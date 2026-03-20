@@ -243,6 +243,9 @@
     <button id="zoom-fullscreen" class="w-10 h-10 bg-[#1a1128] border border-white/5 rounded-xl text-white hover:bg-[#231738] flex items-center justify-center transition-colors" title="Fullscreen">
       <i class="ph-bold ph-arrows-out text-lg"></i>
     </button>
+    <button id="add-campaign-btn" class="px-4 h-10 bg-[#2d1b4e] border border-[#a855f7]/30 rounded-xl text-white text-xs font-bold hover:bg-[#3d246c] transition-colors flex items-center gap-2">
+      <i class="ph-bold ph-plus"></i> Add Constellation
+    </button>
   </div>
 
   <div class="absolute top-6 right-6 z-30 bg-[#1a1128] border border-white/5 px-4 py-2 rounded-xl">
@@ -251,20 +254,17 @@
     </span>
   </div>
 
-  <div id="starmap-viewport" class="w-full h-full overflow-hidden relative">
-    <div id="starmap-canvas" class="starmap-container absolute top-0 left-0 w-[2200px] h-[1400px] origin-top-left">
-      <svg class="pipeline-svg" viewBox="0 0 2200 1400" preserveAspectRatio="none">
-        <path d="M 180 220 Q 500 140 850 220 T 1400 220" class="pipeline-path stroke-[#00f0ff]"></path>
-        <path d="M 180 480 Q 520 560 920 480 T 1500 480" class="pipeline-path stroke-[#b25fff]"></path>
-        <path d="M 180 760 Q 520 680 980 760 T 1580 760" class="pipeline-path stroke-[#00ffaa]"></path>
-        <path d="M 180 1040 Q 520 1120 920 1040 T 1480 1040" class="pipeline-path stroke-[#ffd700]"></path>
-      </svg>
+  <div id="constellation-hint" class="absolute bottom-6 left-6 z-30 bg-[#1a1128]/90 border border-white/5 px-4 py-3 rounded-xl text-[11px] text-gray-300 max-w-[280px] leading-relaxed">
+    Double click anywhere on the map to add a campaign at that position.
+  </div>
 
-      <div id="constellation-layer"></div>
+  <div id="starmap-viewport" class="w-full h-full overflow-hidden relative">
+    <div id="starmap-canvas" class="starmap-container absolute top-0 left-0 w-[2400px] h-[1600px] origin-top-left">
+      <svg id="constellation-lines" class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 2400 1600" preserveAspectRatio="none"></svg>
+      <div id="constellation-layer" class="absolute inset-0"></div>
     </div>
   </div>
 </section>
-
             
  <section id="view-ledger" class="view-section hidden w-full h-full flex-col overflow-hidden bg-[#120c1d] border border-white/5 rounded-2xl">
   <div class="p-8 border-b border-white/5 flex justify-between items-end">
@@ -473,6 +473,18 @@
                     <input type="text" id="modal-title" class="form-input text-sm font-medium" placeholder="Enter post title..." vid="536">
                 </div>
 
+                <div>
+                  <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2">Campaign</label>
+                  <div class="flex gap-2">
+                    <select id="modal-campaign" class="form-input text-sm font-medium">
+                      <option value="">No campaign</option>
+                    </select>
+                    <button id="modal-add-campaign-btn" type="button" class="px-4 py-2 rounded-lg bg-[#231738] border border-white/5 text-xs font-bold text-white hover:bg-[#2d1b4e] transition-colors whitespace-nowrap">
+                      Add
+                    </button>
+                  </div>
+                </div>
+
                 <div class="grid grid-cols-2 gap-6" vid="537">
                     <div class="space-y-5" vid="538">
                         <div vid="539">
@@ -496,11 +508,11 @@
                         </div>
                         <div vid="554">
                             <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2" vid="555">Content Pillar</label>
-                            <div class="grid grid-cols-2 gap-2" vid="556">
-                                <button type="button" class="pillar-btn active edu px-3 py-2 text-[10px] font-bold uppercase tracking-wider" onclick="setPillar(this, 'edu')" vid="557">Education</button>
-                                <button type="button" class="pillar-btn promo px-3 py-2 text-[10px] font-bold uppercase tracking-wider" onclick="setPillar(this, 'promo')" vid="558">Promo</button>
-                                <button type="button" class="pillar-btn engage px-3 py-2 text-[10px] font-bold uppercase tracking-wider" onclick="setPillar(this, 'engage')" vid="559">Engage</button>
-                                <button type="button" class="pillar-btn aware px-3 py-2 text-[10px] font-bold uppercase tracking-wider" onclick="setPillar(this, 'aware')" vid="560">Awareness</button>
+                            <div class="grid grid-cols-2 gap-2">
+                              <button type="button" class="pillar-btn active edu px-3 py-2 text-[10px] font-bold uppercase tracking-wider" data-pillar="edu">Education</button>
+                              <button type="button" class="pillar-btn promo px-3 py-2 text-[10px] font-bold uppercase tracking-wider" data-pillar="promo">Promo</button>
+                              <button type="button" class="pillar-btn engage px-3 py-2 text-[10px] font-bold uppercase tracking-wider" data-pillar="engage">Engage</button>
+                              <button type="button" class="pillar-btn aware px-3 py-2 text-[10px] font-bold uppercase tracking-wider" data-pillar="aware">Awareness</button>
                             </div>
                         </div>
                     </div>
@@ -570,11 +582,12 @@
 const APP_CONFIG = {
   APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbyFdAOY57mt6KtDWHs3pixt80KuDsiczkg7hrBElq2v1ArT81bGEdtjvnIz6FaUQJvl/exec",
   ENABLE_REMOTE_SYNC: true,
-  STORAGE_KEY: "stellarsync_local_state_v3"
+  STORAGE_KEY: "stellarsync_local_state_v4"
 };
 
 const DEFAULT_STATE = {
   posts: [],
+  campaigns: [],
   inspo: [
     {
       id: "inspo-001",
@@ -621,6 +634,8 @@ let pointerStartY = 0;
 
 const modal = document.getElementById("scheduling-modal");
 const titleInput = document.getElementById("modal-title");
+const campaignSelect = document.getElementById("modal-campaign");
+const addCampaignBtnModal = document.getElementById("modal-add-campaign-btn");
 const platSelect = document.getElementById("modal-platform");
 const postTypeSelect = document.getElementById("modal-post-type");
 const dateInput = document.getElementById("modal-date");
@@ -643,6 +658,8 @@ const inspoAddLinkBtn = document.getElementById("inspo-add-link-btn");
 const viewport = document.getElementById("starmap-viewport");
 const canvas = document.getElementById("starmap-canvas");
 const constellationLayer = document.getElementById("constellation-layer");
+const constellationLines = document.getElementById("constellation-lines");
+const addCampaignBtn = document.getElementById("add-campaign-btn");
 
 initApp();
 
@@ -658,12 +675,14 @@ function initApp() {
   setupModalMediaUpload();
   setupInspoAddLink();
   setupConstellationInteractions();
+  setupCampaignControls();
   switchView("calendar");
   rerenderAll();
   syncRemoteIfConfigured();
 }
 
 function rerenderAll() {
+  populateCampaignDropdown();
   renderCalendar();
   renderLedger();
   renderQueue(getScheduledQueue());
@@ -696,6 +715,85 @@ function getScheduledQueue() {
       queueDateLabel: formatLocalQueueDate(post.date),
       queueTimeLabel: formatLocalQueueTime(post.date)
     }));
+}
+
+function setupCampaignControls() {
+  addCampaignBtn?.addEventListener("click", async () => {
+    await promptCreateCampaignAt(320, 320);
+  });
+
+  addCampaignBtnModal?.addEventListener("click", async () => {
+    const campaign = await promptCreateCampaignAt(320, 320, true);
+    if (campaign && campaignSelect) {
+      campaignSelect.value = campaign.campaignId;
+    }
+  });
+}
+
+function populateCampaignDropdown() {
+  if (!campaignSelect) return;
+
+  const options = ['<option value="">No campaign</option>']
+    .concat((appState.campaigns || []).map(campaign => {
+      return `<option value="${escapeHtml(campaign.campaignId)}">${escapeHtml(campaign.campaignName)}</option>`;
+    }));
+
+  campaignSelect.innerHTML = options.join("");
+}
+
+async function promptCreateCampaignAt(x, y, silentCenter = false) {
+  const campaignName = window.prompt("Campaign name");
+  if (!campaignName) return null;
+
+  const pillar = normalizePillar(window.prompt("Pillar: edu, promo, engage, aware", "edu") || "edu");
+  const color = defaultCampaignColor(pillar);
+
+  try {
+    const result = await apiSaveCampaign({
+      campaignName,
+      pillar,
+      color,
+      x,
+      y,
+      isArchived: false
+    });
+
+    const normalized = {
+      campaignId: result.campaign.campaignId,
+      campaignName: result.campaign.campaignName,
+      pillar: result.campaign.pillar,
+      color: result.campaign.color,
+      x: Number(result.campaign.x || x),
+      y: Number(result.campaign.y || y),
+      isArchived: !!result.campaign.isArchived,
+      createdAt: result.campaign.createdAt || ""
+    };
+
+    appState.campaigns.push(normalized);
+    persistLocalState();
+    rerenderAll();
+    showToast("Campaign created", "New constellation added.", "ph-check", "text-[#00ffaa]");
+    return normalized;
+  } catch (err) {
+    console.error(err);
+    showToast("Campaign failed", err.message || "Could not create campaign.", "ph-warning", "text-yellow-400");
+    return null;
+  }
+}
+
+function normalizePillar(value) {
+  const v = String(value || "").toLowerCase();
+  if (v.includes("promo")) return "promo";
+  if (v.includes("engage")) return "engage";
+  if (v.includes("aware")) return "aware";
+  return "edu";
+}
+
+function defaultCampaignColor(pillar) {
+  return pillar === "edu" ? "#00f0ff" :
+         pillar === "promo" ? "#b25fff" :
+         pillar === "engage" ? "#ffd700" :
+         "#00ffaa";
 }
 
 function setupCalendarControls() {
@@ -763,12 +861,8 @@ function renderMonthCalendar(monthNameEl, yearNameEl, grid) {
   const year = calendarCursor.getFullYear();
   const month = calendarCursor.getMonth();
 
-  if (monthNameEl) {
-    monthNameEl.textContent = calendarCursor.toLocaleDateString("en-US", { month: "long" });
-  }
-  if (yearNameEl) {
-    yearNameEl.textContent = String(year);
-  }
+  if (monthNameEl) monthNameEl.textContent = calendarCursor.toLocaleDateString("en-US", { month: "long" });
+  if (yearNameEl) yearNameEl.textContent = String(year);
 
   const firstOfMonth = new Date(year, month, 1);
   const monthStartWeekday = firstOfMonth.getDay();
@@ -956,75 +1050,76 @@ function wireLedgerActions() {
   });
 }
 
+function buildConstellationGroups() {
+  const campaigns = appState.campaigns || [];
+  const posts = appState.posts || [];
+
+  return campaigns
+    .filter(campaign => !campaign.isArchived)
+    .map(campaign => ({
+      ...campaign,
+      posts: posts
+        .filter(post => post.campaignId === campaign.campaignId)
+        .sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0))
+    }));
+}
+
 function renderConstellation() {
-  if (!constellationLayer) return;
+  if (!constellationLayer || !constellationLines) return;
 
   const groups = buildConstellationGroups();
+
   if (!groups.length) {
     constellationLayer.innerHTML = "";
+    constellationLines.innerHTML = "";
     return;
   }
 
-  let html = "";
+  let dotHtml = "";
+  let lineHtml = "";
 
   groups.forEach(group => {
-    const y = laneY(group.pillar);
-    const color = pillarColor(group.pillar);
+    const color = group.color || pillarColor(group.pillar);
+    const rootX = Number(group.x || 320);
+    const rootY = Number(group.y || 320);
 
-    html += `
-      <div class="map-node hub-node border-l-4" style="left:180px; top:${y}px; border-left-color:${color};">
-        <h3 class="font-bold text-white text-sm mb-1">${escapeHtml(group.title)}</h3>
-        <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">${escapeHtml(group.label)}</p>
+    dotHtml += `
+      <button
+        type="button"
+        class="map-node w-4 h-4 rounded-full border border-white/30 shadow-[0_0_14px_currentColor] hover:scale-125 transition-transform"
+        style="left:${rootX}px; top:${rootY}px; background:${color}; color:${color};"
+        title="${escapeHtml(group.campaignName)}">
+      </button>
+
+      <div class="map-node pointer-events-none px-3 py-1.5 rounded-lg bg-[#120c1d]/90 border border-white/5 text-[10px] font-bold text-white whitespace-nowrap"
+           style="left:${rootX + 70}px; top:${rootY - 20}px;">
+        ${escapeHtml(group.campaignName)}
       </div>
     `;
 
     group.posts.forEach((post, index) => {
-      const x = 540 + index * 360;
-      const meta = `${formatShortDate(post.date)} • ${prettyPostType(post.postType)}`;
+      const postX = rootX + 120 + (index * 90);
+      const postY = rootY + ((index % 2 === 0) ? -45 : 45);
 
-      html += `
-        <div class="map-node post-node border-l-4" style="left:${x}px; top:${y}px; border-color:${color};" onclick="openModalById('${escapeHtml(post.id)}')">
-          <div class="flex justify-between items-center mb-3">
-            ${renderConstellationPlatform(post.platform, color)}
-            <span class="badge ${post.status === "published" ? "badge-pub" : post.status === "scheduled" ? "badge-sch" : "badge-drf"}">${escapeHtml(capitalize(post.status))}</span>
-          </div>
-          <h4 class="text-sm text-white font-semibold mb-1 truncate">${escapeHtml(post.title || "")}</h4>
-          <p class="text-[10px] text-gray-400 mb-3">${escapeHtml(meta)}</p>
-          <div class="h-16 bg-[#120c1d] rounded-lg overflow-hidden border border-white/5 flex items-center justify-center">
-            <i class="ph-fill ${constellationPostIcon(post.postType)} text-2xl" style="color:${color}66;"></i>
-          </div>
-        </div>
+      lineHtml += `
+        <line x1="${rootX}" y1="${rootY}" x2="${postX}" y2="${postY}" stroke="${color}" stroke-width="1.5" opacity="0.55" />
+      `;
+
+      dotHtml += `
+        <button
+          type="button"
+          class="map-node w-3 h-3 rounded-full border border-white/20 hover:scale-125 transition-transform"
+          style="left:${postX}px; top:${postY}px; background:${color};"
+          onclick="openModalById('${escapeHtml(post.id)}')"
+          title="${escapeHtml(post.title)}">
+        </button>
       `;
     });
   });
 
-  constellationLayer.innerHTML = html;
+  constellationLines.innerHTML = lineHtml;
+  constellationLayer.innerHTML = dotHtml;
   updateTransform();
-}
-
-function buildConstellationGroups() {
-  const groups = {};
-
-  (appState.posts || []).forEach(post => {
-    const hubTitle = post.hubTitle || post.title || "Untitled";
-    const pillar = post.hubPillarLabel || post.pillar || "edu";
-
-    if (!groups[hubTitle]) {
-      groups[hubTitle] = {
-        title: hubTitle,
-        pillar,
-        label: pillarPretty(pillar),
-        posts: []
-      };
-    }
-
-    groups[hubTitle].posts.push(post);
-  });
-
-  return Object.values(groups).map(group => ({
-    ...group,
-    posts: group.posts.sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0))
-  }));
 }
 
 function setupConstellationInteractions() {
@@ -1033,7 +1128,7 @@ function setupConstellationInteractions() {
   viewport.style.cursor = "grab";
 
   viewport.addEventListener("pointerdown", (e) => {
-    if (e.target.closest(".post-node, .hub-node")) return;
+    if (e.target.closest(".map-node")) return;
     isDragging = true;
     pointerStartX = e.clientX;
     pointerStartY = e.clientY;
@@ -1082,6 +1177,19 @@ function setupConstellationInteractions() {
     updateTransform();
   }, { passive: false });
 
+  viewport.addEventListener("dblclick", async (e) => {
+    if (e.target.closest(".map-node")) return;
+
+    const rect = viewport.getBoundingClientRect();
+    const localX = e.clientX - rect.left;
+    const localY = e.clientY - rect.top;
+
+    const worldX = Math.round((localX - panX) / scale);
+    const worldY = Math.round((localY - panY) / scale);
+
+    await promptCreateCampaignAt(worldX, worldY);
+  });
+
   document.getElementById("zoom-in")?.addEventListener("click", () => zoomConstellation(1.15));
   document.getElementById("zoom-out")?.addEventListener("click", () => zoomConstellation(0.87));
   document.getElementById("zoom-reset")?.addEventListener("click", () => fitConstellation());
@@ -1127,8 +1235,8 @@ function fitConstellation() {
   if (!viewport || !canvas) return;
 
   const rect = viewport.getBoundingClientRect();
-  const worldWidth = 2200;
-  const worldHeight = 1400;
+  const worldWidth = 2400;
+  const worldHeight = 1600;
 
   scale = clamp(Math.min(rect.width / worldWidth, rect.height / worldHeight, 0.72), 0.35, 2.2);
   panX = (rect.width - worldWidth * scale) / 2;
@@ -1140,21 +1248,6 @@ function fitConstellation() {
 function updateTransform() {
   if (!canvas) return;
   canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
-}
-
-function renderConstellationPlatform(platform, color) {
-  if (platform === "both") {
-    return `
-      <div class="flex gap-1">
-        <i class="ph-fill ph-linkedin-logo text-xl" style="color:${color}"></i>
-        <i class="ph-fill ph-instagram-logo text-xl" style="color:${color}"></i>
-      </div>
-    `;
-  }
-
-  return platform === "instagram"
-    ? `<i class="ph-fill ph-instagram-logo text-xl" style="color:${color}"></i>`
-    : `<i class="ph-fill ph-linkedin-logo text-xl" style="color:${color}"></i>`;
 }
 
 function setupMediaFilters() {
@@ -1245,7 +1338,7 @@ function setupModalMediaUpload() {
         assetBadge: file.type.startsWith("video/") ? "Reel" : "Image",
         assetMeta: "",
         linkedPostId: currentEditingPostId || "",
-        campaign: getCurrentModalCampaign()
+        campaign: getCurrentModalCampaignLabel()
       });
 
       currentModalAsset = {
@@ -1277,12 +1370,10 @@ function setupModalMediaUpload() {
   });
 }
 
-function getCurrentModalCampaign() {
-  if (currentEditingPostId) {
-    const existing = (appState.posts || []).find(p => p.id === currentEditingPostId);
-    if (existing?.hubTitle) return existing.hubTitle;
-  }
-  return titleInput?.value.trim() || "";
+function getCurrentModalCampaignLabel() {
+  const campaignId = campaignSelect?.value || "";
+  const campaign = (appState.campaigns || []).find(item => item.campaignId === campaignId);
+  return campaign?.campaignName || "";
 }
 
 function setupInspoAddLink() {
@@ -1322,7 +1413,7 @@ function setupInspoAddLink() {
     }
   });
 }
-    
+
 function populateMediaFilterDropdown() {
   if (!mediaFilterSelect) return;
 
@@ -1346,7 +1437,7 @@ function populateMediaFilterDropdown() {
 
 function linkedPostCampaignLabel(item) {
   const linkedPost = (appState.posts || []).find(post => post.id === item.postId);
-  return linkedPost?.hubTitle || linkedPost?.title || "";
+  return linkedPost?.campaignName || linkedPost?.hubTitle || linkedPost?.title || "";
 }
 
 function renderMedia() {
@@ -1451,17 +1542,9 @@ async function refreshMediaFromRemote() {
 
 function setupPillarButtons() {
   pillarBtns.forEach((btn) => {
-    if (!btn.dataset.pillar) {
-      const text = btn.textContent.trim().toLowerCase();
-      if (text.startsWith("edu")) btn.dataset.pillar = "edu";
-      if (text.startsWith("pro")) btn.dataset.pillar = "promo";
-      if (text.startsWith("eng")) btn.dataset.pillar = "engage";
-      if (text.startsWith("awa")) btn.dataset.pillar = "aware";
-    }
-
     btn.setAttribute("type", "button");
     btn.removeAttribute("onclick");
-    btn.addEventListener("click", () => setPillar(btn.dataset.pillar));
+    btn.addEventListener("click", () => setPillar(btn.dataset.pillar || "edu"));
   });
 }
 
@@ -1531,6 +1614,11 @@ function openModal(
   setPillar(pillarClass || "edu");
 
   const matched = (appState.posts || []).find(post => post.id === postId);
+
+  if (campaignSelect) {
+    campaignSelect.value = matched?.campaignId || "";
+  }
+
   const linkedAsset = matched?.assetId
     ? (appState.media || []).find(asset => asset.id === matched.assetId)
     : null;
@@ -1552,6 +1640,7 @@ function closeModal() {
   currentEditingPostId = null;
   currentModalAsset = null;
   if (modalMediaStatus) modalMediaStatus.textContent = "No media linked";
+  if (campaignSelect) campaignSelect.value = "";
 }
 
 function setupSaveHandler() {
@@ -1565,6 +1654,9 @@ function setupSaveHandler() {
       ? (appState.posts || []).find(p => p.id === currentEditingPostId)
       : null;
 
+    const selectedCampaignId = campaignSelect?.value || "";
+    const selectedCampaign = (appState.campaigns || []).find(campaign => campaign.campaignId === selectedCampaignId);
+
     const payload = {
       id: currentEditingPostId || generateId("post"),
       title: titleInput?.value.trim() || "",
@@ -1575,10 +1667,12 @@ function setupSaveHandler() {
       postType: postTypeSelect?.value || "text",
       description: descInput?.value.trim() || "",
       assetId: currentModalAsset?.id || existing?.assetId || "",
-      hubTitle: existing?.hubTitle || titleInput?.value.trim() || "",
-      hubPillarLabel: existing?.hubPillarLabel || getActivePillar(),
+      hubTitle: selectedCampaign?.campaignName || existing?.hubTitle || titleInput?.value.trim() || "",
+      hubPillarLabel: selectedCampaign?.pillar || existing?.hubPillarLabel || getActivePillar(),
       mediaLabel: currentModalAsset?.title || existing?.mediaLabel || "",
-      createdFromInspoId: existing?.createdFromInspoId || ""
+      createdFromInspoId: existing?.createdFromInspoId || "",
+      campaignId: selectedCampaignId,
+      campaignName: selectedCampaign?.campaignName || ""
     };
 
     if (!payload.title) {
@@ -1787,28 +1881,47 @@ async function syncRemoteIfConfigured() {
   if (!APP_CONFIG.ENABLE_REMOTE_SYNC || !isRemoteConfigured()) return;
 
   try {
-    const [posts, media, inspo] = await Promise.all([
+    const [posts, media, inspo, campaigns] = await Promise.all([
       apiGetPosts(),
       apiGetMedia(),
-      apiGetInspo()
+      apiGetInspo(),
+      apiGetCampaigns()
     ]);
 
-    if (Array.isArray(posts)) {
-      appState.posts = posts.map(post => ({
-        id: post.postId,
-        title: post.title,
-        platform: post.platform,
-        pillar: post.pillar,
-        date: post.scheduledAt,
-        status: post.status,
-        postType: post.postType,
-        description: post.description || "",
-        assetId: post.assetId || "",
-        hubTitle: post.hubTitle || post.title || "",
-        hubPillarLabel: post.hubPillarLabel || post.pillar || "edu",
-        mediaLabel: post.mediaLabel || "",
-        createdFromInspoId: post.createdFromInspoId || ""
+    if (Array.isArray(campaigns)) {
+      appState.campaigns = campaigns.map(campaign => ({
+        campaignId: campaign.campaignId,
+        campaignName: campaign.campaignName,
+        pillar: campaign.pillar || "edu",
+        color: campaign.color || pillarColor(campaign.pillar || "edu"),
+        x: Number(campaign.x || 320),
+        y: Number(campaign.y || 320),
+        isArchived: !!campaign.isArchived,
+        createdAt: campaign.createdAt || ""
       }));
+    }
+
+    if (Array.isArray(posts)) {
+      appState.posts = posts.map(post => {
+        const matchedCampaign = (appState.campaigns || []).find(campaign => campaign.campaignId === (post.campaignId || ""));
+        return {
+          id: post.postId,
+          title: post.title,
+          platform: post.platform,
+          pillar: post.pillar,
+          date: post.scheduledAt,
+          status: post.status,
+          postType: post.postType,
+          description: post.description || "",
+          assetId: post.assetId || "",
+          hubTitle: post.hubTitle || post.title || "",
+          hubPillarLabel: post.hubPillarLabel || post.pillar || "edu",
+          mediaLabel: post.mediaLabel || "",
+          createdFromInspoId: post.createdFromInspoId || "",
+          campaignId: post.campaignId || "",
+          campaignName: matchedCampaign?.campaignName || ""
+        };
+      });
     }
 
     if (Array.isArray(media)) {
@@ -1893,6 +2006,15 @@ async function apiGetInspo() {
   return result.items || [];
 }
 
+async function apiGetCampaigns() {
+  const result = await apiGet("getCampaigns");
+  return result.items || [];
+}
+
+async function apiSaveCampaign(campaign) {
+  return apiPost("saveCampaign", campaign);
+}
+
 async function apiSavePost(post) {
   return apiPost("savePost", {
     postId: post.id || null,
@@ -1907,7 +2029,8 @@ async function apiSavePost(post) {
     hubTitle: post.hubTitle || post.title || "",
     hubPillarLabel: post.hubPillarLabel || post.pillar || "",
     mediaLabel: post.mediaLabel || "",
-    createdFromInspoId: post.createdFromInspoId || ""
+    createdFromInspoId: post.createdFromInspoId || "",
+    campaignId: post.campaignId || ""
   });
 }
 
@@ -1932,7 +2055,8 @@ async function apiDuplicatePost(postId) {
       hubTitle: source.hubTitle || "",
       hubPillarLabel: source.hubPillarLabel || "",
       mediaLabel: source.mediaLabel || "",
-      createdFromInspoId: source.createdFromInspoId || ""
+      createdFromInspoId: source.createdFromInspoId || "",
+      campaignId: source.campaignId || ""
     }
   });
 }
@@ -1992,6 +2116,7 @@ function loadLocalState() {
     const parsed = JSON.parse(raw);
     return {
       posts: Array.isArray(parsed.posts) ? parsed.posts : structuredCloneState(DEFAULT_STATE.posts),
+      campaigns: Array.isArray(parsed.campaigns) ? parsed.campaigns : structuredCloneState(DEFAULT_STATE.campaigns),
       inspo: Array.isArray(parsed.inspo) ? parsed.inspo : structuredCloneState(DEFAULT_STATE.inspo),
       media: Array.isArray(parsed.media) ? parsed.media : structuredCloneState(DEFAULT_STATE.media)
     };
@@ -2078,20 +2203,6 @@ function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
 
-function laneY(pillar) {
-  return pillar === "edu" ? 220 :
-         pillar === "promo" ? 480 :
-         pillar === "aware" ? 760 :
-         1040;
-}
-
-function pillarPretty(pillar) {
-  return pillar === "edu" ? "Education" :
-         pillar === "promo" ? "Promo" :
-         pillar === "engage" ? "Engagement" :
-         "Awareness";
-}
-
 function pillarColor(pillar) {
   return pillar === "edu" ? "#00f0ff" :
          pillar === "promo" ? "#b25fff" :
@@ -2099,34 +2210,10 @@ function pillarColor(pillar) {
          "#00ffaa";
 }
 
-function constellationPostIcon(postType) {
-  if (postType === "video") return "ph-video-camera";
-  if (postType === "carousel") return "ph-images";
-  if (postType === "article") return "ph-link";
-  if (postType === "poll") return "ph-chart-bar";
-  if (postType === "text") return "ph-text-aa";
-  return "ph-image";
-}
-
-function prettyPostType(postType) {
-  if (postType === "video") return "Video";
-  if (postType === "carousel") return "Carousel";
-  if (postType === "article") return "Article";
-  if (postType === "poll") return "Poll";
-  if (postType === "text") return "Text";
-  return "Image";
-}
-
 function formatLedgerDate(value) {
   const d = value ? new Date(value) : null;
   if (!d || isNaN(d)) return "No date";
   return `${d.toLocaleDateString("en-US", { month: "short", day: "numeric" })} • ${d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
-}
-
-function formatShortDate(value) {
-  const d = value ? new Date(value) : null;
-  if (!d || isNaN(d)) return "";
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function formatLocalQueueDate(value) {
