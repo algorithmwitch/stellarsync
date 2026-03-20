@@ -567,7 +567,7 @@
 const APP_CONFIG = {
   APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbxTanf2NgXnTNDILj3ECPG-etXHodowevzojk1ds-KACNFZ3tmpEBWzS9e_CuqNk9t5/exec",
   ENABLE_REMOTE_SYNC: true,
-  STORAGE_KEY: "stellarsync_local_state_v2"
+  STORAGE_KEY: "stellarsync_local_state_v3"
 };
 
 const DEFAULT_STATE = {
@@ -598,12 +598,15 @@ const DEFAULT_STATE = {
 let appState = loadLocalState();
 let currentView = "calendar";
 let currentEditingPostId = null;
+let currentModalAsset = null;
+
 let currentMediaFilter = "all";
 let currentMediaFilterMode = "all";
 let currentMediaFilterValue = "all";
-let currentModalAsset = null;
+
 let calendarMode = "month";
 let calendarCursor = getInitialCalendarCursor();
+
 let scale = 0.62;
 let panX = 80;
 let panY = 60;
@@ -667,11 +670,13 @@ function rerenderAll() {
 }
 
 function getInitialCalendarCursor() {
-  const posts = loadLocalState()?.posts || [];
-  const dated = posts.filter(p => p.date && !isNaN(new Date(p.date)));
-  if (!dated.length) return new Date();
-  dated.sort((a, b) => new Date(a.date) - new Date(b.date));
-  return new Date(dated[0].date);
+  const posts = Array.isArray(appState.posts) ? appState.posts : [];
+  const datedPosts = posts
+    .filter(post => post.date && !isNaN(new Date(post.date)))
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  if (datedPosts.length) return new Date(datedPosts[0].date);
+  return new Date();
 }
 
 function getScheduledQueue() {
@@ -695,7 +700,7 @@ function setupCalendarControls() {
     if (calendarMode === "month") {
       calendarCursor = new Date(calendarCursor.getFullYear(), calendarCursor.getMonth() - 1, 1);
     } else {
-      calendarCursor = addDays(calendarCursor, -7);
+      calendarCursor = addDays(startOfWeek(calendarCursor), -7);
     }
     renderCalendar();
   });
@@ -704,7 +709,7 @@ function setupCalendarControls() {
     if (calendarMode === "month") {
       calendarCursor = new Date(calendarCursor.getFullYear(), calendarCursor.getMonth() + 1, 1);
     } else {
-      calendarCursor = addDays(calendarCursor, 7);
+      calendarCursor = addDays(startOfWeek(calendarCursor), 7);
     }
     renderCalendar();
   });
@@ -755,22 +760,22 @@ function renderMonthCalendar(monthNameEl, yearNameEl, grid) {
   const year = calendarCursor.getFullYear();
   const month = calendarCursor.getMonth();
 
-  if (monthNameEl) monthNameEl.textContent = calendarCursor.toLocaleDateString("en-US", { month: "long" });
-  if (yearNameEl) yearNameEl.textContent = String(year);
+  if (monthNameEl) {
+    monthNameEl.textContent = calendarCursor.toLocaleDateString("en-US", { month: "long" });
+  }
+  if (yearNameEl) {
+    yearNameEl.textContent = String(year);
+  }
 
   const firstOfMonth = new Date(year, month, 1);
-  const lastOfMonth = new Date(year, month + 1, 0);
   const monthStartWeekday = firstOfMonth.getDay();
-  const daysInMonth = lastOfMonth.getDate();
-
-  const prevMonthLast = new Date(year, month, 0).getDate();
-  const totalCells = Math.ceil((monthStartWeekday + daysInMonth) / 7) * 7;
+  const totalCells = 42;
 
   let html = "";
   for (let i = 0; i < totalCells; i += 1) {
     const dateObj = new Date(year, month, 1 - monthStartWeekday + i);
     const inCurrentMonth = dateObj.getMonth() === month;
-    html += renderCalendarCell(dateObj, inCurrentMonth);
+    html += renderCalendarCell(dateObj, inCurrentMonth, false);
   }
 
   grid.innerHTML = html;
@@ -789,23 +794,22 @@ function renderWeekCalendar(monthNameEl, yearNameEl, grid) {
 
   let html = "";
   for (let i = 0; i < 7; i += 1) {
-    const day = addDays(start, i);
-    html += renderCalendarCell(day, true, true);
+    html += renderCalendarCell(addDays(start, i), true, true);
   }
 
   grid.innerHTML = html;
 }
 
 function renderCalendarCell(dateObj, inCurrentMonth = true, isWeekMode = false) {
+  const key = toDateKey(dateObj);
   const today = new Date();
   const isTodayValue = isSameDay(dateObj, today);
-  const key = toDateKey(dateObj);
 
-  const items = (appState.posts || [])
+  const posts = (appState.posts || [])
     .filter(post => post.date && toDateKey(new Date(post.date)) === key)
     .sort((a, b) => new Date(a.date) - new Date(b.date));
 
-  const classes = [
+  const cellClasses = [
     "cal-cell",
     !inCurrentMonth ? "empty" : "",
     isTodayValue ? "ring-1 ring-[#c77dff]/50 bg-[#1c132d]" : ""
@@ -818,9 +822,9 @@ function renderCalendarCell(dateObj, inCurrentMonth = true, isWeekMode = false) 
     : "text-xs text-gray-300 font-medium";
 
   return `
-    <div class="${classes}">
+    <div class="${cellClasses}">
       <span class="${dateLabelClass}">${dateObj.getDate()}</span>
-      ${items.map(post => renderCalendarPill(post, isWeekMode)).join("")}
+      ${posts.map(post => renderCalendarPill(post, isWeekMode)).join("")}
     </div>
   `;
 }
@@ -838,17 +842,17 @@ function renderCalendarPill(post, isWeekMode = false) {
     post.status === "scheduled" ? "#ffd700" :
     "#94a3b8";
 
-  const title = isWeekMode
+  const pillTitle = isWeekMode
     ? `${formatLocalQueueTime(post.date)} ${post.title}`
     : post.title;
 
   return `
-    <button type="button" class="post-pill ${escapeHtml(post.pillar)} mt-1 text-left" onclick="openModalById('${escapeHtml(post.id)}')">
+    <button type="button" class="post-pill ${escapeHtml(post.pillar || "edu")} mt-1 text-left" onclick="openModalById('${escapeHtml(post.id)}')">
       <div class="flex items-center gap-1.5 w-full">
         ${iconBlock}
         <div class="w-1.5 h-1.5 rounded-full ml-auto" style="background:${statusColor}"></div>
       </div>
-      <span class="text-[9px] text-gray-300 truncate w-full block mt-0.5">${escapeHtml(title)}</span>
+      <span class="text-[9px] text-gray-300 truncate w-full block mt-0.5">${escapeHtml(pillTitle)}</span>
     </button>
   `;
 }
@@ -858,9 +862,9 @@ function renderLedger() {
   if (!ledgerList) return;
 
   const posts = [...(appState.posts || [])].sort((a, b) => {
-    const da = a.date ? new Date(a.date).getTime() : 0;
-    const db = b.date ? new Date(b.date).getTime() : 0;
-    return da - db;
+    const aTime = a.date ? new Date(a.date).getTime() : 0;
+    const bTime = b.date ? new Date(b.date).getTime() : 0;
+    return aTime - bTime;
   });
 
   if (!posts.length) {
@@ -889,11 +893,7 @@ function renderLedger() {
       post.platform === "both" ? "ph-infinity" :
       "ph-linkedin-logo";
 
-    const iconColor =
-      post.pillar === "edu" ? "#00f0ff" :
-      post.pillar === "promo" ? "#b25fff" :
-      post.pillar === "engage" ? "#ffd700" :
-      "#00ffaa";
+    const iconColor = pillarColor(post.pillar);
 
     return `
       <div class="ledger-card glass-card p-5" data-post-id="${escapeHtml(post.id)}">
@@ -903,11 +903,11 @@ function renderLedger() {
           </div>
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-3 mb-2">
-              <span class="badge ${badgeClass} text-[8px]">${escapeHtml(post.status.toUpperCase())}</span>
+              <span class="badge ${badgeClass} text-[8px]">${escapeHtml(String(post.status || "draft").toUpperCase())}</span>
               <span class="px-2 py-1 bg-[#120c1d] border border-white/5 rounded text-[9px] text-gray-300 font-medium">${escapeHtml(pillarLabel)}</span>
               <span class="text-gray-500 text-[10px] font-medium">${escapeHtml(formatLedgerDate(post.date))}</span>
             </div>
-            <h3 class="text-white font-bold text-base mb-2">${escapeHtml(post.title)}</h3>
+            <h3 class="text-white font-bold text-base mb-2">${escapeHtml(post.title || "")}</h3>
             <p class="text-gray-400 text-sm leading-relaxed line-clamp-2">${escapeHtml(post.description || "")}</p>
             <div class="mt-4 flex items-center gap-5">
               <button type="button" class="ledger-ai-btn text-[#c77dff] hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-colors">
@@ -962,17 +962,10 @@ function renderConstellation() {
     return;
   }
 
-  const laneY = {
-    edu: 220,
-    promo: 480,
-    aware: 760,
-    engage: 1040
-  };
-
   let html = "";
 
-  groups.forEach((group) => {
-    const y = laneY[group.pillar] || 220;
+  groups.forEach(group => {
+    const y = laneY(group.pillar);
     const color = pillarColor(group.pillar);
 
     html += `
@@ -992,7 +985,7 @@ function renderConstellation() {
             ${renderConstellationPlatform(post.platform, color)}
             <span class="badge ${post.status === "published" ? "badge-pub" : post.status === "scheduled" ? "badge-sch" : "badge-drf"}">${escapeHtml(capitalize(post.status))}</span>
           </div>
-          <h4 class="text-sm text-white font-semibold mb-1 truncate">${escapeHtml(post.title)}</h4>
+          <h4 class="text-sm text-white font-semibold mb-1 truncate">${escapeHtml(post.title || "")}</h4>
           <p class="text-[10px] text-gray-400 mb-3">${escapeHtml(meta)}</p>
           <div class="h-16 bg-[#120c1d] rounded-lg overflow-hidden border border-white/5 flex items-center justify-center">
             <i class="ph-fill ${constellationPostIcon(post.postType)} text-2xl" style="color:${color}66;"></i>
@@ -1007,14 +1000,14 @@ function renderConstellation() {
 }
 
 function buildConstellationGroups() {
-  const grouped = {};
+  const groups = {};
 
   (appState.posts || []).forEach(post => {
     const hubTitle = post.hubTitle || post.title || "Untitled";
     const pillar = post.hubPillarLabel || post.pillar || "edu";
 
-    if (!grouped[hubTitle]) {
-      grouped[hubTitle] = {
+    if (!groups[hubTitle]) {
+      groups[hubTitle] = {
         title: hubTitle,
         pillar,
         label: pillarPretty(pillar),
@@ -1022,60 +1015,13 @@ function buildConstellationGroups() {
       };
     }
 
-    grouped[hubTitle].posts.push(post);
+    groups[hubTitle].posts.push(post);
   });
 
-  return Object.values(grouped).map(group => ({
+  return Object.values(groups).map(group => ({
     ...group,
     posts: group.posts.sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0))
   }));
-}
-
-function renderConstellationPlatform(platform, color) {
-  if (platform === "both") {
-    return `
-      <div class="flex gap-1">
-        <i class="ph-fill ph-linkedin-logo text-xl" style="color:${color}"></i>
-        <i class="ph-fill ph-instagram-logo text-xl" style="color:${color}"></i>
-      </div>
-    `;
-  }
-
-  return platform === "instagram"
-    ? `<i class="ph-fill ph-instagram-logo text-xl" style="color:${color}"></i>`
-    : `<i class="ph-fill ph-linkedin-logo text-xl" style="color:${color}"></i>`;
-}
-
-function pillarPretty(pillar) {
-  return pillar === "edu" ? "Education" :
-         pillar === "promo" ? "Promo" :
-         pillar === "engage" ? "Engagement" :
-         "Awareness";
-}
-
-function pillarColor(pillar) {
-  return pillar === "edu" ? "#00f0ff" :
-         pillar === "promo" ? "#b25fff" :
-         pillar === "engage" ? "#ffd700" :
-         "#00ffaa";
-}
-
-function constellationPostIcon(postType) {
-  if (postType === "video") return "ph-video-camera";
-  if (postType === "carousel") return "ph-images";
-  if (postType === "article") return "ph-link";
-  if (postType === "poll") return "ph-chart-bar";
-  if (postType === "text") return "ph-text-aa";
-  return "ph-image";
-}
-
-function prettyPostType(postType) {
-  if (postType === "video") return "Video";
-  if (postType === "carousel") return "Carousel";
-  if (postType === "article") return "Article";
-  if (postType === "poll") return "Poll";
-  if (postType === "text") return "Text";
-  return "Image";
 }
 
 function setupConstellationInteractions() {
@@ -1091,7 +1037,9 @@ function setupConstellationInteractions() {
     startPanX = panX;
     startPanY = panY;
     viewport.style.cursor = "grabbing";
-    viewport.setPointerCapture?.(e.pointerId);
+    if (viewport.setPointerCapture) {
+      try { viewport.setPointerCapture(e.pointerId); } catch (_) {}
+    }
   });
 
   viewport.addEventListener("pointermove", (e) => {
@@ -1101,14 +1049,15 @@ function setupConstellationInteractions() {
     updateTransform();
   });
 
-  viewport.addEventListener("pointerup", () => {
+  const endDrag = () => {
     isDragging = false;
     viewport.style.cursor = "grab";
-  });
+  };
 
-  viewport.addEventListener("pointercancel", () => {
-    isDragging = false;
-    viewport.style.cursor = "grab";
+  viewport.addEventListener("pointerup", endDrag);
+  viewport.addEventListener("pointercancel", endDrag);
+  viewport.addEventListener("mouseleave", () => {
+    if (isDragging) endDrag();
   });
 
   viewport.addEventListener("wheel", (e) => {
@@ -1117,39 +1066,31 @@ function setupConstellationInteractions() {
     const rect = viewport.getBoundingClientRect();
     const pointerX = e.clientX - rect.left;
     const pointerY = e.clientY - rect.top;
-    const beforeX = (pointerX - panX) / scale;
-    const beforeY = (pointerY - panY) / scale;
 
-    const delta = e.deltaY < 0 ? 1.12 : 0.89;
-    const nextScale = clamp(scale * delta, 0.35, 2.2);
-    scale = nextScale;
+    const worldX = (pointerX - panX) / scale;
+    const worldY = (pointerY - panY) / scale;
 
-    panX = pointerX - beforeX * scale;
-    panY = pointerY - beforeY * scale;
+    const multiplier = e.deltaY < 0 ? 1.12 : 0.89;
+    scale = clamp(scale * multiplier, 0.35, 2.2);
+
+    panX = pointerX - worldX * scale;
+    panY = pointerY - worldY * scale;
 
     updateTransform();
   }, { passive: false });
 
-  document.getElementById("zoom-in")?.addEventListener("click", () => {
-    zoomConstellation(1.15);
-  });
-
-  document.getElementById("zoom-out")?.addEventListener("click", () => {
-    zoomConstellation(0.87);
-  });
-
-  document.getElementById("zoom-reset")?.addEventListener("click", () => {
-    fitConstellation();
-  });
+  document.getElementById("zoom-in")?.addEventListener("click", () => zoomConstellation(1.15));
+  document.getElementById("zoom-out")?.addEventListener("click", () => zoomConstellation(0.87));
+  document.getElementById("zoom-reset")?.addEventListener("click", () => fitConstellation());
 
   document.getElementById("zoom-fullscreen")?.addEventListener("click", async () => {
     const section = document.getElementById("view-constellation");
     if (!section) return;
 
     if (!document.fullscreenElement) {
-      await section.requestFullscreen?.();
+      if (section.requestFullscreen) await section.requestFullscreen();
     } else {
-      await document.exitFullscreen?.();
+      if (document.exitFullscreen) await document.exitFullscreen();
     }
 
     setTimeout(() => fitConstellation(), 100);
@@ -1164,15 +1105,18 @@ function setupConstellationInteractions() {
 
 function zoomConstellation(multiplier) {
   if (!viewport) return;
+
   const rect = viewport.getBoundingClientRect();
   const centerX = rect.width / 2;
   const centerY = rect.height / 2;
-  const beforeX = (centerX - panX) / scale;
-  const beforeY = (centerY - panY) / scale;
+
+  const worldX = (centerX - panX) / scale;
+  const worldY = (centerY - panY) / scale;
 
   scale = clamp(scale * multiplier, 0.35, 2.2);
-  panX = centerX - beforeX * scale;
-  panY = centerY - beforeY * scale;
+  panX = centerX - worldX * scale;
+  panY = centerY - worldY * scale;
+
   updateTransform();
 }
 
@@ -1183,16 +1127,31 @@ function fitConstellation() {
   const worldWidth = 2200;
   const worldHeight = 1400;
 
-  const nextScale = Math.min(rect.width / worldWidth, rect.height / worldHeight, 0.72);
-  scale = clamp(nextScale, 0.35, 2.2);
+  scale = clamp(Math.min(rect.width / worldWidth, rect.height / worldHeight, 0.72), 0.35, 2.2);
   panX = (rect.width - worldWidth * scale) / 2;
   panY = (rect.height - worldHeight * scale) / 2;
+
   updateTransform();
 }
 
 function updateTransform() {
   if (!canvas) return;
   canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+}
+
+function renderConstellationPlatform(platform, color) {
+  if (platform === "both") {
+    return `
+      <div class="flex gap-1">
+        <i class="ph-fill ph-linkedin-logo text-xl" style="color:${color}"></i>
+        <i class="ph-fill ph-instagram-logo text-xl" style="color:${color}"></i>
+      </div>
+    `;
+  }
+
+  return platform === "instagram"
+    ? `<i class="ph-fill ph-instagram-logo text-xl" style="color:${color}"></i>`
+    : `<i class="ph-fill ph-linkedin-logo text-xl" style="color:${color}"></i>`;
 }
 
 function setupMediaFilters() {
@@ -1297,10 +1256,10 @@ function setupModalMediaUpload() {
         modalMediaStatus.textContent = `${currentModalAsset.title} linked`;
       }
 
-      const existingIndex = appState.posts.findIndex(p => p.id === currentEditingPostId);
-      if (existingIndex >= 0) {
-        appState.posts[existingIndex].assetId = currentModalAsset.id;
-        appState.posts[existingIndex].mediaLabel = currentModalAsset.title;
+      const postIndex = appState.posts.findIndex(p => p.id === currentEditingPostId);
+      if (postIndex >= 0) {
+        appState.posts[postIndex].assetId = currentModalAsset.id;
+        appState.posts[postIndex].mediaLabel = currentModalAsset.title;
         persistLocalState();
       }
 
@@ -1367,7 +1326,7 @@ function populateMediaFilterDropdown() {
   let options = [`<option value="all">All Assets</option>`];
 
   if (currentMediaFilterMode === "type") {
-    const types = [...new Set((appState.media || []).map(item => (item.type || "").toLowerCase()).filter(Boolean))];
+    const types = [...new Set((appState.media || []).map(item => String(item.type || "").toLowerCase()).filter(Boolean))];
     options = [`<option value="all">All Types</option>`].concat(
       types.map(type => `<option value="${escapeHtml(type)}">${escapeHtml(capitalize(type))}</option>`)
     );
@@ -1394,11 +1353,11 @@ function renderMedia() {
   let items = [...(appState.media || [])];
 
   if (currentMediaFilter !== "all") {
-    items = items.filter(item => (item.type || "").toLowerCase() === currentMediaFilter);
+    items = items.filter(item => String(item.type || "").toLowerCase() === currentMediaFilter);
   }
 
   if (currentMediaFilterMode === "type" && currentMediaFilterValue !== "all") {
-    items = items.filter(item => (item.type || "").toLowerCase() === currentMediaFilterValue.toLowerCase());
+    items = items.filter(item => String(item.type || "").toLowerCase() === String(currentMediaFilterValue).toLowerCase());
   }
 
   if (currentMediaFilterMode === "campaign" && currentMediaFilterValue !== "all") {
@@ -1417,8 +1376,8 @@ function renderMedia() {
     return;
   }
 
-  grid.innerHTML = items.map((item) => {
-    const type = (item.type || "").toLowerCase();
+  grid.innerHTML = items.map(item => {
+    const type = String(item.type || "").toLowerCase();
     const icon =
       type === "video" ? "ph-video-camera" :
       type === "carousel" ? "ph-images" :
@@ -1455,7 +1414,7 @@ function renderMedia() {
 }
 
 function openMediaAsset(assetId) {
-  const item = (appState.media || []).find((asset) => asset.id === assetId);
+  const item = (appState.media || []).find(asset => asset.id === assetId);
   if (!item) return;
 
   if (item.fileUrl) {
@@ -1468,6 +1427,7 @@ function openMediaAsset(assetId) {
 
 async function refreshMediaFromRemote() {
   const media = await apiGetMedia();
+
   appState.media = media.map(asset => ({
     id: asset.assetId,
     title: asset.assetName,
@@ -1503,7 +1463,7 @@ function setupPillarButtons() {
 }
 
 function getActivePillar() {
-  const active = pillarBtns.find((btn) => btn.classList.contains("active"));
+  const active = pillarBtns.find(btn => btn.classList.contains("active"));
   return active?.dataset.pillar || "edu";
 }
 
@@ -1801,15 +1761,15 @@ function inspoToPost(title, type, description) {
     let pillar = "edu";
     let postType = "text";
 
-    if (["video", "image", "carousel", "visual"].includes(type.toLowerCase())) {
+    if (["video", "image", "carousel", "visual"].includes(String(type).toLowerCase())) {
       platform = "instagram";
       pillar = "aware";
-      postType = type.toLowerCase() === "video" ? "video" : "carousel";
-    } else if (type.toLowerCase() === "trend") {
+      postType = String(type).toLowerCase() === "video" ? "video" : "carousel";
+    } else if (String(type).toLowerCase() === "trend") {
       platform = "both";
       pillar = "engage";
       postType = "text";
-    } else if (type.toLowerCase() === "article") {
+    } else if (String(type).toLowerCase() === "article") {
       platform = "linkedin";
       pillar = "edu";
       postType = "article";
@@ -1872,10 +1832,7 @@ async function syncRemoteIfConfigured() {
       }));
     }
 
-    if (appState.posts.length) {
-      calendarCursor = new Date(appState.posts[0].date || new Date());
-    }
-
+    calendarCursor = getInitialCalendarCursor();
     persistLocalState();
     rerenderAll();
     showToast("Connected", "Google Sheets data loaded.", "ph-cloud-check", "text-[#00ffaa]");
@@ -1899,7 +1856,6 @@ async function apiGet(action) {
   });
 
   if (!response.ok) throw new Error(`Request failed: ${response.status}`);
-
   const result = await response.json();
   if (!result.ok) throw new Error(result.error || "Unknown Apps Script error");
   return result;
@@ -1914,7 +1870,6 @@ async function apiPost(action, payload = {}) {
   });
 
   if (!response.ok) throw new Error(`Request failed: ${response.status}`);
-
   const result = await response.json();
   if (!result.ok) throw new Error(result.error || "Unknown Apps Script error");
   return result;
@@ -1990,11 +1945,7 @@ function renderQueue(queueItems) {
   const items = (queueItems || []).slice(0, 3);
 
   queueList.innerHTML = items.map(item => {
-    const pillarColor =
-      item.pillar === "edu" ? "#00f0ff" :
-      item.pillar === "promo" ? "#b25fff" :
-      item.pillar === "engage" ? "#ffd700" :
-      "#00ffaa";
+    const color = pillarColor(item.pillar);
 
     const platformIcons =
       item.platform === "both"
@@ -2003,7 +1954,7 @@ function renderQueue(queueItems) {
         ? `<div class="text-gray-400"><i class="ph-fill ph-instagram-logo"></i></div>`
         : `<div class="text-gray-400"><i class="ph-fill ph-linkedin-logo"></i></div>`;
 
-    const dateParts = (item.queueDateLabel || "").split(" ");
+    const dateParts = String(item.queueDateLabel || "").split(" ");
     const month = dateParts[0] || "";
     const day = dateParts[1] || "";
 
@@ -2011,7 +1962,7 @@ function renderQueue(queueItems) {
       <div class="bg-[#181125] border border-white/5 rounded-xl p-4 flex gap-4 items-center cursor-pointer hover:border-white/10 transition-colors"
            onclick="openModalById('${escapeHtml(item.postId)}')">
         <div class="bg-[#120c1d] rounded-lg w-12 h-12 flex flex-col items-center justify-center shrink-0"
-             style="color:${pillarColor}; border:1px solid ${pillarColor}33;">
+             style="color:${color}; border:1px solid ${color}33;">
           <span class="text-[9px] font-bold uppercase">${month}</span>
           <span class="text-sm font-bold">${day}</span>
         </div>
@@ -2030,22 +1981,11 @@ function renderQueue(queueItems) {
   if (badge) badge.textContent = `${items.length} Scheduled`;
 }
 
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = String(reader.result || "");
-      resolve(result.split(",")[1] || "");
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
 function loadLocalState() {
   try {
     const raw = localStorage.getItem(APP_CONFIG.STORAGE_KEY);
     if (!raw) return structuredCloneState(DEFAULT_STATE);
+
     const parsed = JSON.parse(raw);
     return {
       posts: Array.isArray(parsed.posts) ? parsed.posts : structuredCloneState(DEFAULT_STATE.posts),
@@ -2064,6 +2004,18 @@ function persistLocalState() {
 
 function structuredCloneState(obj) {
   return JSON.parse(JSON.stringify(obj));
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result || "");
+      resolve(result.split(",")[1] || "");
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
 function seedStars() {
@@ -2123,11 +2075,49 @@ function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
 
+function laneY(pillar) {
+  return pillar === "edu" ? 220 :
+         pillar === "promo" ? 480 :
+         pillar === "aware" ? 760 :
+         1040;
+}
+
+function pillarPretty(pillar) {
+  return pillar === "edu" ? "Education" :
+         pillar === "promo" ? "Promo" :
+         pillar === "engage" ? "Engagement" :
+         "Awareness";
+}
+
+function pillarColor(pillar) {
+  return pillar === "edu" ? "#00f0ff" :
+         pillar === "promo" ? "#b25fff" :
+         pillar === "engage" ? "#ffd700" :
+         "#00ffaa";
+}
+
+function constellationPostIcon(postType) {
+  if (postType === "video") return "ph-video-camera";
+  if (postType === "carousel") return "ph-images";
+  if (postType === "article") return "ph-link";
+  if (postType === "poll") return "ph-chart-bar";
+  if (postType === "text") return "ph-text-aa";
+  return "ph-image";
+}
+
+function prettyPostType(postType) {
+  if (postType === "video") return "Video";
+  if (postType === "carousel") return "Carousel";
+  if (postType === "article") return "Article";
+  if (postType === "poll") return "Poll";
+  if (postType === "text") return "Text";
+  return "Image";
+}
+
 function formatLedgerDate(value) {
   const d = value ? new Date(value) : null;
   if (!d || isNaN(d)) return "No date";
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) + " • " +
-         d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  return `${d.toLocaleDateString("en-US", { month: "short", day: "numeric" })} • ${d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
 }
 
 function formatShortDate(value) {
@@ -2201,6 +2191,5 @@ window.openModal = function(title = "", platform = "linkedin", pillarClass = "ed
   );
 };
 </script>
-
 </body>
 </html>
