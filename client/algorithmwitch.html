@@ -916,8 +916,11 @@ const DEFAULT_STATE = {
       date: "2024-10-02T10:00",
       status: "published",
       postType: "image",
-      description:
-        "Understanding how photovoltaic cells convert sunlight into electricity. A deep dive into the physics behind clean energy generation and why silicon wafers are the backbone of modern solar technology."
+      description: "Understanding how photovoltaic cells convert sunlight into electricity. A deep dive into the physics behind clean energy generation and why silicon wafers are the backbone of modern solar technology.",
+      assetId: "",
+      hubTitle: "Solar Tech 101",
+      hubPillarLabel: "edu",
+      mediaLabel: ""
     },
     {
       id: "post-002",
@@ -927,8 +930,11 @@ const DEFAULT_STATE = {
       date: "2024-10-05T14:30",
       status: "scheduled",
       postType: "video",
-      description:
-        "Beat the winter energy spike! ☃️ Install before December 1st and save 20% on your entire solar system. Limited spots available. DM us SOLAR20 to claim your discount today!"
+      description: "Beat the winter energy spike! ☃️ Install before December 1st and save 20% on your entire solar system. Limited spots available. DM us SOLAR20 to claim your discount today!",
+      assetId: "",
+      hubTitle: "Winter Savings",
+      hubPillarLabel: "promo",
+      mediaLabel: ""
     },
     {
       id: "post-003",
@@ -938,8 +944,11 @@ const DEFAULT_STATE = {
       date: "2024-10-09T09:00",
       status: "draft",
       postType: "article",
-      description:
-        "Our annual sustainability report is here. 47% reduction in carbon footprint across our client installations. 12,000 tons of CO2 offset this year alone."
+      description: "Our annual sustainability report is here. 47% reduction in carbon footprint across our client installations. 12,000 tons of CO2 offset this year alone.",
+      assetId: "",
+      hubTitle: "Eco-Vanguard",
+      hubPillarLabel: "aware",
+      mediaLabel: ""
     },
     {
       id: "post-004",
@@ -949,8 +958,11 @@ const DEFAULT_STATE = {
       date: "2024-10-14T11:00",
       status: "scheduled",
       postType: "poll",
-      description:
-        "What's your #1 priority when considering solar? A) Lower energy bills B) Environmental impact C) Energy independence D) Home value increase. Vote in our poll and share why in the comments!"
+      description: "What's your #1 priority when considering solar? A) Lower energy bills B) Environmental impact C) Energy independence D) Home value increase. Vote in our poll and share why in the comments!",
+      assetId: "",
+      hubTitle: "Future Focus",
+      hubPillarLabel: "engage",
+      mediaLabel: ""
     },
     {
       id: "post-005",
@@ -960,8 +972,11 @@ const DEFAULT_STATE = {
       date: "2024-10-18T16:00",
       status: "scheduled",
       postType: "carousel",
-      description:
-        "A practical maintenance guide for keeping solar panels performing well through seasonal changes."
+      description: "A practical maintenance guide for keeping solar panels performing well through seasonal changes.",
+      assetId: "",
+      hubTitle: "Solar Tech 101",
+      hubPillarLabel: "edu",
+      mediaLabel: ""
     },
     {
       id: "post-006",
@@ -971,8 +986,11 @@ const DEFAULT_STATE = {
       date: "2024-10-22T08:30",
       status: "draft",
       postType: "image",
-      description:
-        "Reveal the Q4 offer with a clean visual and a clear CTA tied to scheduling or consultation."
+      description: "Reveal the Q4 offer with a clean visual and a clear CTA tied to scheduling or consultation.",
+      assetId: "",
+      hubTitle: "Winter Savings",
+      hubPillarLabel: "promo",
+      mediaLabel: ""
     },
     {
       id: "post-007",
@@ -982,8 +1000,11 @@ const DEFAULT_STATE = {
       date: "2024-10-25T13:00",
       status: "published",
       postType: "carousel",
-      description:
-        "A quick infographic carousel with digestible wind energy facts and performance comparisons."
+      description: "A quick infographic carousel with digestible wind energy facts and performance comparisons.",
+      assetId: "",
+      hubTitle: "Eco-Vanguard",
+      hubPillarLabel: "aware",
+      mediaLabel: ""
     },
     {
       id: "post-008",
@@ -993,8 +1014,11 @@ const DEFAULT_STATE = {
       date: "2024-10-29T15:00",
       status: "draft",
       postType: "text",
-      description:
-        "Invite the audience into a Q&A around clean energy myths, concerns, and practical adoption questions."
+      description: "Invite the audience into a Q&A around clean energy myths, concerns, and practical adoption questions.",
+      assetId: "",
+      hubTitle: "Future Focus",
+      hubPillarLabel: "engage",
+      mediaLabel: ""
     }
   ],
   inspo: [
@@ -1002,8 +1026,7 @@ const DEFAULT_STATE = {
       id: "inspo-001",
       title: "The Future of Solar: 2024 Industry Report",
       type: "article",
-      description:
-        "New breakthroughs in perovskite solar cells promise 40% efficiency gains. Major energy companies are investing heavily..."
+      description: "New breakthroughs in perovskite solar cells promise 40% efficiency gains. Major energy companies are investing heavily..."
     },
     {
       id: "inspo-002",
@@ -1023,19 +1046,22 @@ const DEFAULT_STATE = {
       id: "asset-001",
       title: "Solar Physics Infographic",
       type: "image",
-      postId: "post-001"
+      postId: "post-001",
+      campaign: "Solar Tech 101"
     },
     {
       id: "asset-002",
       title: "Winter Promo Video",
       type: "video",
-      postId: "post-002"
+      postId: "post-002",
+      campaign: "Winter Savings"
     },
     {
       id: "asset-003",
       title: "Wind Turbine Stats",
       type: "carousel",
-      postId: "post-007"
+      postId: "post-007",
+      campaign: "Eco-Vanguard"
     }
   ]
 };
@@ -1154,6 +1180,39 @@ function setupMediaFilters() {
   }
 }
 
+function setupMediaUpload() {
+  if (!mediaUploadBtn || !mediaUploadInput) return;
+
+  mediaUploadBtn.addEventListener("click", () => mediaUploadInput.click());
+
+  mediaUploadInput.addEventListener("change", async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const base64Data = await fileToBase64(file);
+
+      await apiPost("uploadMedia", {
+        fileName: file.name,
+        mimeType: file.type,
+        base64Data,
+        assetBadge: file.type.startsWith("video/") ? "Reel" : "Image",
+        assetMeta: "",
+        linkedPostId: "",
+        campaign: ""
+      });
+
+      showToast("Uploaded", "Media uploaded to Drive.", "ph-cloud-arrow-up", "text-[#00ffaa]");
+      await refreshMediaFromRemote();
+    } catch (err) {
+      console.error(err);
+      showToast("Upload failed", err.message || "Could not upload media.", "ph-warning", "text-yellow-400");
+    } finally {
+      mediaUploadInput.value = "";
+    }
+  });
+}
+
 function setupModalMediaUpload() {
   if (!modalMediaUploadTrigger || !modalMediaUploadInput) return;
 
@@ -1169,7 +1228,6 @@ function setupModalMediaUpload() {
       showToast("Uploading", "Uploading media for this post...", "ph-upload-simple", "text-[#c77dff]");
 
       const base64Data = await fileToBase64(file);
-
       const linkedPostId = currentEditingPostId || "";
       const campaign = titleInput.value.trim() || "";
 
@@ -1205,6 +1263,44 @@ function setupModalMediaUpload() {
   });
 }
 
+function setupInspoAddLink() {
+  if (!inspoAddLinkBtn) return;
+
+  inspoAddLinkBtn.addEventListener("click", async () => {
+    const title = window.prompt("Link title");
+    if (!title) return;
+
+    const url = window.prompt("URL");
+    if (!url) return;
+
+    const summary = window.prompt("Short summary") || "";
+    const type = window.prompt("Type: article, video, trend", "article") || "article";
+
+    const payload = {
+      inspoType: type,
+      title,
+      sourceLabel: "Added manually",
+      summary,
+      domainOrMeta: url,
+      suggestedPlatform: type === "video" ? "instagram" : "linkedin",
+      suggestedPillar: type === "trend" ? "engage" : "edu",
+      createPostTitle: title,
+      createPostDescription: summary,
+      createPostType: type === "video" ? "video" : type === "article" ? "article" : "text",
+      notes: url
+    };
+
+    try {
+      await apiSaveInspo(payload);
+      await syncRemoteIfConfigured();
+      showToast("Saved", "Link added to Inspo.", "ph-check", "text-[#00ffaa]");
+    } catch (err) {
+      console.error(err);
+      showToast("Save failed", err.message || "Could not add inspo link.", "ph-warning", "text-yellow-400");
+    }
+  });
+}
+
 function populateMediaFilterDropdown() {
   if (!mediaFilterSelect) return;
 
@@ -1222,10 +1318,6 @@ function populateMediaFilterDropdown() {
     options = [`<option value="all">All Campaigns</option>`].concat(
       campaigns.map(campaign => `<option value="${escapeHtml(campaign)}">${escapeHtml(campaign)}</option>`)
     );
-  }
-
-  if (currentMediaFilterMode === "all") {
-    options = [`<option value="all">All Assets</option>`];
   }
 
   mediaFilterSelect.innerHTML = options.join("");
@@ -1303,7 +1395,7 @@ function renderMedia() {
     `;
   }).join("");
 }
-    
+
 function openMediaAsset(assetId) {
   const item = (appState.media || []).find((asset) => asset.id === assetId);
   if (!item) return;
@@ -1314,39 +1406,6 @@ function openMediaAsset(assetId) {
   }
 
   showToast("Media", item.title || "Asset selected", "ph-image", "text-[#00ffaa]");
-}
-
-function setupMediaUpload() {
-  if (!mediaUploadBtn || !mediaUploadInput) return;
-
-  mediaUploadBtn.addEventListener("click", () => mediaUploadInput.click());
-
-  mediaUploadInput.addEventListener("change", async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const base64Data = await fileToBase64(file);
-
-      await apiPost("uploadMedia", {
-        fileName: file.name,
-        mimeType: file.type,
-        base64Data,
-        assetBadge: file.type.startsWith("video/") ? "Reel" : "Image",
-        assetMeta: "",
-        linkedPostId: "",
-        campaign: ""
-      });
-
-      showToast("Uploaded", "Media uploaded to Drive.", "ph-cloud-arrow-up", "text-[#00ffaa]");
-      await refreshMediaFromRemote();
-    } catch (err) {
-      console.error(err);
-      showToast("Upload failed", err.message || "Could not upload media.", "ph-warning", "text-yellow-400");
-    } finally {
-      mediaUploadInput.value = "";
-    }
-  });
 }
 
 async function refreshMediaFromRemote() {
@@ -1465,6 +1524,8 @@ function setPillar(pillar) {
 }
 
 function setupModalControls() {
+  if (!modal) return;
+
   modal.addEventListener("click", (e) => {
     if (e.target === modal) closeModal();
   });
@@ -1489,11 +1550,11 @@ function openModal(
   currentEditingPostId = postId;
   currentModalAsset = null;
 
-  titleInput.value = title;
-  platSelect.value = platform || "linkedin";
-  dateInput.value = date || new Date().toISOString().slice(0, 16);
-  statusSelect.value = status || "draft";
-  postTypeSelect.value = postType || "text";
+  if (titleInput) titleInput.value = title;
+  if (platSelect) platSelect.value = platform || "linkedin";
+  if (dateInput) dateInput.value = date || new Date().toISOString().slice(0, 16);
+  if (statusSelect) statusSelect.value = status || "draft";
+  if (postTypeSelect) postTypeSelect.value = postType || "text";
   if (descInput) descInput.value = description || "";
   setPillar(pillarClass || "edu");
 
@@ -1509,12 +1570,12 @@ function openModal(
     if (modalMediaStatus) modalMediaStatus.textContent = "No media linked";
   }
 
-  modal.classList.add("active");
+  if (modal) modal.classList.add("active");
   document.body.style.overflow = "hidden";
 }
 
 function closeModal() {
-  modal.classList.remove("active");
+  if (modal) modal.classList.remove("active");
   document.body.style.overflow = "";
   currentEditingPostId = null;
   currentModalAsset = null;
@@ -1586,44 +1647,6 @@ function setupSaveHandler() {
         console.error(err);
         showToast("Local only", "Save worked locally. Remote sync failed.", "ph-warning", "text-yellow-400");
       }
-    }
-  });
-}
-
-function setupInspoAddLink() {
-  if (!inspoAddLinkBtn) return;
-
-  inspoAddLinkBtn.addEventListener("click", async () => {
-    const title = window.prompt("Link title");
-    if (!title) return;
-
-    const url = window.prompt("URL");
-    if (!url) return;
-
-    const summary = window.prompt("Short summary") || "";
-    const type = window.prompt("Type: article, video, trend", "article") || "article";
-
-    const payload = {
-      inspoType: type,
-      title,
-      sourceLabel: "Added manually",
-      summary,
-      domainOrMeta: url,
-      suggestedPlatform: type === "video" ? "instagram" : "linkedin",
-      suggestedPillar: type === "trend" ? "engage" : "edu",
-      createPostTitle: title,
-      createPostDescription: summary,
-      createPostType: type === "video" ? "video" : type === "article" ? "article" : "text",
-      notes: url
-    };
-
-    try {
-      await apiSaveInspo(payload);
-      await syncRemoteIfConfigured();
-      showToast("Saved", "Link added to Inspo.", "ph-check", "text-[#00ffaa]");
-    } catch (err) {
-      console.error(err);
-      showToast("Save failed", err.message || "Could not add inspo link.", "ph-warning", "text-yellow-400");
     }
   });
 }
@@ -1716,14 +1739,6 @@ async function deletePostById(postId) {
   }
 }
 
-async function apiSaveInspo(inspo) {
-  return apiPost("saveInspo", inspo);
-}
-
-async function apiGetCampaigns() {
-  const result = await apiGet("getCampaigns");
-  return result.items || [];
-}
 async function duplicatePostById(postId) {
   const source = appState.posts.find((p) => p.id === postId);
   if (!source) return;
@@ -1810,14 +1825,13 @@ function aiGenerate(type) {
   const captionField = descInput;
 
   const aiText = {
-    caption:
-      "Here’s the core idea in plain language with a sharper hook, a clearer takeaway, and a stronger call to action.",
-    keywords:
-      "content strategy, publishing workflow, campaign planning, content calendar, platform strategy, editorial system, social media operations, content engine",
-    rewrite:
-      "This version sharpens the point, clarifies the value, and makes the post easier to understand at a glance.",
+    caption: "Here’s the core idea in plain language with a sharper hook, a clearer takeaway, and a stronger call to action.",
+    keywords: "content strategy, publishing workflow, campaign planning, content calendar, platform strategy, editorial system, social media operations, content engine",
+    rewrite: "This version sharpens the point, clarifies the value, and makes the post easier to understand at a glance.",
     emoji: "✨ 📈 🪄 📣 🧠 🔮"
   };
+
+  if (!toast || !toastText) return;
 
   toastText.textContent =
     type === "keywords" ? "Generating keywords..." :
@@ -1857,11 +1871,11 @@ function showToast(title, message, iconClass = "ph-sparkle", colorClass = "text-
   const toastText = document.getElementById("ai-toast-text");
   const iconEl = document.getElementById("ai-toast-icon");
 
+  if (!toast) return;
+
   if (toastTitle) toastTitle.textContent = title;
   if (toastText) toastText.textContent = message;
-  if (iconEl) {
-    iconEl.className = `ph-bold ${iconClass} ${colorClass} text-lg`;
-  }
+  if (iconEl) iconEl.className = `ph-bold ${iconClass} ${colorClass} text-lg`;
 
   toast.classList.remove("opacity-0", "pointer-events-none");
   setTimeout(() => {
@@ -1932,57 +1946,53 @@ function setupConstellationInteractions() {
     updateTransform();
   });
 
-  viewport.addEventListener(
-    "wheel",
-    (e) => {
-      e.preventDefault();
-      const delta = e.deltaY * -0.001;
-      const rect = viewport.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
-      const oldScale = scale;
+  viewport.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    const delta = e.deltaY * -0.001;
+    const rect = viewport.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    const oldScale = scale;
 
-      scale = Math.min(Math.max(0.2, scale + delta), 2);
+    scale = Math.min(Math.max(0.2, scale + delta), 2);
 
-      if (scale !== oldScale) {
-        const ratio = 1 - scale / oldScale;
-        panX += (mouseX - panX) * ratio;
-        panY += (mouseY - panY) * ratio;
-        updateTransform();
-      }
-    },
-    { passive: false }
-  );
+    if (scale !== oldScale) {
+      const ratio = 1 - scale / oldScale;
+      panX += (mouseX - panX) * ratio;
+      panY += (mouseY - panY) * ratio;
+      updateTransform();
+    }
+  }, { passive: false });
 
-viewport.addEventListener("touchstart", (e) => {
-  if (e.target.closest(".post-node, .hub-node")) return;
-  e.preventDefault();
+  viewport.addEventListener("touchstart", (e) => {
+    if (e.target.closest(".post-node, .hub-node")) return;
+    e.preventDefault();
 
-  if (e.touches.length === 1) {
-    isDragging = true;
-    startX = e.touches[0].clientX - panX;
-    startY = e.touches[0].clientY - panY;
-  } else if (e.touches.length === 2) {
-    isDragging = false;
-    touchStartDistance = getTouchDistance(e.touches);
-    touchStartScale = scale;
-  }
-}, { passive: false });
+    if (e.touches.length === 1) {
+      isDragging = true;
+      startX = e.touches[0].clientX - panX;
+      startY = e.touches[0].clientY - panY;
+    } else if (e.touches.length === 2) {
+      isDragging = false;
+      touchStartDistance = getTouchDistance(e.touches);
+      touchStartScale = scale;
+    }
+  }, { passive: false });
 
-viewport.addEventListener("touchmove", (e) => {
-  e.preventDefault();
+  viewport.addEventListener("touchmove", (e) => {
+    e.preventDefault();
 
-  if (e.touches.length === 1 && isDragging) {
-    panX = e.touches[0].clientX - startX;
-    panY = e.touches[0].clientY - startY;
-    updateTransform();
-  } else if (e.touches.length === 2 && touchStartDistance) {
-    const newDistance = getTouchDistance(e.touches);
-    const nextScale = touchStartScale * (newDistance / touchStartDistance);
-    scale = Math.min(Math.max(0.2, nextScale), 2);
-    updateTransform();
-  }
-}, { passive: false });
+    if (e.touches.length === 1 && isDragging) {
+      panX = e.touches[0].clientX - startX;
+      panY = e.touches[0].clientY - startY;
+      updateTransform();
+    } else if (e.touches.length === 2 && touchStartDistance) {
+      const newDistance = getTouchDistance(e.touches);
+      const nextScale = touchStartScale * (newDistance / touchStartDistance);
+      scale = Math.min(Math.max(0.2, nextScale), 2);
+      updateTransform();
+    }
+  }, { passive: false });
 
   viewport.addEventListener("touchend", () => {
     isDragging = false;
@@ -2079,22 +2089,28 @@ async function syncRemoteIfConfigured() {
         date: post.scheduledAt,
         status: post.status,
         postType: post.postType,
-        description: post.description || ""
+        description: post.description || "",
+        assetId: post.assetId || "",
+        hubTitle: post.hubTitle || "",
+        hubPillarLabel: post.hubPillarLabel || "",
+        mediaLabel: post.mediaLabel || "",
+        createdFromInspoId: post.createdFromInspoId || ""
       }));
     }
 
     if (Array.isArray(media) && media.length) {
-    appState.media = media.map(asset => ({
-      id: asset.assetId,
-      title: asset.assetName,
-      type: asset.assetType,
-      postId: asset.linkedPostId,
-      assetBadge: asset.assetBadge || "",
-      meta: asset.assetMeta || "",
-      status: asset.assetStatus || "",
-      placeholderIcon: asset.placeholderIcon || "",
-      fileUrl: asset.fileUrl || ""
-    }));
+      appState.media = media.map(asset => ({
+        id: asset.assetId,
+        title: asset.assetName,
+        type: asset.assetType,
+        postId: asset.linkedPostId,
+        assetBadge: asset.assetBadge || "",
+        meta: asset.assetMeta || "",
+        status: asset.assetStatus || "",
+        placeholderIcon: asset.placeholderIcon || "",
+        fileUrl: asset.fileUrl || "",
+        campaign: asset.campaign || ""
+      }));
     }
 
     if (Array.isArray(inspo) && inspo.length) {
@@ -2107,6 +2123,7 @@ async function syncRemoteIfConfigured() {
     }
 
     persistLocalState();
+    populateMediaFilterDropdown();
     renderQueue(queue || []);
     renderMedia();
     setupNestedButtonProtection();
@@ -2160,7 +2177,7 @@ async function apiPost(action, payload = {}) {
 
   return result;
 }
-    
+
 async function apiGetPosts() {
   const result = await apiGet("getPosts");
   return result.items || [];
@@ -2195,7 +2212,12 @@ async function apiSavePost(post) {
     scheduledAt: post.date || "",
     status: post.status || "draft",
     postType: post.postType || "text",
-    description: post.description || ""
+    description: post.description || "",
+    assetId: post.assetId || "",
+    hubTitle: post.hubTitle || "",
+    hubPillarLabel: post.hubPillarLabel || "",
+    mediaLabel: post.mediaLabel || "",
+    createdFromInspoId: post.createdFromInspoId || ""
   });
 }
 
@@ -2215,9 +2237,18 @@ async function apiDuplicatePost(postId) {
       scheduledAt: source.date,
       status: "draft",
       postType: source.postType,
-      description: source.description
+      description: source.description,
+      assetId: source.assetId || "",
+      hubTitle: source.hubTitle || "",
+      hubPillarLabel: source.hubPillarLabel || "",
+      mediaLabel: source.mediaLabel || "",
+      createdFromInspoId: source.createdFromInspoId || ""
     }
   });
+}
+
+async function apiSaveInspo(inspo) {
+  return apiPost("saveInspo", inspo);
 }
 
 function renderQueue(queueItems) {
@@ -2328,7 +2359,7 @@ window.openModal = function(title = "", platform = "linkedin", pillarClass = "ed
     matched?.id || null
   );
 };
-    
+
 window.openMediaAsset = openMediaAsset;
 window.closeModal = closeModal;
 window.switchView = switchView;
@@ -2337,6 +2368,5 @@ window.inspoToPost = inspoToPost;
 window.setPillar = setPillar;
 window.openModalFromQueue = openModalFromQueue;
 </script>
-
 </body>
 </html>
