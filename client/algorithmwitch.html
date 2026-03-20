@@ -1156,6 +1156,12 @@ function renderMedia() {
 function openMediaAsset(assetId) {
   const item = (appState.media || []).find((asset) => asset.id === assetId);
   if (!item) return;
+
+  if (item.fileUrl) {
+    window.open(item.fileUrl, "_blank", "noopener,noreferrer");
+    return;
+  }
+
   showToast("Media", item.title || "Asset selected", "ph-image", "text-[#00ffaa]");
 }
 
