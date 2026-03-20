@@ -61,7 +61,7 @@
             background: #181125 !important;
             border: 1px solid var(--panel-border) !important;
             border-radius: 0.75rem !important;
-            transition: all 0.2s ease;
+            transition: all 0.2s ease;g
         }
         .glass-card:hover {
             border-color: rgba(255, 255, 255, 0.1) !important;
@@ -1289,14 +1289,12 @@ function renderMedia() {
         <div class="aspect-square bg-[#120c1d] border-b border-white/5 flex items-center justify-center relative p-4">
           <i class="ph-fill ${icon} text-gray-600 text-5xl"></i>
           <span class="absolute top-3 right-3 px-2 py-1 bg-[#181125] border border-white/5 rounded text-[8px] uppercase font-bold text-gray-300">${escapeHtml(badge)}</span>
-
           <div class="absolute inset-0 bg-[#2d1b4e]/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
             <button type="button" class="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors" onclick="openMediaAsset('${escapeHtml(item.id)}')">
               <i class="ph-bold ph-arrows-out-simple text-xl"></i>
             </button>
           </div>
         </div>
-
         <div class="p-4">
           <p class="text-white text-sm font-semibold truncate mb-1">${escapeHtml(item.title || "Untitled asset")}</p>
           <p class="text-gray-500 text-[10px] font-medium">${escapeHtml(metaLine)}</p>
@@ -1305,39 +1303,7 @@ function renderMedia() {
     `;
   }).join("");
 }
-
-  grid.innerHTML = items.map((item) => {
-    const type = (item.type || "").toLowerCase();
-    const icon =
-      type === "video" ? "ph-video" :
-      type === "carousel" ? "ph-images" :
-      "ph-image";
-
-    const badge =
-      type === "video" ? "Reel" :
-      type === "carousel" ? "Carousel" :
-      "IG Post";
-
-    return `
-      <div class="glass-card overflow-hidden group">
-        <div class="aspect-square bg-[#120c1d] border-b border-white/5 flex items-center justify-center relative p-4">
-          <i class="ph-fill ${icon} text-gray-600 text-5xl"></i>
-          <span class="absolute top-3 right-3 px-2 py-1 bg-[#181125] border border-white/5 rounded text-[8px] uppercase font-bold text-gray-300">${escapeHtml(item.assetBadge || badge)}</span>
-          <div class="absolute inset-0 bg-[#2d1b4e]/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
-            <button type="button" class="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors" onclick="openMediaAsset('${escapeHtml(item.id)}')">
-              <i class="ph-bold ph-arrows-out-simple text-xl"></i>
-            </button>
-          </div>
-        </div>
-        <div class="p-4">
-          <p class="text-white text-sm font-semibold truncate mb-1">${escapeHtml(item.title || "Untitled asset")}</p>
-          <p class="text-gray-500 text-[10px] font-medium">${escapeHtml(item.meta || "")}</p>
-        </div>
-      </div>
-    `;
-  }).join("");
-}
-
+    
 function openMediaAsset(assetId) {
   const item = (appState.media || []).find((asset) => asset.id === assetId);
   if (!item) return;
@@ -1373,7 +1339,6 @@ function setupMediaUpload() {
       });
 
       showToast("Uploaded", "Media uploaded to Drive.", "ph-cloud-arrow-up", "text-[#00ffaa]");
-
       await refreshMediaFromRemote();
     } catch (err) {
       console.error(err);
@@ -1402,32 +1367,6 @@ async function refreshMediaFromRemote() {
   persistLocalState();
   populateMediaFilterDropdown();
   renderMedia();
-}
-
-      showToast("Uploaded", "Media uploaded to Drive.", "ph-cloud-arrow-up", "text-[#00ffaa]");
-
-      const media = await apiGetMedia();
-        appState.media = media.map(asset => ({
-          id: asset.assetId,
-          title: asset.assetName,
-          type: asset.assetType,
-          postId: asset.linkedPostId,
-          assetBadge: asset.assetBadge || "",
-          meta: asset.assetMeta || "",
-          status: asset.assetStatus || "",
-          placeholderIcon: asset.placeholderIcon || "",
-          fileUrl: asset.fileUrl || ""
-        }));
-
-      persistLocalState();
-      renderMedia();
-    } catch (err) {
-      console.error(err);
-      showToast("Upload failed", err.message || "Could not upload media.", "ph-warning", "text-yellow-400");
-    } finally {
-      uploadInput.value = "";
-    }
-  });
 }
 
 function fileToBase64(file) {
