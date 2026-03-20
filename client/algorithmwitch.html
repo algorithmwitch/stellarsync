@@ -294,9 +294,12 @@
       <h2 class="text-4xl font-bold text-white tracking-tight">Inspo Vault</h2>
       <p class="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mt-2">Saved Links &amp; References</p>
     </div>
-    <button id="inspo-add-link-btn" class="px-5 py-2 bg-[#2d1b4e] border border-[#a855f7]/30 rounded-xl text-xs text-white font-bold hover:bg-[#3d246c] transition-colors shadow-sm">
-      <i class="ph-bold ph-plus mr-1"></i> Add Link
-    </button>
+<div class="flex gap-2 items-center">
+  <input id="inspo-link-input" class="form-input w-[320px]" placeholder="Paste a link..." />
+  <button id="inspo-add-link-btn" class="px-5 py-2 bg-[#2d1b4e] border border-[#a855f7]/30 rounded-xl text-xs text-white font-bold hover:bg-[#3d246c] transition-colors shadow-sm">
+    Add Link
+  </button>
+</div>
   </div>
 
   <div id="inspo-grid" class="grid grid-cols-3 gap-4 overflow-y-auto custom-scrollbar flex-1 pb-4 content-start">          
@@ -565,7 +568,7 @@
     </div>
 <script>
 const APP_CONFIG = {
-  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbxTanf2NgXnTNDILj3ECPG-etXHodowevzojk1ds-KACNFZ3tmpEBWzS9e_CuqNk9t5/exec",
+  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbyFdAOY57mt6KtDWHs3pixt80KuDsiczkg7hrBElq2v1ArT81bGEdtjvnIz6FaUQJvl/exec",
   ENABLE_REMOTE_SYNC: true,
   STORAGE_KEY: "stellarsync_local_state_v3"
 };
@@ -1283,15 +1286,14 @@ function getCurrentModalCampaign() {
 }
 
 function setupInspoAddLink() {
-  if (!inspoAddLinkBtn) return;
+  const input = document.getElementById("inspo-link-input");
+  if (!inspoAddLinkBtn || !input) return;
 
   inspoAddLinkBtn.addEventListener("click", async () => {
-    const title = window.prompt("Link title");
-    if (!title) return;
-
-    const url = window.prompt("URL");
+    const url = input.value.trim();
     if (!url) return;
 
+    const title = window.prompt("Link title") || url;
     const summary = window.prompt("Short summary") || "";
     const type = window.prompt("Type: article, video, trend", "article") || "article";
 
@@ -1311,6 +1313,7 @@ function setupInspoAddLink() {
 
     try {
       await apiSaveInspo(payload);
+      input.value = "";
       await syncRemoteIfConfigured();
       showToast("Saved", "Link added to Inspo.", "ph-check", "text-[#00ffaa]");
     } catch (err) {
@@ -1319,7 +1322,7 @@ function setupInspoAddLink() {
     }
   });
 }
-
+    
 function populateMediaFilterDropdown() {
   if (!mediaFilterSelect) return;
 
