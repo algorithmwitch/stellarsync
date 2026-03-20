@@ -1853,17 +1853,17 @@ async function syncRemoteIfConfigured() {
     }
 
     if (Array.isArray(media) && media.length) {
-      appState.media = media.map(asset => ({
-        id: asset.assetId,
-        title: asset.assetName,
-        type: asset.assetType,
-        postId: asset.linkedPostId,
-        assetBadge: asset.assetBadge || "",
-        meta: asset.assetMeta || "",
-        status: asset.assetStatus || "",
-        placeholderIcon: asset.placeholderIcon || "",
-        fileUrl: asset.fileUrl || ""
-      }));
+    appState.media = media.map(asset => ({
+      id: asset.assetId,
+      title: asset.assetName,
+      type: asset.assetType,
+      postId: asset.linkedPostId,
+      assetBadge: asset.assetBadge || "",
+      meta: asset.assetMeta || "",
+      status: asset.assetStatus || "",
+      placeholderIcon: asset.placeholderIcon || "",
+      fileUrl: asset.fileUrl || ""
+    }));
     }
 
     if (Array.isArray(inspo) && inspo.length) {
