@@ -1154,6 +1154,57 @@ function setupMediaFilters() {
   }
 }
 
+function setupModalMediaUpload() {
+  if (!modalMediaUploadTrigger || !modalMediaUploadInput) return;
+
+  modalMediaUploadTrigger.addEventListener("click", () => {
+    modalMediaUploadInput.click();
+  });
+
+  modalMediaUploadInput.addEventListener("change", async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      showToast("Uploading", "Uploading media for this post...", "ph-upload-simple", "text-[#c77dff]");
+
+      const base64Data = await fileToBase64(file);
+
+      const linkedPostId = currentEditingPostId || "";
+      const campaign = titleInput.value.trim() || "";
+
+      const result = await apiPost("uploadMedia", {
+        fileName: file.name,
+        mimeType: file.type,
+        base64Data,
+        assetBadge: file.type.startsWith("video/") ? "Reel" : "Image",
+        assetMeta: "",
+        linkedPostId,
+        campaign
+      });
+
+      currentModalAsset = {
+        id: result.asset.assetId,
+        title: result.asset.assetName,
+        type: result.asset.assetType,
+        fileUrl: result.asset.fileUrl
+      };
+
+      if (modalMediaStatus) {
+        modalMediaStatus.textContent = `${currentModalAsset.title} linked`;
+      }
+
+      await refreshMediaFromRemote();
+      showToast("Uploaded", "Media linked to this post.", "ph-check", "text-[#00ffaa]");
+    } catch (err) {
+      console.error(err);
+      showToast("Upload failed", err.message || "Could not upload post media.", "ph-warning", "text-yellow-400");
+    } finally {
+      modalMediaUploadInput.value = "";
+    }
+  });
+}
+
 function populateMediaFilterDropdown() {
   if (!mediaFilterSelect) return;
 
@@ -1300,14 +1351,11 @@ function openMediaAsset(assetId) {
 }
 
 function setupMediaUpload() {
-  const uploadBtn = document.getElementById("media-upload-btn");
-  const uploadInput = document.getElementById("media-upload-input");
+  if (!mediaUploadBtn || !mediaUploadInput) return;
 
-  if (!uploadBtn || !uploadInput) return;
+  mediaUploadBtn.addEventListener("click", () => mediaUploadInput.click());
 
-  uploadBtn.addEventListener("click", () => uploadInput.click());
-
-  uploadInput.addEventListener("change", async (e) => {
+  mediaUploadInput.addEventListener("change", async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -1318,10 +1366,43 @@ function setupMediaUpload() {
         fileName: file.name,
         mimeType: file.type,
         base64Data,
-        assetBadge: file.type.startsWith("video/") ? "Reel" : "IG Post",
+        assetBadge: file.type.startsWith("video/") ? "Reel" : "Image",
         assetMeta: "",
-        linkedPostId: ""
+        linkedPostId: "",
+        campaign: ""
       });
+
+      showToast("Uploaded", "Media uploaded to Drive.", "ph-cloud-arrow-up", "text-[#00ffaa]");
+
+      await refreshMediaFromRemote();
+    } catch (err) {
+      console.error(err);
+      showToast("Upload failed", err.message || "Could not upload media.", "ph-warning", "text-yellow-400");
+    } finally {
+      mediaUploadInput.value = "";
+    }
+  });
+}
+
+async function refreshMediaFromRemote() {
+  const media = await apiGetMedia();
+  appState.media = media.map(asset => ({
+    id: asset.assetId,
+    title: asset.assetName,
+    type: asset.assetType,
+    postId: asset.linkedPostId,
+    assetBadge: asset.assetBadge || "",
+    meta: asset.assetMeta || "",
+    status: asset.assetStatus || "",
+    placeholderIcon: asset.placeholderIcon || "",
+    fileUrl: asset.fileUrl || "",
+    campaign: asset.campaign || ""
+  }));
+
+  persistLocalState();
+  populateMediaFilterDropdown();
+  renderMedia();
+}
 
       showToast("Uploaded", "Media uploaded to Drive.", "ph-cloud-arrow-up", "text-[#00ffaa]");
 
@@ -1467,6 +1548,8 @@ function openModal(
   postId = null
 ) {
   currentEditingPostId = postId;
+  currentModalAsset = null;
+
   titleInput.value = title;
   platSelect.value = platform || "linkedin";
   dateInput.value = date || new Date().toISOString().slice(0, 16);
@@ -1474,6 +1557,18 @@ function openModal(
   postTypeSelect.value = postType || "text";
   if (descInput) descInput.value = description || "";
   setPillar(pillarClass || "edu");
+
+  const matched = (appState.posts || []).find(post => post.id === postId);
+  const linkedAsset = matched?.assetId
+    ? (appState.media || []).find(asset => asset.id === matched.assetId)
+    : null;
+
+  if (linkedAsset) {
+    currentModalAsset = linkedAsset;
+    if (modalMediaStatus) modalMediaStatus.textContent = `${linkedAsset.title} linked`;
+  } else {
+    if (modalMediaStatus) modalMediaStatus.textContent = "No media linked";
+  }
 
   modal.classList.add("active");
   document.body.style.overflow = "hidden";
@@ -1483,6 +1578,8 @@ function closeModal() {
   modal.classList.remove("active");
   document.body.style.overflow = "";
   currentEditingPostId = null;
+  currentModalAsset = null;
+  if (modalMediaStatus) modalMediaStatus.textContent = "No media linked";
 }
 
 function setupSaveHandler() {
@@ -1490,6 +1587,7 @@ function setupSaveHandler() {
 
   saveButton.setAttribute("type", "button");
   saveButton.removeAttribute("onclick");
+
   saveButton.addEventListener("click", async () => {
     const payload = {
       id: currentEditingPostId || generateId("post"),
@@ -1499,7 +1597,12 @@ function setupSaveHandler() {
       date: dateInput.value,
       status: statusSelect.value,
       postType: postTypeSelect.value,
-      description: descInput.value.trim()
+      description: descInput.value.trim(),
+      assetId: currentModalAsset?.id || "",
+      hubTitle: titleInput.value.trim(),
+      hubPillarLabel: getActivePillar(),
+      mediaLabel: currentModalAsset?.title || "",
+      createdFromInspoId: ""
     };
 
     if (!payload.title) {
@@ -1538,13 +1641,50 @@ function setupSaveHandler() {
     if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
       try {
         await apiSavePost(payload);
+        await syncRemoteIfConfigured();
         showToast("Synced", "Post synced to Google Sheets.", "ph-cloud-check", "text-[#00ffaa]");
       } catch (err) {
         console.error(err);
         showToast("Local only", "Save worked locally. Remote sync failed.", "ph-warning", "text-yellow-400");
       }
-    } else {
-      showToast("Sync not set", "Saved locally. Add Apps Script URL to enable sync.", "ph-plugs", "text-yellow-400");
+    }
+  });
+}
+
+function setupInspoAddLink() {
+  if (!inspoAddLinkBtn) return;
+
+  inspoAddLinkBtn.addEventListener("click", async () => {
+    const title = window.prompt("Link title");
+    if (!title) return;
+
+    const url = window.prompt("URL");
+    if (!url) return;
+
+    const summary = window.prompt("Short summary") || "";
+    const type = window.prompt("Type: article, video, trend", "article") || "article";
+
+    const payload = {
+      inspoType: type,
+      title,
+      sourceLabel: "Added manually",
+      summary,
+      domainOrMeta: url,
+      suggestedPlatform: type === "video" ? "instagram" : "linkedin",
+      suggestedPillar: type === "trend" ? "engage" : "edu",
+      createPostTitle: title,
+      createPostDescription: summary,
+      createPostType: type === "video" ? "video" : type === "article" ? "article" : "text",
+      notes: url
+    };
+
+    try {
+      await apiSaveInspo(payload);
+      await syncRemoteIfConfigured();
+      showToast("Saved", "Link added to Inspo.", "ph-check", "text-[#00ffaa]");
+    } catch (err) {
+      console.error(err);
+      showToast("Save failed", err.message || "Could not add inspo link.", "ph-warning", "text-yellow-400");
     }
   });
 }
@@ -1637,6 +1777,14 @@ async function deletePostById(postId) {
   }
 }
 
+async function apiSaveInspo(inspo) {
+  return apiPost("saveInspo", inspo);
+}
+
+async function apiGetCampaigns() {
+  const result = await apiGet("getCampaigns");
+  return result.items || [];
+}
 async function duplicatePostById(postId) {
   const source = appState.posts.find((p) => p.id === postId);
   if (!source) return;
