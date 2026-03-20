@@ -563,129 +563,15 @@
             </div>
         </div>
     </div>
-
 <script>
 const APP_CONFIG = {
   APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbxTanf2NgXnTNDILj3ECPG-etXHodowevzojk1ds-KACNFZ3tmpEBWzS9e_CuqNk9t5/exec",
   ENABLE_REMOTE_SYNC: true,
-  STORAGE_KEY: "stellarsync_local_state_v1"
+  STORAGE_KEY: "stellarsync_local_state_v2"
 };
 
 const DEFAULT_STATE = {
-  posts: [
-    {
-      id: "post-001",
-      title: "Solar Physics 101",
-      platform: "linkedin",
-      pillar: "edu",
-      date: "2024-10-02T10:00",
-      status: "published",
-      postType: "image",
-      description: "Understanding how photovoltaic cells convert sunlight into electricity. A deep dive into the physics behind clean energy generation and why silicon wafers are the backbone of modern solar technology.",
-      assetId: "",
-      hubTitle: "Solar Tech 101",
-      hubPillarLabel: "edu",
-      mediaLabel: ""
-    },
-    {
-      id: "post-002",
-      title: "Winter Savings Promo",
-      platform: "instagram",
-      pillar: "promo",
-      date: "2024-10-05T14:30",
-      status: "scheduled",
-      postType: "video",
-      description: "Beat the winter energy spike! ☃️ Install before December 1st and save 20% on your entire solar system. Limited spots available. DM us SOLAR20 to claim your discount today!",
-      assetId: "",
-      hubTitle: "Winter Savings",
-      hubPillarLabel: "promo",
-      mediaLabel: ""
-    },
-    {
-      id: "post-003",
-      title: "Eco-Vanguard Report",
-      platform: "linkedin",
-      pillar: "aware",
-      date: "2024-10-09T09:00",
-      status: "draft",
-      postType: "article",
-      description: "Our annual sustainability report is here. 47% reduction in carbon footprint across our client installations. 12,000 tons of CO2 offset this year alone.",
-      assetId: "",
-      hubTitle: "Eco-Vanguard",
-      hubPillarLabel: "aware",
-      mediaLabel: ""
-    },
-    {
-      id: "post-004",
-      title: "Future Focus Poll",
-      platform: "both",
-      pillar: "engage",
-      date: "2024-10-14T11:00",
-      status: "scheduled",
-      postType: "poll",
-      description: "What's your #1 priority when considering solar? A) Lower energy bills B) Environmental impact C) Energy independence D) Home value increase. Vote in our poll and share why in the comments!",
-      assetId: "",
-      hubTitle: "Future Focus",
-      hubPillarLabel: "engage",
-      mediaLabel: ""
-    },
-    {
-      id: "post-005",
-      title: "Panel Maintenance Guide",
-      platform: "instagram",
-      pillar: "edu",
-      date: "2024-10-18T16:00",
-      status: "scheduled",
-      postType: "carousel",
-      description: "A practical maintenance guide for keeping solar panels performing well through seasonal changes.",
-      assetId: "",
-      hubTitle: "Solar Tech 101",
-      hubPillarLabel: "edu",
-      mediaLabel: ""
-    },
-    {
-      id: "post-006",
-      title: "Q4 Discount Reveal",
-      platform: "linkedin",
-      pillar: "promo",
-      date: "2024-10-22T08:30",
-      status: "draft",
-      postType: "image",
-      description: "Reveal the Q4 offer with a clean visual and a clear CTA tied to scheduling or consultation.",
-      assetId: "",
-      hubTitle: "Winter Savings",
-      hubPillarLabel: "promo",
-      mediaLabel: ""
-    },
-    {
-      id: "post-007",
-      title: "Wind Turbine Stats",
-      platform: "instagram",
-      pillar: "aware",
-      date: "2024-10-25T13:00",
-      status: "published",
-      postType: "carousel",
-      description: "A quick infographic carousel with digestible wind energy facts and performance comparisons.",
-      assetId: "",
-      hubTitle: "Eco-Vanguard",
-      hubPillarLabel: "aware",
-      mediaLabel: ""
-    },
-    {
-      id: "post-008",
-      title: "Community Q&A",
-      platform: "linkedin",
-      pillar: "engage",
-      date: "2024-10-29T15:00",
-      status: "draft",
-      postType: "text",
-      description: "Invite the audience into a Q&A around clean energy myths, concerns, and practical adoption questions.",
-      assetId: "",
-      hubTitle: "Future Focus",
-      hubPillarLabel: "engage",
-      mediaLabel: ""
-    }
-  ],
+  posts: [],
   inspo: [
     {
       id: "inspo-001",
@@ -706,29 +592,7 @@ const DEFAULT_STATE = {
       description: "Have you tried any of these viral solar maintenance hacks?"
     }
   ],
-  media: [
-    {
-      id: "asset-001",
-      title: "Solar Physics Infographic",
-      type: "image",
-      postId: "post-001",
-      campaign: "Solar Tech 101"
-    },
-    {
-      id: "asset-002",
-      title: "Winter Promo Video",
-      type: "video",
-      postId: "post-002",
-      campaign: "Winter Savings"
-    },
-    {
-      id: "asset-003",
-      title: "Wind Turbine Stats",
-      type: "carousel",
-      postId: "post-007",
-      campaign: "Eco-Vanguard"
-    }
-  ]
+  media: []
 };
 
 let appState = loadLocalState();
@@ -738,6 +602,16 @@ let currentMediaFilter = "all";
 let currentMediaFilterMode = "all";
 let currentMediaFilterValue = "all";
 let currentModalAsset = null;
+let calendarMode = "month";
+let calendarCursor = getInitialCalendarCursor();
+let scale = 0.62;
+let panX = 80;
+let panY = 60;
+let isDragging = false;
+let startPanX = 0;
+let startPanY = 0;
+let pointerStartX = 0;
+let pointerStartY = 0;
 
 const modal = document.getElementById("scheduling-modal");
 const titleInput = document.getElementById("modal-title");
@@ -762,15 +636,7 @@ const inspoAddLinkBtn = document.getElementById("inspo-add-link-btn");
 
 const viewport = document.getElementById("starmap-viewport");
 const canvas = document.getElementById("starmap-canvas");
-
-let scale = 0.5;
-let panX = -200;
-let panY = -100;
-let isDragging = false;
-let startX = 0;
-let startY = 0;
-let touchStartDistance = null;
-let touchStartScale = scale;
+const constellationLayer = document.getElementById("constellation-layer");
 
 initApp();
 
@@ -779,34 +645,554 @@ function initApp() {
   cleanInvalidImportantToken();
   setupPillarButtons();
   setupModalControls();
-  setupNestedButtonProtection();
-  setupConstellationInteractions();
   setupSaveHandler();
+  setupCalendarControls();
   setupMediaFilters();
   setupMediaUpload();
   setupModalMediaUpload();
   setupInspoAddLink();
+  setupConstellationInteractions();
   switchView("calendar");
+  rerenderAll();
+  syncRemoteIfConfigured();
+}
 
-  renderQueue(
-    appState.posts
-      .filter(post => post.status === "scheduled" && post.date)
-      .sort((a, b) => new Date(a.date) - new Date(b.date))
-      .map(post => ({
-        postId: post.id,
-        title: post.title,
-        platform: post.platform,
-        pillar: post.pillar,
-        scheduledAt: post.date,
-        status: post.status,
-        queueDateLabel: formatLocalQueueDate(post.date),
-        queueTimeLabel: formatLocalQueueTime(post.date)
-      }))
-  );
-
+function rerenderAll() {
+  renderCalendar();
+  renderLedger();
+  renderQueue(getScheduledQueue());
   populateMediaFilterDropdown();
   renderMedia();
-  syncRemoteIfConfigured();
+  renderConstellation();
+}
+
+function getInitialCalendarCursor() {
+  const posts = loadLocalState()?.posts || [];
+  const dated = posts.filter(p => p.date && !isNaN(new Date(p.date)));
+  if (!dated.length) return new Date();
+  dated.sort((a, b) => new Date(a.date) - new Date(b.date));
+  return new Date(dated[0].date);
+}
+
+function getScheduledQueue() {
+  return (appState.posts || [])
+    .filter(post => post.status === "scheduled" && post.date)
+    .sort((a, b) => new Date(a.date) - new Date(b.date))
+    .map(post => ({
+      postId: post.id,
+      title: post.title,
+      platform: post.platform,
+      pillar: post.pillar,
+      scheduledAt: post.date,
+      status: post.status,
+      queueDateLabel: formatLocalQueueDate(post.date),
+      queueTimeLabel: formatLocalQueueTime(post.date)
+    }));
+}
+
+function setupCalendarControls() {
+  document.getElementById("calendar-prev-btn")?.addEventListener("click", () => {
+    if (calendarMode === "month") {
+      calendarCursor = new Date(calendarCursor.getFullYear(), calendarCursor.getMonth() - 1, 1);
+    } else {
+      calendarCursor = addDays(calendarCursor, -7);
+    }
+    renderCalendar();
+  });
+
+  document.getElementById("calendar-next-btn")?.addEventListener("click", () => {
+    if (calendarMode === "month") {
+      calendarCursor = new Date(calendarCursor.getFullYear(), calendarCursor.getMonth() + 1, 1);
+    } else {
+      calendarCursor = addDays(calendarCursor, 7);
+    }
+    renderCalendar();
+  });
+
+  document.getElementById("calendar-mode-month")?.addEventListener("click", () => {
+    calendarMode = "month";
+    updateCalendarModeButtons();
+    renderCalendar();
+  });
+
+  document.getElementById("calendar-mode-week")?.addEventListener("click", () => {
+    calendarMode = "week";
+    updateCalendarModeButtons();
+    renderCalendar();
+  });
+
+  updateCalendarModeButtons();
+}
+
+function updateCalendarModeButtons() {
+  const monthBtn = document.getElementById("calendar-mode-month");
+  const weekBtn = document.getElementById("calendar-mode-week");
+  if (!monthBtn || !weekBtn) return;
+
+  if (calendarMode === "month") {
+    monthBtn.className = "px-5 py-2 text-xs bg-[#2d1b4e] text-white rounded-lg font-semibold shadow-sm";
+    weekBtn.className = "px-5 py-2 text-xs text-gray-400 hover:text-white rounded-lg font-medium transition-colors";
+  } else {
+    weekBtn.className = "px-5 py-2 text-xs bg-[#2d1b4e] text-white rounded-lg font-semibold shadow-sm";
+    monthBtn.className = "px-5 py-2 text-xs text-gray-400 hover:text-white rounded-lg font-medium transition-colors";
+  }
+}
+
+function renderCalendar() {
+  const monthNameEl = document.getElementById("calendar-month-name");
+  const yearNameEl = document.getElementById("calendar-year-name");
+  const grid = document.getElementById("calendar-grid");
+  if (!grid) return;
+
+  if (calendarMode === "month") {
+    renderMonthCalendar(monthNameEl, yearNameEl, grid);
+  } else {
+    renderWeekCalendar(monthNameEl, yearNameEl, grid);
+  }
+}
+
+function renderMonthCalendar(monthNameEl, yearNameEl, grid) {
+  const year = calendarCursor.getFullYear();
+  const month = calendarCursor.getMonth();
+
+  if (monthNameEl) monthNameEl.textContent = calendarCursor.toLocaleDateString("en-US", { month: "long" });
+  if (yearNameEl) yearNameEl.textContent = String(year);
+
+  const firstOfMonth = new Date(year, month, 1);
+  const lastOfMonth = new Date(year, month + 1, 0);
+  const monthStartWeekday = firstOfMonth.getDay();
+  const daysInMonth = lastOfMonth.getDate();
+
+  const prevMonthLast = new Date(year, month, 0).getDate();
+  const totalCells = Math.ceil((monthStartWeekday + daysInMonth) / 7) * 7;
+
+  let html = "";
+  for (let i = 0; i < totalCells; i += 1) {
+    const dateObj = new Date(year, month, 1 - monthStartWeekday + i);
+    const inCurrentMonth = dateObj.getMonth() === month;
+    html += renderCalendarCell(dateObj, inCurrentMonth);
+  }
+
+  grid.innerHTML = html;
+}
+
+function renderWeekCalendar(monthNameEl, yearNameEl, grid) {
+  const start = startOfWeek(calendarCursor);
+  const end = addDays(start, 6);
+
+  if (monthNameEl) {
+    monthNameEl.textContent = `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${end.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+  }
+  if (yearNameEl) {
+    yearNameEl.textContent = String(end.getFullYear());
+  }
+
+  let html = "";
+  for (let i = 0; i < 7; i += 1) {
+    const day = addDays(start, i);
+    html += renderCalendarCell(day, true, true);
+  }
+
+  grid.innerHTML = html;
+}
+
+function renderCalendarCell(dateObj, inCurrentMonth = true, isWeekMode = false) {
+  const today = new Date();
+  const isTodayValue = isSameDay(dateObj, today);
+  const key = toDateKey(dateObj);
+
+  const items = (appState.posts || [])
+    .filter(post => post.date && toDateKey(new Date(post.date)) === key)
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  const classes = [
+    "cal-cell",
+    !inCurrentMonth ? "empty" : "",
+    isTodayValue ? "ring-1 ring-[#c77dff]/50 bg-[#1c132d]" : ""
+  ].filter(Boolean).join(" ");
+
+  const dateLabelClass = !inCurrentMonth
+    ? "text-xs text-gray-600 font-medium"
+    : isTodayValue
+    ? "text-xs text-white font-bold"
+    : "text-xs text-gray-300 font-medium";
+
+  return `
+    <div class="${classes}">
+      <span class="${dateLabelClass}">${dateObj.getDate()}</span>
+      ${items.map(post => renderCalendarPill(post, isWeekMode)).join("")}
+    </div>
+  `;
+}
+
+function renderCalendarPill(post, isWeekMode = false) {
+  const iconBlock =
+    post.platform === "both"
+      ? `<div class="flex"><i class="ph-fill ph-linkedin-logo text-xs"></i><i class="ph-fill ph-instagram-logo text-xs -ml-1"></i></div>`
+      : post.platform === "instagram"
+      ? `<i class="ph-fill ph-instagram-logo text-xs"></i>`
+      : `<i class="ph-fill ph-linkedin-logo text-xs"></i>`;
+
+  const statusColor =
+    post.status === "published" ? "#00ffaa" :
+    post.status === "scheduled" ? "#ffd700" :
+    "#94a3b8";
+
+  const title = isWeekMode
+    ? `${formatLocalQueueTime(post.date)} ${post.title}`
+    : post.title;
+
+  return `
+    <button type="button" class="post-pill ${escapeHtml(post.pillar)} mt-1 text-left" onclick="openModalById('${escapeHtml(post.id)}')">
+      <div class="flex items-center gap-1.5 w-full">
+        ${iconBlock}
+        <div class="w-1.5 h-1.5 rounded-full ml-auto" style="background:${statusColor}"></div>
+      </div>
+      <span class="text-[9px] text-gray-300 truncate w-full block mt-0.5">${escapeHtml(title)}</span>
+    </button>
+  `;
+}
+
+function renderLedger() {
+  const ledgerList = document.getElementById("ledger-list");
+  if (!ledgerList) return;
+
+  const posts = [...(appState.posts || [])].sort((a, b) => {
+    const da = a.date ? new Date(a.date).getTime() : 0;
+    const db = b.date ? new Date(b.date).getTime() : 0;
+    return da - db;
+  });
+
+  if (!posts.length) {
+    ledgerList.innerHTML = `
+      <div class="glass-card p-8 text-center">
+        <p class="text-gray-400 text-sm">No posts yet.</p>
+      </div>
+    `;
+    return;
+  }
+
+  ledgerList.innerHTML = posts.map(post => {
+    const badgeClass =
+      post.status === "published" ? "badge-pub" :
+      post.status === "scheduled" ? "badge-sch" :
+      "badge-drf";
+
+    const pillarLabel =
+      post.pillar === "edu" ? "Education" :
+      post.pillar === "promo" ? "Promo" :
+      post.pillar === "engage" ? "Engagement" :
+      "Awareness";
+
+    const platformIcon =
+      post.platform === "instagram" ? "ph-instagram-logo" :
+      post.platform === "both" ? "ph-infinity" :
+      "ph-linkedin-logo";
+
+    const iconColor =
+      post.pillar === "edu" ? "#00f0ff" :
+      post.pillar === "promo" ? "#b25fff" :
+      post.pillar === "engage" ? "#ffd700" :
+      "#00ffaa";
+
+    return `
+      <div class="ledger-card glass-card p-5" data-post-id="${escapeHtml(post.id)}">
+        <div class="flex items-start gap-5">
+          <div class="w-14 h-14 rounded-xl bg-[#120c1d] border border-white/5 flex items-center justify-center shrink-0">
+            <i class="ph-fill ${platformIcon} text-3xl" style="color:${iconColor}"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="badge ${badgeClass} text-[8px]">${escapeHtml(post.status.toUpperCase())}</span>
+              <span class="px-2 py-1 bg-[#120c1d] border border-white/5 rounded text-[9px] text-gray-300 font-medium">${escapeHtml(pillarLabel)}</span>
+              <span class="text-gray-500 text-[10px] font-medium">${escapeHtml(formatLedgerDate(post.date))}</span>
+            </div>
+            <h3 class="text-white font-bold text-base mb-2">${escapeHtml(post.title)}</h3>
+            <p class="text-gray-400 text-sm leading-relaxed line-clamp-2">${escapeHtml(post.description || "")}</p>
+            <div class="mt-4 flex items-center gap-5">
+              <button type="button" class="ledger-ai-btn text-[#c77dff] hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-colors">
+                <i class="ph-bold ph-sparkle"></i> AI Enhance
+              </button>
+              <button type="button" class="ledger-duplicate-btn text-gray-500 hover:text-white text-xs font-medium flex items-center gap-1.5 transition-colors">
+                <i class="ph-bold ph-copy"></i> Duplicate
+              </button>
+              <button type="button" class="ledger-delete-btn text-gray-500 hover:text-red-400 text-xs font-medium flex items-center gap-1.5 transition-colors ml-auto">
+                <i class="ph-bold ph-trash"></i> Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  wireLedgerActions();
+}
+
+function wireLedgerActions() {
+  document.querySelectorAll(".ledger-card").forEach(card => {
+    const postId = card.dataset.postId;
+    if (!postId) return;
+
+    card.addEventListener("click", () => openModalById(postId));
+
+    card.querySelector(".ledger-ai-btn")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      showToast("AI Assistant", "This action is ready for your next prompt workflow.", "ph-sparkle");
+    });
+
+    card.querySelector(".ledger-duplicate-btn")?.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      await duplicatePostById(postId);
+    });
+
+    card.querySelector(".ledger-delete-btn")?.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      await deletePostById(postId);
+    });
+  });
+}
+
+function renderConstellation() {
+  if (!constellationLayer) return;
+
+  const groups = buildConstellationGroups();
+  if (!groups.length) {
+    constellationLayer.innerHTML = "";
+    return;
+  }
+
+  const laneY = {
+    edu: 220,
+    promo: 480,
+    aware: 760,
+    engage: 1040
+  };
+
+  let html = "";
+
+  groups.forEach((group) => {
+    const y = laneY[group.pillar] || 220;
+    const color = pillarColor(group.pillar);
+
+    html += `
+      <div class="map-node hub-node border-l-4" style="left:180px; top:${y}px; border-left-color:${color};">
+        <h3 class="font-bold text-white text-sm mb-1">${escapeHtml(group.title)}</h3>
+        <p class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">${escapeHtml(group.label)}</p>
+      </div>
+    `;
+
+    group.posts.forEach((post, index) => {
+      const x = 540 + index * 360;
+      const meta = `${formatShortDate(post.date)} • ${prettyPostType(post.postType)}`;
+
+      html += `
+        <div class="map-node post-node border-l-4" style="left:${x}px; top:${y}px; border-color:${color};" onclick="openModalById('${escapeHtml(post.id)}')">
+          <div class="flex justify-between items-center mb-3">
+            ${renderConstellationPlatform(post.platform, color)}
+            <span class="badge ${post.status === "published" ? "badge-pub" : post.status === "scheduled" ? "badge-sch" : "badge-drf"}">${escapeHtml(capitalize(post.status))}</span>
+          </div>
+          <h4 class="text-sm text-white font-semibold mb-1 truncate">${escapeHtml(post.title)}</h4>
+          <p class="text-[10px] text-gray-400 mb-3">${escapeHtml(meta)}</p>
+          <div class="h-16 bg-[#120c1d] rounded-lg overflow-hidden border border-white/5 flex items-center justify-center">
+            <i class="ph-fill ${constellationPostIcon(post.postType)} text-2xl" style="color:${color}66;"></i>
+          </div>
+        </div>
+      `;
+    });
+  });
+
+  constellationLayer.innerHTML = html;
+  updateTransform();
+}
+
+function buildConstellationGroups() {
+  const grouped = {};
+
+  (appState.posts || []).forEach(post => {
+    const hubTitle = post.hubTitle || post.title || "Untitled";
+    const pillar = post.hubPillarLabel || post.pillar || "edu";
+
+    if (!grouped[hubTitle]) {
+      grouped[hubTitle] = {
+        title: hubTitle,
+        pillar,
+        label: pillarPretty(pillar),
+        posts: []
+      };
+    }
+
+    grouped[hubTitle].posts.push(post);
+  });
+
+  return Object.values(grouped).map(group => ({
+    ...group,
+    posts: group.posts.sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0))
+  }));
+}
+
+function renderConstellationPlatform(platform, color) {
+  if (platform === "both") {
+    return `
+      <div class="flex gap-1">
+        <i class="ph-fill ph-linkedin-logo text-xl" style="color:${color}"></i>
+        <i class="ph-fill ph-instagram-logo text-xl" style="color:${color}"></i>
+      </div>
+    `;
+  }
+
+  return platform === "instagram"
+    ? `<i class="ph-fill ph-instagram-logo text-xl" style="color:${color}"></i>`
+    : `<i class="ph-fill ph-linkedin-logo text-xl" style="color:${color}"></i>`;
+}
+
+function pillarPretty(pillar) {
+  return pillar === "edu" ? "Education" :
+         pillar === "promo" ? "Promo" :
+         pillar === "engage" ? "Engagement" :
+         "Awareness";
+}
+
+function pillarColor(pillar) {
+  return pillar === "edu" ? "#00f0ff" :
+         pillar === "promo" ? "#b25fff" :
+         pillar === "engage" ? "#ffd700" :
+         "#00ffaa";
+}
+
+function constellationPostIcon(postType) {
+  if (postType === "video") return "ph-video-camera";
+  if (postType === "carousel") return "ph-images";
+  if (postType === "article") return "ph-link";
+  if (postType === "poll") return "ph-chart-bar";
+  if (postType === "text") return "ph-text-aa";
+  return "ph-image";
+}
+
+function prettyPostType(postType) {
+  if (postType === "video") return "Video";
+  if (postType === "carousel") return "Carousel";
+  if (postType === "article") return "Article";
+  if (postType === "poll") return "Poll";
+  if (postType === "text") return "Text";
+  return "Image";
+}
+
+function setupConstellationInteractions() {
+  if (!viewport || !canvas) return;
+
+  viewport.style.cursor = "grab";
+
+  viewport.addEventListener("pointerdown", (e) => {
+    if (e.target.closest(".post-node, .hub-node")) return;
+    isDragging = true;
+    pointerStartX = e.clientX;
+    pointerStartY = e.clientY;
+    startPanX = panX;
+    startPanY = panY;
+    viewport.style.cursor = "grabbing";
+    viewport.setPointerCapture?.(e.pointerId);
+  });
+
+  viewport.addEventListener("pointermove", (e) => {
+    if (!isDragging) return;
+    panX = startPanX + (e.clientX - pointerStartX);
+    panY = startPanY + (e.clientY - pointerStartY);
+    updateTransform();
+  });
+
+  viewport.addEventListener("pointerup", () => {
+    isDragging = false;
+    viewport.style.cursor = "grab";
+  });
+
+  viewport.addEventListener("pointercancel", () => {
+    isDragging = false;
+    viewport.style.cursor = "grab";
+  });
+
+  viewport.addEventListener("wheel", (e) => {
+    e.preventDefault();
+
+    const rect = viewport.getBoundingClientRect();
+    const pointerX = e.clientX - rect.left;
+    const pointerY = e.clientY - rect.top;
+    const beforeX = (pointerX - panX) / scale;
+    const beforeY = (pointerY - panY) / scale;
+
+    const delta = e.deltaY < 0 ? 1.12 : 0.89;
+    const nextScale = clamp(scale * delta, 0.35, 2.2);
+    scale = nextScale;
+
+    panX = pointerX - beforeX * scale;
+    panY = pointerY - beforeY * scale;
+
+    updateTransform();
+  }, { passive: false });
+
+  document.getElementById("zoom-in")?.addEventListener("click", () => {
+    zoomConstellation(1.15);
+  });
+
+  document.getElementById("zoom-out")?.addEventListener("click", () => {
+    zoomConstellation(0.87);
+  });
+
+  document.getElementById("zoom-reset")?.addEventListener("click", () => {
+    fitConstellation();
+  });
+
+  document.getElementById("zoom-fullscreen")?.addEventListener("click", async () => {
+    const section = document.getElementById("view-constellation");
+    if (!section) return;
+
+    if (!document.fullscreenElement) {
+      await section.requestFullscreen?.();
+    } else {
+      await document.exitFullscreen?.();
+    }
+
+    setTimeout(() => fitConstellation(), 100);
+  });
+
+  window.addEventListener("resize", () => {
+    if (currentView === "constellation") fitConstellation();
+  });
+
+  setTimeout(() => fitConstellation(), 50);
+}
+
+function zoomConstellation(multiplier) {
+  if (!viewport) return;
+  const rect = viewport.getBoundingClientRect();
+  const centerX = rect.width / 2;
+  const centerY = rect.height / 2;
+  const beforeX = (centerX - panX) / scale;
+  const beforeY = (centerY - panY) / scale;
+
+  scale = clamp(scale * multiplier, 0.35, 2.2);
+  panX = centerX - beforeX * scale;
+  panY = centerY - beforeY * scale;
+  updateTransform();
+}
+
+function fitConstellation() {
+  if (!viewport || !canvas) return;
+
+  const rect = viewport.getBoundingClientRect();
+  const worldWidth = 2200;
+  const worldHeight = 1400;
+
+  const nextScale = Math.min(rect.width / worldWidth, rect.height / worldHeight, 0.72);
+  scale = clamp(nextScale, 0.35, 2.2);
+  panX = (rect.width - worldWidth * scale) / 2;
+  panY = (rect.height - worldHeight * scale) / 2;
+  updateTransform();
+}
+
+function updateTransform() {
+  if (!canvas) return;
+  canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
 }
 
 function setupMediaFilters() {
@@ -828,21 +1214,17 @@ function setupMediaFilters() {
     });
   });
 
-  if (mediaFilterModeSelect) {
-    mediaFilterModeSelect.addEventListener("change", () => {
-      currentMediaFilterMode = mediaFilterModeSelect.value || "all";
-      currentMediaFilterValue = "all";
-      populateMediaFilterDropdown();
-      renderMedia();
-    });
-  }
+  mediaFilterModeSelect?.addEventListener("change", () => {
+    currentMediaFilterMode = mediaFilterModeSelect.value || "all";
+    currentMediaFilterValue = "all";
+    populateMediaFilterDropdown();
+    renderMedia();
+  });
 
-  if (mediaFilterSelect) {
-    mediaFilterSelect.addEventListener("change", () => {
-      currentMediaFilterValue = mediaFilterSelect.value || "all";
-      renderMedia();
-    });
-  }
+  mediaFilterSelect?.addEventListener("change", () => {
+    currentMediaFilterValue = mediaFilterSelect.value || "all";
+    renderMedia();
+  });
 }
 
 function setupMediaUpload() {
@@ -855,6 +1237,7 @@ function setupMediaUpload() {
     if (!file) return;
 
     try {
+      showToast("Uploading", "Uploading media...", "ph-upload-simple", "text-[#c77dff]");
       const base64Data = await fileToBase64(file);
 
       await apiPost("uploadMedia", {
@@ -867,8 +1250,8 @@ function setupMediaUpload() {
         campaign: ""
       });
 
-      showToast("Uploaded", "Media uploaded to Drive.", "ph-cloud-arrow-up", "text-[#00ffaa]");
       await refreshMediaFromRemote();
+      showToast("Uploaded", "Media uploaded to Drive.", "ph-check", "text-[#00ffaa]");
     } catch (err) {
       console.error(err);
       showToast("Upload failed", err.message || "Could not upload media.", "ph-warning", "text-yellow-400");
@@ -891,10 +1274,7 @@ function setupModalMediaUpload() {
 
     try {
       showToast("Uploading", "Uploading media for this post...", "ph-upload-simple", "text-[#c77dff]");
-
       const base64Data = await fileToBase64(file);
-      const linkedPostId = currentEditingPostId || "";
-      const campaign = titleInput.value.trim() || "";
 
       const result = await apiPost("uploadMedia", {
         fileName: file.name,
@@ -902,8 +1282,8 @@ function setupModalMediaUpload() {
         base64Data,
         assetBadge: file.type.startsWith("video/") ? "Reel" : "Image",
         assetMeta: "",
-        linkedPostId,
-        campaign
+        linkedPostId: currentEditingPostId || "",
+        campaign: getCurrentModalCampaign()
       });
 
       currentModalAsset = {
@@ -917,6 +1297,13 @@ function setupModalMediaUpload() {
         modalMediaStatus.textContent = `${currentModalAsset.title} linked`;
       }
 
+      const existingIndex = appState.posts.findIndex(p => p.id === currentEditingPostId);
+      if (existingIndex >= 0) {
+        appState.posts[existingIndex].assetId = currentModalAsset.id;
+        appState.posts[existingIndex].mediaLabel = currentModalAsset.title;
+        persistLocalState();
+      }
+
       await refreshMediaFromRemote();
       showToast("Uploaded", "Media linked to this post.", "ph-check", "text-[#00ffaa]");
     } catch (err) {
@@ -926,6 +1313,14 @@ function setupModalMediaUpload() {
       modalMediaUploadInput.value = "";
     }
   });
+}
+
+function getCurrentModalCampaign() {
+  if (currentEditingPostId) {
+    const existing = (appState.posts || []).find(p => p.id === currentEditingPostId);
+    if (existing?.hubTitle) return existing.hubTitle;
+  }
+  return titleInput?.value.trim() || "";
 }
 
 function setupInspoAddLink() {
@@ -974,11 +1369,9 @@ function populateMediaFilterDropdown() {
   if (currentMediaFilterMode === "type") {
     const types = [...new Set((appState.media || []).map(item => (item.type || "").toLowerCase()).filter(Boolean))];
     options = [`<option value="all">All Types</option>`].concat(
-      types.map(type => `<option value="${escapeHtml(type)}">${escapeHtml(type.charAt(0).toUpperCase() + type.slice(1))}</option>`)
+      types.map(type => `<option value="${escapeHtml(type)}">${escapeHtml(capitalize(type))}</option>`)
     );
-  }
-
-  if (currentMediaFilterMode === "campaign") {
+  } else if (currentMediaFilterMode === "campaign") {
     const campaigns = [...new Set((appState.media || []).map(item => item.campaign || linkedPostCampaignLabel(item)).filter(Boolean))];
     options = [`<option value="all">All Campaigns</option>`].concat(
       campaigns.map(campaign => `<option value="${escapeHtml(campaign)}">${escapeHtml(campaign)}</option>`)
@@ -1093,71 +1486,6 @@ async function refreshMediaFromRemote() {
   renderMedia();
 }
 
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = String(reader.result || "");
-      resolve(result.split(",")[1] || "");
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-function loadLocalState() {
-  try {
-    const raw = localStorage.getItem(APP_CONFIG.STORAGE_KEY);
-    if (!raw) return structuredCloneState(DEFAULT_STATE);
-    const parsed = JSON.parse(raw);
-    return {
-      posts: Array.isArray(parsed.posts) ? parsed.posts : structuredCloneState(DEFAULT_STATE.posts),
-      inspo: Array.isArray(parsed.inspo) ? parsed.inspo : structuredCloneState(DEFAULT_STATE.inspo),
-      media: Array.isArray(parsed.media) ? parsed.media : structuredCloneState(DEFAULT_STATE.media)
-    };
-  } catch (err) {
-    console.warn("Failed to load local state, using defaults.", err);
-    return structuredCloneState(DEFAULT_STATE);
-  }
-}
-
-function persistLocalState() {
-  localStorage.setItem(APP_CONFIG.STORAGE_KEY, JSON.stringify(appState));
-}
-
-function structuredCloneState(obj) {
-  return JSON.parse(JSON.stringify(obj));
-}
-
-function seedStars() {
-  const starsContainer = document.getElementById("stars-container");
-  if (!starsContainer || starsContainer.dataset.seeded === "true") return;
-
-  for (let i = 0; i < 150; i += 1) {
-    const star = document.createElement("div");
-    star.className = "star";
-    star.style.left = `${Math.random() * 100}%`;
-    star.style.top = `${Math.random() * 100}%`;
-    const size = Math.random() < 0.1 ? 3 : Math.random() < 0.3 ? 2 : 1;
-    star.style.width = `${size}px`;
-    star.style.height = `${size}px`;
-    star.style.setProperty("--duration", `${2 + Math.random() * 5}s`);
-    star.style.setProperty("--delay", `${Math.random() * 5}s`);
-    star.style.setProperty("--opacity", `${0.1 + Math.random() * 0.4}`);
-    starsContainer.appendChild(star);
-  }
-
-  starsContainer.dataset.seeded = "true";
-}
-
-function cleanInvalidImportantToken() {
-  document.querySelectorAll("[class]").forEach((el) => {
-    if (el.className.includes("!important")) {
-      el.className = el.className.replace(/\s*!important/g, "").trim();
-    }
-  });
-}
-
 function setupPillarButtons() {
   pillarBtns.forEach((btn) => {
     if (!btn.dataset.pillar) {
@@ -1202,6 +1530,22 @@ function setupModalControls() {
   });
 }
 
+function openModalById(postId) {
+  const matched = (appState.posts || []).find(post => post.id === postId);
+  if (!matched) return;
+
+  openModal(
+    matched.title,
+    matched.platform,
+    matched.pillar,
+    matched.date,
+    matched.status,
+    matched.description,
+    matched.postType,
+    matched.id
+  );
+}
+
 function openModal(
   title = "",
   platform = "linkedin",
@@ -1235,12 +1579,12 @@ function openModal(
     if (modalMediaStatus) modalMediaStatus.textContent = "No media linked";
   }
 
-  if (modal) modal.classList.add("active");
+  modal?.classList.add("active");
   document.body.style.overflow = "hidden";
 }
 
 function closeModal() {
-  if (modal) modal.classList.remove("active");
+  modal?.classList.remove("active");
   document.body.style.overflow = "";
   currentEditingPostId = null;
   currentModalAsset = null;
@@ -1254,20 +1598,24 @@ function setupSaveHandler() {
   saveButton.removeAttribute("onclick");
 
   saveButton.addEventListener("click", async () => {
+    const existing = currentEditingPostId
+      ? (appState.posts || []).find(p => p.id === currentEditingPostId)
+      : null;
+
     const payload = {
       id: currentEditingPostId || generateId("post"),
-      title: titleInput.value.trim(),
-      platform: platSelect.value,
+      title: titleInput?.value.trim() || "",
+      platform: platSelect?.value || "linkedin",
       pillar: getActivePillar(),
-      date: dateInput.value,
-      status: statusSelect.value,
-      postType: postTypeSelect.value,
-      description: descInput.value.trim(),
-      assetId: currentModalAsset?.id || "",
-      hubTitle: titleInput.value.trim(),
-      hubPillarLabel: getActivePillar(),
-      mediaLabel: currentModalAsset?.title || "",
-      createdFromInspoId: ""
+      date: dateInput?.value || "",
+      status: statusSelect?.value || "draft",
+      postType: postTypeSelect?.value || "text",
+      description: descInput?.value.trim() || "",
+      assetId: currentModalAsset?.id || existing?.assetId || "",
+      hubTitle: existing?.hubTitle || titleInput?.value.trim() || "",
+      hubPillarLabel: existing?.hubPillarLabel || getActivePillar(),
+      mediaLabel: currentModalAsset?.title || existing?.mediaLabel || "",
+      createdFromInspoId: existing?.createdFromInspoId || ""
     };
 
     if (!payload.title) {
@@ -1283,23 +1631,7 @@ function setupSaveHandler() {
     }
 
     persistLocalState();
-
-    renderQueue(
-      appState.posts
-        .filter(post => post.status === "scheduled" && post.date)
-        .sort((a, b) => new Date(a.date) - new Date(b.date))
-        .map(post => ({
-          postId: post.id,
-          title: post.title,
-          platform: post.platform,
-          pillar: post.pillar,
-          scheduledAt: post.date,
-          status: post.status,
-          queueDateLabel: formatLocalQueueDate(post.date),
-          queueTimeLabel: formatLocalQueueTime(post.date)
-        }))
-    );
-
+    rerenderAll();
     closeModal();
     showToast("Saved", "Post saved locally.", "ph-check", "text-[#00ffaa]");
 
@@ -1316,82 +1648,13 @@ function setupSaveHandler() {
   });
 }
 
-function setupNestedButtonProtection() {
-  document.querySelectorAll(".ledger-card button, .glass-card button, .post-node button").forEach((btn) => {
-    btn.setAttribute("type", "button");
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-    });
-  });
-
-  document.querySelectorAll(".ledger-card").forEach((card) => {
-    const title = card.querySelector("h3")?.textContent?.trim();
-    if (!title) return;
-    const matched = appState.posts.find((post) => post.title === title);
-    if (!matched) return;
-
-    card.removeAttribute("onclick");
-    card.addEventListener("click", () => {
-      openModal(
-        matched.title,
-        matched.platform,
-        matched.pillar,
-        matched.date,
-        matched.status,
-        matched.description,
-        matched.postType,
-        matched.id
-      );
-    });
-
-    const buttons = card.querySelectorAll("button");
-    buttons.forEach((btn) => {
-      const label = btn.textContent.trim().toLowerCase();
-
-      if (label.includes("delete")) {
-        btn.addEventListener("click", async () => {
-          await deletePostById(matched.id);
-        });
-      }
-
-      if (label.includes("duplicate")) {
-        btn.addEventListener("click", async () => {
-          await duplicatePostById(matched.id);
-        });
-      }
-
-      if (label.includes("ai")) {
-        btn.addEventListener("click", () => {
-          showToast("AI Assistant", "This action is ready for your next prompt workflow.", "ph-sparkle");
-        });
-      }
-    });
-  });
-}
-
 async function deletePostById(postId) {
   const target = appState.posts.find((p) => p.id === postId);
   if (!target) return;
 
   appState.posts = appState.posts.filter((p) => p.id !== postId);
   persistLocalState();
-
-  renderQueue(
-    appState.posts
-      .filter(post => post.status === "scheduled" && post.date)
-      .sort((a, b) => new Date(a.date) - new Date(b.date))
-      .map(post => ({
-        postId: post.id,
-        title: post.title,
-        platform: post.platform,
-        pillar: post.pillar,
-        scheduledAt: post.date,
-        status: post.status,
-        queueDateLabel: formatLocalQueueDate(post.date),
-        queueTimeLabel: formatLocalQueueTime(post.date)
-      }))
-  );
-
+  rerenderAll();
   showToast("Deleted", "Post removed locally.", "ph-trash", "text-red-400");
 
   if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
@@ -1417,23 +1680,7 @@ async function duplicatePostById(postId) {
 
   appState.posts.push(copy);
   persistLocalState();
-
-  renderQueue(
-    appState.posts
-      .filter(post => post.status === "scheduled" && post.date)
-      .sort((a, b) => new Date(a.date) - new Date(b.date))
-      .map(post => ({
-        postId: post.id,
-        title: post.title,
-        platform: post.platform,
-        pillar: post.pillar,
-        scheduledAt: post.date,
-        status: post.status,
-        queueDateLabel: formatLocalQueueDate(post.date),
-        queueTimeLabel: formatLocalQueueTime(post.date)
-      }))
-  );
-
+  rerenderAll();
   showToast("Duplicated", "Post duplicated locally.", "ph-copy", "text-[#00ffaa]");
 
   if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
@@ -1474,7 +1721,7 @@ function switchView(viewName) {
   if (viewName === "constellation") {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        centerConstellationView();
+        fitConstellation();
       });
     });
   }
@@ -1511,9 +1758,7 @@ function aiGenerate(type) {
       if (type === "emoji") {
         captionField.value = `${current} ${aiText[type]}`.trim();
       } else if (type === "keywords") {
-        captionField.value = current
-          ? `${current}\n\nKeywords: ${aiText[type]}`
-          : `Keywords: ${aiText[type]}`;
+        captionField.value = current ? `${current}\n\nKeywords: ${aiText[type]}` : `Keywords: ${aiText[type]}`;
       } else {
         captionField.value = aiText[type];
       }
@@ -1575,177 +1820,17 @@ function inspoToPost(title, type, description) {
   }, 1000);
 }
 
-function generateId(prefix) {
-  return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
-}
-
-function updateTransform() {
-  if (canvas) {
-    canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
-  }
-}
-
-function setupConstellationInteractions() {
-  if (!viewport || !canvas) return;
-
-  updateTransform();
-
-  viewport.addEventListener("mousedown", (e) => {
-    if (e.target.closest(".post-node, .hub-node")) return;
-    isDragging = true;
-    startX = e.clientX - panX;
-    startY = e.clientY - panY;
-    viewport.style.cursor = "grabbing";
-  });
-
-  window.addEventListener("mouseup", () => {
-    isDragging = false;
-    viewport.style.cursor = "grab";
-  });
-
-  window.addEventListener("mousemove", (e) => {
-    if (!isDragging) return;
-    e.preventDefault();
-    panX = e.clientX - startX;
-    panY = e.clientY - startY;
-    updateTransform();
-  });
-
-  viewport.addEventListener("wheel", (e) => {
-    e.preventDefault();
-    const delta = e.deltaY * -0.001;
-    const rect = viewport.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-    const oldScale = scale;
-
-    scale = Math.min(Math.max(0.2, scale + delta), 2);
-
-    if (scale !== oldScale) {
-      const ratio = 1 - scale / oldScale;
-      panX += (mouseX - panX) * ratio;
-      panY += (mouseY - panY) * ratio;
-      updateTransform();
-    }
-  }, { passive: false });
-
-  viewport.addEventListener("touchstart", (e) => {
-    if (e.target.closest(".post-node, .hub-node")) return;
-    e.preventDefault();
-
-    if (e.touches.length === 1) {
-      isDragging = true;
-      startX = e.touches[0].clientX - panX;
-      startY = e.touches[0].clientY - panY;
-    } else if (e.touches.length === 2) {
-      isDragging = false;
-      touchStartDistance = getTouchDistance(e.touches);
-      touchStartScale = scale;
-    }
-  }, { passive: false });
-
-  viewport.addEventListener("touchmove", (e) => {
-    e.preventDefault();
-
-    if (e.touches.length === 1 && isDragging) {
-      panX = e.touches[0].clientX - startX;
-      panY = e.touches[0].clientY - startY;
-      updateTransform();
-    } else if (e.touches.length === 2 && touchStartDistance) {
-      const newDistance = getTouchDistance(e.touches);
-      const nextScale = touchStartScale * (newDistance / touchStartDistance);
-      scale = Math.min(Math.max(0.2, nextScale), 2);
-      updateTransform();
-    }
-  }, { passive: false });
-
-  viewport.addEventListener("touchend", () => {
-    isDragging = false;
-    touchStartDistance = null;
-  }, { passive: true });
-
-  document.getElementById("zoom-in")?.addEventListener("click", () => {
-    scale = Math.min(2, scale + 0.2);
-    updateTransform();
-  });
-
-  document.getElementById("zoom-out")?.addEventListener("click", () => {
-    scale = Math.max(0.2, scale - 0.2);
-    updateTransform();
-  });
-
-  document.getElementById("zoom-reset")?.addEventListener("click", () => {
-    resetConstellationView();
-  });
-
-  document.getElementById("zoom-fullscreen")?.addEventListener("click", async () => {
-    const section = document.getElementById("view-constellation");
-    if (!section) return;
-
-    if (!document.fullscreenElement) {
-      await section.requestFullscreen?.();
-    } else {
-      await document.exitFullscreen?.();
-    }
-
-    setTimeout(() => centerConstellationView(), 100);
-  });
-
-  window.addEventListener("resize", () => {
-    if (currentView === "constellation") {
-      centerConstellationView();
-    }
-  });
-}
-
-function getTouchDistance(touches) {
-  const dx = touches[0].clientX - touches[1].clientX;
-  const dy = touches[0].clientY - touches[1].clientY;
-  return Math.sqrt(dx * dx + dy * dy);
-}
-
-function centerConstellationView() {
-  if (!viewport || !canvas) return;
-
-  const viewportRect = viewport.getBoundingClientRect();
-  const canvasWidth = 2000;
-  const canvasHeight = 1200;
-
-  scale = Math.min(
-    viewportRect.width / canvasWidth,
-    viewportRect.height / canvasHeight,
-    0.85
-  );
-
-  panX = (viewportRect.width - canvasWidth * scale) / 2;
-  panY = (viewportRect.height - canvasHeight * scale) / 2;
-
-  updateTransform();
-}
-
-function resetConstellationView() {
-  centerConstellationView();
-}
-
-function isRemoteConfigured() {
-  return (
-    APP_CONFIG.APP_SCRIPT_URL &&
-    APP_CONFIG.APP_SCRIPT_URL !== "PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE"
-  );
-}
-
 async function syncRemoteIfConfigured() {
   if (!APP_CONFIG.ENABLE_REMOTE_SYNC || !isRemoteConfigured()) return;
 
   try {
-    const [posts, media, inspo, queue] = await Promise.all([
+    const [posts, media, inspo] = await Promise.all([
       apiGetPosts(),
       apiGetMedia(),
-      apiGetInspo(),
-      apiGetQueue()
+      apiGetInspo()
     ]);
 
-    if (Array.isArray(posts) && posts.length) {
+    if (Array.isArray(posts)) {
       appState.posts = posts.map(post => ({
         id: post.postId,
         title: post.title,
@@ -1756,14 +1841,14 @@ async function syncRemoteIfConfigured() {
         postType: post.postType,
         description: post.description || "",
         assetId: post.assetId || "",
-        hubTitle: post.hubTitle || "",
-        hubPillarLabel: post.hubPillarLabel || "",
+        hubTitle: post.hubTitle || post.title || "",
+        hubPillarLabel: post.hubPillarLabel || post.pillar || "edu",
         mediaLabel: post.mediaLabel || "",
         createdFromInspoId: post.createdFromInspoId || ""
       }));
     }
 
-    if (Array.isArray(media) && media.length) {
+    if (Array.isArray(media)) {
       appState.media = media.map(asset => ({
         id: asset.assetId,
         title: asset.assetName,
@@ -1787,11 +1872,12 @@ async function syncRemoteIfConfigured() {
       }));
     }
 
+    if (appState.posts.length) {
+      calendarCursor = new Date(appState.posts[0].date || new Date());
+    }
+
     persistLocalState();
-    populateMediaFilterDropdown();
-    renderQueue(queue || []);
-    renderMedia();
-    setupNestedButtonProtection();
+    rerenderAll();
     showToast("Connected", "Google Sheets data loaded.", "ph-cloud-check", "text-[#00ffaa]");
   } catch (err) {
     console.error(err);
@@ -1799,47 +1885,38 @@ async function syncRemoteIfConfigured() {
   }
 }
 
-async function apiGet(action) {
-  const url = APP_CONFIG.APP_SCRIPT_URL;
-  if (!isRemoteConfigured()) throw new Error("Apps Script URL is not configured.");
+function isRemoteConfigured() {
+  return (
+    APP_CONFIG.APP_SCRIPT_URL &&
+    APP_CONFIG.APP_SCRIPT_URL !== "PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE"
+  );
+}
 
-  const response = await fetch(`${url}?action=${encodeURIComponent(action)}`, {
+async function apiGet(action) {
+  const response = await fetch(`${APP_CONFIG.APP_SCRIPT_URL}?action=${encodeURIComponent(action)}`, {
     method: "GET",
     mode: "cors"
   });
 
-  if (!response.ok) {
-    throw new Error(`Request failed: ${response.status}`);
-  }
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
 
   const result = await response.json();
-  if (!result.ok) {
-    throw new Error(result.error || "Unknown Apps Script error");
-  }
-
+  if (!result.ok) throw new Error(result.error || "Unknown Apps Script error");
   return result;
 }
 
 async function apiPost(action, payload = {}) {
-  const url = APP_CONFIG.APP_SCRIPT_URL;
-  if (!isRemoteConfigured()) throw new Error("Apps Script URL is not configured.");
-
-  const response = await fetch(url, {
+  const response = await fetch(APP_CONFIG.APP_SCRIPT_URL, {
     method: "POST",
     mode: "cors",
     headers: { "Content-Type": "text/plain;charset=utf-8" },
     body: JSON.stringify({ action, payload })
   });
 
-  if (!response.ok) {
-    throw new Error(`Request failed: ${response.status}`);
-  }
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
 
   const result = await response.json();
-  if (!result.ok) {
-    throw new Error(result.error || "Unknown Apps Script error");
-  }
-
+  if (!result.ok) throw new Error(result.error || "Unknown Apps Script error");
   return result;
 }
 
@@ -1858,16 +1935,6 @@ async function apiGetInspo() {
   return result.items || [];
 }
 
-async function apiGetQueue() {
-  const result = await apiGet("getQueue");
-  return result.items || [];
-}
-
-async function apiGetDashboard() {
-  const result = await apiGet("getDashboard");
-  return result.summary || {};
-}
-
 async function apiSavePost(post) {
   return apiPost("savePost", {
     postId: post.id || null,
@@ -1879,8 +1946,8 @@ async function apiSavePost(post) {
     postType: post.postType || "text",
     description: post.description || "",
     assetId: post.assetId || "",
-    hubTitle: post.hubTitle || "",
-    hubPillarLabel: post.hubPillarLabel || "",
+    hubTitle: post.hubTitle || post.title || "",
+    hubPillarLabel: post.hubPillarLabel || post.pillar || "",
     mediaLabel: post.mediaLabel || "",
     createdFromInspoId: post.createdFromInspoId || ""
   });
@@ -1942,7 +2009,7 @@ function renderQueue(queueItems) {
 
     return `
       <div class="bg-[#181125] border border-white/5 rounded-xl p-4 flex gap-4 items-center cursor-pointer hover:border-white/10 transition-colors"
-           onclick="openModalFromQueue('${escapeHtml(item.postId)}')">
+           onclick="openModalById('${escapeHtml(item.postId)}')">
         <div class="bg-[#120c1d] rounded-lg w-12 h-12 flex flex-col items-center justify-center shrink-0"
              style="color:${pillarColor}; border:1px solid ${pillarColor}33;">
           <span class="text-[9px] font-bold uppercase">${month}</span>
@@ -1960,34 +2027,113 @@ function renderQueue(queueItems) {
   }).join("");
 
   const badge = document.querySelector('[vid="492"]');
-  if (badge) {
-    badge.textContent = `${items.length} Scheduled`;
+  if (badge) badge.textContent = `${items.length} Scheduled`;
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result || "");
+      resolve(result.split(",")[1] || "");
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function loadLocalState() {
+  try {
+    const raw = localStorage.getItem(APP_CONFIG.STORAGE_KEY);
+    if (!raw) return structuredCloneState(DEFAULT_STATE);
+    const parsed = JSON.parse(raw);
+    return {
+      posts: Array.isArray(parsed.posts) ? parsed.posts : structuredCloneState(DEFAULT_STATE.posts),
+      inspo: Array.isArray(parsed.inspo) ? parsed.inspo : structuredCloneState(DEFAULT_STATE.inspo),
+      media: Array.isArray(parsed.media) ? parsed.media : structuredCloneState(DEFAULT_STATE.media)
+    };
+  } catch (err) {
+    console.warn("Failed to load local state, using defaults.", err);
+    return structuredCloneState(DEFAULT_STATE);
   }
 }
 
-function openModalFromQueue(postId) {
-  const matched = appState.posts.find(post => post.id === postId);
-  if (!matched) return;
-
-  openModal(
-    matched.title,
-    matched.platform,
-    matched.pillar,
-    matched.date,
-    matched.status,
-    matched.description,
-    matched.postType,
-    matched.id
-  );
+function persistLocalState() {
+  localStorage.setItem(APP_CONFIG.STORAGE_KEY, JSON.stringify(appState));
 }
 
-function escapeHtml(str) {
-  return String(str || "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
+function structuredCloneState(obj) {
+  return JSON.parse(JSON.stringify(obj));
+}
+
+function seedStars() {
+  const starsContainer = document.getElementById("stars-container");
+  if (!starsContainer || starsContainer.dataset.seeded === "true") return;
+
+  for (let i = 0; i < 150; i += 1) {
+    const star = document.createElement("div");
+    star.className = "star";
+    star.style.left = `${Math.random() * 100}%`;
+    star.style.top = `${Math.random() * 100}%`;
+    const size = Math.random() < 0.1 ? 3 : Math.random() < 0.3 ? 2 : 1;
+    star.style.width = `${size}px`;
+    star.style.height = `${size}px`;
+    star.style.setProperty("--duration", `${2 + Math.random() * 5}s`);
+    star.style.setProperty("--delay", `${Math.random() * 5}s`);
+    star.style.setProperty("--opacity", `${0.1 + Math.random() * 0.4}`);
+    starsContainer.appendChild(star);
+  }
+
+  starsContainer.dataset.seeded = "true";
+}
+
+function cleanInvalidImportantToken() {
+  document.querySelectorAll("[class]").forEach((el) => {
+    if (typeof el.className === "string" && el.className.includes("!important")) {
+      el.className = el.className.replace(/\s*!important/g, "").trim();
+    }
+  });
+}
+
+function addDays(date, days) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function startOfWeek(date) {
+  const d = new Date(date);
+  const day = d.getDay();
+  d.setDate(d.getDate() - day);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function toDateKey(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function isSameDay(a, b) {
+  return a.getFullYear() === b.getFullYear()
+    && a.getMonth() === b.getMonth()
+    && a.getDate() === b.getDate();
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function formatLedgerDate(value) {
+  const d = value ? new Date(value) : null;
+  if (!d || isNaN(d)) return "No date";
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) + " • " +
+         d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+}
+
+function formatShortDate(value) {
+  const d = value ? new Date(value) : null;
+  if (!d || isNaN(d)) return "";
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function formatLocalQueueDate(value) {
@@ -2002,8 +2148,34 @@ function formatLocalQueueTime(value) {
   return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 }
 
+function capitalize(str) {
+  const s = String(str || "");
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : "";
+}
+
+function generateId(prefix) {
+  return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+}
+
+function escapeHtml(str) {
+  return String(str || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+window.openModalById = openModalById;
+window.openMediaAsset = openMediaAsset;
+window.closeModal = closeModal;
+window.switchView = switchView;
+window.aiGenerate = aiGenerate;
+window.inspoToPost = inspoToPost;
+window.setPillar = setPillar;
+
 window.openModal = function(title = "", platform = "linkedin", pillarClass = "edu", date = "", status = "draft", description = "", postType = "text") {
-  const matched = appState.posts.find((post) => {
+  let matched = appState.posts.find((post) => {
     return (
       post.title === title &&
       post.platform === platform &&
@@ -2013,25 +2185,22 @@ window.openModal = function(title = "", platform = "linkedin", pillarClass = "ed
     );
   });
 
+  if (!matched) {
+    matched = appState.posts.find(post => post.title === title);
+  }
+
   openModal(
-    title,
-    platform,
-    pillarClass,
-    date,
-    status,
-    description || matched?.description || "",
-    postType || matched?.postType || "text",
+    matched?.title || title,
+    matched?.platform || platform,
+    matched?.pillar || pillarClass,
+    matched?.date || date,
+    matched?.status || status,
+    matched?.description || description || "",
+    matched?.postType || postType || "text",
     matched?.id || null
   );
 };
-
-window.openMediaAsset = openMediaAsset;
-window.closeModal = closeModal;
-window.switchView = switchView;
-window.aiGenerate = aiGenerate;
-window.inspoToPost = inspoToPost;
-window.setPillar = setPillar;
-window.openModalFromQueue = openModalFromQueue;
 </script>
+
 </body>
 </html>
