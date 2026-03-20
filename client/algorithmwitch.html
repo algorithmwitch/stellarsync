@@ -1086,13 +1086,15 @@ function renderConstellation() {
     dotHtml += `
       <button
         type="button"
-        class="map-node w-4 h-4 rounded-full border border-white/30 shadow-[0_0_14px_currentColor] hover:scale-125 transition-transform"
+        class="map-node constellation-root-dot w-4 h-4 rounded-full border border-white/30 shadow-[0_0_14px_currentColor] hover:scale-125 transition-transform"
+        data-campaign-id="${escapeHtml(group.campaignId)}"
         style="left:${rootX}px; top:${rootY}px; background:${color}; color:${color};"
         title="${escapeHtml(group.campaignName)}">
       </button>
 
-      <div class="map-node pointer-events-none px-3 py-1.5 rounded-lg bg-[#120c1d]/90 border border-white/5 text-[10px] font-bold text-white whitespace-nowrap"
-           style="left:${rootX + 70}px; top:${rootY - 20}px;">
+      <div
+        class="map-node pointer-events-none px-3 py-1.5 rounded-lg bg-[#120c1d]/90 border border-white/5 text-[10px] font-bold text-white whitespace-nowrap"
+        style="left:${rootX + 70}px; top:${rootY - 20}px;">
         ${escapeHtml(group.campaignName)}
       </div>
     `;
@@ -1119,9 +1121,11 @@ function renderConstellation() {
 
   constellationLines.innerHTML = lineHtml;
   constellationLayer.innerHTML = dotHtml;
+
+  wireConstellationRootDots();
   updateTransform();
 }
-
+    
 function setupConstellationInteractions() {
   if (!viewport || !canvas) return;
 
@@ -1580,7 +1584,7 @@ function openModalById(postId) {
   const matched = (appState.posts || []).find(post => post.id === postId);
   if (!matched) return;
 
-  openModal(
+  openPostModal(
     matched.title,
     matched.platform,
     matched.pillar,
@@ -1591,8 +1595,8 @@ function openModalById(postId) {
     matched.id
   );
 }
-
-function openModal(
+    
+function openPostModal(
   title = "",
   platform = "linkedin",
   pillarClass = "edu",
@@ -1872,9 +1876,17 @@ function inspoToPost(title, type, description) {
       postType = "article";
     }
 
-    openModal(title, platform, pillar, "", "draft", description, postType, null);
+    openPostModal(title, platform, pillar, "", "draft", description, postType, null);
     showToast("Success", "Post created from inspo!", "ph-check", "text-[#00ffaa]");
   }, 1000);
+}
+
+async function apiUpdateCampaignPosition(campaignId, x, y) {
+  return apiPost("updateCampaignPosition", { campaignId, x, y });
+}
+    
+async function apiUpdateCampaign(campaign) {
+  return apiPost("saveCampaign", campaign);
 }
 
 async function syncRemoteIfConfigured() {
@@ -1961,7 +1973,7 @@ async function syncRemoteIfConfigured() {
 function isRemoteConfigured() {
   return (
     APP_CONFIG.APP_SCRIPT_URL &&
-    APP_CONFIG.APP_SCRIPT_URL !== "https://script.google.com/macros/s/AKfycbxOg_k9yMjtpWvPWsCT-A4UY_-TIDFx1aZ53l38OUbV9xY98UW2TD4ef8eITvnyeUXW/exec"
+    APP_CONFIG.APP_SCRIPT_URL !== "PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE"
   );
 }
 
@@ -2254,7 +2266,15 @@ window.aiGenerate = aiGenerate;
 window.inspoToPost = inspoToPost;
 window.setPillar = setPillar;
 
-window.openModal = function(title = "", platform = "linkedin", pillarClass = "edu", date = "", status = "draft", description = "", postType = "text") {
+window.openModal = function(
+  title = "",
+  platform = "linkedin",
+  pillarClass = "edu",
+  date = "",
+  status = "draft",
+  description = "",
+  postType = "text"
+) {
   let matched = appState.posts.find((post) => {
     return (
       post.title === title &&
@@ -2269,7 +2289,7 @@ window.openModal = function(title = "", platform = "linkedin", pillarClass = "ed
     matched = appState.posts.find(post => post.title === title);
   }
 
-  openModal(
+  openPostModal(
     matched?.title || title,
     matched?.platform || platform,
     matched?.pillar || pillarClass,
