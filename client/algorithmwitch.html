@@ -711,7 +711,7 @@
 
             <div class="p-6 border-t border-white/5 flex justify-end gap-4" vid="587">
                 <button onclick="closeModal()" class="px-6 py-2.5 rounded-xl text-xs font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-colors border border-transparent" vid="588">Cancel</button>
-                    <button id="save-post-btn" type="button" onclick="closeModal()" class="px-6 py-2.5 bg-gradient-to-r from-[#9d4edd] to-[#c77dff] hover:opacity-90 text-white text-xs uppercase tracking-wider font-bold rounded-xl shadow-[0_0_20px_rgba(157,78,221,0.2)] transition-all flex items-center gap-2">
+                    <button id="save-post-btn" type="button" class="px-6 py-2.5 bg-gradient-to-r from-[#9d4edd] to-[#c77dff] hover:opacity-90 text-white text-xs uppercase tracking-wider font-bold rounded-xl shadow-[0_0_20px_rgba(157,78,221,0.2)] transition-all flex items-center gap-2">
                       <i class="ph-bold ph-check text-sm"></i> Save Post
                     </button>
             </div>
@@ -818,10 +818,6 @@ let currentView = "calendar";
 let currentEditingPostId = null;
 let currentModalAsset = null;
 
-let currentMediaFilter = "all";
-let currentMediaFilterMode = "all";
-let currentMediaFilterValue = "all";
-
 let calendarMode = "month";
 let calendarCursor = getInitialCalendarCursor();
 
@@ -860,8 +856,6 @@ const descInput = document.querySelector("#scheduling-modal textarea");
 const pillarBtns = Array.from(document.querySelectorAll(".pillar-btn"));
 const saveButton = document.getElementById("save-post-btn");
 
-const mediaFilterModeSelect = document.getElementById("media-filter-mode");
-const mediaFilterSelect = document.getElementById("media-filter-select");
 const mediaUploadBtn = document.getElementById("media-upload-btn");
 const mediaUploadInput = document.getElementById("media-upload-input");
 
@@ -912,7 +906,6 @@ function rerenderAll() {
   renderCalendar();
   renderLedger();
   renderQueue(getScheduledQueue());
-  populateMediaFilterDropdown();
   renderMedia();
   renderInspo();
   renderConstellation();
