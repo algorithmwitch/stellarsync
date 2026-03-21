@@ -939,22 +939,27 @@ initApp();
 function initApp() {
   seedStars();
   cleanInvalidImportantToken();
+
   setupPillarButtons();
   setupModalControls();
   setupSaveHandler();
+
   setupCalendarControls();
   setupMediaFilters();
   setupMediaUpload();
   setupModalMediaUpload();
+
   setupInspoModal();
-  setupConstellationInteractions();
   setupCampaignControls();
+  setupConstellationInteractions();
   setupLedgerControls();
   setupMediaAdvancedFilters();
+
   switchView("calendar");
   rerenderAll();
   syncRemoteIfConfigured();
 }
+    
 function rerenderAll() {
   populateCampaignDropdown();
   renderCalendar();
