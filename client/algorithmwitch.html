@@ -697,7 +697,7 @@
                 
                   <div class="flex-1 flex flex-col">
                     <div class="flex justify-between items-center mb-2">
-                      <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500">Caption / Deion</label>
+                      <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500">Caption / Description</label>
                       <div class="flex gap-2">
                         <button class="text-[#c77dff] hover:text-white text-xs font-semibold flex items-center gap-1 transition-colors" onclick="aiGenerate('caption')" title="AI Caption"><i class="ph-bold ph-sparkle"></i></button>
                         <button class="text-gray-500 hover:text-white text-xs font-semibold flex items-center gap-1 transition-colors" onclick="aiGenerate('keywords')" title="Keywords"><i class="ph-bold ph-key"></i></button>
@@ -718,6 +718,47 @@
         </div>
     </div>
 
+    <div id="campaign-modal" class="fixed inset-0 z-[105] flex items-center justify-center bg-black/70 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
+  <div id="campaign-modal-card" class="modal-content w-full max-w-md bg-[#120c1d] border border-white/10 rounded-2xl shadow-2xl overflow-hidden scale-95 transition-transform duration-300">
+    <div class="p-6 border-b border-white/10 flex justify-between items-center bg-gradient-to-r from-[#1a1128] to-[#120c1d]">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-[#2d1b4e] flex items-center justify-center">
+          <i class="ph-fill ph-planet text-[#c77dff] text-xl"></i>
+        </div>
+        <h2 class="text-xl font-bold text-white tracking-tight">Create Campaign</h2>
+      </div>
+      <button id="close-campaign-modal-btn" type="button" class="text-gray-500 hover:text-white p-2 rounded-xl hover:bg-white/5 transition-colors">
+        <i class="ph-bold ph-x text-xl"></i>
+      </button>
+    </div>
+
+    <div class="p-6 space-y-5">
+      <div>
+        <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2">Campaign Name</label>
+        <input type="text" id="campaign-name-input" class="form-input text-sm font-medium" placeholder="Enter campaign name...">
+      </div>
+
+      <div>
+        <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2">Content Pillar</label>
+        <select id="campaign-pillar-input" class="form-input text-sm font-medium">
+          <option value="edu">Education</option>
+          <option value="promo">Promo</option>
+          <option value="engage">Engage</option>
+          <option value="aware">Awareness</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="p-6 border-t border-white/10 flex justify-end gap-3 bg-[#0f0a18]">
+      <button id="cancel-campaign-btn" type="button" class="px-5 py-2.5 rounded-xl text-xs font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-colors">
+        Cancel
+      </button>
+      <button id="save-campaign-btn" type="button" class="px-6 py-2.5 bg-gradient-to-r from-[#9d4edd] to-[#c77dff] hover:opacity-90 text-white text-xs uppercase tracking-wider font-bold rounded-xl shadow-[0_0_20px_rgba(157,78,221,0.3)] transition-all flex items-center gap-2">
+        <i class="ph-bold ph-check text-sm"></i> Create Campaign
+      </button>
+    </div>
+  </div>
+</div>
     
     <div id="ai-toast" class="fixed bottom-8 right-8 z-[110] opacity-0 pointer-events-none transition-opacity duration-300" vid="591">
         <div class="bg-[#181125] px-5 py-4 rounded-xl border border-white/5 shadow-2xl flex items-center gap-4" vid="592">
