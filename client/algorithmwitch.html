@@ -2186,19 +2186,19 @@ function setupLedgerControls() {
   });
 }
 
-function populateLedgerCampaignFilter() {
-  const select = document.getElementById("ledger-filter-campaign");
+function populateMediaCampaignFilter() {
+  const select = document.getElementById("media-filter-campaign");
   if (!select) return;
 
   const options = ['<option value="all">All Campaigns</option>']
     .concat((appState.campaigns || [])
       .filter(c => !c.isArchived)
-      .map(c => `<option value="${escapeHtml(c.campaignId)}">${escapeHtml(c.campaignName)}</option>`));
+      .map(c => `<option value="${escapeHtml(c.campaignName)}">${escapeHtml(c.campaignName)}</option>`));
 
   select.innerHTML = options.join("");
-  select.value = ledgerFilters.campaign || "all";
+  select.value = mediaFilters.campaign || "all";
 }
-
+    
 function setupMediaAdvancedFilters() {
   const toggle = document.getElementById("media-filter-toggle");
   const dropdown = document.getElementById("media-filter-dropdown");
@@ -2226,6 +2226,13 @@ function setupMediaAdvancedFilters() {
       type: "all",
       campaign: "all"
     };
+    if (mediaFilters.campaign !== "all") {
+  items = items.filter(item => {
+    const linkedPost = (appState.posts || []).find(post => post.id === item.postId);
+    const campaignName = item.campaign || item.campaignName || linkedPost?.campaignName || linkedPost?.hubTitle || "";
+    return String(campaignName) === mediaFilters.campaign;
+  });
+}
 
     if (typeSelect) typeSelect.value = "all";
     if (campaignSelectEl) campaignSelectEl.value = "all";
@@ -2875,7 +2882,8 @@ function renderQueue(queueItems) {
 
   if (!queueList) return;
 
-  const items = (queueItems || []).slice(0, 3);
+  const allItems = queueItems || [];
+  const items = allItems.slice(0, 3);
 
   queueList.innerHTML = items.map(item => {
     const color = pillarColor(item.pillar);
@@ -2911,7 +2919,7 @@ function renderQueue(queueItems) {
   }).join("");
 
   if (badge) {
-    badge.textContent = `${items.length} Scheduled`;
+    badge.textContent = `${allItems.length} Scheduled`;
   }
 }
 
