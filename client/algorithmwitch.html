@@ -1014,6 +1014,7 @@ let pointerStartY = 0;
 
 let ledgerFilters = {
   pillar: "all",
+  pillarCategory: "all",
   campaign: "all",
   type: "all",
   status: "all"
@@ -1291,11 +1292,6 @@ function setupCampaignControls() {
     campaignModalTargetSelect = campaignSelect || null;
     openCampaignModal();
   });
-
-document.getElementById("constellation-create-campaign-btn")?.addEventListener("click", () => {
-  campaignModalTargetSelect = null;
-  openCampaignModal();
-});
 
   closeCampaignModalBtn?.addEventListener("click", closeCampaignModal);
   cancelCampaignBtn?.addEventListener("click", closeCampaignModal);
@@ -1577,6 +1573,13 @@ function renderLedger() {
     posts = posts.filter(post => String(post.pillar || "") === ledgerFilters.pillar);
   }
 
+  if (ledgerFilters.pillarCategory !== "all") {
+    posts = posts.filter(post => {
+      const category = String(post.pillarCategory || post.subcategory || "").toLowerCase();
+      return category === ledgerFilters.pillarCategory;
+    });
+  }
+
   if (ledgerFilters.campaign !== "all") {
     posts = posts.filter(post => String(post.campaignId || "") === ledgerFilters.campaign);
   }
@@ -1594,12 +1597,14 @@ function renderLedger() {
     const bTime = b.date ? new Date(b.date).getTime() : 0;
 
     if (ledgerSortMode === "oldest") return aTime - bTime;
+
     if (ledgerSortMode === "scheduled") {
       const aScheduled = a.status === "scheduled" ? 0 : 1;
       const bScheduled = b.status === "scheduled" ? 0 : 1;
       if (aScheduled !== bScheduled) return aScheduled - bScheduled;
       return aTime - bTime;
     }
+
     if (ledgerSortMode === "status") {
       const order = { scheduled: 0, draft: 1, published: 2 };
       const aOrder = order[a.status] ?? 99;
@@ -1646,9 +1651,14 @@ function renderLedger() {
             <i class="ph-fill ${platformIcon} text-3xl" style="color:${iconColor}"></i>
           </div>
           <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-3 mb-2">
+            <div class="flex items-center gap-3 mb-2 flex-wrap">
               <span class="badge ${badgeClass} text-[8px]">${escapeHtml(String(post.status || "draft").toUpperCase())}</span>
               <span class="px-2 py-1 bg-[#120c1d] border border-white/5 rounded text-[9px] text-gray-300 font-medium">${escapeHtml(pillarLabel)}</span>
+              ${
+                post.pillarCategory || post.subcategory
+                  ? `<span class="px-2 py-1 bg-[#181125] border border-white/5 rounded text-[9px] text-gray-400 font-medium">${escapeHtml(post.pillarCategory || post.subcategory)}</span>`
+                  : ""
+              }
               <span class="text-gray-500 text-[10px] font-medium">${escapeHtml(formatLedgerDate(post.date))}</span>
             </div>
             <h3 class="text-white font-bold text-base mb-2">${escapeHtml(post.title || "")}</h3>
@@ -1824,27 +1834,15 @@ function renderConstellation() {
       });
       dot.addEventListener("click", () => openModalById(post.id));
 
-      const dotLabel = document.createElement("div");
-      dotLabel.style.cssText = `
-        position:absolute;
-        left:${dotX + 18}px;
-        top:90px;
-        transform:translateY(-50%);
-        white-space:nowrap;
-        background:rgba(18,12,29,0.85);
-        border:1px solid ${color}40;
-        padding:5px 9px;
-        border-radius:8px;
-        font-size:10px;
-        color:white;
-        font-weight:600;
-        z-index:8;
-        pointer-events:none;
-        max-width:180px;
-        overflow:hidden;
-        text-overflow:ellipsis;
-      `;
+      const dotLabel = document.createElement("button");
+      dotLabel.type = "button";
+      dotLabel.className = "constellation-label-btn";
+      dotLabel.style.left = `${dotX + 18}px`;
+      dotLabel.style.top = "90px";
+      dotLabel.style.borderColor = `${color}40`;
       dotLabel.textContent = post.title || "Untitled post";
+      dotLabel.title = post.title || "Open post";
+      dotLabel.addEventListener("click", () => openModalById(post.id));
 
       rowGroup.appendChild(dot);
       rowGroup.appendChild(dotLabel);
@@ -1907,10 +1905,10 @@ function renderConstellation() {
   `;
   canvas.appendChild(addCampaignRow);
 
-    document.getElementById("constellation-create-campaign-btn")?.addEventListener("click", () => {
-      campaignModalTargetSelect = null;
-      openCampaignModal();
-    });
+  document.getElementById("constellation-create-campaign-btn")?.addEventListener("click", () => {
+    campaignModalTargetSelect = null;
+    openCampaignModal();
+  });
 
   updateTransform();
 }
@@ -2435,6 +2433,21 @@ function setupLedgerControls() {
       engage: "Engagement",
       aware: "Awareness"
     },
+    pillarCategory: {
+      all: "All",
+      "thought-leadership": "Thought Leadership",
+      explainer: "Explainers",
+      "case-study": "Case Studies",
+      offer: "Offers",
+      service: "Services",
+      launch: "Launches",
+      question: "Questions",
+      poll: "Polls",
+      conversation: "Conversation",
+      brand: "Brand",
+      visibility: "Visibility",
+      culture: "Culture"
+    },
     type: {
       all: "All",
       image: "Image",
@@ -2465,43 +2478,47 @@ function setupLedgerControls() {
     sortDropdown?.classList.toggle("hidden");
   });
 
-  document.querySelectorAll(".ledger-filter-option").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const key = btn.dataset.filterKey;
-      const value = btn.dataset.filterValue;
+  filterDropdown?.addEventListener("click", (e) => {
+    const btn = e.target.closest(".ledger-filter-option");
+    if (!btn) return;
 
-      if (!key) return;
+    const key = btn.dataset.filterKey;
+    const value = btn.dataset.filterValue || "all";
+    if (!key) return;
 
-      ledgerFilters[key] = value || "all";
+    ledgerFilters[key] = value;
 
-      if (key === "pillar" && pillarLabel) {
-        pillarLabel.textContent = labelMaps.pillar[value] || "All";
+    if (key === "pillar" && pillarLabel) {
+      pillarLabel.textContent = labelMaps.pillar[value] || "All";
+      if (ledgerFilters.pillar === "all") {
+        ledgerFilters.pillarCategory = "all";
       }
+    }
 
-      if (key === "campaign" && campaignLabel) {
-        campaignLabel.textContent =
-          value === "all"
-            ? "All"
-            : ((appState.campaigns || []).find(c => c.campaignId === value)?.campaignName || "All");
-      }
+    if (key === "campaign" && campaignLabel) {
+      campaignLabel.textContent =
+        value === "all"
+          ? "All"
+          : ((appState.campaigns || []).find(c => c.campaignId === value)?.campaignName || "All");
+    }
 
-      if (key === "type" && typeLabel) {
-        typeLabel.textContent = labelMaps.type[value] || "All";
-      }
+    if (key === "type" && typeLabel) {
+      typeLabel.textContent = labelMaps.type[value] || "All";
+    }
 
-      if (key === "status" && statusLabel) {
-        statusLabel.textContent = labelMaps.status[value] || "All";
-      }
+    if (key === "status" && statusLabel) {
+      statusLabel.textContent = labelMaps.status[value] || "All";
+    }
 
-      renderLedger();
-      filterDropdown?.classList.add("hidden");
-      showToast("Filter applied", "Ledger filters updated.", "ph-check", "text-[#00ffaa]");
-    });
+    renderLedger();
+    filterDropdown.classList.add("hidden");
+    showToast("Filter applied", "Ledger filters updated.", "ph-check", "text-[#00ffaa]");
   });
 
   resetBtn?.addEventListener("click", () => {
     ledgerFilters = {
       pillar: "all",
+      pillarCategory: "all",
       campaign: "all",
       type: "all",
       status: "all"
