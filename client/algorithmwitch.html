@@ -934,8 +934,6 @@ const inspoTypeButtons = Array.from(document.querySelectorAll(".inspo-type-btn")
 
 let currentInspoType = "article";
 
-initApp();
-
 function initApp() {
   seedStars();
   cleanInvalidImportantToken();
@@ -1781,9 +1779,10 @@ function renderConstellation() {
   `;
   canvas.appendChild(addCampaignRow);
 
-  document.getElementById("constellation-create-campaign-btn")?.addEventListener("click", async () => {
-    await promptCreateCampaignRow();
-  });
+    document.getElementById("constellation-create-campaign-btn")?.addEventListener("click", () => {
+      campaignModalTargetSelect = null;
+      openCampaignModal();
+    });
 
   updateTransform();
 }
@@ -3350,7 +3349,7 @@ window.openModal = function(
   if (!matched) {
     matched = appState.posts.find(post => post.title === title);
   }
-
+    
   openPostModal(
     matched?.title || title,
     matched?.platform || platform,
@@ -3362,6 +3361,9 @@ window.openModal = function(
     matched?.id || null
   );
 };
+    
+initApp();
+    
 </script>
 </body>
 </html>
