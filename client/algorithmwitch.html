@@ -810,6 +810,8 @@
       <button id="save-campaign-btn" type="button" class="px-6 py-2.5 bg-gradient-to-r from-[#9d4edd] to-[#c77dff] hover:opacity-90 text-white text-xs uppercase tracking-wider font-bold rounded-xl shadow-[0_0_20px_rgba(157,78,221,0.3)] transition-all flex items-center gap-2">
         <i class="ph-bold ph-check text-sm"></i> Create Campaign
       </button>
+        <select id="modal-campaign"></select>
+<button id="modal-add-campaign-btn" type="button">Add</button>
     </div>
   </div>
 </div>
@@ -892,7 +894,7 @@ let ledgerFilters = {
 };
 
 let ledgerSortMode = "newest";
-
+let currentMediaFilter = "all";
 let mediaFilters = {
   type: "all",
   campaign: "all"
@@ -1157,12 +1159,15 @@ function setupCampaignControls() {
 function populateCampaignDropdown() {
   if (!campaignSelect) return;
 
+  const currentValue = campaignSelect.value || "";
+
   const options = ['<option value="">No campaign</option>']
     .concat((appState.campaigns || []).map(campaign => {
       return `<option value="${escapeHtml(campaign.campaignId)}">${escapeHtml(campaign.campaignName)}</option>`;
     }));
 
   campaignSelect.innerHTML = options.join("");
+  campaignSelect.value = currentValue;
 }
 
 function normalizePillar(value) {
@@ -2020,27 +2025,6 @@ function getCurrentModalCampaignLabel() {
   const campaignId = campaignSelect?.value || "";
   const campaign = (appState.campaigns || []).find(item => item.campaignId === campaignId);
   return campaign?.campaignName || "";
-}
-
-function populateMediaFilterDropdown() {
-  if (!mediaFilterSelect) return;
-
-  let options = [`<option value="all">All Assets</option>`];
-
-  if (currentMediaFilterMode === "type") {
-    const types = [...new Set((appState.media || []).map(item => String(item.type || "").toLowerCase()).filter(Boolean))];
-    options = [`<option value="all">All Types</option>`].concat(
-      types.map(type => `<option value="${escapeHtml(type)}">${escapeHtml(capitalize(type))}</option>`)
-    );
-  } else if (currentMediaFilterMode === "campaign") {
-    const campaigns = [...new Set((appState.media || []).map(item => item.campaign || linkedPostCampaignLabel(item)).filter(Boolean))];
-    options = [`<option value="all">All Campaigns</option>`].concat(
-      campaigns.map(campaign => `<option value="${escapeHtml(campaign)}">${escapeHtml(campaign)}</option>`)
-    );
-  }
-
-  mediaFilterSelect.innerHTML = options.join("");
-  mediaFilterSelect.value = "all";
 }
 
 function linkedPostCampaignLabel(item) {
