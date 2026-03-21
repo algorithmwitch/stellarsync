@@ -229,7 +229,7 @@
           </div>
         </section>
             
-<section id="view-constellation" class="view-section hidden w-full h-full flex-col overflow-hidden bg-transparent border border-white/5 rounded-2xl">
+<section id="view-constellation" class="view-section hidden w-full h-full flex-col overflow-hidden bg-transparent border border-white/5 rounded-2xl relative">
   <div class="absolute top-6 left-6 z-30 flex gap-2">
     <button id="zoom-in" class="w-10 h-10 bg-[#1a1128] border border-white/5 rounded-xl text-white hover:bg-[#231738] flex items-center justify-center transition-colors" title="Zoom in">
       <i class="ph-bold ph-magnifying-glass-plus text-lg"></i>
@@ -237,14 +237,8 @@
     <button id="zoom-out" class="w-10 h-10 bg-[#1a1128] border border-white/5 rounded-xl text-white hover:bg-[#231738] flex items-center justify-center transition-colors" title="Zoom out">
       <i class="ph-bold ph-magnifying-glass-minus text-lg"></i>
     </button>
-    <button id="zoom-reset" class="w-10 h-10 bg-[#1a1128] border border-white/5 rounded-xl text-white hover:bg-[#231738] flex items-center justify-center transition-colors" title="Reset view">
+    <button id="zoom-reset" class="w-10 h-10 bg-[#1a1128] border border-white/5 rounded-xl text-white hover:bg-[#231738] flex items-center justify-center transition-colors" title="Reset">
       <i class="ph-bold ph-corners-out text-lg"></i>
-    </button>
-    <button id="zoom-fullscreen" class="w-10 h-10 bg-[#1a1128] border border-white/5 rounded-xl text-white hover:bg-[#231738] flex items-center justify-center transition-colors" title="Fullscreen">
-      <i class="ph-bold ph-arrows-out text-lg"></i>
-    </button>
-    <button id="add-campaign-btn" class="px-4 h-10 bg-[#2d1b4e] border border-[#a855f7]/30 rounded-xl text-white text-xs font-bold hover:bg-[#3d246c] transition-colors flex items-center gap-2">
-      <i class="ph-bold ph-plus"></i> Add Constellation
     </button>
   </div>
 
@@ -254,14 +248,9 @@
     </span>
   </div>
 
-  <div id="constellation-hint" class="absolute bottom-6 left-6 z-30 bg-[#1a1128]/90 border border-white/5 px-4 py-3 rounded-xl text-[11px] text-gray-300 max-w-[280px] leading-relaxed">
-    Double click anywhere on the map to add a campaign at that position.
-  </div>
-
   <div id="starmap-viewport" class="w-full h-full overflow-hidden relative">
-    <div id="starmap-canvas" class="starmap-container absolute top-0 left-0 w-[2400px] h-[1600px] origin-top-left">
-      <svg id="constellation-lines" class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 2400 1600" preserveAspectRatio="none"></svg>
-      <div id="constellation-layer" class="absolute inset-0"></div>
+    <div id="starmap-canvas" class="starmap-container absolute top-0 left-0 w-[2200px] h-[2200px] origin-top-left transition-transform duration-75 ease-out">
+      <!-- dynamic -->
     </div>
   </div>
 </section>
@@ -292,91 +281,15 @@
   <div class="flex justify-between items-end mb-8">
     <div>
       <h2 class="text-4xl font-bold text-white tracking-tight">Inspo Vault</h2>
-      <p class="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mt-2">Saved Links &amp; References</p>
+      <p class="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mt-2">Saved Links & References</p>
     </div>
-<div class="flex gap-2 items-center">
-  <input id="inspo-link-input" class="form-input w-[320px]" placeholder="Paste a link..." />
-  <button id="inspo-add-link-btn" class="px-5 py-2 bg-[#2d1b4e] border border-[#a855f7]/30 rounded-xl text-xs text-white font-bold hover:bg-[#3d246c] transition-colors shadow-sm">
-    Add Link
-  </button>
-</div>
+    <button id="open-inspo-modal-btn" type="button" class="px-5 py-2 bg-[#2d1b4e] border border-[#a855f7]/30 rounded-xl text-xs text-white font-bold hover:bg-[#3d246c] transition-colors shadow-sm">
+      <i class="ph-bold ph-plus mr-1"></i> Add Link
+    </button>
   </div>
 
-  <div id="inspo-grid" class="grid grid-cols-3 gap-4 overflow-y-auto custom-scrollbar flex-1 pb-4 content-start">          
-                    
-                    <div class="glass-card flex flex-col" vid="380">
-                        <div class="p-5 border-b border-white/5" vid="381">
-                            <div class="flex justify-between items-start mb-3" vid="382">
-                                <span class="px-2.5 py-1 bg-[#120c1d] border border-white/5 rounded text-[10px] text-gray-300 font-semibold uppercase tracking-wider" vid="383">Article</span>
-                                <button onclick="inspoToPost('The Future of Solar: 2024 Industry Report', 'article', 'New breakthroughs in perovskite solar cells promise 40% efficiency gains.')" class="text-gray-500 hover:text-white transition-colors bg-[#120c1d] p-2 rounded-lg border border-white/5" title="Turn into post" vid="384">
-                                    <i class="ph-bold ph-paper-plane-tilt text-lg" vid="385"></i>
-                                </button>
-                            </div>
-                            <h3 class="text-white text-base font-bold mb-2 line-clamp-2" vid="386">The Future of Solar: 2024 Industry Report</h3>
-                            <p class="text-gray-500 text-[10px] font-medium" vid="387">GreenTech Daily • Added Oct 1</p>
-                        </div>
-                        <div class="p-5 flex-1 flex flex-col justify-between" vid="388">
-                            <p class="text-gray-400 text-xs leading-relaxed line-clamp-3 mb-5" vid="389">New breakthroughs in perovskite solar cells promise 40% efficiency gains. Major energy companies are investing heavily...</p>
-                            <div class="flex items-center justify-between mt-auto" vid="390">
-                                <span class="text-[10px] text-gray-500 font-medium truncate max-w-[120px]" vid="391">greentech.com</span>
-                                <button onclick="inspoToPost('The Future of Solar: 2024 Industry Report', 'article', 'New breakthroughs in perovskite solar cells promise 40% efficiency gains.')" class="text-[#c77dff] text-xs font-bold hover:text-white transition-colors flex items-center gap-1.5" vid="392">
-                                    <i class="ph-bold ph-plus" vid="393"></i> Create Post
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    
-                    <div class="glass-card flex flex-col" vid="394">
-                        <div class="p-5 border-b border-white/5" vid="395">
-                            <div class="flex justify-between items-start mb-3" vid="396">
-                                <span class="px-2.5 py-1 bg-[#120c1d] border border-white/5 rounded text-[10px] text-gray-300 font-semibold uppercase tracking-wider" vid="397">Video</span>
-                                <button onclick="inspoToPost('Tesla Solar Roof Process', 'video', 'Check out how fast the new V3 tiles can be installed.')" class="text-gray-500 hover:text-white transition-colors bg-[#120c1d] p-2 rounded-lg border border-white/5" title="Turn into post" vid="398">
-                                    <i class="ph-bold ph-paper-plane-tilt text-lg" vid="399"></i>
-                                </button>
-                            </div>
-                            <h3 class="text-white text-base font-bold mb-2 line-clamp-2" vid="400">Tesla's New Solar Roof Installation Process</h3>
-                            <p class="text-gray-500 text-[10px] font-medium" vid="401">YouTube • Added Oct 3</p>
-                        </div>
-                        <div class="p-5 flex-1 flex flex-col justify-between" vid="402">
-                            <div class="aspect-video bg-[#120c1d] border border-white/5 rounded-lg flex items-center justify-center mb-4" vid="403">
-                                <i class="ph-fill ph-play-circle text-gray-600 text-4xl" vid="404"></i>
-                            </div>
-                            <div class="flex items-center justify-between mt-auto" vid="405">
-                                <span class="text-[10px] text-gray-500 font-medium" vid="406">12:34 Duration</span>
-                                <button onclick="inspoToPost('Tesla Solar Roof Process', 'video', 'Check out how fast the new V3 tiles can be installed.')" class="text-[#c77dff] text-xs font-bold hover:text-white transition-colors flex items-center gap-1.5" vid="407">
-                                    <i class="ph-bold ph-plus" vid="408"></i> Create Post
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    
-                    <div class="glass-card flex flex-col" vid="409">
-                        <div class="p-5 border-b border-white/5" vid="410">
-                            <div class="flex justify-between items-start mb-3" vid="411">
-                                <span class="px-2.5 py-1 bg-[#120c1d] border border-white/5 rounded text-[10px] text-gray-300 font-semibold uppercase tracking-wider" vid="412">Trend</span>
-                                <button onclick="inspoToPost('Viral Solar Hacks', 'trend', 'Have you tried any of these viral solar maintenance hacks?')" class="text-gray-500 hover:text-white transition-colors bg-[#120c1d] p-2 rounded-lg border border-white/5" title="Turn into post" vid="413">
-                                    <i class="ph-bold ph-paper-plane-tilt text-lg" vid="414"></i>
-                                </button>
-                            </div>
-                            <h3 class="text-white text-base font-bold mb-2 line-clamp-2" vid="415">Viral Solar Panel Hacks TikTok Compilation</h3>
-                            <p class="text-gray-500 text-[10px] font-medium" vid="416">Social • Added Oct 5</p>
-                        </div>
-                        <div class="p-5 flex-1 flex flex-col justify-between" vid="417">
-                            <p class="text-gray-400 text-xs leading-relaxed line-clamp-3 mb-4" vid="418">Collection of trending DIY solar setups and maintenance tips gaining traction. 2.4M views across platforms.</p>
-                            <div class="flex items-center justify-between mt-auto" vid="419">
-                                <div class="flex gap-2" vid="420">
-                                    <span class="px-2 py-1 bg-[#120c1d] border border-white/5 rounded text-[9px] text-gray-400 font-medium" vid="421">#solarhacks</span>
-                                </div>
-                                <button onclick="inspoToPost('Viral Solar Hacks', 'trend', 'Have you tried any of these viral solar maintenance hacks?')" class="text-[#c77dff] text-xs font-bold hover:text-white transition-colors flex items-center gap-1.5" vid="422">
-                                    <i class="ph-bold ph-plus" vid="423"></i> Create Post
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
+  <div id="inspo-grid" class="grid grid-cols-3 gap-4 overflow-y-auto custom-scrollbar flex-1 pb-4 content-start"></div>
+</section>
 
             
 <section id="view-media" class="view-section hidden w-full h-full p-8 flex-col overflow-hidden bg-[#120c1d] border border-white/5 rounded-2xl">
@@ -449,6 +362,73 @@
         </aside>
 
     </div>
+
+    <div id="inspo-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
+  <div id="inspo-modal-card" class="modal-content w-full max-w-lg bg-[#120c1d] border border-white/10 rounded-2xl shadow-2xl overflow-hidden scale-95 transition-transform duration-300">
+    <div class="p-6 border-b border-white/10 flex justify-between items-center bg-gradient-to-r from-[#1a1128] to-[#120c1d]">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-[#2d1b4e] flex items-center justify-center">
+          <i class="ph-fill ph-lightbulb text-[#c77dff] text-xl"></i>
+        </div>
+        <h2 class="text-xl font-bold text-white tracking-tight">Add Inspiration</h2>
+      </div>
+      <button id="close-inspo-modal-btn" type="button" class="text-gray-500 hover:text-white p-2 rounded-xl hover:bg-white/5 transition-colors">
+        <i class="ph-bold ph-x text-xl"></i>
+      </button>
+    </div>
+
+    <div class="p-6 space-y-5">
+      <div>
+        <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2">Title</label>
+        <input type="text" id="inspo-title" class="form-input text-sm font-medium" placeholder="Enter inspiration title...">
+      </div>
+
+      <div>
+        <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2">Link URL</label>
+        <div class="relative">
+          <i class="ph-bold ph-link absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500"></i>
+          <input type="url" id="inspo-url" class="form-input text-sm font-medium pl-10" placeholder="https://example.com/article">
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2">Content Type</label>
+        <div class="grid grid-cols-4 gap-2">
+          <button type="button" class="inspo-type-btn active px-3 py-2.5 bg-[#181125] border border-[#00f0ff]/30 rounded-xl text-[#00f0ff] text-xs font-semibold flex flex-col items-center gap-1.5 transition-all" data-inspo-type="article">
+            <i class="ph-fill ph-article text-lg"></i>
+            <span class="text-[9px] uppercase tracking-wider">Article</span>
+          </button>
+          <button type="button" class="inspo-type-btn px-3 py-2.5 bg-[#181125] border border-white/5 rounded-xl text-gray-400 hover:text-[#b25fff] hover:border-[#b25fff]/30 text-xs font-semibold flex flex-col items-center gap-1.5 transition-all" data-inspo-type="video">
+            <i class="ph-fill ph-video text-lg"></i>
+            <span class="text-[9px] uppercase tracking-wider">Video</span>
+          </button>
+          <button type="button" class="inspo-type-btn px-3 py-2.5 bg-[#181125] border border-white/5 rounded-xl text-gray-400 hover:text-[#ffd700] hover:border-[#ffd700]/30 text-xs font-semibold flex flex-col items-center gap-1.5 transition-all" data-inspo-type="trend">
+            <i class="ph-fill ph-trend-up text-lg"></i>
+            <span class="text-[9px] uppercase tracking-wider">Trend</span>
+          </button>
+          <button type="button" class="inspo-type-btn px-3 py-2.5 bg-[#181125] border border-white/5 rounded-xl text-gray-400 hover:text-[#00ffaa] hover:border-[#00ffaa]/30 text-xs font-semibold flex flex-col items-center gap-1.5 transition-all" data-inspo-type="image">
+            <i class="ph-fill ph-image text-lg"></i>
+            <span class="text-[9px] uppercase tracking-wider">Image</span>
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2">Notes (Optional)</label>
+        <textarea id="inspo-notes" class="form-input resize-none h-20 text-sm" placeholder="Add your thoughts, takeaways, or post ideas..."></textarea>
+      </div>
+    </div>
+
+    <div class="p-6 border-t border-white/10 flex justify-end gap-3 bg-[#0f0a18]">
+      <button id="cancel-inspo-btn" type="button" class="px-5 py-2.5 rounded-xl text-xs font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-colors">
+        Cancel
+      </button>
+      <button id="save-inspo-btn" type="button" class="px-6 py-2.5 bg-gradient-to-r from-[#9d4edd] to-[#c77dff] hover:opacity-90 text-white text-xs uppercase tracking-wider font-bold rounded-xl shadow-[0_0_20px_rgba(157,78,221,0.3)] transition-all flex items-center gap-2">
+        <i class="ph-bold ph-check text-sm"></i> Save to Vault
+      </button>
+    </div>
+  </div>
+</div>
 
     
     <div id="scheduling-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm" vid="524">
@@ -670,6 +650,20 @@ const constellationLayer = document.getElementById("constellation-layer");
 const constellationLines = document.getElementById("constellation-lines");
 const addCampaignBtn = document.getElementById("add-campaign-btn");
 
+const inspoModal = document.getElementById("inspo-modal");
+const inspoModalCard = document.getElementById("inspo-modal-card");
+const openInspoModalBtn = document.getElementById("open-inspo-modal-btn");
+const closeInspoModalBtn = document.getElementById("close-inspo-modal-btn");
+const cancelInspoBtn = document.getElementById("cancel-inspo-btn");
+const saveInspoBtn = document.getElementById("save-inspo-btn");
+
+const inspoTitleInput = document.getElementById("inspo-title");
+const inspoUrlInput = document.getElementById("inspo-url");
+const inspoNotesInput = document.getElementById("inspo-notes");
+const inspoTypeButtons = Array.from(document.querySelectorAll(".inspo-type-btn"));
+
+let currentInspoType = "article";
+
 initApp();
 
 function initApp() {
@@ -707,6 +701,234 @@ function inspoTypeLabel(type) {
   if (t === "trend") return "Trend";
   if (t === "article") return "Article";
   if (t === "podcast") return "Podcast";
+  return capitalize(t || "Reference");
+}
+
+function setupInspoModal() {
+  openInspoModalBtn?.addEventListener("click", openInspoModal);
+  closeInspoModalBtn?.addEventListener("click", closeInspoModal);
+  cancelInspoBtn?.addEventListener("click", closeInspoModal);
+  saveInspoBtn?.addEventListener("click", saveInspoFromModal);
+
+  inspoModal?.addEventListener("click", (e) => {
+    if (e.target === inspoModal) closeInspoModal();
+  });
+
+  inspoTypeButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      setInspoType(btn.dataset.inspoType || "article");
+    });
+  });
+}
+
+function openInspoModal() {
+  if (!inspoModal || !inspoModalCard) return;
+  inspoModal.classList.remove("opacity-0", "pointer-events-none");
+  inspoModalCard.classList.remove("scale-95");
+  inspoModalCard.classList.add("scale-100");
+}
+
+function closeInspoModal() {
+  if (!inspoModal || !inspoModalCard) return;
+  inspoModal.classList.add("opacity-0", "pointer-events-none");
+  inspoModalCard.classList.remove("scale-100");
+  inspoModalCard.classList.add("scale-95");
+
+  setTimeout(() => {
+    if (inspoTitleInput) inspoTitleInput.value = "";
+    if (inspoUrlInput) inspoUrlInput.value = "";
+    if (inspoNotesInput) inspoNotesInput.value = "";
+    setInspoType("article");
+  }, 200);
+}
+
+function setInspoType(type = "article") {
+  currentInspoType = type;
+
+  const colors = {
+    article: "#00f0ff",
+    video: "#b25fff",
+    trend: "#ffd700",
+    image: "#00ffaa"
+  };
+
+  inspoTypeButtons.forEach((btn) => {
+    const btnType = btn.dataset.inspoType || "";
+    btn.classList.remove("active");
+    btn.style.borderColor = "rgba(255,255,255,0.05)";
+    btn.style.color = "#94a3b8";
+
+    if (btnType === type) {
+      btn.classList.add("active");
+      btn.style.borderColor = `${colors[type] || "#c77dff"}4D`;
+      btn.style.color = colors[type] || "#c77dff";
+    }
+  });
+}
+
+async function saveInspoFromModal() {
+  const title = inspoTitleInput?.value.trim() || "";
+  const url = inspoUrlInput?.value.trim() || "";
+  const notes = inspoNotesInput?.value.trim() || "";
+
+  if (!title) {
+    showToast("Missing title", "Please enter a title.", "ph-warning", "text-red-400");
+    return;
+  }
+
+  const payload = {
+    inspoType: currentInspoType,
+    title,
+    sourceLabel: deriveSourceLabel(url),
+    summary: notes,
+    domainOrMeta: deriveDomainLabel(url),
+    suggestedPlatform: currentInspoType === "video" || currentInspoType === "image" ? "instagram" : currentInspoType === "trend" ? "both" : "linkedin",
+    suggestedPillar: currentInspoType === "trend" ? "engage" : currentInspoType === "image" || currentInspoType === "video" ? "aware" : "edu",
+    createPostTitle: title,
+    createPostDescription: notes,
+    createPostType: currentInspoType === "video" ? "video" : currentInspoType === "article" ? "article" : currentInspoType === "image" ? "image" : "text",
+    notes: url || notes
+  };
+
+  const localItem = {
+    id: generateId("inspo"),
+    title,
+    type: currentInspoType,
+    description: notes,
+    sourceLabel: deriveSourceLabel(url),
+    domainOrMeta: deriveDomainLabel(url),
+    url,
+    notes
+  };
+
+  appState.inspo.unshift(localItem);
+  persistLocalState();
+  renderInspo();
+  closeInspoModal();
+  showToast("Saved", "Inspiration saved to vault.", "ph-check", "text-[#00ffaa]");
+
+  if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
+    try {
+      await apiSaveInspo(payload);
+      await syncRemoteIfConfigured();
+    } catch (err) {
+      console.error(err);
+      showToast("Local only", "Saved locally. Remote inspo sync failed.", "ph-warning", "text-yellow-400");
+    }
+  }
+}
+
+function deriveSourceLabel(url) {
+  if (!url) return "Added manually";
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, "");
+    if (host.includes("youtube")) return "YouTube";
+    if (host.includes("instagram")) return "Instagram";
+    if (host.includes("tiktok")) return "TikTok";
+    if (host.includes("linkedin")) return "LinkedIn";
+    return host.split(".")[0]
+      ? capitalize(host.split(".")[0])
+      : "Added manually";
+  } catch (_) {
+    return "Added manually";
+  }
+}
+
+function deriveDomainLabel(url) {
+  if (!url) return "";
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch (_) {
+    return url;
+  }
+}
+
+function renderInspo() {
+  const grid = document.getElementById("inspo-grid");
+  if (!grid) return;
+
+  const items = [...(appState.inspo || [])];
+
+  if (!items.length) {
+    grid.innerHTML = `
+      <div class="col-span-3 glass-card p-8 text-center">
+        <p class="text-gray-400 text-sm">No saved inspiration yet.</p>
+      </div>
+    `;
+    return;
+  }
+
+  grid.innerHTML = items.map(item => {
+    const type = String(item.type || "").toLowerCase();
+    const label = inspoTypeLabel(type);
+    const meta = [item.sourceLabel || "", item.domainOrMeta || ""].filter(Boolean).join(" • ");
+    const description = item.description || "";
+    const footer = item.url || item.domainOrMeta || item.notes || "Saved reference";
+
+    const preview =
+      type === "video"
+        ? `
+          <div class="aspect-video bg-[#120c1d] border border-white/5 rounded-lg flex items-center justify-center mb-4">
+            <i class="ph-fill ph-play-circle text-gray-600 text-4xl"></i>
+          </div>
+        `
+        : `
+          <p class="text-gray-400 text-xs leading-relaxed line-clamp-3 mb-5">
+            ${escapeHtml(description || "No summary saved yet.")}
+          </p>
+        `;
+
+    return `
+      <div class="glass-card flex flex-col">
+        <div class="p-5 border-b border-white/5">
+          <div class="flex justify-between items-start mb-3">
+            <span class="px-2.5 py-1 bg-[#120c1d] border border-white/5 rounded text-[10px] text-gray-300 font-semibold uppercase tracking-wider">
+              ${escapeHtml(label)}
+            </span>
+            <button
+              type="button"
+              onclick="inspoToPost('${escapeHtml(item.id)}')"
+              class="text-gray-500 hover:text-white transition-colors bg-[#120c1d] p-2 rounded-lg border border-white/5"
+              title="Turn into post">
+              <i class="ph-bold ph-paper-plane-tilt text-lg"></i>
+            </button>
+          </div>
+
+          <h3 class="text-white text-base font-bold mb-2 line-clamp-2">
+            ${escapeHtml(item.title || "Untitled inspiration")}
+          </h3>
+
+          <p class="text-gray-500 text-[10px] font-medium">
+            ${escapeHtml(meta || "Saved reference")}
+          </p>
+        </div>
+
+        <div class="p-5 flex-1 flex flex-col justify-between">
+          ${preview}
+
+          <div class="flex items-center justify-between mt-auto gap-3">
+            <span class="text-[10px] text-gray-500 font-medium truncate max-w-[140px]">
+              ${escapeHtml(footer)}
+            </span>
+            <button
+              type="button"
+              onclick="inspoToPost('${escapeHtml(item.id)}')"
+              class="text-[#c77dff] text-xs font-bold hover:text-white transition-colors flex items-center gap-1.5 shrink-0">
+              <i class="ph-bold ph-plus"></i> Create Post
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function inspoTypeLabel(type) {
+  const t = String(type || "").toLowerCase();
+  if (t === "video") return "Video";
+  if (t === "trend") return "Trend";
+  if (t === "article") return "Article";
+  if (t === "image") return "Image";
   return capitalize(t || "Reference");
 }
 
@@ -778,11 +1000,11 @@ function getScheduledQueue() {
 
 function setupCampaignControls() {
   addCampaignBtn?.addEventListener("click", async () => {
-    await promptCreateCampaignAt(320, 320);
+    await promptCreateCampaignRow();
   });
 
   addCampaignBtnModal?.addEventListener("click", async () => {
-    const campaign = await promptCreateCampaignAt(320, 320);
+    const campaign = await promptCreateCampaignRow();
     if (campaign && campaignSelect) {
       campaignSelect.value = campaign.campaignId;
     }
@@ -1122,135 +1344,289 @@ function buildConstellationGroups() {
     }));
 }
 
-function renderConstellation() {
-  if (!constellationLayer || !constellationLines) return;
-
-  const groups = buildConstellationGroups();
-
-  if (!groups.length) {
-    constellationLayer.innerHTML = "";
-    constellationLines.innerHTML = "";
-    return;
-  }
-
-  let dotHtml = "";
-  let lineHtml = "";
-
-  groups.forEach(group => {
-    const color = group.color || pillarColor(group.pillar);
-    const rootX = Number(group.x || 320);
-    const rootY = Number(group.y || 320);
-
-    dotHtml += `
-      <button
-        type="button"
-        class="map-node constellation-root-dot w-4 h-4 rounded-full border border-white/30 shadow-[0_0_14px_currentColor] hover:scale-125 transition-transform"
-        data-campaign-id="${escapeHtml(group.campaignId)}"
-        style="left:${rootX}px; top:${rootY}px; background:${color}; color:${color};"
-        title="${escapeHtml(group.campaignName)}">
-      </button>
-
-      <div
-        class="map-node pointer-events-none px-3 py-1.5 rounded-lg bg-[#120c1d]/90 border border-white/5 text-[10px] font-bold text-white whitespace-nowrap"
-        style="left:${rootX + 70}px; top:${rootY - 20}px;">
-        ${escapeHtml(group.campaignName)}
-      </div>
-    `;
-
-    group.posts.forEach((post, index) => {
-      const postX = rootX + 120 + (index * 90);
-      const postY = rootY + ((index % 2 === 0) ? -45 : 45);
-
-      lineHtml += `
-        <line x1="${rootX}" y1="${rootY}" x2="${postX}" y2="${postY}" stroke="${color}" stroke-width="1.5" opacity="0.55" />
-      `;
-
-      dotHtml += `
-        <button
-          type="button"
-          class="map-node w-3 h-3 rounded-full border border-white/20 hover:scale-125 transition-transform"
-          style="left:${postX}px; top:${postY}px; background:${color};"
-          onclick="openModalById('${escapeHtml(post.id)}')"
-          title="${escapeHtml(post.title)}">
-        </button>
-      `;
+function buildConstellationRows() {
+  const campaigns = [...(appState.campaigns || [])]
+    .filter(campaign => !campaign.isArchived)
+    .sort((a, b) => {
+      const aSort = Number(a.sortOrder || 0);
+      const bSort = Number(b.sortOrder || 0);
+      return aSort - bSort;
     });
+
+  return campaigns.map((campaign) => {
+    const posts = [...(appState.posts || [])]
+      .filter(post => post.campaignId === campaign.campaignId)
+      .sort((a, b) => {
+        const aTime = a.date ? new Date(a.date).getTime() : 0;
+        const bTime = b.date ? new Date(b.date).getTime() : 0;
+        return aTime - bTime;
+      });
+
+    return {
+      ...campaign,
+      posts
+    };
+  });
+}
+
+function renderConstellation() {
+  if (!canvas) return;
+
+  const rows = buildConstellationRows();
+  const rowHeight = 250;
+  const rowStartY = 170;
+  const labelX = 90;
+  const firstDotX = 360;
+  const dotGap = 190;
+  const addDotOffset = 180;
+  const minCanvasHeight = Math.max(1800, (rows.length + 1) * rowHeight + 220);
+
+  canvas.style.height = `${minCanvasHeight}px`;
+  canvas.innerHTML = "";
+
+  rows.forEach((campaign, index) => {
+    const rowY = rowStartY + (index * rowHeight);
+    const color = campaign.color || pillarColor(campaign.pillar || "edu");
+
+    const rowGroup = document.createElement("div");
+    rowGroup.className = "absolute left-0 w-full";
+    rowGroup.style.top = `${rowY - 90}px`;
+    rowGroup.style.height = "180px";
+
+    const label = document.createElement("div");
+    label.style.cssText = `
+      position:absolute;
+      left:${labelX}px;
+      top:50%;
+      transform:translateY(-50%);
+      padding:10px 18px;
+      background:rgba(18,12,29,0.78);
+      border:1px solid rgba(255,255,255,0.05);
+      border-left:3px solid ${color};
+      border-radius:0 12px 12px 0;
+      backdrop-filter:blur(10px);
+      z-index:6;
+      min-width:170px;
+    `;
+    label.innerHTML = `
+      <h3 style="font-weight:700;color:white;font-size:13px;margin-bottom:2px;">${escapeHtml(campaign.campaignName || "Untitled Campaign")}</h3>
+      <p style="font-size:9px;color:${color};text-transform:uppercase;letter-spacing:0.14em;font-weight:700;">
+        ${escapeHtml(campaign.pillar || "campaign")}
+      </p>
+    `;
+    rowGroup.appendChild(label);
+
+    const lineSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    lineSvg.setAttribute("width", "2200");
+    lineSvg.setAttribute("height", "180");
+    lineSvg.style.cssText = "position:absolute;left:0;top:0;pointer-events:none;z-index:1;overflow:visible;";
+
+    const rowPosts = campaign.posts || [];
+
+    rowPosts.forEach((post, postIndex) => {
+      const currentX = firstDotX + (postIndex * dotGap);
+      const currentY = 90;
+
+      if (postIndex < rowPosts.length - 1) {
+        const nextX = firstDotX + ((postIndex + 1) * dotGap);
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", String(currentX));
+        line.setAttribute("y1", String(currentY));
+        line.setAttribute("x2", String(nextX));
+        line.setAttribute("y2", String(currentY));
+        line.setAttribute("stroke", color);
+        line.setAttribute("stroke-width", "2");
+        line.setAttribute("stroke-dasharray", "5 5");
+        line.setAttribute("opacity", "0.45");
+        lineSvg.appendChild(line);
+      }
+    });
+
+    rowGroup.appendChild(lineSvg);
+
+    rowPosts.forEach((post, postIndex) => {
+      const dotX = firstDotX + (postIndex * dotGap);
+
+      const dot = document.createElement("button");
+      dot.type = "button";
+      dot.className = "absolute rounded-full transition-all";
+      dot.style.cssText = `
+        left:${dotX}px;
+        top:90px;
+        width:14px;
+        height:14px;
+        transform:translate(-50%,-50%);
+        background:${color};
+        border:1px solid rgba(255,255,255,0.35);
+        box-shadow:0 0 18px ${color}55;
+        z-index:10;
+        cursor:pointer;
+      `;
+      dot.title = post.title || "Open post";
+      dot.addEventListener("mouseenter", () => {
+        dot.style.transform = "translate(-50%,-50%) scale(1.22)";
+      });
+      dot.addEventListener("mouseleave", () => {
+        dot.style.transform = "translate(-50%,-50%) scale(1)";
+      });
+      dot.addEventListener("click", () => openModalById(post.id));
+
+      const dotLabel = document.createElement("div");
+      dotLabel.style.cssText = `
+        position:absolute;
+        left:${dotX + 18}px;
+        top:90px;
+        transform:translateY(-50%);
+        white-space:nowrap;
+        background:rgba(18,12,29,0.85);
+        border:1px solid ${color}40;
+        padding:5px 9px;
+        border-radius:8px;
+        font-size:10px;
+        color:white;
+        font-weight:600;
+        z-index:8;
+        pointer-events:none;
+        max-width:180px;
+        overflow:hidden;
+        text-overflow:ellipsis;
+      `;
+      dotLabel.textContent = post.title || "Untitled post";
+
+      rowGroup.appendChild(dot);
+      rowGroup.appendChild(dotLabel);
+    });
+
+    const addX = firstDotX + (Math.max(rowPosts.length, 1) * dotGap) + addDotOffset;
+
+    const addDot = document.createElement("button");
+    addDot.type = "button";
+    addDot.className = "absolute flex items-center justify-center rounded-full transition-all";
+    addDot.style.cssText = `
+      left:${addX}px;
+      top:90px;
+      width:34px;
+      height:34px;
+      transform:translate(-50%,-50%);
+      background:rgba(18,12,29,0.82);
+      border:2px dashed ${color}66;
+      color:${color};
+      z-index:10;
+      cursor:pointer;
+    `;
+    addDot.innerHTML = `<i class="ph-bold ph-plus text-base"></i>`;
+    addDot.title = `Add post to ${campaign.campaignName || "campaign"}`;
+    addDot.addEventListener("click", () => createPostForCampaign(campaign.campaignId));
+
+    rowGroup.appendChild(addDot);
+    canvas.appendChild(rowGroup);
   });
 
-  constellationLines.innerHTML = lineHtml;
-  constellationLayer.innerHTML = dotHtml;
+  const addCampaignRow = document.createElement("div");
+  addCampaignRow.style.cssText = `
+    position:absolute;
+    left:0;
+    top:${rowStartY + (rows.length * rowHeight) - 80}px;
+    width:100%;
+    height:160px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  `;
+  addCampaignRow.innerHTML = `
+    <button id="constellation-create-campaign-btn" type="button"
+      style="
+        padding:16px 32px;
+        background:rgba(18,12,29,0.82);
+        border:2px dashed rgba(199,125,255,0.4);
+        border-radius:14px;
+        color:#c77dff;
+        font-size:13px;
+        font-weight:700;
+        cursor:pointer;
+        transition:all 0.2s;
+        display:flex;
+        align-items:center;
+        gap:8px;
+      ">
+      <i class="ph-bold ph-plus"></i> Create New Campaign
+    </button>
+  `;
+  canvas.appendChild(addCampaignRow);
 
-  wireConstellationRootDots();
+  document.getElementById("constellation-create-campaign-btn")?.addEventListener("click", async () => {
+    await promptCreateCampaignRow();
+  });
+
   updateTransform();
+}
+
+async function promptCreateCampaignRow() {
+  const campaignName = window.prompt("Campaign name");
+  if (!campaignName) return null;
+
+  const pillar = normalizePillar(window.prompt("Pillar: edu, promo, engage, aware", "edu") || "edu");
+  const color = defaultCampaignColor(pillar);
+
+  const nextSortOrder = ((appState.campaigns || []).reduce((max, item) => {
+    return Math.max(max, Number(item.sortOrder || 0));
+  }, 0)) + 1;
+
+  try {
+    const result = await apiSaveCampaign({
+      campaignName,
+      pillar,
+      color,
+      sortOrder: nextSortOrder,
+      isArchived: false
+    });
+
+    const normalized = {
+      campaignId: result.campaign.campaignId,
+      campaignName: result.campaign.campaignName,
+      pillar: result.campaign.pillar || pillar,
+      color: result.campaign.color || color,
+      sortOrder: Number(result.campaign.sortOrder || nextSortOrder),
+      isArchived: !!result.campaign.isArchived,
+      createdAt: result.campaign.createdAt || ""
+    };
+
+    appState.campaigns.push(normalized);
+    persistLocalState();
+    rerenderAll();
+    showToast("Campaign created", "New constellation row added.", "ph-check", "text-[#00ffaa]");
+    return normalized;
+  } catch (err) {
+    console.error(err);
+    showToast("Campaign failed", err.message || "Could not create campaign.", "ph-warning", "text-yellow-400");
+    return null;
+  }
+}
+
+function createPostForCampaign(campaignId) {
+  const campaign = (appState.campaigns || []).find(c => c.campaignId === campaignId);
+  if (!campaign) return;
+
+  openPostModal(
+    "",
+    "linkedin",
+    campaign.pillar || "edu",
+    "",
+    "draft",
+    "",
+    "text",
+    null
+  );
+
+  if (campaignSelect) {
+    campaignSelect.value = campaign.campaignId;
+  }
 }
     
 function setupConstellationInteractions() {
   if (!viewport || !canvas) return;
 
   viewport.style.cursor = "grab";
-
-  viewport.addEventListener("pointerdown", (e) => {
-    if (e.target.closest(".map-node")) return;
-    isDragging = true;
-    pointerStartX = e.clientX;
-    pointerStartY = e.clientY;
-    startPanX = panX;
-    startPanY = panY;
-    viewport.style.cursor = "grabbing";
-    if (viewport.setPointerCapture) {
-      try { viewport.setPointerCapture(e.pointerId); } catch (_) {}
-    }
-  });
-
-  viewport.addEventListener("pointermove", (e) => {
-    if (!isDragging) return;
-    panX = startPanX + (e.clientX - pointerStartX);
-    panY = startPanY + (e.clientY - pointerStartY);
-    updateTransform();
-  });
-
-  const endDrag = () => {
-    isDragging = false;
-    viewport.style.cursor = "grab";
-  };
-
-  viewport.addEventListener("pointerup", endDrag);
-  viewport.addEventListener("pointercancel", endDrag);
-  viewport.addEventListener("mouseleave", () => {
-    if (isDragging) endDrag();
-  });
-
-  viewport.addEventListener("wheel", (e) => {
-    e.preventDefault();
-
-    const rect = viewport.getBoundingClientRect();
-    const pointerX = e.clientX - rect.left;
-    const pointerY = e.clientY - rect.top;
-
-    const worldX = (pointerX - panX) / scale;
-    const worldY = (pointerY - panY) / scale;
-
-    const multiplier = e.deltaY < 0 ? 1.12 : 0.89;
-    scale = clamp(scale * multiplier, 0.35, 2.2);
-
-    panX = pointerX - worldX * scale;
-    panY = pointerY - worldY * scale;
-
-    updateTransform();
-  }, { passive: false });
-
-  viewport.addEventListener("dblclick", async (e) => {
-    if (e.target.closest(".map-node")) return;
-
-    const rect = viewport.getBoundingClientRect();
-    const localX = e.clientX - rect.left;
-    const localY = e.clientY - rect.top;
-
-    const worldX = Math.round((localX - panX) / scale);
-    const worldY = Math.round((localY - panY) / scale);
-
-    await promptCreateCampaignAt(worldX, worldY);
-  });
 
   document.getElementById("zoom-in")?.addEventListener("click", () => zoomConstellation(1.15));
   document.getElementById("zoom-out")?.addEventListener("click", () => zoomConstellation(0.87));
@@ -2058,23 +2434,41 @@ function inspoToPost(inspoIdOrTitle, type, description) {
   showToast("AI Assistant", "Creating post from inspiration...", "ph-magic-wand");
 
   setTimeout(() => {
-    const settings = inferInspoPostSettings(source.type);
+    let platform = "linkedin";
+    let pillar = "edu";
+    let postType = "text";
+
+    const sourceType = String(source.type || "").toLowerCase();
+
+    if (["video", "image", "carousel", "visual"].includes(sourceType)) {
+      platform = "instagram";
+      pillar = "aware";
+      postType = sourceType === "video" ? "video" : "image";
+    } else if (sourceType === "trend") {
+      platform = "both";
+      pillar = "engage";
+      postType = "text";
+    } else if (sourceType === "article") {
+      platform = "linkedin";
+      pillar = "edu";
+      postType = "article";
+    }
 
     openPostModal(
       source.title || "",
-      settings.platform,
-      settings.pillar,
+      platform,
+      pillar,
       "",
       "draft",
       source.description || "",
-      settings.postType,
+      postType,
       null
     );
 
     showToast("Success", "Post created from inspo!", "ph-check", "text-[#00ffaa]");
   }, 700);
 }
-
+    
 function renderInspo() {
   const grid = document.getElementById("inspo-grid");
   if (!grid) return;
@@ -2184,18 +2578,17 @@ const media = mediaResult.status === "fulfilled" ? mediaResult.value : [];
 const inspo = inspoResult.status === "fulfilled" ? inspoResult.value : [];
 const campaigns = campaignsResult.status === "fulfilled" ? campaignsResult.value : [];
 
-    if (Array.isArray(campaigns)) {
-      appState.campaigns = campaigns.map(campaign => ({
-        campaignId: campaign.campaignId,
-        campaignName: campaign.campaignName,
-        pillar: campaign.pillar || "edu",
-        color: campaign.color || pillarColor(campaign.pillar || "edu"),
-        x: Number(campaign.x || 320),
-        y: Number(campaign.y || 320),
-        isArchived: !!campaign.isArchived,
-        createdAt: campaign.createdAt || ""
-      }));
-    }
+if (Array.isArray(campaigns)) {
+  appState.campaigns = campaigns.map(campaign => ({
+    campaignId: campaign.campaignId,
+    campaignName: campaign.campaignName,
+    pillar: campaign.pillar || "edu",
+    color: campaign.color || pillarColor(campaign.pillar || "edu"),
+    sortOrder: Number(campaign.sortOrder || 0),
+    isArchived: !!campaign.isArchived,
+    createdAt: campaign.createdAt || ""
+  }));
+}
 
     if (Array.isArray(posts)) {
       appState.posts = posts.map(post => {
