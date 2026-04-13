@@ -58,6 +58,11 @@
     position: relative;
   }
 
+  .view-section {
+    min-height: 0;
+    min-width: 0;
+  }
+
   .constellation-label-btn {
     position: absolute;
     transform: translateY(-50%);
@@ -161,6 +166,15 @@
         .post-pill.engage { background: rgba(255, 215, 0, 0.08) !important; border: 1px solid rgba(255, 215, 0, 0.15) !important; }
         .post-pill.aware { background: rgba(0, 255, 170, 0.08) !important; border: 1px solid rgba(0, 255, 170, 0.15) !important; }
         .wrap-safe { white-space: normal; overflow-wrap: anywhere; word-break: break-word; }
+        .signal-label-fit {
+            white-space: normal;
+            overflow-wrap: normal;
+            word-break: normal;
+            hyphens: none;
+            text-wrap: pretty;
+            line-height: 1.2;
+            font-size: clamp(11px, 0.78vw, 12px);
+        }
         .pillar-empty-state { border: 1px dashed rgba(255,255,255,0.08); border-radius: 0.75rem; padding: 0.75rem; color: #6b7280; font-size: 11px; text-align: center; }
 
         .starmap-container { cursor: grab; background-color: var(--color-bg); }
@@ -216,9 +230,10 @@
         .comparison-fill { height:100%; border-radius:999px; }
         .audit-list li { position:relative; padding-left:1rem; }
         .audit-list li::before { content:""; position:absolute; left:0; top:0.5rem; width:6px; height:6px; border-radius:999px; background:currentColor; opacity:0.8; }
+        .ledger-linkedin { color: #0A66C2; }
     </style>
 </head>
-<body class="flex flex-col relative p-4 gap-4" vid="11">
+<body class="flex flex-col relative p-4 gap-4 overflow-hidden" vid="11">
     
     <div id="app-background-overlay" class="fixed inset-0 z-0 pointer-events-none" vid="12">
             <div class="absolute inset-0 bg-gradient-to-br from-[#0a0514] via-[#05020a] to-[#0a0514]" vid="13"></div>
@@ -248,7 +263,7 @@
         </div>
     </header>
 
-    <div class="flex flex-1 overflow-hidden relative z-10 w-full gap-4" vid="29">
+    <div class="flex flex-1 min-h-0 overflow-hidden relative z-10 w-full gap-4" vid="29">
         
         <aside class="w-[88px] bg-[#120c1d] border border-white/5 rounded-2xl flex flex-col items-center py-6 gap-4 shrink-0 z-40" vid="30">
             <button id="nav-calendar" onclick="switchView('calendar')" class="w-12 h-12 rounded-xl bg-[#2d1b4e] text-white flex items-center justify-center relative group nav-btn active transition-colors" vid="31">
@@ -287,10 +302,10 @@
             </div>
         </aside>
 
-        <main class="flex-1 w-full h-full overflow-hidden relative" vid="50">
+        <main class="flex-1 w-full h-full min-h-0 overflow-hidden relative" vid="50">
             
             
-        <section id="view-calendar" class="view-section w-full h-full p-8 flex flex-col overflow-hidden bg-[#120c1d] border border-white/5 rounded-2xl">
+<section id="view-calendar" class="view-section w-full h-full p-8 flex flex-col min-h-0 overflow-hidden bg-[#120c1d] border border-white/5 rounded-2xl">
           <div class="mb-8 flex justify-between items-start">
             <div>
               <h2 class="text-4xl font-bold text-white tracking-tight flex items-baseline gap-3">
@@ -333,7 +348,7 @@
           </div>
         </section>
             
-<section id="view-constellation" class="view-section hidden w-full h-full flex-col bg-transparent border border-white/5 rounded-2xl relative overflow-visible">
+<section id="view-constellation" class="view-section hidden w-full h-full min-h-0 flex-col bg-transparent border border-white/5 rounded-2xl relative overflow-visible">
   <div class="absolute top-6 left-6 z-30 flex gap-2">
     <button id="zoom-in" class="w-10 h-10 bg-[#1a1128] border border-white/5 rounded-xl text-white hover:bg-[#231738] flex items-center justify-center transition-colors" title="Zoom in">
       <i class="ph-bold ph-magnifying-glass-plus text-lg"></i>
@@ -359,7 +374,7 @@
   </div>
 </section>
             
-<section id="view-ledger" class="view-section hidden w-full h-full flex-col bg-[#120c1d] border border-white/5 rounded-2xl overflow-visible">
+<section id="view-ledger" class="view-section hidden w-full h-full min-h-0 flex-col bg-[#120c1d] border border-white/5 rounded-2xl overflow-visible">
   <div class="ledger-toolbar p-8 border-b border-white/5 flex justify-between items-end">
     <div>
       <h2 class="text-4xl font-bold text-white tracking-tight">Content Ledger</h2>
@@ -518,7 +533,7 @@
   </div>
 </section>
             
-<section id="view-inspo" class="view-section hidden w-full h-full p-8 flex-col overflow-hidden bg-[#120c1d] border border-white/5 rounded-2xl">
+<section id="view-inspo" class="view-section hidden w-full h-full p-8 min-h-0 flex-col overflow-hidden bg-[#120c1d] border border-white/5 rounded-2xl">
   <div class="flex justify-between items-end mb-8">
     <div>
       <h2 class="text-4xl font-bold text-white tracking-tight">Inspo Vault</h2>
@@ -533,7 +548,7 @@
 </section>
 
             
-<section id="view-media" class="view-section hidden w-full h-full p-8 flex-col overflow-hidden bg-[#120c1d] border border-white/5 rounded-2xl">
+<section id="view-media" class="view-section hidden w-full h-full p-8 min-h-0 flex-col overflow-hidden bg-[#120c1d] border border-white/5 rounded-2xl">
   <div class="flex justify-between items-end mb-8">
     <div>
       <h2 class="text-4xl font-bold text-white tracking-tight">Media Vault</h2>
@@ -625,7 +640,7 @@
   <div id="media-grid" class="grid grid-cols-3 gap-4 overflow-y-auto custom-scrollbar flex-1 content-start"></div>
 </section>
 
-<section id="view-performance" class="view-section hidden w-full h-full p-8 flex-col overflow-y-auto custom-scrollbar bg-[#120c1d] border border-white/5 rounded-2xl">
+<section id="view-performance" class="view-section hidden w-full h-full p-8 min-h-0 flex-col overflow-y-auto custom-scrollbar bg-[#120c1d] border border-white/5 rounded-2xl">
   <div class="flex justify-between items-end mb-8">
     <div>
       <h2 class="text-4xl font-bold text-white tracking-tight">Performance</h2>
@@ -694,7 +709,7 @@
   </div>
 </section>
 
-<section id="view-audit" class="view-section hidden w-full h-full p-8 flex-col overflow-y-auto custom-scrollbar bg-[#120c1d] border border-white/5 rounded-2xl">
+<section id="view-audit" class="view-section hidden w-full h-full p-8 min-h-0 flex-col overflow-y-auto custom-scrollbar bg-[#120c1d] border border-white/5 rounded-2xl">
   <div class="flex justify-between items-end mb-8">
     <div>
       <h2 class="text-4xl font-bold text-white tracking-tight">Audit</h2>
@@ -731,11 +746,11 @@
         </main>
         
         
-        <aside class="w-[320px] bg-[#120c1d] border border-white/5 rounded-2xl flex flex-col shrink-0 z-40 overflow-hidden" vid="470">
+        <aside class="w-[320px] bg-[#120c1d] border border-white/5 rounded-2xl flex flex-col min-h-0 shrink-0 z-40 overflow-hidden" vid="470">
             <div class="p-6 border-b border-white/5" vid="471">
                 <h3 class="text-sm font-bold text-white tracking-widest uppercase" vid="472">Signals Overview</h3>
             </div>
-            <div class="p-6 overflow-y-auto custom-scrollbar flex-1" vid="473">
+            <div class="p-6 overflow-y-auto custom-scrollbar flex-1 min-h-0" vid="473">
                 <div class="mini-card p-4 mb-5">
                   <div class="flex items-center justify-between gap-3 mb-3">
                     <div>
@@ -1177,6 +1192,29 @@ function normalizeDisplayText(value) {
     .trim();
 }
 
+const CANONICAL_PILLAR_MAP = {
+  auth: "authority",
+  authority: "authority",
+  authoritative: "authority",
+  edu: "education",
+  education: "education",
+  educational: "education",
+  promo: "promotional",
+  promotion: "promotional",
+  promotional: "promotional",
+  engage: "engagement",
+  engagement: "engagement",
+  aware: "awareness",
+  awareness: "awareness"
+};
+
+function getCanonicalPillarValue(value) {
+  const cleaned = normalizeDisplayText(value);
+  if (!cleaned) return "";
+  const normalized = normalizeLookupValue(cleaned);
+  return CANONICAL_PILLAR_MAP[normalized] || cleaned;
+}
+
 function toTitleCase(value) {
   const smallWords = new Set(["a", "an", "and", "as", "at", "by", "for", "in", "of", "on", "or", "the", "to", "vs", "via"]);
   return normalizeDisplayText(value)
@@ -1200,7 +1238,15 @@ function formatCampaignDisplayName(value) {
 }
 
 function formatContentPillarLabel(value) {
-  return toTitleCase(value);
+  return toTitleCase(getCanonicalPillarValue(value));
+}
+
+function getDisplayPostContentPillar(post) {
+  return getCanonicalPillarValue(getPostContentPillar(post));
+}
+
+function getDisplayCampaignContentPillar(campaign) {
+  return getCanonicalPillarValue(getCampaignContentPillar(campaign));
 }
 
 function getDisplayTitle(value, fallback = "Untitled", maxWords = 5) {
@@ -1235,7 +1281,7 @@ function getAvailableContentPillars() {
     .filter(campaign => !campaign.isArchived)
     .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0))
     .forEach((campaign) => {
-      const pillar = getCampaignContentPillar(campaign);
+      const pillar = getDisplayCampaignContentPillar(campaign);
       const key = normalizeLookupValue(pillar);
       if (key && !seen.has(key)) {
         seen.add(key);
@@ -1244,7 +1290,7 @@ function getAvailableContentPillars() {
     });
 
   (appState.posts || []).forEach((post) => {
-    const pillar = getPostContentPillar(post);
+    const pillar = getDisplayPostContentPillar(post);
     const key = normalizeLookupValue(pillar);
     if (key && !seen.has(key)) {
       seen.add(key);
@@ -1256,9 +1302,9 @@ function getAvailableContentPillars() {
 }
 
 function getPillarTheme(pillarValue) {
-  const normalized = normalizeLookupValue(pillarValue);
+  const normalized = normalizeLookupValue(getCanonicalPillarValue(pillarValue));
   const matchedCampaign = (appState.campaigns || []).find(campaign => {
-    return normalizeLookupValue(getCampaignContentPillar(campaign)) === normalized;
+    return normalizeLookupValue(getDisplayCampaignContentPillar(campaign)) === normalized;
   });
 
   if (matchedCampaign?.color) return matchedCampaign.color;
@@ -1270,9 +1316,9 @@ function getPillarTheme(pillarValue) {
 }
 
 function legacyPillarForDisplayValue(value) {
-  const normalized = normalizeLookupValue(value);
+  const normalized = normalizeLookupValue(getCanonicalPillarValue(value));
   const matchedCampaign = (appState.campaigns || []).find(campaign => {
-    return normalizeLookupValue(getCampaignContentPillar(campaign)) === normalized;
+    return normalizeLookupValue(getDisplayCampaignContentPillar(campaign)) === normalized;
   });
   return matchedCampaign?.pillar || normalizePillar(value);
 }
@@ -1352,7 +1398,7 @@ function renderSignalsOverview() {
 
   const counts = new Map();
   (appState.posts || []).forEach((post) => {
-    const pillar = getPostContentPillar(post);
+    const pillar = getDisplayPostContentPillar(post);
     if (!pillar) return;
     counts.set(pillar, (counts.get(pillar) || 0) + 1);
   });
@@ -1370,7 +1416,7 @@ function renderSignalsOverview() {
       <div class="bg-[#181125] border border-white/5 rounded-lg px-3 py-2.5 flex items-center justify-between gap-3 min-w-0">
         <div class="min-w-0 flex items-center gap-2">
           <div class="w-2 h-2 rounded-sm shrink-0" style="background:${escapeHtml(color)}"></div>
-          <span class="text-xs text-gray-300 font-medium wrap-safe" title="${escapeHtml(pillar)}">${escapeHtml(formatContentPillarLabel(pillar))}</span>
+          <span class="text-gray-300 font-medium signal-label-fit min-w-0" title="${escapeHtml(pillar)}">${escapeHtml(formatContentPillarLabel(pillar))}</span>
         </div>
         <span class="text-[10px] font-bold text-gray-500 shrink-0">${count}</span>
       </div>
@@ -1392,7 +1438,7 @@ function renderOverviewPanel() {
   const publishedCount = filteredPosts.filter(post => post.status === "published").length;
   const scheduledCount = filteredPosts.filter(post => post.status === "scheduled").length;
   const topCampaign = countPostsBy(filteredPosts, post => post.campaignName || "").slice(0, 1)[0];
-  const topPillar = countPostsBy(filteredPosts, post => getPostContentPillar(post)).slice(0, 1)[0];
+  const topPillar = countPostsBy(filteredPosts, post => getDisplayPostContentPillar(post)).slice(0, 1)[0];
   const audit = buildAuditSummary();
   const rankingMeta = topPost ? getPostRankingMeta(topPost, filteredPosts) : null;
 
@@ -1418,7 +1464,7 @@ function renderOverviewPanel() {
               </div>
               <div class="px-2 py-2 rounded-lg bg-[#120c1d] border border-white/5">
                 <div class="text-gray-500 uppercase tracking-widest mb-1">Pillar</div>
-                <div class="text-gray-200 wrap-safe">${escapeHtml(formatContentPillarLabel(getPostContentPillar(topPost) || "Missing"))}</div>
+                <div class="text-gray-200 signal-label-fit">${escapeHtml(formatContentPillarLabel(getDisplayPostContentPillar(topPost) || "Missing"))}</div>
               </div>
               <div class="px-2 py-2 rounded-lg bg-[#120c1d] border border-white/5">
                 <div class="text-gray-500 uppercase tracking-widest mb-1">Platform</div>
@@ -1454,8 +1500,8 @@ function renderOverviewPanel() {
     campaignSnapshot.innerHTML = `
       <div class="flex items-center justify-between gap-3"><span class="text-[11px] text-gray-500">Active campaigns</span><span class="text-sm font-bold text-white">${countPostsBy(filteredPosts, post => post.campaignName || "").length}</span></div>
       <div class="flex items-center justify-between gap-3"><span class="text-[11px] text-gray-500">Top campaign</span><span class="text-sm font-bold text-white wrap-safe text-right">${escapeHtml(topCampaign ? formatCampaignDisplayName(topCampaign[0]) : "None")}</span></div>
-      <div class="flex items-center justify-between gap-3"><span class="text-[11px] text-gray-500">Top pillar</span><span class="text-sm font-bold text-white wrap-safe text-right">${escapeHtml(topPillar ? formatContentPillarLabel(topPillar[0]) : "None")}</span></div>
-      <div class="flex items-center justify-between gap-3"><span class="text-[11px] text-gray-500">Pillar values</span><span class="text-sm font-bold text-white">${countPostsBy(filteredPosts, post => getPostContentPillar(post)).length}</span></div>
+      <div class="flex items-center justify-between gap-3"><span class="text-[11px] text-gray-500">Top pillar</span><span class="text-sm font-bold text-white signal-label-fit text-right">${escapeHtml(topPillar ? formatContentPillarLabel(topPillar[0]) : "None")}</span></div>
+      <div class="flex items-center justify-between gap-3"><span class="text-[11px] text-gray-500">Pillar values</span><span class="text-sm font-bold text-white">${countPostsBy(filteredPosts, post => getDisplayPostContentPillar(post)).length}</span></div>
     `;
   }
 
@@ -1484,6 +1530,7 @@ function renderOverviewPanel() {
 }
 
 function renderPerformanceView() {
+  syncPerformanceControls();
   const filteredPosts = getFilteredPosts(performanceFilters);
   const kpis = document.getElementById("performance-kpis");
   const trendSummary = document.getElementById("performance-trend-summary");
@@ -1494,7 +1541,7 @@ function renderPerformanceView() {
   const published = filteredPosts.filter(post => post.status === "published").length;
   const scheduled = filteredPosts.filter(post => post.status === "scheduled").length;
   const withCampaign = filteredPosts.filter(post => post.campaignId).length;
-  const withPillar = filteredPosts.filter(post => getPostContentPillar(post)).length;
+  const withPillar = filteredPosts.filter(post => getDisplayPostContentPillar(post)).length;
   const primaryInsightTotal = primaryInsightMetric
     ? filteredPosts.reduce((sum, post) => sum + normalizeMetricNumber(post[primaryInsightMetric.key]), 0)
     : 0;
@@ -1560,7 +1607,7 @@ function renderPerformanceView() {
 
   renderComparisonRows(
     "performance-pillar-comparison",
-    countPostsBy(filteredPosts, post => getPostContentPillar(post))
+    countPostsBy(filteredPosts, post => getDisplayPostContentPillar(post))
       .slice(0, 5)
       .map(([key, value]) => ({ key, value, label: formatContentPillarLabel(key) })),
     value => `${value}`,
@@ -1588,7 +1635,7 @@ function renderPerformanceView() {
           </div>
           <div class="text-sm font-bold text-white wrap-safe mb-1" title="${escapeHtml(post.title || "")}">${escapeHtml(getDisplayTitle(post.title))}</div>
           <div class="text-[11px] text-gray-400 wrap-safe">${escapeHtml(getDisplayExcerpt(post.description, post.ledgerExcerpt || ""))}</div>
-          <div class="mt-2 text-[10px] text-gray-500">${escapeHtml(formatCampaignDisplayName(post.campaignName || "Unassigned"))} • ${escapeHtml(formatContentPillarLabel(getPostContentPillar(post) || "Missing"))}</div>
+          <div class="mt-2 text-[10px] text-gray-500">${escapeHtml(formatCampaignDisplayName(post.campaignName || "Unassigned"))} • ${escapeHtml(formatContentPillarLabel(getDisplayPostContentPillar(post) || "Missing"))}</div>
           <div class="mt-1 text-[10px] text-gray-500">${escapeHtml(getInsightSummaryLine(post, filteredPosts))}</div>
         </button>
       `).join("")
@@ -1681,17 +1728,34 @@ function setupPerformanceControls() {
   const range = document.getElementById("performance-range-filter");
   if (platform) {
     platform.value = performanceFilters.platform;
-    platform.addEventListener("change", () => {
-      performanceFilters.platform = platform.value || "all";
-      renderPerformanceView();
-    });
+    if (!platform.dataset.bound) {
+      platform.addEventListener("change", () => {
+        performanceFilters.platform = platform.value || "all";
+        renderPerformanceView();
+      });
+      platform.dataset.bound = "true";
+    }
   }
   if (range) {
     range.value = performanceFilters.range;
-    range.addEventListener("change", () => {
-      performanceFilters.range = range.value || "30";
-      renderPerformanceView();
-    });
+    if (!range.dataset.bound) {
+      range.addEventListener("change", () => {
+        performanceFilters.range = range.value || "30";
+        renderPerformanceView();
+      });
+      range.dataset.bound = "true";
+    }
+  }
+}
+
+function syncPerformanceControls() {
+  const platform = document.getElementById("performance-platform-filter");
+  const range = document.getElementById("performance-range-filter");
+  if (platform && platform.value !== performanceFilters.platform) {
+    platform.value = performanceFilters.platform;
+  }
+  if (range && range.value !== performanceFilters.range) {
+    range.value = performanceFilters.range;
   }
 }
 
@@ -1879,7 +1943,7 @@ function renderComparisonRows(targetId, rows, formatter = (value) => String(valu
       <div class="comparison-row">
         <div class="min-w-0">
           <div class="flex justify-between gap-3 mb-1">
-            <span class="text-sm text-gray-200 font-medium wrap-safe">${escapeHtml(item.label)}</span>
+            <span class="text-sm text-gray-200 font-medium signal-label-fit">${escapeHtml(item.label)}</span>
             <span class="text-xs text-gray-500 shrink-0">${escapeHtml(formatter(item.value))}</span>
           </div>
           <div class="comparison-track">
@@ -1897,13 +1961,13 @@ function buildAuditSummary() {
   const datedPosts = posts.filter(post => parsePostDate(post.date));
   const publishedPosts = posts.filter(post => post.status === "published");
   const missingCampaign = posts.filter(post => !post.campaignId);
-  const missingPillar = posts.filter(post => !getPostContentPillar(post));
+  const missingPillar = posts.filter(post => !getDisplayPostContentPillar(post));
   const missingMedia = posts.filter(post => post.postType !== "text" && !findLinkedAssetForPost(post));
   const unresolvedAssets = posts.filter(post => post.assetId && !findLinkedAssetForPost(post));
   const campaignMismatch = posts.filter((post) => {
     if (!post.campaignId) return false;
     const campaign = campaigns.find(item => String(item.campaignId || "") === String(post.campaignId || ""));
-    return !!campaign && normalizeLookupValue(getPostContentPillar(post)) !== normalizeLookupValue(campaign.campaignName);
+    return !!campaign && normalizeLookupValue(getDisplayPostContentPillar(post)) !== normalizeLookupValue(getDisplayCampaignContentPillar(campaign));
   });
 
   const working = [];
@@ -2454,7 +2518,7 @@ function renderLedger() {
   let posts = [...(appState.posts || [])];
 
   if (ledgerFilters.pillar !== "all") {
-    posts = posts.filter(post => normalizeLookupValue(getPostContentPillar(post)) === normalizeLookupValue(ledgerFilters.pillar));
+    posts = posts.filter(post => normalizeLookupValue(getDisplayPostContentPillar(post)) === normalizeLookupValue(ledgerFilters.pillar));
   }
 
   if (ledgerFilters.campaign !== "all") {
@@ -2509,22 +2573,24 @@ function renderLedger() {
       "badge-drf";
 
     const pillarValue = getPostContentPillar(post);
-    const pillarLabel = pillarValue ? formatContentPillarLabel(pillarValue) : "No Pillar";
+    const displayPillarValue = getDisplayPostContentPillar(post);
+    const pillarLabel = displayPillarValue ? formatContentPillarLabel(displayPillarValue) : "No Pillar";
 
     const platformIcon =
       post.platform === "instagram" ? "ph-instagram-logo" :
       post.platform === "both" ? "ph-infinity" :
       "ph-linkedin-logo";
 
-    const iconColor = getPillarTheme(pillarValue);
+    const iconColor = post.platform === "linkedin" ? "#0A66C2" : post.platform === "instagram" ? "#b25fff" : "#ffd700";
     const displayTitle = getDisplayTitle(post.title);
     const displayDescription = getDisplayExcerpt(post.description, post.ledgerExcerpt || "");
+    const platformIconClass = post.platform === "linkedin" ? "ledger-linkedin" : "";
 
     return `
       <div class="ledger-card glass-card p-5" data-post-id="${escapeHtml(post.id)}">
         <div class="flex items-start gap-5">
           <div class="w-14 h-14 rounded-xl bg-[#120c1d] border border-white/5 flex items-center justify-center shrink-0">
-            <i class="ph-fill ${platformIcon} text-3xl" style="color:${iconColor}"></i>
+            <i class="ph-fill ${platformIcon} ${platformIconClass} text-3xl" style="color:${iconColor}"></i>
           </div>
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-3 mb-2 flex-wrap">
@@ -3599,7 +3665,7 @@ function populateLedgerPillarMenu() {
           class="ledger-filter-option w-full px-3 py-2 rounded-lg hover:bg-[#2d1b4e] text-left text-xs text-gray-300 hover:text-white transition-all flex items-center gap-2"
         >
           <div class="w-2 h-2 rounded-full" style="background:${escapeHtml(getPillarTheme(pillar))}"></div>
-          <span class="wrap-safe">${escapeHtml(formatContentPillarLabel(pillar))}</span>
+          <span class="signal-label-fit">${escapeHtml(formatContentPillarLabel(pillar))}</span>
         </button>
       `).join("")}
     </div>
@@ -3778,6 +3844,14 @@ function switchView(viewName) {
         fitConstellation();
       });
     });
+  }
+
+  if (viewName === "performance") {
+    renderPerformanceView();
+  }
+
+  if (viewName === "audit") {
+    renderAuditView();
   }
 
   if (viewName === "media") {
