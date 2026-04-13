@@ -654,12 +654,6 @@
       >
         <i class="ph-bold ph-upload-simple text-sm"></i> Upload
       </button>
-      <button
-        id="media-link-btn"
-        class="px-5 py-2 bg-[#1a1128] border border-white/5 rounded-xl text-xs text-gray-300 font-bold hover:text-white hover:bg-[#231738] transition-colors shadow-sm flex items-center gap-2"
-      >
-        <i class="ph-bold ph-link-simple text-sm"></i> Add Link
-      </button>
       <input id="media-upload-input" type="file" class="hidden" accept="image/*,video/*" />
     </div>
   </div>
@@ -1111,7 +1105,7 @@
 </div>
 <script>
 const APP_CONFIG = {
-  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbyUjzwQjtiMWPeG-R0y8ZLvAw2R7GBhmzaNG1JAImpiR1l2kVWPkN3NdXXsaOq_2E64/exec",
+  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbw3OFesW0SGxl-nEvYmIW4pOZ2w4XdUT_U3OLq7PtvwJXgGxFRqUfw2ojR8PgjqHDxn/exec",
   ENABLE_REMOTE_SYNC: true,
   STORAGE_KEY: "stellarsync_local_state_v4",
   SHELL_LAYOUT_KEY: "stellarsync_shell_layout_v1"
@@ -1208,7 +1202,6 @@ const pillarBtns = Array.from(document.querySelectorAll(".pillar-btn"));
 const saveButton = document.getElementById("save-post-btn");
 
 const mediaUploadBtn = document.getElementById("media-upload-btn");
-const mediaLinkBtn = document.getElementById("media-link-btn");
 const mediaUploadInput = document.getElementById("media-upload-input");
 
 const modalMediaUploadTrigger = document.getElementById("modal-media-upload-trigger");
