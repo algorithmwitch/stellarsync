@@ -768,7 +768,7 @@
 
                 <div class="mb-5" vid="474">
                     <h4 class="text-[10px] font-bold text-gray-500 tracking-widest uppercase mb-4" vid="475">Content Pillars</h4>
-                    <div id="signal-pillar-grid" class="grid grid-cols-2 gap-3" vid="476"></div>
+                    <div id="signal-pillar-grid" class="grid gap-3" style="grid-template-columns:repeat(2,minmax(0,1fr));" vid="476"></div>
                 </div>
 
                 <div class="mini-card p-4 mb-5">
@@ -1214,7 +1214,7 @@ function getPostContentPillar(post) {
 }
 
 function getCampaignContentPillar(campaign) {
-  return String(campaign?.campaignName || "").trim();
+  return String(campaign?.pillar || "").trim();
 }
 
 function getAvailableContentPillars() {
@@ -1267,6 +1267,51 @@ function legacyPillarForDisplayValue(value) {
   return matchedCampaign?.pillar || normalizePillar(value);
 }
 
+const INSIGHT_METRICS = [
+  { key: "clicks", label: "Clicks", weight: 5 },
+  { key: "shares", label: "Shares", weight: 4 },
+  { key: "comments", label: "Comments", weight: 3 },
+  { key: "saves", label: "Saves", weight: 3 },
+  { key: "likes", label: "Likes", weight: 1.5 },
+  { key: "engagementRate", label: "Engagement Rate", weight: 120, formatter: value => `${Number(value || 0).toFixed(1)}%` },
+  { key: "impressions", label: "Impressions", weight: 0.01 },
+  { key: "reach", label: "Reach", weight: 0.012 }
+];
+
+function normalizeMetricNumber(value) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : 0;
+}
+
+function getPostInsightMetrics(post) {
+  return {
+    impressions: normalizeMetricNumber(post?.impressions),
+    reach: normalizeMetricNumber(post?.reach),
+    likes: normalizeMetricNumber(post?.likes),
+    comments: normalizeMetricNumber(post?.comments),
+    shares: normalizeMetricNumber(post?.shares),
+    saves: normalizeMetricNumber(post?.saves),
+    clicks: normalizeMetricNumber(post?.clicks),
+    engagementRate: normalizeMetricNumber(post?.engagementRate)
+  };
+}
+
+function hasInsightMetrics(post) {
+  const metrics = getPostInsightMetrics(post);
+  return Object.values(metrics).some(value => value > 0);
+}
+
+function getPrimaryInsightMetricConfig(posts = []) {
+  return INSIGHT_METRICS.find(metric => posts.some(post => normalizeMetricNumber(post?.[metric.key]) > 0)) || null;
+}
+
+function getInsightScore(post) {
+  const metrics = getPostInsightMetrics(post);
+  return INSIGHT_METRICS.reduce((sum, metric) => {
+    return sum + (normalizeMetricNumber(metrics[metric.key]) * metric.weight);
+  }, 0);
+}
+
 function findLinkedAssetForPost(post, mediaItems = appState.media || []) {
   if (!post) return null;
 
@@ -1312,7 +1357,7 @@ function renderSignalsOverview() {
     const color = getPillarTheme(pillar);
     const count = counts.get(pillar) || 0;
     return `
-      <div class="bg-[#181125] border border-white/5 rounded-lg px-3 py-2.5 flex items-center justify-between gap-3">
+      <div class="bg-[#181125] border border-white/5 rounded-lg px-3 py-2.5 flex items-center justify-between gap-3 min-w-0">
         <div class="min-w-0 flex items-center gap-2">
           <div class="w-2 h-2 rounded-sm shrink-0" style="background:${escapeHtml(color)}"></div>
           <span class="text-xs text-gray-300 font-medium wrap-safe" title="${escapeHtml(pillar)}">${escapeHtml(formatContentPillarLabel(pillar))}</span>
@@ -1339,6 +1384,7 @@ function renderOverviewPanel() {
   const topCampaign = countPostsBy(filteredPosts, post => post.campaignName || "").slice(0, 1)[0];
   const topPillar = countPostsBy(filteredPosts, post => getPostContentPillar(post)).slice(0, 1)[0];
   const audit = buildAuditSummary();
+  const rankingMeta = topPost ? getPostRankingMeta(topPost, filteredPosts) : null;
 
   if (topPostCard) {
     if (!topPost) {
@@ -1346,7 +1392,6 @@ function renderOverviewPanel() {
       if (topPostRank) topPostRank.textContent = "No match";
     } else {
       const linkedAsset = findLinkedAssetForPost(topPost);
-      const score = getPostOperationalScore(topPost).toFixed(1);
       topPostCard.innerHTML = `
         <button type="button" class="w-full text-left" onclick="openModalById('${escapeHtml(topPost.id)}')">
           <div class="p-4 rounded-xl bg-[#181125] border border-white/5 hover:border-white/10 transition-colors">
@@ -1374,11 +1419,15 @@ function renderOverviewPanel() {
                 <div class="text-gray-200">${linkedAsset ? "Linked" : "Not linked"}</div>
               </div>
             </div>
-            <div class="mt-3 text-[10px] text-gray-500">Scheduler score ${escapeHtml(score)} • ${escapeHtml(getRangeLabel(overviewFilters.range))}</div>
+            <div class="mt-3 text-[10px] text-gray-500">${escapeHtml(getInsightSummaryLine(topPost, filteredPosts))} • ${escapeHtml(getRangeLabel(overviewFilters.range))}</div>
           </div>
         </button>
       `;
-      if (topPostRank) topPostRank.textContent = `Score ${score}`;
+      if (topPostRank) {
+        topPostRank.textContent = rankingMeta.mode === "insight"
+          ? `${rankingMeta.label} ${rankingMeta.formatter(rankingMeta.value)}`
+          : `Score ${rankingMeta.formatter(rankingMeta.value)}`;
+      }
     }
   }
 
@@ -1429,16 +1478,16 @@ function renderPerformanceView() {
   const kpis = document.getElementById("performance-kpis");
   const trendSummary = document.getElementById("performance-trend-summary");
   const timeChart = document.getElementById("performance-time-chart");
+  const primaryInsightMetric = getPrimaryInsightMetricConfig(filteredPosts);
 
   const buckets = buildTimeBuckets(filteredPosts, performanceFilters.range);
-  const previousRangePosts = getFilteredPosts({
-    platform: performanceFilters.platform,
-    range: performanceFilters.range === "all" ? "all" : String(Number(performanceFilters.range) * 2)
-  });
   const published = filteredPosts.filter(post => post.status === "published").length;
   const scheduled = filteredPosts.filter(post => post.status === "scheduled").length;
   const withCampaign = filteredPosts.filter(post => post.campaignId).length;
   const withPillar = filteredPosts.filter(post => getPostContentPillar(post)).length;
+  const primaryInsightTotal = primaryInsightMetric
+    ? filteredPosts.reduce((sum, post) => sum + normalizeMetricNumber(post[primaryInsightMetric.key]), 0)
+    : 0;
 
   if (kpis) {
     const cards = [
@@ -1447,8 +1496,17 @@ function renderPerformanceView() {
       { label: "Scheduled", value: scheduled, accent: "#ffd700" },
       { label: "Mapped", value: `${withCampaign}/${withPillar}`, accent: "#00f0ff" }
     ];
+    if (primaryInsightMetric) {
+      cards.splice(1, 0, {
+        label: primaryInsightMetric.label,
+        value: primaryInsightMetric.formatter
+          ? primaryInsightMetric.formatter(primaryInsightTotal)
+          : String(Math.round(primaryInsightTotal)),
+        accent: "#fb7185"
+      });
+    }
     kpis.innerHTML = cards.map(card => `
-      <div class="mini-kpi">
+      <div class="mini-kpi min-w-0">
         <div class="text-[10px] text-gray-500 uppercase tracking-widest mb-2">${escapeHtml(card.label)}</div>
         <div class="text-2xl font-bold text-white">${escapeHtml(String(card.value))}</div>
         <div class="text-[11px] mt-2" style="color:${card.accent};">${escapeHtml(getRangeLabel(performanceFilters.range))}</div>
@@ -1457,14 +1515,25 @@ function renderPerformanceView() {
   }
 
   if (trendSummary) {
-    trendSummary.textContent = `${filteredPosts.length} posts • ${performanceFilters.platform === "all" ? "All platforms" : toTitleCase(performanceFilters.platform)}`;
+    trendSummary.textContent = primaryInsightMetric
+      ? `${primaryInsightMetric.label} over time • ${performanceFilters.platform === "all" ? "All platforms" : toTitleCase(performanceFilters.platform)}`
+      : `${filteredPosts.length} posts • ${performanceFilters.platform === "all" ? "All platforms" : toTitleCase(performanceFilters.platform)}`;
   }
 
   if (timeChart) {
-    const max = Math.max(...buckets.map(bucket => bucket.total), 1);
+    const chartValues = buckets.map(bucket => {
+      if (!primaryInsightMetric) return bucket.total;
+      return filteredPosts
+        .filter((post) => {
+          const date = parsePostDate(post.date);
+          return date && date >= bucket.start && date <= bucket.end;
+        })
+        .reduce((sum, post) => sum + normalizeMetricNumber(post[primaryInsightMetric.key]), 0);
+    });
+    const max = Math.max(...chartValues, 1);
     timeChart.innerHTML = buckets.map(bucket => `
-      <div class="chart-bar" title="${escapeHtml(`${bucket.label}: ${bucket.total} posts, ${bucket.published} published`)}">
-        <div class="chart-bar-fill" style="height:${Math.max(6, (bucket.total / max) * 140)}px;background:linear-gradient(180deg,#c77dff 0%, #2d1b4e 100%)"></div>
+      <div class="chart-bar" title="${escapeHtml(primaryInsightMetric ? `${bucket.label}: ${chartValues[buckets.indexOf(bucket)]} ${primaryInsightMetric.label.toLowerCase()}` : `${bucket.label}: ${bucket.total} posts, ${bucket.published} published`)}">
+        <div class="chart-bar-fill" style="height:${Math.max(6, ((primaryInsightMetric ? chartValues[buckets.indexOf(bucket)] : bucket.total) / max) * 140)}px;background:linear-gradient(180deg,#c77dff 0%, #2d1b4e 100%)"></div>
         <div class="chart-bar-label">${escapeHtml(bucket.shortLabel)}</div>
       </div>
     `).join("");
@@ -1476,7 +1545,7 @@ function renderPerformanceView() {
       .slice(0, 5)
       .map(([key, value]) => ({ key, value, label: formatCampaignDisplayName(key) })),
     value => `${value} posts`,
-    key => getPillarTheme(key)
+    key => getPillarTheme((appState.campaigns || []).find(campaign => normalizeLookupValue(campaign.campaignName) === normalizeLookupValue(key))?.pillar || "")
   );
 
   renderComparisonRows(
@@ -1510,6 +1579,7 @@ function renderPerformanceView() {
           <div class="text-sm font-bold text-white wrap-safe mb-1" title="${escapeHtml(post.title || "")}">${escapeHtml(getDisplayTitle(post.title))}</div>
           <div class="text-[11px] text-gray-400 wrap-safe">${escapeHtml(getDisplayExcerpt(post.description, post.ledgerExcerpt || ""))}</div>
           <div class="mt-2 text-[10px] text-gray-500">${escapeHtml(formatCampaignDisplayName(post.campaignName || "Unassigned"))} • ${escapeHtml(formatContentPillarLabel(getPostContentPillar(post) || "Missing"))}</div>
+          <div class="mt-1 text-[10px] text-gray-500">${escapeHtml(getInsightSummaryLine(post, filteredPosts))}</div>
         </button>
       `).join("")
       : `<p class="text-sm text-gray-500">No posts available for the current performance filters.</p>`;
@@ -1701,11 +1771,40 @@ function getPostOperationalScore(post) {
   return statusWeight + hasMedia + hasCampaign + hasPillar + (recencyDays / 30);
 }
 
+function getPostRankingMeta(post, posts = []) {
+  const primaryInsightMetric = getPrimaryInsightMetricConfig(posts);
+  if (primaryInsightMetric && hasInsightMetrics(post)) {
+    return {
+      mode: "insight",
+      score: getInsightScore(post),
+      label: primaryInsightMetric.label,
+      value: normalizeMetricNumber(post[primaryInsightMetric.key]),
+      formatter: primaryInsightMetric.formatter || (value => String(Math.round(value)))
+    };
+  }
+
+  return {
+    mode: "scheduler",
+    score: getPostOperationalScore(post),
+    label: "Scheduler Score",
+    value: getPostOperationalScore(post),
+    formatter: value => Number(value || 0).toFixed(1)
+  };
+}
+
+function getInsightSummaryLine(post, posts = []) {
+  const meta = getPostRankingMeta(post, posts);
+  return meta.mode === "insight"
+    ? `${meta.label} ${meta.formatter(meta.value)}`
+    : `Scheduler score ${meta.formatter(meta.value)}`;
+}
+
 function getTopRankedPosts(filters = {}, limit = 5) {
-  return getFilteredPosts(filters)
+  const filteredPosts = getFilteredPosts(filters);
+  return filteredPosts
     .slice()
     .sort((a, b) => {
-      const scoreDiff = getPostOperationalScore(b) - getPostOperationalScore(a);
+      const scoreDiff = getPostRankingMeta(b, filteredPosts).score - getPostRankingMeta(a, filteredPosts).score;
       if (scoreDiff !== 0) return scoreDiff;
       return (parsePostDate(b.date)?.getTime() || 0) - (parsePostDate(a.date)?.getTime() || 0);
     })
@@ -2725,7 +2824,7 @@ function createPostForCampaign(campaignId) {
   openPostModal(
     "",
     "linkedin",
-    campaign.campaignName || "",
+    campaign.pillar || "",
     "",
     "draft",
     "",
@@ -2940,7 +3039,7 @@ async function editCampaignById(campaignId) {
         ...post,
         campaignName: updated.campaignName,
         hubTitle: updated.campaignName,
-        hubPillarLabel: updated.campaignName
+        hubPillarLabel: updated.pillar
       };
     });
 
@@ -3529,7 +3628,7 @@ function setupSaveHandler() {
 
     const selectedCampaignId = campaignSelect?.value || "";
     const selectedCampaign = (appState.campaigns || []).find(campaign => String(campaign.campaignId || "") === String(selectedCampaignId || ""));
-    const selectedContentPillar = selectedCampaign?.campaignName || getActivePillar() || existing?.hubPillarLabel || "";
+    const selectedContentPillar = selectedCampaign?.pillar || getActivePillar() || existing?.hubPillarLabel || "";
     const legacyPillar = selectedCampaign?.pillar || existing?.pillar || legacyPillarForDisplayValue(selectedContentPillar) || "edu";
 
     const payload = {
@@ -3547,7 +3646,15 @@ function setupSaveHandler() {
       mediaLabel: currentModalAsset?.title || existing?.mediaLabel || "",
       createdFromInspoId: existing?.createdFromInspoId || "",
       campaignId: selectedCampaignId,
-      campaignName: selectedCampaign?.campaignName || ""
+      campaignName: selectedCampaign?.campaignName || "",
+      impressions: existing?.impressions || 0,
+      reach: existing?.reach || 0,
+      likes: existing?.likes || 0,
+      comments: existing?.comments || 0,
+      shares: existing?.shares || 0,
+      saves: existing?.saves || 0,
+      clicks: existing?.clicks || 0,
+      engagementRate: existing?.engagementRate || 0
     };
 
     if (!payload.title) {
@@ -3889,8 +3996,8 @@ async function syncRemoteIfConfigured() {
       appState.campaigns = campaigns.map(campaign => ({
         campaignId: campaign.campaignId,
         campaignName: campaign.campaignName,
-        pillar: campaign.pillar || "edu",
-        color: campaign.color || pillarColor(campaign.pillar || "edu"),
+        pillar: campaign.pillar || "",
+        color: campaign.color || (campaign.pillar ? pillarColor(campaign.pillar) : "#6b7280"),
         sortOrder: Number(campaign.sortOrder || 0),
         isArchived: !!campaign.isArchived,
         createdAt: campaign.createdAt || ""
@@ -3927,11 +4034,19 @@ async function syncRemoteIfConfigured() {
           description: post.description || "",
           assetId: post.assetId || "",
           hubTitle: post.hubTitle || post.title || "",
-          hubPillarLabel: post.hubPillarLabel || matchedCampaign?.campaignName || "",
+          hubPillarLabel: post.hubPillarLabel || matchedCampaign?.pillar || "",
           mediaLabel: post.mediaLabel || linkedAsset?.title || "",
           createdFromInspoId: post.createdFromInspoId || "",
           campaignId: post.campaignId || "",
-          campaignName: matchedCampaign?.campaignName || ""
+          campaignName: matchedCampaign?.campaignName || "",
+          impressions: normalizeMetricNumber(post.impressions),
+          reach: normalizeMetricNumber(post.reach),
+          likes: normalizeMetricNumber(post.likes),
+          comments: normalizeMetricNumber(post.comments),
+          shares: normalizeMetricNumber(post.shares),
+          saves: normalizeMetricNumber(post.saves),
+          clicks: normalizeMetricNumber(post.clicks),
+          engagementRate: normalizeMetricNumber(post.engagementRate)
         };
       });
     }
@@ -4035,7 +4150,15 @@ async function apiSavePost(post) {
     hubPillarLabel: post.hubPillarLabel || "",
     mediaLabel: post.mediaLabel || "",
     createdFromInspoId: post.createdFromInspoId || "",
-    campaignId: post.campaignId || ""
+    campaignId: post.campaignId || "",
+    impressions: post.impressions || 0,
+    reach: post.reach || 0,
+    likes: post.likes || 0,
+    comments: post.comments || 0,
+    shares: post.shares || 0,
+    saves: post.saves || 0,
+    clicks: post.clicks || 0,
+    engagementRate: post.engagementRate || 0
   });
 }
 
@@ -4061,7 +4184,15 @@ async function apiDuplicatePost(postId) {
       hubPillarLabel: source.hubPillarLabel || "",
       mediaLabel: source.mediaLabel || "",
       createdFromInspoId: source.createdFromInspoId || "",
-      campaignId: source.campaignId || ""
+      campaignId: source.campaignId || "",
+      impressions: source.impressions || 0,
+      reach: source.reach || 0,
+      likes: source.likes || 0,
+      comments: source.comments || 0,
+      shares: source.shares || 0,
+      saves: source.saves || 0,
+      clicks: source.clicks || 0,
+      engagementRate: source.engagementRate || 0
     }
   });
 }
