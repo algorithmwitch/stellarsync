@@ -778,16 +778,6 @@
     </div>
   </div>
 
-  <div class="mini-card p-5 mb-6">
-    <div class="flex items-center justify-between mb-4">
-      <div>
-        <h3 class="text-sm font-bold text-white">Impressions Trend</h3>
-        <p id="audit-impressions-summary" class="text-[10px] text-gray-500 uppercase tracking-widest mt-1">Real post insights</p>
-      </div>
-    </div>
-    <div id="audit-impressions-chart" class="chart-bars"></div>
-  </div>
-
   <div class="grid grid-cols-2 gap-6">
     <div class="mini-card p-5">
       <h3 class="text-sm font-bold text-white mb-4">Mapping Gaps</h3>
@@ -1115,7 +1105,7 @@
 </div>
 <script>
 const APP_CONFIG = {
-  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbwl2M7VYOJ2O13QqTvmWBGDrdPrt0WZTemWiNNEVnvGgXjcCKlECF5iXHgSAQU1HV5T/exec",
+  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbz66wL9mgY1TOu1-2qZ5q72SMAIyuXe5dTioOxPltExkXvwRiLkx3o4GhAaTF5ja2Eq/exec",
   ENABLE_REMOTE_SYNC: true,
   STORAGE_KEY: "stellarsync_local_state_v4",
   SHELL_LAYOUT_KEY: "stellarsync_shell_layout_v1"
@@ -1747,8 +1737,6 @@ function renderAuditView() {
   const nextAction = document.getElementById("audit-next-action");
   const gapCards = document.getElementById("audit-gap-cards");
   const health = document.getElementById("audit-data-health");
-  const impressionsChart = document.getElementById("audit-impressions-chart");
-  const impressionsSummary = document.getElementById("audit-impressions-summary");
 
   if (workingList) {
     workingList.innerHTML = (summary.working.length ? summary.working : ["No strong signals yet. Publish and map a few more posts."])
@@ -1802,45 +1790,6 @@ function renderAuditView() {
     `).join("");
   }
 
-  if (impressionsChart) {
-    const posts = appState.posts || [];
-    const metricKey = posts.some(post => normalizeMetricNumber(post.impressions) > 0)
-      ? "impressions"
-      : posts.some(post => normalizeMetricNumber(post.reach) > 0)
-      ? "reach"
-      : posts.some(post => normalizeMetricNumber(post.engagementRate) > 0)
-      ? "engagementRate"
-      : "";
-
-    if (!metricKey) {
-      impressionsChart.innerHTML = `<div class="pillar-empty-state w-full">No impression-style insight data is available yet.</div>`;
-      if (impressionsSummary) impressionsSummary.textContent = "Waiting for real insight metrics";
-    } else {
-      const buckets = buildTimeBuckets(posts.filter(post => parsePostDate(post.date)), "all");
-      const metricLabel = metricKey === "reach" ? "Reach" : metricKey === "engagementRate" ? "Engagement Rate" : "Impressions";
-      const values = buckets.map(bucket => {
-        return posts
-          .filter((post) => {
-            const date = parsePostDate(post.date);
-            return date && date >= bucket.start && date <= bucket.end;
-          })
-          .reduce((sum, post) => sum + normalizeMetricNumber(post[metricKey]), 0);
-      });
-      const max = Math.max(...values, 1);
-
-      impressionsChart.innerHTML = buckets.map((bucket, index) => `
-        <div class="chart-bar" title="${escapeHtml(`${bucket.label}: ${Math.round(values[index])} ${metricLabel.toLowerCase()}`)}">
-          <div class="chart-bar-fill" style="height:${Math.max(8, (values[index] / max) * 140)}px;background:linear-gradient(180deg,#00f0ff 0%, #2d1b4e 100%)"></div>
-          <div class="chart-bar-label">${escapeHtml(bucket.shortLabel)}</div>
-        </div>
-      `).join("");
-
-      if (impressionsSummary) {
-        const total = values.reduce((sum, value) => sum + value, 0);
-        impressionsSummary.textContent = `${metricLabel} over time • ${Math.round(total).toLocaleString()} total`;
-      }
-    }
-  }
 }
 
 function setupOverviewControls() {
@@ -4092,11 +4041,25 @@ function switchView(viewName) {
   }
 
   if (viewName === "constellation") {
+    renderConstellation();
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         fitConstellation();
       });
     });
+  }
+
+  if (viewName === "calendar") {
+    renderCalendar();
+    renderOverviewPanel();
+  }
+
+  if (viewName === "ledger") {
+    renderLedger();
+  }
+
+  if (viewName === "inspo") {
+    renderInspo();
   }
 
   if (viewName === "performance") {
@@ -4330,15 +4293,7 @@ async function syncRemoteIfConfigured() {
     const campaigns = campaignsResult.status === "fulfilled" ? campaignsResult.value : [];
 
     if (Array.isArray(campaigns)) {
-      appState.campaigns = campaigns.map(campaign => ({
-        campaignId: campaign.campaignId,
-        campaignName: campaign.campaignName,
-        pillar: campaign.pillar || "",
-        color: campaign.color || (campaign.pillar ? pillarColor(campaign.pillar) : "#6b7280"),
-        sortOrder: Number(campaign.sortOrder || 0),
-        isArchived: !!campaign.isArchived,
-        createdAt: campaign.createdAt || ""
-      }));
+      appState.campaigns = campaigns.map(campaign => normalizeRemoteCampaign(campaign));
     }
 
     if (Array.isArray(media)) {
@@ -4368,20 +4323,7 @@ async function syncRemoteIfConfigured() {
     }
 
     if (Array.isArray(inspo)) {
-      appState.inspo = inspo.map(item => ({
-        id: item.inspoId,
-        title: item.title,
-        type: item.inspoType,
-        description: item.createPostDescription || item.summary || "",
-        sourceLabel: item.sourceLabel || "",
-        domainOrMeta: item.domainOrMeta || "",
-        suggestedPlatform: item.suggestedPlatform || "",
-        suggestedPillar: item.suggestedPillar || "",
-        createPostTitle: item.createPostTitle || "",
-        createPostType: item.createPostType || "",
-        notes: item.notes || "",
-        url: item.notes || item.domainOrMeta || ""
-      }));
+      appState.inspo = inspo.map(item => normalizeRemoteInspo(item));
     }
 
     calendarCursor = getInitialCalendarCursor();
@@ -4454,6 +4396,12 @@ function pickRemoteValue(...values) {
   return "";
 }
 
+function normalizeRemoteBoolean(value) {
+  if (value === true || value === false) return value;
+  const normalized = String(value || "").trim().toLowerCase();
+  return normalized === "true" || normalized === "1" || normalized === "yes" || normalized === "y";
+}
+
 function normalizeRemotePost(post, campaigns = [], mediaItems = []) {
   const campaignId = String(pickRemoteValue(post?.campaignId, post?.campaign_id, post?.campaignID, "")).trim();
   const matchedCampaign = campaigns.find(campaign => String(campaign.campaignId || "") === campaignId);
@@ -4486,6 +4434,38 @@ function normalizeRemotePost(post, campaigns = [], mediaItems = []) {
     saves: normalizeMetricNumber(pickRemoteValue(post?.saves, 0)),
     clicks: normalizeMetricNumber(pickRemoteValue(post?.clicks, 0)),
     engagementRate: normalizeMetricNumber(pickRemoteValue(post?.engagementRate, post?.engagement_rate, 0))
+  };
+}
+
+function normalizeRemoteCampaign(campaign) {
+  const pillar = String(pickRemoteValue(campaign?.pillar, campaign?.hubPillarLabel, campaign?.hub_pillar_label, "")).trim();
+  return {
+    campaignId: String(pickRemoteValue(campaign?.campaignId, campaign?.campaign_id, campaign?.campaignID, campaign?.id, "")).trim(),
+    campaignName: String(pickRemoteValue(campaign?.campaignName, campaign?.campaign_name, campaign?.title, "")).trim(),
+    pillar,
+    color: String(pickRemoteValue(campaign?.color, pillar ? pillarColor(pillar) : "#6b7280")).trim() || "#6b7280",
+    x: Number(pickRemoteValue(campaign?.x, 0)) || 0,
+    y: Number(pickRemoteValue(campaign?.y, 0)) || 0,
+    sortOrder: Number(pickRemoteValue(campaign?.sortOrder, campaign?.sort_order, 0)) || 0,
+    isArchived: normalizeRemoteBoolean(pickRemoteValue(campaign?.isArchived, campaign?.is_archived, false)),
+    createdAt: String(pickRemoteValue(campaign?.createdAt, campaign?.created_at, "")).trim()
+  };
+}
+
+function normalizeRemoteInspo(item) {
+  return {
+    id: String(pickRemoteValue(item?.inspoId, item?.inspo_id, item?.id, "")).trim(),
+    title: String(pickRemoteValue(item?.title, "")).trim(),
+    type: String(pickRemoteValue(item?.inspoType, item?.inspo_type, item?.type, "article")).trim(),
+    description: String(pickRemoteValue(item?.createPostDescription, item?.create_post_description, item?.summary, item?.description, "")).trim(),
+    sourceLabel: String(pickRemoteValue(item?.sourceLabel, item?.source_label, "")).trim(),
+    domainOrMeta: String(pickRemoteValue(item?.domainOrMeta, item?.domain_or_meta, "")).trim(),
+    suggestedPlatform: String(pickRemoteValue(item?.suggestedPlatform, item?.suggested_platform, "")).trim(),
+    suggestedPillar: String(pickRemoteValue(item?.suggestedPillar, item?.suggested_pillar, "")).trim(),
+    createPostTitle: String(pickRemoteValue(item?.createPostTitle, item?.create_post_title, "")).trim(),
+    createPostType: String(pickRemoteValue(item?.createPostType, item?.create_post_type, "")).trim(),
+    notes: String(pickRemoteValue(item?.notes, "")).trim(),
+    url: String(pickRemoteValue(item?.url, item?.notes, item?.domainOrMeta, item?.domain_or_meta, "")).trim()
   };
 }
 
