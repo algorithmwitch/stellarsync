@@ -1298,12 +1298,13 @@
       </div>
 
       <div>
-        <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2">Theme Color</label>
+        <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2">Default Pillar</label>
         <select id="campaign-pillar-input" class="form-input text-sm font-medium">
-          <option value="edu">Cyan</option>
-          <option value="promo">Violet</option>
-          <option value="engage">Gold</option>
-          <option value="aware">Green</option>
+          <option value="education">Education</option>
+          <option value="promotion">Promotion</option>
+          <option value="engagement">Engagement</option>
+          <option value="awareness">Awareness</option>
+          <option value="identity">Identity</option>
         </select>
       </div>
     </div>
@@ -1401,7 +1402,7 @@
 </div>
 <script>
 const APP_CONFIG = {
-  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbyFWbkgcZ32j2JdtpJNZQDt0Q_ynfNRwKVNoVQ0RuEvnaLsZ3VG_4w3Xo84sVvvSSfK/exec",
+  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbz66wL9mgY1TOu1-2qZ5q72SMAIyuXe5dTioOxPltExkXvwRiLkx3o4GhAaTF5ja2Eq/exec",
   ENABLE_REMOTE_SYNC: true,
   STORAGE_KEY: "stellarsync_local_state_v4",
   SHELL_LAYOUT_KEY: "stellarsync_shell_layout_v1"
@@ -1564,33 +1565,32 @@ function normalizeDisplayText(value) {
 }
 
 const CANONICAL_PILLAR_MAP = {
-  auth: "authority",
-  authority: "authority",
-  authoritative: "authority",
-  dist: "distribution",
-  distribute: "distribution",
-  distribution: "distribution",
+  iden: "identity",
   ident: "identity",
   identity: "identity",
-  app: "application",
-  application: "application",
   edu: "education",
   education: "education",
   educational: "education",
-  promo: "promotional",
-  promotion: "promotional",
-  promotional: "promotional",
+  promo: "promotion",
+  promotion: "promotion",
+  promotional: "promotion",
   engage: "engagement",
   engagement: "engagement",
   aware: "awareness",
   awareness: "awareness"
 };
 
-function getCanonicalPillarValue(value) {
+function getCanonicalPillarValue(value, fallback = "") {
   const cleaned = normalizeDisplayText(value);
-  if (!cleaned) return "";
+  if (!cleaned) return fallback ? getCanonicalPillarValue(fallback, "") : "";
   const normalized = normalizeLookupValue(cleaned);
-  return CANONICAL_PILLAR_MAP[normalized] || cleaned;
+  if (CANONICAL_PILLAR_MAP[normalized]) return CANONICAL_PILLAR_MAP[normalized];
+  if (normalized.includes("identity")) return "identity";
+  if (normalized.includes("educat")) return "education";
+  if (normalized.includes("promo")) return "promotion";
+  if (normalized.includes("engage")) return "engagement";
+  if (normalized.includes("aware")) return "awareness";
+  return fallback ? getCanonicalPillarValue(fallback, "") : "";
 }
 
 function normalizePillarToken(value) {
@@ -1712,11 +1712,7 @@ function getPillarTheme(pillarValue) {
 }
 
 function legacyPillarForDisplayValue(value) {
-  const normalized = normalizePillarToken(value);
-  const matchedCampaign = (appState.campaigns || []).find(campaign => {
-    return normalizePillarToken(getDisplayCampaignContentPillar(campaign)) === normalized;
-  });
-  return matchedCampaign?.pillar || normalizePillar(value);
+  return normalizePillar(value);
 }
 
 const INSIGHT_METRICS = [
@@ -2643,7 +2639,7 @@ async function saveInspoFromModal() {
     summary: notes,
     domainOrMeta: deriveDomainLabel(url),
     suggestedPlatform: currentInspoType === "video" || currentInspoType === "image" ? "instagram" : currentInspoType === "trend" ? "both" : "linkedin",
-    suggestedPillar: currentInspoType === "trend" ? "engage" : currentInspoType === "image" || currentInspoType === "video" ? "aware" : "edu",
+    suggestedPillar: currentInspoType === "trend" ? "engagement" : currentInspoType === "image" || currentInspoType === "video" ? "awareness" : "education",
     createPostTitle: title,
     createPostDescription: notes,
     createPostType: currentInspoType === "video" ? "video" : currentInspoType === "article" ? "article" : currentInspoType === "image" ? "image" : "text",
@@ -2771,20 +2767,24 @@ function populateCampaignDropdown() {
 
 function normalizePillar(value) {
   const v = String(value || "").toLowerCase();
-  if (v.includes("promo") || v.includes("violet") || v.includes("purple")) return "promo";
-  if (v.includes("engage") || v.includes("gold") || v.includes("yellow")) return "engage";
-  if (v.includes("aware") || v.includes("green")) return "aware";
-  return "edu";
+  if (v.includes("identity") || v.includes("iden") || v.includes("ident")) return "identity";
+  if (v.includes("promo") || v.includes("violet") || v.includes("purple")) return "promotion";
+  if (v.includes("engage") || v.includes("gold") || v.includes("yellow")) return "engagement";
+  if (v.includes("aware") || v.includes("green")) return "awareness";
+  if (v.includes("edu") || v.includes("cyan") || v.includes("blue")) return "education";
+  return getCanonicalPillarValue(value, "education") || "education";
 }
 
 function defaultCampaignColor(pillar) {
-  return pillar === "edu" ? "#00f0ff" :
-         pillar === "promo" ? "#b25fff" :
-         pillar === "engage" ? "#ffd700" :
+  const canonical = normalizePillar(pillar);
+  return canonical === "education" ? "#00f0ff" :
+         canonical === "promotion" ? "#b25fff" :
+         canonical === "engagement" ? "#ffd700" :
+         canonical === "identity" ? "#fb7185" :
          "#00ffaa";
 }
 
-function openCampaignModal(defaultPillar = "edu") {
+function openCampaignModal(defaultPillar = "education") {
   if (!campaignModal || !campaignModalCard) return;
 
   if (campaignNameInput) campaignNameInput.value = "";
@@ -2804,13 +2804,13 @@ function closeCampaignModal() {
 
   setTimeout(() => {
     if (campaignNameInput) campaignNameInput.value = "";
-    if (campaignPillarInput) campaignPillarInput.value = "edu";
+    if (campaignPillarInput) campaignPillarInput.value = "education";
   }, 200);
 }
 
 async function saveCampaignFromModal() {
   const campaignName = campaignNameInput?.value.trim() || "";
-  const pillar = normalizePillar(campaignPillarInput?.value || "edu");
+  const pillar = normalizePillar(campaignPillarInput?.value || "education");
 
   if (!campaignName) {
     showToast("Missing name", "Please enter a campaign name.", "ph-warning", "text-yellow-400");
@@ -3363,7 +3363,7 @@ async function promptCreateCampaignRow() {
   const campaignName = window.prompt("Campaign name");
   if (!campaignName) return null;
 
-  const pillar = normalizePillar(window.prompt("Theme: cyan, violet, gold, green", "cyan") || "cyan");
+  const pillar = normalizePillar(window.prompt("Default pillar: education, promotion, engagement, awareness, identity", "education") || "education");
   const color = defaultCampaignColor(pillar);
 
   const nextSortOrder = ((appState.campaigns || []).reduce((max, item) => {
@@ -3695,7 +3695,7 @@ async function editCampaignById(campaignId) {
   const nextName = window.prompt("Edit campaign name", campaign.campaignName);
   if (nextName === null) return;
 
-  const nextPillar = normalizePillar(window.prompt("Edit theme: cyan, violet, gold, green", campaign.pillar) || campaign.pillar);
+  const nextPillar = normalizePillar(window.prompt("Edit default pillar: education, promotion, engagement, awareness, identity", campaign.pillar) || campaign.pillar);
   const archiveAnswer = window.prompt("Archive this campaign? yes / no", campaign.isArchived ? "yes" : "no");
   if (archiveAnswer === null) return;
 
@@ -3726,7 +3726,7 @@ async function editCampaignById(campaignId) {
         ...post,
         campaignName: updated.campaignName,
         hubTitle: updated.campaignName,
-        hubPillarLabel: updated.pillar
+        hubPillarLabel: formatContentPillarLabel(updated.pillar)
       };
     });
 
@@ -4349,7 +4349,7 @@ function populateMediaCampaignFilter() {
 function openPostModal(
   title = "",
   platform = "linkedin",
-  pillarClass = "edu",
+  pillarClass = "education",
   date = "",
   status = "draft",
   description = "",
@@ -4416,7 +4416,7 @@ function populateLedgerCampaignMenu() {
           data-filter-value="${escapeHtml(c.campaignId)}"
           class="ledger-filter-option w-full px-3 py-2 rounded-lg hover:bg-[#2d1b4e] text-left text-xs text-gray-300 hover:text-white transition-all flex items-center gap-2"
         >
-          <div class="w-2 h-2 rounded-full" style="background:${escapeHtml(c.color || pillarColor(c.pillar || 'edu'))}"></div>
+          <div class="w-2 h-2 rounded-full" style="background:${escapeHtml(c.color || pillarColor(c.pillar || 'education'))}"></div>
           ${escapeHtml(formatCampaignDisplayName(c.campaignName))}
         </button>
       `).join("")}
@@ -4500,21 +4500,20 @@ function setupSaveHandler() {
 
     const selectedCampaignId = campaignSelect?.value || "";
     const selectedCampaign = (appState.campaigns || []).find(campaign => String(campaign.campaignId || "") === String(selectedCampaignId || ""));
-    const selectedContentPillar = selectedCampaign?.pillar || getActivePillar() || existing?.hubPillarLabel || "";
-    const legacyPillar = selectedCampaign?.pillar || existing?.pillar || legacyPillarForDisplayValue(selectedContentPillar) || "edu";
+    const selectedContentPillar = normalizePillar(selectedCampaign?.pillar || getActivePillar() || existing?.hubPillarLabel || existing?.pillar || "education");
 
     const payload = {
       id: currentEditingPostId || generateId("post"),
       title: titleInput?.value.trim() || "",
       platform: platSelect?.value || "linkedin",
-      pillar: legacyPillar,
+      pillar: selectedContentPillar,
       date: dateInput?.value || "",
       status: statusSelect?.value || "draft",
       postType: postTypeSelect?.value || "text",
       description: descInput?.value.trim() || "",
       assetId: currentModalAsset?.id || existing?.assetId || "",
       hubTitle: selectedCampaign?.campaignName || existing?.hubTitle || titleInput?.value.trim() || "",
-      hubPillarLabel: selectedContentPillar,
+      hubPillarLabel: formatContentPillarLabel(selectedContentPillar),
       mediaLabel: currentModalAsset?.title || existing?.mediaLabel || "",
       createdFromInspoId: existing?.createdFromInspoId || "",
       campaignId: selectedCampaignId,
@@ -4800,22 +4799,22 @@ function inspoToPost(inspoIdOrTitle, type, description) {
 
   setTimeout(() => {
     let platform = "linkedin";
-    let pillar = "edu";
+    let pillar = "education";
     let postType = "text";
 
     const sourceType = String(source.type || "").toLowerCase();
 
     if (["video", "image", "carousel", "visual"].includes(sourceType)) {
       platform = "instagram";
-      pillar = "aware";
+      pillar = "awareness";
       postType = sourceType === "video" ? "video" : "image";
     } else if (sourceType === "trend") {
       platform = "both";
-      pillar = "engage";
+      pillar = "engagement";
       postType = "text";
     } else if (sourceType === "article") {
       platform = "linkedin";
-      pillar = "edu";
+      pillar = "education";
       postType = "article";
     }
 
@@ -5045,14 +5044,14 @@ function normalizeRemotePost(post, campaigns = [], mediaItems = []) {
     id: postId || `remote-${normalizeLookupValue(title || "post")}-${scheduledAt || "undated"}`,
     title,
     platform: String(pickRemoteValue(post?.platform, "linkedin")).trim() || "linkedin",
-    pillar: String(pickRemoteValue(post?.pillar, matchedCampaign?.pillar, "edu")).trim() || "edu",
+    pillar: getCanonicalPillarValue(pickRemoteValue(post?.pillar, post?.hubPillarLabel, post?.hub_pillar_label, matchedCampaign?.pillar), "education") || "education",
     date: scheduledAt,
     status: String(pickRemoteValue(post?.status, "draft")).trim() || "draft",
     postType: String(pickRemoteValue(post?.postType, post?.post_type, "text")).trim() || "text",
     description: String(pickRemoteValue(post?.description, post?.ledgerExcerpt, post?.ledger_excerpt, "")).trim(),
     assetId: String(pickRemoteValue(post?.assetId, post?.asset_id, "")).trim(),
     hubTitle: String(pickRemoteValue(post?.hubTitle, post?.hub_title, title)).trim(),
-    hubPillarLabel: String(pickRemoteValue(post?.hubPillarLabel, post?.hub_pillar_label, matchedCampaign?.pillar, "")).trim(),
+    hubPillarLabel: formatContentPillarLabel(pickRemoteValue(post?.hubPillarLabel, post?.hub_pillar_label, post?.pillar, matchedCampaign?.pillar, "education")),
     mediaLabel: String(pickRemoteValue(post?.mediaLabel, post?.media_label, linkedAsset?.title, linkedAsset?.assetName, "")).trim(),
     createdFromInspoId: String(pickRemoteValue(post?.createdFromInspoId, post?.created_from_inspo_id, "")).trim(),
     campaignId,
@@ -5069,7 +5068,7 @@ function normalizeRemotePost(post, campaigns = [], mediaItems = []) {
 }
 
 function normalizeRemoteCampaign(campaign) {
-  const pillar = String(pickRemoteValue(campaign?.pillar, campaign?.hubPillarLabel, campaign?.hub_pillar_label, "")).trim();
+  const pillar = getCanonicalPillarValue(pickRemoteValue(campaign?.pillar, campaign?.hubPillarLabel, campaign?.hub_pillar_label, ""), "");
   return {
     campaignId: String(pickRemoteValue(campaign?.campaignId, campaign?.campaign_id, campaign?.campaignID, campaign?.id, "")).trim(),
     campaignName: String(pickRemoteValue(campaign?.campaignName, campaign?.campaign_name, campaign?.title, "")).trim(),
@@ -5092,7 +5091,7 @@ function normalizeRemoteInspo(item) {
     sourceLabel: String(pickRemoteValue(item?.sourceLabel, item?.source_label, "")).trim(),
     domainOrMeta: String(pickRemoteValue(item?.domainOrMeta, item?.domain_or_meta, "")).trim(),
     suggestedPlatform: String(pickRemoteValue(item?.suggestedPlatform, item?.suggested_platform, "")).trim(),
-    suggestedPillar: String(pickRemoteValue(item?.suggestedPillar, item?.suggested_pillar, "")).trim(),
+    suggestedPillar: getCanonicalPillarValue(pickRemoteValue(item?.suggestedPillar, item?.suggested_pillar, ""), "education") || "education",
     createPostTitle: String(pickRemoteValue(item?.createPostTitle, item?.create_post_title, "")).trim(),
     createPostType: String(pickRemoteValue(item?.createPostType, item?.create_post_type, "")).trim(),
     notes: String(pickRemoteValue(item?.notes, "")).trim(),
@@ -5164,14 +5163,14 @@ async function apiSavePost(post) {
     postId: post.id || null,
     title: post.title || "",
     platform: post.platform || "linkedin",
-    pillar: post.pillar || "edu",
+    pillar: normalizePillar(post.pillar || post.hubPillarLabel || "education"),
     scheduledAt: post.date || "",
     status: post.status || "draft",
     postType: post.postType || "text",
     description: post.description || "",
     assetId: post.assetId || "",
     hubTitle: post.hubTitle || post.title || "",
-    hubPillarLabel: post.hubPillarLabel || "",
+    hubPillarLabel: formatContentPillarLabel(post.hubPillarLabel || post.pillar || "education"),
     mediaLabel: post.mediaLabel || "",
     createdFromInspoId: post.createdFromInspoId || "",
     campaignId: post.campaignId || "",
@@ -5198,14 +5197,14 @@ async function apiDuplicatePost(postId) {
     duplicate: {
       title: `${source.title} Copy`,
       platform: source.platform,
-      pillar: source.pillar,
+      pillar: normalizePillar(source.pillar || source.hubPillarLabel || "education"),
       scheduledAt: source.date,
       status: "draft",
       postType: source.postType,
       description: source.description,
       assetId: source.assetId || "",
       hubTitle: source.hubTitle || "",
-      hubPillarLabel: source.hubPillarLabel || "",
+      hubPillarLabel: formatContentPillarLabel(source.hubPillarLabel || source.pillar || "education"),
       mediaLabel: source.mediaLabel || "",
       createdFromInspoId: source.createdFromInspoId || "",
       campaignId: source.campaignId || "",
@@ -5448,9 +5447,11 @@ function clamp(value, min, max) {
 }
 
 function pillarColor(pillar) {
-  return pillar === "edu" ? "#00f0ff" :
-         pillar === "promo" ? "#b25fff" :
-         pillar === "engage" ? "#ffd700" :
+  const canonical = normalizePillar(pillar);
+  return canonical === "education" ? "#00f0ff" :
+         canonical === "promotion" ? "#b25fff" :
+         canonical === "engagement" ? "#ffd700" :
+         canonical === "identity" ? "#fb7185" :
          "#00ffaa";
 }
 
@@ -5501,7 +5502,7 @@ window.setPillar = setPillar;
 window.openModal = function(
   title = "",
   platform = "linkedin",
-  pillarClass = "edu",
+  pillarClass = "education",
   date = "",
   status = "draft",
   description = "",
