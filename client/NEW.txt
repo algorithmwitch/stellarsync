@@ -1,0 +1,16 @@
+StellarSync audit scaffold summary
+
+Backend
+- Added NOTES aliases and NOTE_HEADERS.
+- Added created_from_note_id and publishing/import scaffold fields to POSTS without deleting existing headers.
+- Added note CRUD and createPostFromNote/importPostFromUrl/publishing readiness placeholder actions.
+- Added local-date-safe parsing helpers, asset-list parsing, and publish-status update helpers.
+
+Frontend
+- Added Notes navigation, Notes view, note modal, note rendering, and create-post-from-note prefill flow.
+- Added mobile calendar day view with prev/today/next controls while preserving desktop month/week calendar.
+- Added URL import foundation, publishing readiness UI, carousel indicators, safer localStorage fallbacks, and PWA install hardening.
+
+Remaining limitations
+- Live publishing is still scaffold-only and requires OAuth, credentials, platform app review, and API-specific media/container flows.
+- LinkedIn and Instagram imports use safe fallback behavior when metadata access is limited or blocked.
