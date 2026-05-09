@@ -728,6 +728,12 @@
     <button id="zoom-reset" class="w-10 h-10 bg-[#1a1128] border border-white/5 rounded-xl text-white hover:bg-[#231738] flex items-center justify-center transition-colors" title="Reset">
       <i class="ph-bold ph-corners-out text-lg"></i>
     </button>
+    <select id="semantic-bridge-density" class="px-3 py-2 rounded-xl bg-[#1a1128] border border-white/5 text-[10px] uppercase tracking-widest font-bold text-white">
+      <option value="off">Bridges Off</option>
+      <option value="low" selected>Bridges Low</option>
+      <option value="medium">Bridges Medium</option>
+      <option value="high">Bridges High</option>
+    </select>
   </div>
 
   <div class="absolute top-6 right-6 z-30 bg-[#1a1128] border border-white/5 px-4 py-2 rounded-xl">
@@ -1189,9 +1195,14 @@
           <h3 class="text-sm font-bold text-white">Diagnostics / System Health</h3>
           <p class="text-[10px] text-gray-500 uppercase tracking-widest mt-1">Backend, versions, cache, and deploy checks</p>
         </div>
-        <button id="audit-refresh-diagnostics-btn" type="button" class="px-3 py-2 rounded-xl bg-[#1a1128] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">
-          Refresh Diagnostics
-        </button>
+        <div class="flex items-center gap-2">
+          <button id="audit-copy-diagnostics-btn" type="button" class="px-3 py-2 rounded-xl bg-[#1a1128] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">
+            Copy Summary
+          </button>
+          <button id="audit-refresh-diagnostics-btn" type="button" class="px-3 py-2 rounded-xl bg-[#1a1128] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">
+            Refresh Diagnostics
+          </button>
+        </div>
       </div>
       <div id="audit-version-warning" class="hidden mb-4 p-3 rounded-xl border border-yellow-500/20 bg-yellow-500/10 text-sm text-yellow-200"></div>
       <div id="audit-system-health" class="space-y-4"></div>
@@ -1276,6 +1287,17 @@
                     </div>
                   </div>
                   <div id="contextual-guidance-panel" class="space-y-3"></div>
+                </div>
+
+                <div class="mini-card p-4 mb-5">
+                  <div class="flex items-center justify-between gap-3 mb-4">
+                    <div>
+                      <h4 class="text-[10px] font-bold text-gray-500 tracking-widest uppercase">Semantic Memory</h4>
+                      <p class="text-[10px] text-gray-600 mt-1">Constellation intelligence, campaign memory, and semantic territory signals.</p>
+                    </div>
+                    <span class="text-[9px] text-[#00f0ff]">Heuristic</span>
+                  </div>
+                  <div id="semantic-memory-panel" class="space-y-3"></div>
                 </div>
 
                 <div class="mini-card p-4">
@@ -1459,6 +1481,9 @@
                     <span id="modal-source-context-chip" class="px-2.5 py-1 rounded-full bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-[#c77dff]">Manual</span>
                   </div>
                   <p id="modal-source-context-detail" class="text-xs text-gray-400 leading-relaxed">This post starts as a manual draft.</p>
+                  <div class="text-[11px] text-yellow-200 border border-yellow-500/15 bg-yellow-500/10 rounded-xl px-3 py-2">
+                    Scheduling organizes posts inside StellarSync. Live platform posting is not connected yet.
+                  </div>
                 </div>
                 
                 <div vid="534">
@@ -1721,6 +1746,8 @@
             <option value="auto">Auto Detect Platform</option>
             <option value="linkedin">LinkedIn</option>
             <option value="instagram">Instagram</option>
+            <option value="threads">Threads</option>
+            <option value="bluesky">Bluesky</option>
             <option value="external">External URL</option>
           </select>
           <select id="media-link-type" class="form-input text-sm font-medium">
@@ -1733,10 +1760,34 @@
         <input id="media-link-source" class="form-input" placeholder="Paste Drive link, file ID, LinkedIn URL, or direct asset URL">
         <textarea id="media-link-meta" class="form-input min-h-[120px]" placeholder="Notes or asset meta"></textarea>
         <textarea id="media-link-caption-fallback" class="form-input min-h-[100px]" placeholder="Manual caption fallback for blocked platform metadata or post creation context"></textarea>
+        <div id="media-link-import-status" class="p-4 rounded-2xl bg-[#181125] border border-white/5 space-y-3">
+          <div class="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Social Import Adapter</p>
+              <p class="text-xs text-gray-400 mt-1">Use Open Graph for regular articles, Instagram oEmbed when configured, or authenticated/manual fallback for social platforms.</p>
+            </div>
+            <span id="media-link-import-mode-chip" class="px-2.5 py-1 rounded-full bg-[#120c1d] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300">Manual Social Card</span>
+          </div>
+          <div id="media-link-import-status-text" class="text-sm text-gray-300 wrap-safe">Paste a URL to detect the safest import mode.</div>
+          <div id="media-link-connected-account-actions" class="flex flex-wrap gap-2"></div>
+        </div>
         <input id="media-link-name" class="form-input" placeholder="Asset name">
         <input id="media-link-badge" class="form-input" placeholder="Badge label">
+        <div class="p-4 rounded-2xl bg-[#181125] border border-white/5 space-y-3">
+          <div class="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Optional Social Card Image</p>
+              <p class="text-xs text-gray-400 mt-1">Attach an image when platform metadata is blocked or missing.</p>
+            </div>
+            <button id="media-link-upload-btn" type="button" class="px-3 py-2 bg-[#120c1d] hover:bg-[#231738] border border-white/5 rounded-xl text-[10px] uppercase tracking-wider font-bold text-white transition-colors">
+              Attach Image
+            </button>
+          </div>
+          <input id="media-link-upload-input" type="file" accept="image/*" class="hidden">
+          <div id="media-link-upload-preview" class="hidden aspect-video rounded-xl overflow-hidden bg-[#0f0a18] border border-white/5 items-center justify-center"></div>
+        </div>
         <div id="media-link-preview" class="p-4 rounded-2xl bg-[#0f0a18] border border-white/5 space-y-3">
-          <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Detected Source Preview</p>
+          <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Social Card / Source Preview</p>
           <div id="media-link-preview-body" class="text-sm text-gray-400">Paste a URL to preview the detected source.</div>
         </div>
       </div>
@@ -1747,6 +1798,12 @@
         </button>
         <button id="create-post-from-link-btn" type="button" class="px-4 py-2 bg-[#181125] hover:bg-[#231738] text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all border border-white/10">
           Create Post
+        </button>
+        <button id="save-link-to-inspo-btn" type="button" class="px-4 py-2 bg-[#181125] hover:bg-[#231738] text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all border border-white/10">
+          Save to Inspo
+        </button>
+        <button id="save-link-to-media-btn" type="button" class="px-4 py-2 bg-[#181125] hover:bg-[#231738] text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all border border-white/10">
+          Save to Media
         </button>
         <button id="save-media-link-btn" type="button" class="px-4 py-2 bg-gradient-to-r from-[#9d4edd] to-[#c77dff] hover:opacity-90 text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all border border-white/10">
           Save Link
@@ -1951,6 +2008,10 @@
           <input id="ai-draft-title" class="form-input text-sm font-medium" placeholder="Draft title">
           <textarea id="ai-draft-preview" class="form-input min-h-[220px] text-sm" placeholder="Generated draft preview"></textarea>
           <textarea id="ai-draft-carousel-outline" class="form-input min-h-[120px] text-sm" placeholder="Carousel outline or structured slide sequence"></textarea>
+          <div class="p-4 rounded-2xl bg-[#0f0a18] border border-white/5">
+            <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3">Semantic Memory</p>
+            <div id="ai-semantic-memory-cards" class="space-y-3"></div>
+          </div>
           <div id="ai-draft-meta" class="grid grid-cols-1 md:grid-cols-3 gap-3"></div>
           <div id="ai-draft-list" class="space-y-3"></div>
           <div class="flex justify-end gap-3">
@@ -2013,8 +2074,8 @@ const APP_CONFIG = {
   SHELL_LAYOUT_KEY: "stellarsync_shell_layout_v1"
 };
 
-const APP_FRONTEND_VERSION = "2026.05.09.5";
-const APP_SERVICE_WORKER_VERSION = "2026.05.09.5";
+const APP_FRONTEND_VERSION = "2026.05.09.8";
+const APP_SERVICE_WORKER_VERSION = "2026.05.09.8";
 const MAX_UPLOAD_IMAGE_BYTES = 10 * 1024 * 1024;
 const MAX_UPLOAD_VIDEO_BYTES = 50 * 1024 * 1024;
 
@@ -2102,6 +2163,12 @@ let pendingUploadFiles = [];
 let uploadStagingTarget = "vault";
 let currentAIDraftId = "";
 let currentBrandFrameworkSection = "";
+let diagnosticsRefreshing = false;
+let socialCardUpload = null;
+let socialImportCapabilities = null;
+let connectedAccounts = [];
+let semanticBridgeDensity = safeStorageGet("stellarsync_bridge_density") || "low";
+let currentSocialImportResult = null;
 let installContext = {
   isIos: /iphone|ipad|ipod/i.test(navigator.userAgent || ""),
   isStandalone: false
@@ -2203,7 +2270,16 @@ const mediaLinkTypeInput = document.getElementById("media-link-type");
 const mediaLinkBadgeInput = document.getElementById("media-link-badge");
 const mediaLinkMetaInput = document.getElementById("media-link-meta");
 const mediaLinkCaptionFallbackInput = document.getElementById("media-link-caption-fallback");
+const mediaLinkImportModeChip = document.getElementById("media-link-import-mode-chip");
+const mediaLinkImportStatusText = document.getElementById("media-link-import-status-text");
+const mediaLinkConnectedAccountActions = document.getElementById("media-link-connected-account-actions");
 const mediaLinkPreviewBody = document.getElementById("media-link-preview-body");
+const mediaLinkUploadBtn = document.getElementById("media-link-upload-btn");
+const mediaLinkUploadInput = document.getElementById("media-link-upload-input");
+const mediaLinkUploadPreview = document.getElementById("media-link-upload-preview");
+const saveLinkToInspoBtn = document.getElementById("save-link-to-inspo-btn");
+const saveLinkToMediaBtn = document.getElementById("save-link-to-media-btn");
+const auditCopyDiagnosticsBtn = document.getElementById("audit-copy-diagnostics-btn");
 
 const mediaAssetModal = document.getElementById("media-asset-modal");
 const mediaAssetModalCard = document.getElementById("media-asset-modal-card");
@@ -2286,6 +2362,7 @@ const aiRegenerateDraftBtn = document.getElementById("ai-regenerate-draft-btn");
 const aiDraftTitleInput = document.getElementById("ai-draft-title");
 const aiDraftPreviewInput = document.getElementById("ai-draft-preview");
 const aiDraftCarouselOutlineInput = document.getElementById("ai-draft-carousel-outline");
+const aiSemanticMemoryCards = document.getElementById("ai-semantic-memory-cards");
 const aiDraftMeta = document.getElementById("ai-draft-meta");
 const aiDraftList = document.getElementById("ai-draft-list");
 const aiSaveDraftBtn = document.getElementById("ai-save-draft-btn");
@@ -2349,6 +2426,506 @@ function getLocalBrandFrameworkDefaults() {
     { frameworkKey: "preferred_vocabulary", section: "Preferred Vocabulary", ruleType: "vocabulary", title: "Preferred Vocabulary", content: "orientation, participation, legibility, infrastructure, recognition, proximity, systems, translation, classification, public interfaces, participation architecture, civic systems, semantic clarity, community-led, local systems, embedded analysis", importance: 7, strictness: "medium", semanticCategory: "vocabulary", enabled: true, examples: "", sortOrder: 19 },
     { frameworkKey: "avoid_vocabulary", section: "Avoid Vocabulary", ruleType: "vocabulary", title: "Avoid Vocabulary", content: "generic inspiration, guru framing, detached institutional phrasing", importance: 7, strictness: "medium", semanticCategory: "vocabulary", enabled: true, examples: "", sortOrder: 20 }
   ];
+}
+
+const SEMANTIC_RELATIONSHIP_TYPES = [
+  "related_to",
+  "expands_on",
+  "contrasts_with",
+  "continues",
+  "local_example_of",
+  "infrastructure_example_of",
+  "platform_example_of",
+  "participation_example_of",
+  "alternate_reality_of",
+  "campaign_child_of",
+  "semantic_neighbor",
+  "repeated_pattern",
+  "repeated_hook",
+  "repeated_structure",
+  "repeated_cta",
+  "repeated_platform_signal"
+];
+
+function normalizeStringList(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item || "").trim()).filter(Boolean).filter((item, index, list) => list.indexOf(item) === index);
+  }
+  const text = String(value || "").trim();
+  if (!text) return [];
+  try {
+    if (text.startsWith("[")) {
+      const parsed = JSON.parse(text);
+      if (Array.isArray(parsed)) return normalizeStringList(parsed);
+    }
+  } catch (_) {}
+  return text.split(/[|,\n]/).map((item) => String(item || "").trim()).filter(Boolean).filter((item, index, list) => list.indexOf(item) === index);
+}
+
+function normalizeRemoteSemanticFields(item) {
+  return {
+    semanticTags: normalizeStringList(pickRemoteValue(item?.semanticTags, item?.semantic_tags, "")),
+    semanticClusters: normalizeStringList(pickRemoteValue(item?.semanticClusters, item?.semantic_clusters, "")),
+    semanticNeighbors: normalizeStringList(pickRemoteValue(item?.semanticNeighbors, item?.semantic_neighbors, "")),
+    semanticStrength: normalizeMetricNumber(pickRemoteValue(item?.semanticStrength, item?.semantic_strength, 0)),
+    semanticOrigin: String(pickRemoteValue(item?.semanticOrigin, item?.semantic_origin, "")).trim(),
+    semanticRelationshipType: String(pickRemoteValue(item?.semanticRelationshipType, item?.semantic_relationship_type, "")).trim(),
+    semanticConfidence: normalizeMetricNumber(pickRemoteValue(item?.semanticConfidence, item?.semantic_confidence, 0)),
+    semanticEmbeddingVersion: String(pickRemoteValue(item?.semanticEmbeddingVersion, item?.semantic_embedding_version, "heuristic-overlap-v1")).trim(),
+    semanticSummary: String(pickRemoteValue(item?.semanticSummary, item?.semantic_summary, "")).trim(),
+    recurringPatternFlags: normalizeStringList(pickRemoteValue(item?.recurringPatternFlags, item?.recurring_pattern_flags, "")),
+    semanticDecayScore: normalizeMetricNumber(pickRemoteValue(item?.semanticDecayScore, item?.semantic_decay_score, 0)),
+    semanticNoveltyScore: normalizeMetricNumber(pickRemoteValue(item?.semanticNoveltyScore, item?.semantic_novelty_score, 0)),
+    semanticDensityScore: normalizeMetricNumber(pickRemoteValue(item?.semanticDensityScore, item?.semantic_density_score, 0))
+  };
+}
+
+function extractSemanticTokens(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s/#-]+/g, " ")
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter((token) => token && token.length > 2 && !["the","and","for","with","from","that","this","into","your","about"].includes(token))
+    .filter((token, index, list) => list.indexOf(token) === index);
+}
+
+function getSemanticDescriptor(item, type = "") {
+  const id = String(item?.id || item?.postId || item?.noteId || item?.inspoId || item?.campaignId || item?.aiDraftId || item?.assetId || "").trim();
+  const title = String(item?.title || item?.campaignName || item?.assetName || "").trim();
+  const campaignId = String(item?.campaignId || "").trim();
+  const platform = String(item?.platform || item?.suggestedPlatform || item?.sourcePlatform || "").trim();
+  const tags = normalizeStringList(item?.semanticTags).concat(
+    extractSemanticTokens([
+      title,
+      item?.description,
+      item?.body,
+      item?.notes,
+      item?.summary,
+      item?.draftText,
+      item?.prompt,
+      item?.semanticSummary
+    ].join(" "))
+  ).filter((tag, index, list) => list.indexOf(tag) === index);
+  return {
+    id,
+    type,
+    title,
+    campaignId,
+    campaignName: String(item?.campaignName || item?.campaign || "").trim(),
+    platform,
+    tags,
+    semanticSummary: String(item?.semanticSummary || "").trim(),
+    recurringPatternFlags: normalizeStringList(item?.recurringPatternFlags),
+    createdAt: String(item?.createdAt || item?.updatedAt || item?.date || item?.scheduledAt || "").trim(),
+    raw: item
+  };
+}
+
+function getSemanticCorpus() {
+  return []
+    .concat((appState.posts || []).map((item) => getSemanticDescriptor(item, "post")))
+    .concat((appState.notes || []).map((item) => getSemanticDescriptor(item, "note")))
+    .concat((appState.inspo || []).map((item) => getSemanticDescriptor(item, "inspo")))
+    .concat((appState.campaigns || []).map((item) => getSemanticDescriptor(item, "campaign")))
+    .concat((appState.aiDrafts || []).map((item) => getSemanticDescriptor(item, "ai_draft")))
+    .concat((appState.media || []).map((item) => getSemanticDescriptor(item, "media")))
+    .filter((item) => item.id && (item.title || item.tags.length));
+}
+
+function semanticSimilarity(a, b) {
+  const aTags = a?.tags || [];
+  const bTags = b?.tags || [];
+  if (!aTags.length || !bTags.length) return 0;
+  const overlap = aTags.filter((tag) => bTags.includes(tag)).length;
+  const union = Array.from(new Set(aTags.concat(bTags))).length || 1;
+  const campaignBoost = a.campaignId && b.campaignId && a.campaignId === b.campaignId ? 0.18 : 0;
+  const platformBoost = a.platform && b.platform && a.platform === b.platform ? 0.08 : 0;
+  return (overlap / union) + campaignBoost + platformBoost;
+}
+
+function inferSemanticRelationships(corpus = getSemanticCorpus()) {
+  const edges = [];
+  corpus.forEach((item, index) => {
+    for (let i = index + 1; i < corpus.length; i += 1) {
+      const other = corpus[i];
+      const score = semanticSimilarity(item, other);
+      if (score < 0.22) continue;
+      const relationshipType = score > 0.58
+        ? "repeated_pattern"
+        : item.campaignId && item.campaignId === other.campaignId
+        ? "continues"
+        : item.platform && item.platform === other.platform
+        ? "repeated_platform_signal"
+        : "semantic_neighbor";
+      edges.push({
+        fromId: item.id,
+        fromType: item.type,
+        toId: other.id,
+        toType: other.type,
+        relationshipType,
+        strength: Number(score.toFixed(3))
+      });
+    }
+  });
+  return edges.sort((a, b) => b.strength - a.strength);
+}
+
+function getSemanticNeighbors(targetId, targetType, limit = 6) {
+  const corpus = getSemanticCorpus();
+  const edges = inferSemanticRelationships(corpus);
+  const neighbors = edges.filter((edge) => (edge.fromId === targetId && edge.fromType === targetType) || (edge.toId === targetId && edge.toType === targetType)).slice(0, limit);
+  return neighbors.map((edge) => {
+    const neighborId = edge.fromId === targetId && edge.fromType === targetType ? edge.toId : edge.fromId;
+    const neighborType = edge.fromId === targetId && edge.fromType === targetType ? edge.toType : edge.fromType;
+    const descriptor = corpus.find((item) => item.id === neighborId && item.type === neighborType);
+    return { ...edge, neighbor: descriptor || null };
+  });
+}
+
+function detectRecurringPatterns(corpus = getSemanticCorpus()) {
+  const map = new Map();
+  corpus.forEach((item) => {
+    const key = item.tags.slice(0, 3).join(" / ");
+    if (!key) return;
+    map.set(key, (map.get(key) || 0) + 1);
+  });
+  return Array.from(map.entries()).map(([pattern, count]) => ({ pattern, count })).filter((item) => item.count > 1).sort((a, b) => b.count - a.count);
+}
+
+function detectOverusedPatterns(corpus = getSemanticCorpus()) {
+  const recurring = detectRecurringPatterns(corpus);
+  return {
+    hooks: recurring.filter((item) => item.count >= 3).slice(0, 5),
+    structures: recurring.filter((item) => item.count >= 4).slice(0, 5),
+    ctas: recurring.filter((item) => item.pattern.includes("cta") || item.pattern.includes("comment") || item.pattern.includes("share")).slice(0, 5)
+  };
+}
+
+function detectCampaignClusters(corpus = getSemanticCorpus()) {
+  const campaigns = new Map();
+  corpus.forEach((item) => {
+    const key = item.campaignId || item.campaignName;
+    if (!key) return;
+    if (!campaigns.has(key)) campaigns.set(key, { campaignKey: key, count: 0, tags: [] });
+    const cluster = campaigns.get(key);
+    cluster.count += 1;
+    cluster.tags = cluster.tags.concat(item.tags);
+  });
+  return Array.from(campaigns.values()).map((cluster) => ({ ...cluster, tags: Array.from(new Set(cluster.tags)) }));
+}
+
+function detectPlatformClassificationSignals(corpus = getSemanticCorpus()) {
+  const platformMap = new Map();
+  corpus.forEach((item) => {
+    if (!item.platform) return;
+    if (!platformMap.has(item.platform)) platformMap.set(item.platform, {});
+    item.tags.forEach((tag) => {
+      platformMap.get(item.platform)[tag] = (platformMap.get(item.platform)[tag] || 0) + 1;
+    });
+  });
+  return Array.from(platformMap.entries()).map(([platform, tags]) => {
+    const ranked = Object.entries(tags).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([tag]) => tag);
+    return { platform, tags: ranked, weak: ranked.length < 2 };
+  });
+}
+
+function detectSemanticDrift(corpus = getSemanticCorpus()) {
+  const dated = corpus.filter((item) => item.createdAt).sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+  if (dated.length < 4) return [];
+  const midpoint = Math.floor(dated.length / 2);
+  const olderTags = dated.slice(0, midpoint).flatMap((item) => item.tags);
+  const newerTags = dated.slice(midpoint).flatMap((item) => item.tags);
+  const overlap = olderTags.filter((tag) => newerTags.includes(tag)).length;
+  return overlap < Math.max(2, Math.floor(newerTags.length * 0.12))
+    ? [{ issue: "semantic drift over time", overlap }]
+    : [];
+}
+
+function calculateSemanticNovelty(item, corpus = getSemanticCorpus()) {
+  const descriptor = getSemanticDescriptor(item, item?.type || "");
+  const strongest = Math.max(0, ...corpus.filter((entry) => entry.id !== descriptor.id).map((entry) => semanticSimilarity(descriptor, entry)));
+  return Number((1 - Math.min(strongest, 1)).toFixed(3));
+}
+
+function calculateSemanticDensity(item) {
+  const descriptor = getSemanticDescriptor(item, item?.type || "");
+  return Number((((descriptor.tags || []).length + (descriptor.recurringPatternFlags || []).length) / 10).toFixed(3));
+}
+
+function buildSemanticConstellation(corpus = getSemanticCorpus()) {
+  const clusters = detectCampaignClusters(corpus);
+  const bridges = [];
+  for (let i = 0; i < clusters.length; i += 1) {
+    for (let j = i + 1; j < clusters.length; j += 1) {
+      const strength = semanticSimilarity({ tags: clusters[i].tags, campaignId: clusters[i].campaignKey }, { tags: clusters[j].tags, campaignId: clusters[j].campaignKey });
+      if (strength >= 0.18) bridges.push({ fromCampaign: clusters[i].campaignKey, toCampaign: clusters[j].campaignKey, strength: Number(strength.toFixed(3)) });
+    }
+  }
+  return { clusters, bridges };
+}
+
+function getRecordCollectionByType(type) {
+  if (type === "post") return appState.posts || [];
+  if (type === "note") return appState.notes || [];
+  if (type === "inspo") return appState.inspo || [];
+  if (type === "campaign") return appState.campaigns || [];
+  if (type === "ai_draft") return appState.aiDrafts || [];
+  if (type === "media") return appState.media || [];
+  return [];
+}
+
+function findSemanticSourceRecord(type, id) {
+  const recordId = String(id || "").trim();
+  if (!type || !recordId) return null;
+  const collection = getRecordCollectionByType(type);
+  return collection.find((item) => {
+    return String(item?.id || item?.postId || item?.noteId || item?.inspoId || item?.campaignId || item?.aiDraftId || item?.assetId || "").trim() === recordId;
+  }) || null;
+}
+
+function getCurrentSemanticFocus() {
+  if (currentEditingPostId) {
+    const post = (appState.posts || []).find((item) => item.id === currentEditingPostId);
+    if (post) return { type: "post", record: post };
+  }
+
+  if (aiWorkspaceModal && !aiWorkspaceModal.classList.contains("pointer-events-none")) {
+    const sourceType = String(aiSourceTypeInput?.value || "").trim();
+    const sourceId = String(aiSourceIdInput?.value || "").trim();
+    const sourceRecord = findSemanticSourceRecord(sourceType, sourceId);
+    if (sourceRecord) return { type: sourceType, record: sourceRecord };
+    if (currentAIDraftId) {
+      const draft = (appState.aiDrafts || []).find((item) => item.aiDraftId === currentAIDraftId);
+      if (draft) return { type: "ai_draft", record: draft };
+    }
+  }
+
+  if (currentView === "calendar" || currentView === "ledger" || currentView === "performance" || currentView === "audit") {
+    const datedPosts = (appState.posts || []).filter((post) => normalizePostCalendarDateKey(post) === selectedCalendarDateKey);
+    if (datedPosts[0]) return { type: "post", record: datedPosts[0] };
+    if ((appState.posts || [])[0]) return { type: "post", record: appState.posts[0] };
+  }
+
+  if (currentView === "notes" && (appState.notes || [])[0]) return { type: "note", record: appState.notes[0] };
+  if (currentView === "inspo" && (appState.inspo || [])[0]) return { type: "inspo", record: appState.inspo[0] };
+  if (currentView === "media" && (appState.media || [])[0]) return { type: "media", record: appState.media[0] };
+  if (currentView === "constellation" && (appState.campaigns || [])[0]) return { type: "campaign", record: appState.campaigns[0] };
+
+  return null;
+}
+
+function getSemanticThemeBuckets(descriptor) {
+  const tags = descriptor?.tags || [];
+  const contains = (token) => tags.some((tag) => tag.includes(token));
+  return {
+    geographic: tags.filter((tag) => ["chicago", "transit", "energy", "climate", "neighborhood", "local", "geographic", "spatial", "infrastructure", "proximity", "public"].some((token) => tag.includes(token))),
+    participation: tags.filter((tag) => ["participation", "barrier", "visibility", "access", "recognition", "translation", "orientation", "legibility", "community", "onboarding"].some((token) => tag.includes(token))),
+    emotional: tags.filter((tag) => ["friction", "recognition", "surprise", "trust", "care", "proximity", "clarity", "urgency", "grief", "joy"].some((token) => tag.includes(token))),
+    classification: tags.filter((tag) => ["classification", "signal", "platform", "taxonomy", "distribution", "systems", "semantic", "structure"].some((token) => tag.includes(token))),
+    hasOrientation: contains("orientation") || contains("legibility") || contains("recognition")
+  };
+}
+
+function buildSemanticAIDraftPayload() {
+  const sourceType = String(aiSourceTypeInput?.value || "manual").trim();
+  const sourceId = String(aiSourceIdInput?.value || "").trim();
+  const sourceRecord = findSemanticSourceRecord(sourceType, sourceId);
+  const draftText = String(aiDraftPreviewInput?.value || "").trim();
+  const prompt = String(aiWorkspacePrompt?.value || "").trim();
+  const title = String(aiDraftTitleInput?.value || "").trim();
+  const sourceTags = normalizeStringList(sourceRecord?.semanticTags);
+  const inferredTags = extractSemanticTokens([title, draftText, prompt, sourceRecord?.title, sourceRecord?.description, sourceRecord?.body].join(" "));
+  const tags = normalizeStringList(sourceTags.concat(inferredTags)).slice(0, 18);
+  const recurring = detectRecurringPatterns(getSemanticCorpus())
+    .filter((item) => {
+      const patternTags = normalizeStringList(String(item.pattern || "").split("/"));
+      return patternTags.some((tag) => tags.includes(tag));
+    })
+    .slice(0, 4)
+    .map((item) => item.pattern);
+  return {
+    semanticTags: tags,
+    semanticClusters: tags.slice(0, 5),
+    semanticOrigin: sourceType || "manual",
+    semanticSummary: draftText.split(/\n+/).find(Boolean) || prompt || title || "",
+    recurringPatternFlags: recurring,
+    semanticEmbeddingVersion: "heuristic-overlap-v1",
+    semanticNoveltyScore: calculateSemanticNovelty({ id: sourceId || title || "draft", type: "ai_draft", title, draftText, prompt, semanticTags: tags }, getSemanticCorpus()),
+    semanticDensityScore: Number((tags.length / 10).toFixed(3))
+  };
+}
+
+function renderSemanticMemoryPanel() {
+  const target = document.getElementById("semantic-memory-panel");
+  if (!target) return;
+
+  const corpus = getSemanticCorpus();
+  if (!corpus.length) {
+    target.innerHTML = makeEmptyState("Semantic memory is quiet", "Add posts, notes, inspo, media, campaigns, or AI drafts to start mapping recurring territory and communication structures.", "ph-orbit");
+    return;
+  }
+
+  const focus = getCurrentSemanticFocus();
+  const focusDescriptor = focus ? getSemanticDescriptor(focus.record, focus.type) : null;
+  const neighbors = focusDescriptor ? getSemanticNeighbors(focusDescriptor.id, focusDescriptor.type, 8) : [];
+  const recurring = detectRecurringPatterns(corpus).slice(0, 3);
+  const overused = detectOverusedPatterns(corpus);
+  const platformSignals = detectPlatformClassificationSignals(corpus).slice(0, 3);
+  const drift = detectSemanticDrift(corpus);
+  const themeBuckets = getSemanticThemeBuckets(focusDescriptor || {});
+
+  const filterNeighborsByType = (type) => neighbors.filter((edge) => edge.neighbor?.type === type).slice(0, 3);
+  const toNeighborText = (edge) => `${edge.neighbor?.title || edge.neighbor?.campaignName || "Untitled"} • ${edge.relationshipType.replace(/_/g, " ")} • ${Math.round((edge.strength || 0) * 100)}%`;
+
+  const cards = [
+    {
+      title: "Semantic Territory",
+      detail: focusDescriptor
+        ? `Focus: ${focusDescriptor.title || "Untitled"}`
+        : "Cross-record overview",
+      items: focusDescriptor?.tags?.slice(0, 6) || recurring.map((item) => `${item.pattern} (${item.count})`),
+      icon: "ph-orbit"
+    },
+    { title: "Related Posts", detail: "Nearby posts in the current semantic territory.", items: filterNeighborsByType("post").map(toNeighborText), icon: "ph-article" },
+    { title: "Related Notes", detail: "Ideas and fragments connected to this territory.", items: filterNeighborsByType("note").map(toNeighborText), icon: "ph-note-pencil" },
+    { title: "Related Inspo", detail: "References that overlap with the same structures.", items: filterNeighborsByType("inspo").map(toNeighborText), icon: "ph-bookmarks" },
+    { title: "Related Campaigns", detail: "Campaign memory and continuity signals.", items: filterNeighborsByType("campaign").map(toNeighborText), icon: "ph-shooting-star" },
+    { title: "Repeated Structures", detail: "Patterns showing up repeatedly across the corpus.", items: recurring.map((item) => `${item.pattern} • ${item.count} repeats`), icon: "ph-repeat" },
+    { title: "Classification Signals", detail: "Platform and structure signals the corpus keeps reinforcing.", items: platformSignals.map((item) => `${toTitleCase(item.platform)}: ${(item.tags || []).slice(0, 3).join(", ") || "weak signal"}`), icon: "ph-funnel-simple" },
+    { title: "Emotional Entry Points", detail: "Recognizable emotional openings already in the memory layer.", items: themeBuckets.emotional.slice(0, 4), icon: "ph-heartbeat" },
+    { title: "Platform Patterns", detail: "Recurring platform-specific framing and classification cues.", items: overused.hooks.slice(0, 3).map((item) => `${item.pattern} • ${item.count}`), icon: "ph-linkedin-logo" },
+    { title: "Geographic / Spatial Themes", detail: "Place-based systems and orientation topics in circulation.", items: themeBuckets.geographic.slice(0, 4), icon: "ph-map-trifold" },
+    { title: "Participation Themes", detail: "Participation architecture, recognition, and access signals.", items: themeBuckets.participation.slice(0, 4), icon: "ph-users-three" }
+  ].filter((card) => card.items && card.items.length);
+
+  const statusLine = focusDescriptor
+    ? `${toTitleCase(focusDescriptor.type.replace(/_/g, " "))} focus • ${neighbors.length} semantic neighbors • novelty ${Math.round(calculateSemanticNovelty(focus.record, corpus) * 100)}%`
+    : `${corpus.length} semantic records • ${drift.length ? "drift detected" : "territory stable"}`;
+
+  target.innerHTML = `
+    <div class="p-3 rounded-xl bg-[#181125] border border-white/5">
+      <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Semantic Observatory</div>
+      <div class="text-sm font-bold text-white wrap-safe mb-1">${escapeHtml(statusLine)}</div>
+      <div class="text-[11px] text-gray-400 wrap-safe">${escapeHtml(focusDescriptor?.semanticSummary || "This layer tracks recurring concepts, campaign continuity, semantic bridges, and classification signals across StellarSync.")}</div>
+    </div>
+    ${cards.map((card) => `
+      <div class="p-3 rounded-xl bg-[#181125] border border-white/5">
+        <div class="flex items-start gap-3 mb-2">
+          <div class="w-8 h-8 rounded-lg bg-[#120c1d] border border-white/5 flex items-center justify-center text-[#c77dff] shrink-0">
+            <i class="ph-bold ${card.icon}"></i>
+          </div>
+          <div class="min-w-0">
+            <div class="text-sm font-bold text-white wrap-safe">${escapeHtml(card.title)}</div>
+            <div class="text-[11px] text-gray-400 wrap-safe">${escapeHtml(card.detail)}</div>
+          </div>
+        </div>
+        <div class="space-y-1">
+          ${card.items.slice(0, 4).map((item) => `<div class="text-[11px] text-gray-300 wrap-safe">• ${escapeHtml(item)}</div>`).join("")}
+        </div>
+      </div>
+    `).join("")}
+  `;
+}
+
+function renderAISemanticMemoryCards() {
+  if (!aiSemanticMemoryCards) return;
+
+  const sourceType = String(aiSourceTypeInput?.value || "manual").trim();
+  const sourceId = String(aiSourceIdInput?.value || "").trim();
+  const sourceRecord = findSemanticSourceRecord(sourceType, sourceId);
+  const corpus = getSemanticCorpus();
+  const semanticPayload = buildSemanticAIDraftPayload();
+  const draftDescriptor = getSemanticDescriptor({
+    id: currentAIDraftId || sourceId || `draft-${Date.now()}`,
+    title: aiDraftTitleInput?.value || sourceRecord?.title || "AI Draft",
+    draftText: aiDraftPreviewInput?.value || "",
+    prompt: aiWorkspacePrompt?.value || "",
+    platform: aiPlatformInput?.value || "",
+    semanticTags: semanticPayload.semanticTags,
+    semanticSummary: semanticPayload.semanticSummary,
+    recurringPatternFlags: semanticPayload.recurringPatternFlags
+  }, "ai_draft");
+  const neighbors = sourceRecord ? getSemanticNeighbors(String(sourceId || sourceRecord.id || "").trim(), sourceType, 6) : [];
+  const strongestNeighbor = neighbors[0]?.neighbor || null;
+  const strongestSimilarity = neighbors[0]?.strength || Math.max(0, ...corpus.map((entry) => semanticSimilarity(draftDescriptor, entry)));
+  const overused = detectOverusedPatterns(corpus);
+  const matchingHook = overused.hooks.find((item) => normalizeStringList(String(item.pattern || "").split("/")).some((tag) => semanticPayload.semanticTags.includes(tag)));
+  const platformSignal = detectPlatformClassificationSignals(corpus).find((item) => item.platform === (aiPlatformInput?.value || "linkedin"));
+  const novelty = calculateSemanticNovelty({
+    id: draftDescriptor.id,
+    type: "ai_draft",
+    title: draftDescriptor.title,
+    draftText: aiDraftPreviewInput?.value || "",
+    semanticTags: semanticPayload.semanticTags
+  }, corpus);
+  const cards = [];
+
+  if (strongestNeighbor) {
+    cards.push({
+      title: "You've explored this theme before",
+      detail: `${strongestNeighbor.title || "Untitled"} sits nearby in semantic memory.`,
+      tone: "repeat"
+    });
+  }
+  if (sourceRecord?.campaignId || sourceRecord?.campaignName) {
+    cards.push({
+      title: `This relates to ${formatCampaignDisplayName(sourceRecord.campaignName || "a campaign")}`,
+      detail: "Keep continuity signals visible so the draft strengthens campaign memory rather than floating free.",
+      tone: "campaign"
+    });
+  }
+  if (matchingHook) {
+    cards.push({
+      title: "This repeats a recent hook structure",
+      detail: `${matchingHook.pattern} has already appeared ${matchingHook.count} times. Consider a different opening move.`,
+      tone: "warning"
+    });
+  }
+  if (platformSignal && platformSignal.tags.length) {
+    cards.push({
+      title: "This strengthens platform classification",
+      detail: `${toTitleCase(platformSignal.platform)} already clusters around ${platformSignal.tags.slice(0, 3).join(", ")}.`,
+      tone: "signal"
+    });
+  }
+  if (strongestSimilarity >= 0.6) {
+    cards.push({
+      title: "This overlaps heavily with a recent post",
+      detail: "Push the structure, hook, or emotional entry point further apart before saving.",
+      tone: "warning"
+    });
+  }
+  if (novelty >= 0.62) {
+    cards.push({
+      title: "This introduces a new semantic territory",
+      detail: "You have room to explore a less repeated concept while still anchoring it in campaign context.",
+      tone: "new"
+    });
+  }
+  if (!cards.length) {
+    cards.push({
+      title: "Semantic memory is ready",
+      detail: "Select a source or generate a draft preview to compare it against existing campaigns, hooks, and territory.",
+      tone: "quiet"
+    });
+  }
+
+  const toneStyles = {
+    repeat: "border-[#c77dff]/25 bg-[#231738]",
+    campaign: "border-cyan-400/20 bg-[#12212d]",
+    warning: "border-yellow-400/20 bg-[#2b2311]",
+    signal: "border-emerald-400/20 bg-[#13261f]",
+    new: "border-fuchsia-400/20 bg-[#251329]",
+    quiet: "border-white/5 bg-[#181125]"
+  };
+
+  aiSemanticMemoryCards.innerHTML = cards.map((card) => `
+    <div class="p-3 rounded-xl border ${toneStyles[card.tone] || toneStyles.quiet}">
+      <div class="text-sm font-bold text-white wrap-safe mb-1">${escapeHtml(card.title)}</div>
+      <div class="text-[11px] text-gray-300 wrap-safe">${escapeHtml(card.detail)}</div>
+    </div>
+  `).join("");
 }
 
 const PILLAR_SHAPES = {
@@ -2879,7 +3456,7 @@ function renderOverviewPanel() {
           <div class="p-4 rounded-xl bg-[#181125] border border-white/5 hover:border-white/10 transition-colors">
             <div class="flex items-center justify-between gap-3 mb-3">
               <span class="text-[9px] font-bold uppercase tracking-widest text-[#c77dff]">${escapeHtml(formatStatusLabel(topPost.status))}</span>
-              <span class="text-[9px] text-gray-500">${escapeHtml(formatLedgerDate(topPost.date))}</span>
+              <span class="text-[9px] text-gray-500">${escapeHtml(formatLedgerDate(topPost))}</span>
             </div>
             <h4 class="text-sm font-bold text-white wrap-safe mb-2" title="${escapeHtml(topPost.title || "")}">${escapeHtml(getDisplayTitle(topPost.title))}</h4>
             <p class="text-[11px] text-gray-400 wrap-safe mb-3" title="${escapeHtml(topPost.description || "")}">${escapeHtml(getDisplayExcerpt(topPost.description, topPost.ledgerExcerpt || ""))}</p>
@@ -3019,7 +3596,7 @@ function renderPerformanceView() {
       if (!primaryInsightMetric) return bucket.total;
       return filteredPosts
         .filter((post) => {
-          const date = parsePostDate(post.date);
+          const date = parsePostDate(normalizePostCalendarDateKey(post) || post.date);
           return date && date >= bucket.start && date <= bucket.end;
         })
         .reduce((sum, post) => sum + normalizeMetricNumber(post[primaryInsightMetric.key]), 0);
@@ -3085,7 +3662,7 @@ function renderPerformanceView() {
       .sort((a, b) => {
         const scoreDiff = getPostRankingMeta(b, filteredPosts).score - getPostRankingMeta(a, filteredPosts).score;
         if (scoreDiff !== 0) return scoreDiff;
-        return (parsePostDate(b.date)?.getTime() || 0) - (parsePostDate(a.date)?.getTime() || 0);
+        return (parsePostDate(normalizePostCalendarDateKey(b) || b.date)?.getTime() || 0) - (parsePostDate(normalizePostCalendarDateKey(a) || a.date)?.getTime() || 0);
       })
       .slice(0, 4);
     topPostsTarget.innerHTML = topPosts.length
@@ -3144,7 +3721,10 @@ function renderAuditView() {
       { label: "Missing Pillar", value: summary.gaps.missingPillar, color: "#fb7185" },
       { label: "Missing Media", value: summary.gaps.missingMedia, color: "#c77dff" },
       { label: "Unresolved Asset Link", value: summary.gaps.unresolvedAssets, color: "#00f0ff" },
-      { label: "Campaign/Pillar Mismatch", value: summary.gaps.campaignMismatch, color: "#f97316" }
+      { label: "Campaign/Pillar Mismatch", value: summary.gaps.campaignMismatch, color: "#f97316" },
+      { label: "Semantic Repetition Risk", value: summary.gaps.semanticRepetitionRisk, color: "#f59e0b" },
+      { label: "Orphaned Memory", value: summary.gaps.orphanedMemory, color: "#38bdf8" },
+      { label: "Isolated Campaigns", value: summary.gaps.isolatedCampaigns, color: "#a78bfa" }
     ];
     gapCards.innerHTML = items.map(item => `
       <div class="p-3 rounded-xl bg-[#181125] border border-white/5 flex items-center justify-between gap-3">
@@ -3163,7 +3743,7 @@ function renderAuditView() {
       { label: "Campaigns loaded", value: campaigns.length },
       { label: "Media assets loaded", value: mediaItems.length },
       { label: "Published posts", value: posts.filter(post => post.status === "published").length },
-      { label: "Dated posts", value: posts.filter(post => parsePostDate(post.date)).length }
+      { label: "Dated posts", value: posts.filter(post => normalizePostCalendarDateKey(post)).length }
     ];
 
     health.innerHTML = rows.map(row => `
@@ -3304,9 +3884,33 @@ function parsePostDate(value) {
   return !Number.isNaN(parsed.getTime()) ? parsed : null;
 }
 
+function parseDisplayDateKey(value) {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  const isoMatch = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+  const mdyMatch = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (mdyMatch) {
+    return `${mdyMatch[3]}-${String(Number(mdyMatch[1])).padStart(2, "0")}-${String(Number(mdyMatch[2])).padStart(2, "0")}`;
+  }
+  return "";
+}
+
+function normalizePostCalendarDateKey(post) {
+  if (!post || typeof post !== "object") return getPostDateKey(post);
+  return (
+    parseDisplayDateKey(post.queueDateLabel) ||
+    parseDisplayDateKey(post.queue_date_label) ||
+    parseDisplayDateKey(post.scheduledDateKey) ||
+    parseDisplayDateKey(String(post.scheduledAt || post.scheduled_at || post.date || "").slice(0, 10)) ||
+    parseDisplayDateKey(String(post.createdAt || post.created_at || "").slice(0, 10)) ||
+    toDateKey(post.scheduledAt || post.scheduled_at || post.date || post.createdAt || post.created_at)
+  );
+}
+
 function getPostDateKey(postOrValue) {
   const rawValue = typeof postOrValue === "object" && postOrValue !== null
-    ? postOrValue.scheduledDateKey || postOrValue.date || postOrValue.scheduledAt
+    ? normalizePostCalendarDateKey(postOrValue) || postOrValue.scheduledDateKey || postOrValue.date || postOrValue.scheduledAt
     : postOrValue;
   if (typeof rawValue === "string" && /^\d{4}-\d{2}-\d{2}/.test(rawValue)) {
     return rawValue.slice(0, 10);
@@ -3334,7 +3938,7 @@ function postMatchesFilters(post, filters = {}) {
 
   const start = getRangeStart(range);
   if (start) {
-    const postDate = parsePostDate(post.date);
+    const postDate = parsePostDate(normalizePostCalendarDateKey(post) || post.date);
     if (!postDate || postDate < start) return false;
   }
 
@@ -3353,7 +3957,7 @@ function getFilteredPerformancePosts() {
 
     if (!platformOk) return false;
 
-    const dateValue = parsePostDate(post.scheduledAt || post.date);
+    const dateValue = parsePostDate(normalizePostCalendarDateKey(post) || post.scheduledAt || post.date);
     if (!dateValue) return false;
 
     if (performanceFilters.range === "all") return true;
@@ -3386,7 +3990,7 @@ function getPostOperationalScore(post) {
   const hasMedia = findLinkedAssetForPost(post) ? 1 : 0;
   const hasCampaign = post.campaignId ? 1 : 0;
   const hasPillar = getPostContentPillar(post) ? 1 : 0;
-  const postDate = parsePostDate(post.date);
+  const postDate = parsePostDate(normalizePostCalendarDateKey(post) || post.date);
   const recencyDays = postDate ? Math.max(0, 30 - Math.floor((Date.now() - postDate.getTime()) / 86400000)) : 0;
   return statusWeight + hasMedia + hasCampaign + hasPillar + (recencyDays / 30);
 }
@@ -3426,7 +4030,7 @@ function getTopRankedPosts(filters = {}, limit = 5) {
     .sort((a, b) => {
       const scoreDiff = getPostRankingMeta(b, filteredPosts).score - getPostRankingMeta(a, filteredPosts).score;
       if (scoreDiff !== 0) return scoreDiff;
-      return (parsePostDate(b.date)?.getTime() || 0) - (parsePostDate(a.date)?.getTime() || 0);
+      return (parsePostDate(normalizePostCalendarDateKey(b) || b.date)?.getTime() || 0) - (parsePostDate(normalizePostCalendarDateKey(a) || a.date)?.getTime() || 0);
     })
     .slice(0, limit);
 }
@@ -3461,7 +4065,7 @@ function buildTimeBuckets(posts, range = "30") {
   });
 
   posts.forEach((post) => {
-    const date = parsePostDate(post.date);
+    const date = parsePostDate(normalizePostCalendarDateKey(post) || post.date);
     if (!date) return;
     const bucket = buckets.find(item => date >= item.start && date <= item.end);
     if (!bucket) return;
@@ -3476,7 +4080,7 @@ function getBucketMetricTotals(posts, buckets, metricKey) {
   return buckets.map((bucket) => {
     return posts
       .filter((post) => {
-        const date = parsePostDate(post.date);
+        const date = parsePostDate(normalizePostCalendarDateKey(post) || post.date);
         return date && date >= bucket.start && date <= bucket.end;
       })
       .reduce((sum, post) => sum + normalizeMetricNumber(post?.[metricKey]), 0);
@@ -3542,7 +4146,9 @@ function renderComparisonRows(targetId, rows, formatter = (value) => String(valu
 function buildAuditSummary() {
   const posts = appState.posts || [];
   const campaigns = appState.campaigns || [];
-  const datedPosts = posts.filter(post => parsePostDate(post.date));
+  const notes = appState.notes || [];
+  const inspo = appState.inspo || [];
+  const datedPosts = posts.filter(post => parsePostDate(normalizePostCalendarDateKey(post) || post.date));
   const publishedPosts = posts.filter(post => post.status === "published");
   const missingCampaign = posts.filter(post => !post.campaignId);
   const missingPillar = posts.filter(post => !getDisplayPostContentPillar(post));
@@ -3562,6 +4168,12 @@ function buildAuditSummary() {
   const failedMissingError = posts.filter(post => String(post.publishStatus || "").toLowerCase().includes("failed") && !String(post.apiError || "").trim());
   const dateMismatch = posts.filter(post => Array.isArray(post.dateDiagnostics) && post.dateDiagnostics.length);
   const importFailures = posts.filter(post => ["failed", "limited"].includes(String(post.sourceImportStatus || "").toLowerCase()));
+  const semanticOverused = detectOverusedPatterns();
+  const semanticDrift = detectSemanticDrift();
+  const weakClassificationSignals = detectPlatformClassificationSignals().filter((item) => item.weak);
+  const isolatedCampaigns = detectCampaignClusters().filter((cluster) => cluster.count <= 1);
+  const orphanedMemory = notes.filter((note) => !note.convertedPostId && !note.sourceUrl && !normalizeStringList(note.semanticTags).length)
+    .concat(inspo.filter((item) => !item.convertedPostId && !item.sourceLabel && !normalizeStringList(item.semanticTags).length));
   const campaignMismatch = posts.filter((post) => {
     if (!post.campaignId) return false;
     const campaign = campaigns.find(item => String(item.campaignId || "") === String(post.campaignId || ""));
@@ -3573,6 +4185,7 @@ function buildAuditSummary() {
   if (campaigns.length && campaigns.every(item => item.campaignName)) working.push(`${campaigns.length} campaigns are available for planning.`);
   if (posts.length && missingPillar.length === 0) working.push("Content pillar mapping is complete on current rows.");
   if (posts.length && missingCampaign.length < Math.max(2, Math.ceil(posts.length * 0.2))) working.push("Most posts are attached to campaigns.");
+  if (!semanticDrift.length && posts.length > 4) working.push("Semantic territory looks stable across the current memory layer.");
 
   const attention = [];
   if (missingCampaign.length) attention.push(`${missingCampaign.length} posts are missing campaign mapping.`);
@@ -3585,6 +4198,10 @@ function buildAuditSummary() {
   if (publishedMissingUrl.length) attention.push(`${publishedMissingUrl.length} published posts are missing published URLs.`);
   if (failedMissingError.length) attention.push(`${failedMissingError.length} failed publish rows are missing api_error details.`);
   if (dateMismatch.length) attention.push(`${dateMismatch.length} posts show a local date-key mismatch between stored datetime and rendered day.`);
+  if (semanticOverused.hooks.length || semanticOverused.structures.length) attention.push("Recurring semantic patterns are starting to repeat too often.");
+  if (isolatedCampaigns.length) attention.push(`${isolatedCampaigns.length} campaigns are semantically isolated from the rest of the map.`);
+  if (weakClassificationSignals.length) attention.push(`${weakClassificationSignals.length} platforms have weak classification signals.`);
+  if (orphanedMemory.length) attention.push(`${orphanedMemory.length} notes or inspo records are currently orphaned from the memory layer.`);
   if (!datedPosts.length) attention.push("No dated posts are available for trend analysis.");
 
   const nextAction =
@@ -3608,7 +4225,11 @@ function buildAuditSummary() {
       publishedMissingUrl: publishedMissingUrl.length,
       failedMissingError: failedMissingError.length,
       dateMismatch: dateMismatch.length,
-      importFailures: importFailures.length
+      importFailures: importFailures.length,
+      semanticRepetitionRisk: semanticOverused.hooks.length + semanticOverused.structures.length,
+      isolatedCampaigns: isolatedCampaigns.length,
+      orphanedMemory: orphanedMemory.length,
+      weakClassificationSignals: weakClassificationSignals.length
     }
   };
 }
@@ -3656,6 +4277,15 @@ function initApp() {
       if (result) showToast("Diagnostics updated", "Backend diagnostics refreshed.", "ph-shield-check", "text-[#00ffaa]");
     }).catch(() => undefined);
   });
+  auditCopyDiagnosticsBtn?.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(getDiagnosticsSummaryText(backendDiagnostics || {}));
+      showToast("Copied", "Diagnostics summary copied.", "ph-copy", "text-[#00ffaa]");
+    } catch (err) {
+      console.error(err);
+      showToast("Copy failed", "Could not copy diagnostics summary.", "ph-warning", "text-yellow-400");
+    }
+  });
   importUrlBtn?.addEventListener("click", importPostSourceIntoModal);
 
   switchView("calendar");
@@ -3684,11 +4314,14 @@ function initApp() {
 }
     
 function rerenderAll() {
+  const bridgeControl = document.getElementById("semantic-bridge-density");
+  if (bridgeControl) bridgeControl.value = semanticBridgeDensity;
   populateCampaignDropdown();
   setBackendActionAvailability();
   updateAppStatusBanner();
   renderOverviewPanel();
   renderContextualGuidancePanel();
+  renderSemanticMemoryPanel();
   renderModalPillarButtons();
   renderCalendar();
   renderLedgerFilterMenus();
@@ -3701,6 +4334,7 @@ function rerenderAll() {
   renderConstellation();
   renderPerformanceView();
   renderAuditView();
+  renderAISemanticMemoryCards();
 }
 
 function inspoTypeLabel(type) {
@@ -3951,8 +4585,8 @@ function getInitialCalendarCursor() {
 
 function getScheduledQueue() {
   return (appState.posts || [])
-    .filter(post => post.status === "scheduled" && post.date)
-    .sort((a, b) => (parsePostDate(a.date)?.getTime() || 0) - (parsePostDate(b.date)?.getTime() || 0))
+    .filter(post => post.status === "scheduled" && normalizePostCalendarDateKey(post))
+    .sort((a, b) => (parsePostDate(normalizePostCalendarDateKey(a) || a.date)?.getTime() || 0) - (parsePostDate(normalizePostCalendarDateKey(b) || b.date)?.getTime() || 0))
     .map(post => ({
       postId: post.id,
       title: post.title,
@@ -3961,8 +4595,8 @@ function getScheduledQueue() {
       pillar: getPostContentPillar(post),
       scheduledAt: post.date,
       status: post.status,
-      queueDateLabel: formatLocalQueueDate(post.date),
-      queueTimeLabel: formatLocalQueueTime(post.date)
+      queueDateLabel: post.queueDateLabel || formatLocalQueueDate(post.date),
+      queueTimeLabel: post.queueTimeLabel || formatLocalQueueTime(post.date)
     }));
 }
 
@@ -4034,9 +4668,24 @@ function setupAIAndBrandWorkspaces() {
     if (event.target === aiWorkspaceModal) closeAIWorkspaceModal();
   });
   aiWorkspaceOpenBrandBtn?.addEventListener("click", openBrandFrameworkModal);
-  aiSourceTypeInput?.addEventListener("change", populateAISourceOptions);
-  aiPostTypeInput?.addEventListener("change", populateAIGenerationModes);
-  aiPlatformInput?.addEventListener("change", populateAIGenerationModes);
+  aiSourceTypeInput?.addEventListener("change", () => {
+    populateAISourceOptions();
+    renderAISemanticMemoryCards();
+  });
+  aiSourceIdInput?.addEventListener("change", renderAISemanticMemoryCards);
+  aiPostTypeInput?.addEventListener("change", () => {
+    populateAIGenerationModes();
+    renderAISemanticMemoryCards();
+  });
+  aiPlatformInput?.addEventListener("change", () => {
+    populateAIGenerationModes();
+    renderAISemanticMemoryCards();
+  });
+  aiGenerationModeInput?.addEventListener("change", renderAISemanticMemoryCards);
+  aiWorkspacePrompt?.addEventListener("input", renderAISemanticMemoryCards);
+  aiDraftTitleInput?.addEventListener("input", renderAISemanticMemoryCards);
+  aiDraftPreviewInput?.addEventListener("input", renderAISemanticMemoryCards);
+  aiDraftCarouselOutlineInput?.addEventListener("input", renderAISemanticMemoryCards);
   aiGenerateDraftBtn?.addEventListener("click", () => generateAIDraftPreview().catch((err) => {
     console.error(err);
     showToast("AI scaffold only", err.message || "Could not build the draft context.", "ph-warning", "text-yellow-400");
@@ -4377,8 +5026,8 @@ function renderCalendarCell(dateObj, inCurrentMonth = true, isWeekMode = false) 
   const isTodayValue = isSameDay(dateObj, today);
 
   const posts = (appState.posts || [])
-    .filter(post => getPostDateKey(post) === key)
-    .sort((a, b) => (parsePostDate(a.date)?.getTime() || 0) - (parsePostDate(b.date)?.getTime() || 0));
+    .filter(post => normalizePostCalendarDateKey(post) === key)
+    .sort((a, b) => (parsePostDate(normalizePostCalendarDateKey(a) || a.date)?.getTime() || 0) - (parsePostDate(normalizePostCalendarDateKey(b) || b.date)?.getTime() || 0));
 
   const cellClasses = [
     "cal-cell",
@@ -4416,8 +5065,8 @@ function renderMobileDayCalendar() {
   label.textContent = selectedDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
   const posts = (appState.posts || [])
-    .filter(post => getPostDateKey(post) === selectedCalendarDateKey)
-    .sort((a, b) => (parsePostDate(a.date)?.getTime() || 0) - (parsePostDate(b.date)?.getTime() || 0));
+    .filter(post => normalizePostCalendarDateKey(post) === selectedCalendarDateKey)
+    .sort((a, b) => (parsePostDate(normalizePostCalendarDateKey(a) || a.date)?.getTime() || 0) - (parsePostDate(normalizePostCalendarDateKey(b) || b.date)?.getTime() || 0));
 
   if (!posts.length) {
     list.innerHTML = makeEmptyState("No posts on selected day", `No posts are scheduled for ${label.textContent}.`, "ph-calendar-x");
@@ -4505,8 +5154,8 @@ function renderLedger() {
   }
 
   posts.sort((a, b) => {
-    const aTime = a.date ? new Date(a.date).getTime() : 0;
-    const bTime = b.date ? new Date(b.date).getTime() : 0;
+    const aTime = parsePostDate(normalizePostCalendarDateKey(a) || a.date || a.createdAt)?.getTime() || 0;
+    const bTime = parsePostDate(normalizePostCalendarDateKey(b) || b.date || b.createdAt)?.getTime() || 0;
 
     if (ledgerSortMode === "oldest") return aTime - bTime;
 
@@ -4583,7 +5232,7 @@ function renderLedger() {
               <span class="publishing-chip ${mediaKind === "missing" ? "text-red-300" : "text-gray-300"}">
                 <i class="ph-bold ${mediaKind === "video" ? "ph-video-camera" : mediaKind === "carousel" ? "ph-images" : mediaKind === "image" ? "ph-image" : mediaKind === "text" ? "ph-text-t" : "ph-warning-circle"}"></i>${escapeHtml(mediaLabel)}
               </span>
-              <span class="text-gray-500 text-[10px] font-medium">${escapeHtml(formatLedgerDate(post.date))}</span>
+              <span class="text-gray-500 text-[10px] font-medium">${escapeHtml(formatLedgerDate(post))}</span>
             </div>
             <h3 class="text-white font-bold text-base mb-2 wrap-safe" title="${escapeHtml(post.title || "")}">${escapeHtml(displayTitle)}</h3>
             <p class="text-gray-400 text-sm leading-relaxed wrap-safe" title="${escapeHtml(post.description || "")}">${escapeHtml(displayDescription)}</p>
@@ -4648,8 +5297,8 @@ function buildConstellationRows() {
         return normalizeLookupValue(post.campaignName || "") === normalizeLookupValue(campaign.campaignName || "");
       })
       .sort((a, b) => {
-        const aTime = a.date ? new Date(a.date).getTime() : 0;
-        const bTime = b.date ? new Date(b.date).getTime() : 0;
+        const aTime = parsePostDate(normalizePostCalendarDateKey(a) || a.date)?.getTime() || 0;
+        const bTime = parsePostDate(normalizePostCalendarDateKey(b) || b.date)?.getTime() || 0;
         return aTime - bTime;
       });
 
@@ -4668,8 +5317,8 @@ function getConstellationAnchor(campaign, index) {
   const column = index % columns;
   const row = Math.floor(index / columns);
   return {
-    x: clamp(Number(campaign.x || 0) || (420 + column * 980), 260, 2140),
-    y: clamp(Number(campaign.y || 0) || (320 + row * 640), 220, 1900)
+    x: clamp(Number(campaign.x || 0) || (760 + column * 1560), 520, 3660),
+    y: clamp(Number(campaign.y || 0) || (520 + row * 1080), 360, 4140)
   };
 }
 
@@ -4681,38 +5330,38 @@ function getIconPathPoints(shape, count, anchorX, anchorY) {
     let x = anchorX;
     let y = anchorY;
     if (shape === "leaf") {
-      x += Math.sin(t * Math.PI) * 180;
-      y += Math.cos(t * Math.PI * 2) * 70 - 30;
+      x += Math.sin(t * Math.PI) * 320;
+      y += Math.cos(t * Math.PI * 2) * 140 - 55;
     } else if (shape === "spark" || shape === "star") {
-      x += (t - 0.5) * 340;
-      y += Math.sin(t * Math.PI * 4) * 85;
+      x += (t - 0.5) * 640;
+      y += Math.sin(t * Math.PI * 4) * 145;
     } else if (shape === "sun") {
-      x += Math.cos(t * Math.PI * 2) * 150;
-      y += Math.sin(t * Math.PI * 2) * 150;
+      x += Math.cos(t * Math.PI * 2) * 280;
+      y += Math.sin(t * Math.PI * 2) * 280;
     } else if (shape === "moon") {
-      x += Math.cos((0.2 + t * 0.8) * Math.PI) * 170;
-      y += Math.sin((0.2 + t * 0.8) * Math.PI) * 150;
+      x += Math.cos((0.2 + t * 0.8) * Math.PI) * 310;
+      y += Math.sin((0.2 + t * 0.8) * Math.PI) * 260;
     } else if (shape === "bolt") {
-      x += (t < 0.5 ? -110 + t * 220 : -10 + (t - 0.5) * 240);
-      y += (t < 0.5 ? -150 + t * 240 : -30 + (t - 0.5) * 260);
+      x += (t < 0.5 ? -220 + t * 440 : -35 + (t - 0.5) * 500);
+      y += (t < 0.5 ? -260 + t * 420 : -70 + (t - 0.5) * 460);
     } else if (shape === "map") {
-      x += (t - 0.5) * 320;
-      y += Math.sin(t * Math.PI * 3) * 60 + Math.cos(t * Math.PI) * 45;
+      x += (t - 0.5) * 620;
+      y += Math.sin(t * Math.PI * 3) * 120 + Math.cos(t * Math.PI) * 90;
     } else if (shape === "book") {
-      x += (t - 0.5) * 300;
-      y += Math.sin((t - 0.5) * Math.PI) * 90;
+      x += (t - 0.5) * 560;
+      y += Math.sin((t - 0.5) * Math.PI) * 160;
     } else if (shape === "spiral") {
       const angle = t * Math.PI * 3.6;
-      const radius = 35 + t * 150;
+      const radius = 75 + t * 320;
       x += Math.cos(angle) * radius;
       y += Math.sin(angle) * radius;
     } else {
-      x += (t - 0.5) * 360;
-      y += Math.sin(t * Math.PI * 2) * 40;
+      x += (t - 0.5) * 700;
+      y += Math.sin(t * Math.PI * 2) * 95;
     }
     points.push({
-      x: clamp(x, 160, 2240),
-      y: clamp(y, 150, 2050)
+      x: clamp(x, 320, 3980),
+      y: clamp(y, 220, 4380)
     });
   }
   return points;
@@ -4728,14 +5377,69 @@ function buildCampaignSummary(campaign) {
   };
 }
 
+function getBridgeDensityConfig(level = semanticBridgeDensity) {
+  const density = String(level || "low").toLowerCase();
+  if (density === "off") return { threshold: 1.1, maxPerCampaign: 0, opacity: 0 };
+  if (density === "medium") return { threshold: 0.32, maxPerCampaign: 4, opacity: 0.22 };
+  if (density === "high") return { threshold: 0.18, maxPerCampaign: 7, opacity: 0.28 };
+  return { threshold: 0.42, maxPerCampaign: 2, opacity: 0.18 };
+}
+
 function renderConstellation() {
   if (!canvas) return;
 
   const rows = buildConstellationRows();
-  const minCanvasHeight = Math.max(2200, (Math.ceil(rows.length / 2) + 1) * 680);
+  const semanticConstellation = buildSemanticConstellation();
+  const bridgeConfig = getBridgeDensityConfig();
+  const minCanvasHeight = Math.max(3800, (Math.ceil(rows.length / 2) + 1) * 1180);
+  const worldWidth = 4300;
 
   canvas.style.height = `${minCanvasHeight}px`;
+  canvas.style.width = `${worldWidth}px`;
+  canvas.dataset.worldWidth = String(worldWidth);
+  canvas.dataset.worldHeight = String(minCanvasHeight);
   canvas.innerHTML = "";
+
+  const anchorByCampaign = new Map();
+  rows.forEach((campaign, index) => {
+    anchorByCampaign.set(String(campaign.campaignId || campaign.campaignName || `campaign-${index}`), getConstellationAnchor(campaign, index));
+  });
+
+  if (semanticConstellation.bridges.length && bridgeConfig.maxPerCampaign > 0) {
+    const bridgeSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    bridgeSvg.setAttribute("width", String(worldWidth));
+    bridgeSvg.setAttribute("height", String(minCanvasHeight));
+    bridgeSvg.style.cssText = "position:absolute;left:0;top:0;pointer-events:none;z-index:0;overflow:visible;";
+    const bridgeCounts = new Map();
+    semanticConstellation.bridges
+      .filter((bridge) => (bridge.strength || 0) >= bridgeConfig.threshold)
+      .sort((a, b) => (b.strength || 0) - (a.strength || 0))
+      .forEach((bridge) => {
+      const fromCount = bridgeCounts.get(bridge.fromCampaign) || 0;
+      const toCount = bridgeCounts.get(bridge.toCampaign) || 0;
+      if (fromCount >= bridgeConfig.maxPerCampaign || toCount >= bridgeConfig.maxPerCampaign) return;
+      const fromAnchor = anchorByCampaign.get(String(bridge.fromCampaign || ""));
+      const toAnchor = anchorByCampaign.get(String(bridge.toCampaign || ""));
+      if (!fromAnchor || !toAnchor) return;
+      const bridgeLine = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      const midX = Math.round((fromAnchor.x + toAnchor.x) / 2);
+      const bendY = Math.round(Math.min(fromAnchor.y, toAnchor.y) - 120 - bridge.strength * 120);
+      bridgeLine.setAttribute("d", `M ${fromAnchor.x} ${fromAnchor.y} Q ${midX} ${bendY} ${toAnchor.x} ${toAnchor.y}`);
+      bridgeLine.setAttribute("fill", "none");
+      bridgeLine.setAttribute("stroke", "#8b5cf6");
+      bridgeLine.setAttribute("stroke-width", String(Math.max(1, bridge.strength * 3.6)));
+      bridgeLine.setAttribute("stroke-dasharray", "4 10");
+      bridgeLine.setAttribute("opacity", String(clamp(bridge.strength * bridgeConfig.opacity, 0.08, 0.3)));
+      bridgeLine.dataset.fromCampaign = String(bridge.fromCampaign || "");
+      bridgeLine.dataset.toCampaign = String(bridge.toCampaign || "");
+      bridgeLine.dataset.baseOpacity = String(clamp(bridge.strength * bridgeConfig.opacity, 0.08, 0.3));
+      bridgeLine.dataset.bridgeStrength = String(bridge.strength || 0);
+      bridgeSvg.appendChild(bridgeLine);
+      bridgeCounts.set(bridge.fromCampaign, fromCount + 1);
+      bridgeCounts.set(bridge.toCampaign, toCount + 1);
+    });
+    canvas.appendChild(bridgeSvg);
+  }
 
   rows.forEach((campaign, index) => {
     const anchor = getConstellationAnchor(campaign, index);
@@ -4744,7 +5448,7 @@ function renderConstellation() {
     const summary = buildCampaignSummary(campaign);
     const rowGroup = document.createElement("div");
     rowGroup.className = "absolute left-0 top-0";
-    rowGroup.style.width = "2400px";
+    rowGroup.style.width = `${worldWidth}px`;
     rowGroup.style.height = `${minCanvasHeight}px`;
 
     const points = getIconPathPoints(String(campaign.iconShape || "").trim().toLowerCase(), Math.max((campaign.posts || []).length, 1), anchor.x, anchor.y);
@@ -4753,8 +5457,8 @@ function renderConstellation() {
     const label = document.createElement("div");
     label.style.cssText = `
       position:absolute;
-      left:${Math.max(24, points[0].x - 120)}px;
-      top:${Math.max(24, points[0].y - 110)}px;
+      left:${Math.max(48, points[0].x - 130)}px;
+      top:${Math.max(52, points[0].y - 160)}px;
       padding:10px 18px;
       background:rgba(18,12,29,0.18);
       border:1px solid rgba(255,255,255,0.12);
@@ -4764,7 +5468,7 @@ function renderConstellation() {
       box-shadow:none;
       z-index:6;
       min-width:170px;
-      max-width:220px;
+      max-width:250px;
       pointer-events:none;
     `;
     label.innerHTML = `
@@ -4776,7 +5480,7 @@ function renderConstellation() {
     rowGroup.appendChild(label);
 
     const lineSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    lineSvg.setAttribute("width", "2400");
+    lineSvg.setAttribute("width", String(worldWidth));
     lineSvg.setAttribute("height", String(minCanvasHeight));
     lineSvg.style.cssText = "position:absolute;left:0;top:0;pointer-events:none;z-index:1;overflow:visible;";
     const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
@@ -4836,7 +5540,7 @@ function renderConstellation() {
         dot.style.transform = "translate(-50%,-50%) scale(1.22)";
         path.setAttribute("opacity", "0.8");
         hoverCard.style.display = "block";
-        hoverCard.style.left = `${Math.min(dotX + 24, 2140)}px`;
+        hoverCard.style.left = `${Math.min(dotX + 32, worldWidth - 280)}px`;
         hoverCard.style.top = `${Math.max(dotY - 18, 32)}px`;
       });
       dot.addEventListener("mouseleave", () => {
@@ -4849,7 +5553,7 @@ function renderConstellation() {
       const dotLabel = document.createElement("button");
       dotLabel.type = "button";
       dotLabel.className = "constellation-label-btn";
-      dotLabel.style.left = `${Math.min(dotX + 18, 2140)}px`;
+      dotLabel.style.left = `${Math.min(dotX + 22, worldWidth - 260)}px`;
       dotLabel.style.top = `${dotY}px`;
       dotLabel.style.borderColor = `${color}40`;
       dotLabel.innerHTML = `${pillarShape}<span>${escapeHtml(getConstellationLabel(post.title))}</span>`;
@@ -4864,8 +5568,8 @@ function renderConstellation() {
     });
 
     const lastPoint = points[Math.max(points.length - 1, 0)] || anchor;
-    const addX = clamp(lastPoint.x + 130, 120, 2250);
-    const addY = clamp(lastPoint.y + 20, 120, minCanvasHeight - 120);
+    const addX = clamp(lastPoint.x + 220, 220, worldWidth - 180);
+    const addY = clamp(lastPoint.y + 48, 220, minCanvasHeight - 180);
 
     const addDot = document.createElement("button");
     addDot.type = "button";
@@ -4890,12 +5594,19 @@ function renderConstellation() {
     rowGroup.addEventListener("mouseenter", () => {
       path.setAttribute("opacity", "0.8");
       hoverCard.style.display = "block";
-      hoverCard.style.left = `${Math.min(points[0].x + 20, 2140)}px`;
+      hoverCard.style.left = `${Math.min(points[0].x + 24, worldWidth - 280)}px`;
       hoverCard.style.top = `${Math.max(points[0].y - 34, 32)}px`;
+      canvas.querySelectorAll("path[data-from-campaign]").forEach((line) => {
+        const connected = line.dataset.fromCampaign === String(campaign.campaignId || campaign.campaignName || "") || line.dataset.toCampaign === String(campaign.campaignId || campaign.campaignName || "");
+        line.setAttribute("opacity", connected ? String(clamp(Number(line.dataset.baseOpacity || 0.12) * 2.2, 0.18, 0.65)) : "0.04");
+      });
     });
     rowGroup.addEventListener("mouseleave", () => {
       path.setAttribute("opacity", "0.45");
       hoverCard.style.display = "none";
+      canvas.querySelectorAll("path[data-from-campaign]").forEach((line) => {
+        line.setAttribute("opacity", String(line.dataset.baseOpacity || "0.12"));
+      });
     });
     canvas.appendChild(rowGroup);
   });
@@ -4904,7 +5615,7 @@ function renderConstellation() {
   addCampaignRow.style.cssText = `
     position:absolute;
     left:0;
-    top:${minCanvasHeight - 170}px;
+    top:${minCanvasHeight - 210}px;
     width:100%;
     height:160px;
     display:flex;
@@ -5034,8 +5745,8 @@ function setupConstellationInteractions() {
     const worldX = (mouseX - panX) / scale;
     const worldY = (mouseY - panY) / scale;
 
-    const zoomAmount = e.deltaY < 0 ? 1.08 : 0.92;
-    scale = clamp(scale * zoomAmount, 0.35, 2.2);
+    const zoomAmount = e.deltaY < 0 ? 1.1 : 0.9;
+    scale = clamp(scale * zoomAmount, 0.22, 3.1);
 
     panX = mouseX - worldX * scale;
     panY = mouseY - worldY * scale;
@@ -5046,6 +5757,12 @@ function setupConstellationInteractions() {
   document.getElementById("zoom-in")?.addEventListener("click", () => zoomConstellation(1.15));
   document.getElementById("zoom-out")?.addEventListener("click", () => zoomConstellation(0.87));
   document.getElementById("zoom-reset")?.addEventListener("click", () => fitConstellation());
+  document.getElementById("semantic-bridge-density")?.addEventListener("change", (event) => {
+    semanticBridgeDensity = String(event.target?.value || "low").toLowerCase();
+    safeStorageSet("stellarsync_bridge_density", semanticBridgeDensity);
+    renderConstellation();
+    if (currentView === "constellation") fitConstellation({ preserveUserView: true });
+  });
 
   let constellationResizeFrame = null;
 
@@ -5072,7 +5789,7 @@ function zoomConstellation(multiplier) {
   const worldX = (centerX - panX) / scale;
   const worldY = (centerY - panY) / scale;
 
-  scale = clamp(scale * multiplier, 0.35, 2.2);
+  scale = clamp(scale * multiplier, 0.18, 3.8);
   panX = centerX - worldX * scale;
   panY = centerY - worldY * scale;
 
@@ -5090,11 +5807,11 @@ function fitConstellation({ preserveUserView = false } = {}) {
   const rect = viewport.getBoundingClientRect();
   if (!rect.width || !rect.height) return;
 
-  const worldWidth = 2400;
-  const worldHeight = 2200;
+  const worldWidth = Number(canvas.dataset.worldWidth || canvas.offsetWidth || 4300);
+  const worldHeight = Number(canvas.dataset.worldHeight || canvas.offsetHeight || 3800);
 
   const fitScale = Math.min(rect.width / worldWidth, rect.height / worldHeight);
-  scale = clamp(fitScale * 0.94, 0.32, 2.2);
+  scale = clamp(fitScale * 1.14, 0.2, 3.8);
 
   panX = Math.round((rect.width - worldWidth * scale) / 2);
   panY = Math.round((rect.height - worldHeight * scale) / 2);
@@ -5290,6 +6007,7 @@ function openMediaLinkModal() {
   mediaLinkModalCard.classList.remove("scale-95");
   mediaLinkModalCard.classList.add("scale-100");
   renderMediaLinkPreview();
+  refreshSocialImportContext().then(() => renderMediaLinkPreview()).catch(() => undefined);
 }
 
 function closeMediaLinkModal() {
@@ -5306,33 +6024,292 @@ function closeMediaLinkModal() {
     if (mediaLinkBadgeInput) mediaLinkBadgeInput.value = "";
     if (mediaLinkMetaInput) mediaLinkMetaInput.value = "";
     if (mediaLinkCaptionFallbackInput) mediaLinkCaptionFallbackInput.value = "";
+    socialCardUpload = null;
+    currentSocialImportResult = null;
+    if (mediaLinkUploadInput) mediaLinkUploadInput.value = "";
+    if (mediaLinkUploadPreview) {
+      mediaLinkUploadPreview.classList.add("hidden");
+      mediaLinkUploadPreview.classList.remove("flex");
+      mediaLinkUploadPreview.innerHTML = "";
+    }
     if (mediaLinkPreviewBody) mediaLinkPreviewBody.textContent = "Paste a URL to preview the detected source.";
   }, 180);
 }
 
-function renderMediaLinkPreview() {
-  if (!mediaLinkPreviewBody) return;
+function getSocialCardState() {
   const sourceUrl = String(mediaLinkSourceInput?.value || "").trim();
-  if (!sourceUrl) {
-    mediaLinkPreviewBody.textContent = "Paste a URL to preview the detected source.";
-    return;
-  }
   const selectedPlatform = mediaLinkPlatformInput?.value || "auto";
   const detected = selectedPlatform === "auto" ? (detectSourcePlatform(sourceUrl) || "external") : selectedPlatform;
   const fallback = String(mediaLinkCaptionFallbackInput?.value || "").trim();
-  const previewImage = /\.(png|jpe?g|webp|gif)$/i.test(sourceUrl)
-    ? `<img src="${escapeHtml(sourceUrl)}" alt="Preview" class="w-24 h-24 rounded-xl object-cover border border-white/5" onerror="handleBrokenMediaPreview(this)">`
-    : `<div class="w-24 h-24 rounded-xl bg-[#181125] border border-white/5 flex items-center justify-center text-[#c77dff]"><i class="ph-bold ${detected === "linkedin" ? "ph-linkedin-logo" : detected === "instagram" ? "ph-instagram-logo" : "ph-link"} text-3xl"></i></div>`;
+  const title = String(mediaLinkNameInput?.value || "").trim();
+  const likelyBlocked = ["linkedin", "instagram", "threads", "bluesky"].includes(detected);
+  const externalPreview = /\.(png|jpe?g|webp|gif)$/i.test(sourceUrl);
+  const imageUrl = socialCardUpload?.previewUrl || String(currentSocialImportResult?.metadata?.image || currentSocialImportResult?.metadata?.media_url || currentSocialImportResult?.image || "").trim() || (externalPreview ? sourceUrl : "");
+  return {
+    sourceUrl,
+    detected,
+    fallback,
+    title,
+    likelyBlocked,
+    imageUrl,
+    importedAt: new Date().toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })
+  };
+}
+
+function getConnectedAccount(platform) {
+  return (connectedAccounts || []).find((item) => item.platform === platform) || null;
+}
+
+function inferSocialImportMode(state) {
+  const platform = state?.detected || "external";
+  const account = getConnectedAccount(platform);
+  if (account?.accessStatus === "connected" && account.importSupported) return "authenticated_import";
+  if (platform === "external") return "open_graph";
+  if (platform === "instagram" && socialImportCapabilities?.instagramOEmbed?.configured) return "instagram_oembed";
+  if (["linkedin", "instagram", "threads", "bluesky"].includes(platform)) return "manual_social_card";
+  return "unsupported";
+}
+
+function formatSocialImportModeLabel(mode) {
+  if (mode === "authenticated_import") return "Authenticated Import";
+  if (mode === "open_graph") return "Open Graph";
+  if (mode === "instagram_oembed") return "Instagram oEmbed";
+  if (mode === "manual_social_card") return "Manual Social Card";
+  return "Unsupported";
+}
+
+async function connectSocialAccount(platform) {
+  try {
+    const result = await apiGetSocialAuthUrl(platform);
+    const auth = result?.auth || result;
+    if (auth?.url) {
+      window.open(auth.url, "_blank", "noopener,noreferrer");
+      showToast("OAuth scaffold", "Connection flow opened in a new tab.", "ph-link-simple", "text-[#00ffaa]");
+      return;
+    }
+    showToast("Connection scaffold", (auth?.diagnostics || []).join(" ") || "OAuth is scaffolded only right now.", "ph-warning", "text-yellow-400");
+  } catch (err) {
+    console.error(err);
+    showToast("Connect failed", err.message || "Could not initialize the account connection scaffold.", "ph-warning", "text-yellow-400");
+  }
+}
+
+async function disconnectConnectedAccount(platform) {
+  try {
+    await apiDisconnectSocialAccount(platform);
+    await refreshSocialImportContext();
+    showToast("Disconnected", `${toTitleCase(platform)} account scaffold disconnected.`, "ph-check", "text-[#00ffaa]");
+  } catch (err) {
+    console.error(err);
+    showToast("Disconnect failed", err.message || "Could not disconnect the account scaffold.", "ph-warning", "text-yellow-400");
+  }
+}
+
+async function refreshSocialImportContext() {
+  if (!APP_CONFIG.ENABLE_REMOTE_SYNC || !isRemoteConfigured()) return;
+  try {
+    const [capabilitiesResult, accountsResult] = await Promise.all([
+      apiGetSocialImportCapabilities(),
+      apiGetConnectedAccounts()
+    ]);
+    socialImportCapabilities = capabilitiesResult?.capabilities || capabilitiesResult || null;
+    connectedAccounts = accountsResult?.accounts || accountsResult || [];
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+function renderConnectedAccountActions(state) {
+  if (!mediaLinkConnectedAccountActions) return;
+  const platform = state?.detected || "external";
+  const account = getConnectedAccount(platform);
+  const mode = inferSocialImportMode(state);
+  const buttons = [];
+  if (["linkedin", "instagram", "threads", "bluesky"].includes(platform)) {
+    if (account?.accessStatus === "connected") {
+      buttons.push(`
+        <button type="button" onclick="importConnectedSocialPost()" class="px-3 py-2 rounded-xl bg-[#120c1d] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">
+          Import from Connected Account
+        </button>
+      `);
+      buttons.push(`
+        <button type="button" onclick="disconnectConnectedAccount('${escapeHtml(platform)}')" class="px-3 py-2 rounded-xl bg-[#120c1d] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 transition-colors">
+          Disconnect
+        </button>
+      `);
+    } else {
+      buttons.push(`
+        <button type="button" onclick="connectSocialAccount('${escapeHtml(platform)}')" class="px-3 py-2 rounded-xl bg-[#120c1d] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">
+          Connect Account
+        </button>
+      `);
+    }
+  }
+  buttons.push(`<div class="text-[10px] text-gray-500 self-center">${escapeHtml(formatSocialImportModeLabel(mode))}</div>`);
+  mediaLinkConnectedAccountActions.innerHTML = buttons.join("");
+}
+
+async function importConnectedSocialPost() {
+  const state = getSocialCardState();
+  if (!state.sourceUrl) {
+    showToast("Missing link", "Paste a URL before using connected-account import.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  try {
+    const result = await apiImportSocialPostByUrl({
+      url: state.sourceUrl,
+      captionFallback: state.fallback,
+      titleFallback: state.title
+    });
+    applyImportedSocialCard(result?.imported || result);
+    showToast("Imported", "Connected-account import scaffold applied its safest available fields.", "ph-check", "text-[#00ffaa]");
+  } catch (err) {
+    console.error(err);
+    showToast("Import failed", err.message || "Could not import from the connected-account scaffold.", "ph-warning", "text-yellow-400");
+  }
+}
+
+function applyImportedSocialCard(imported) {
+  const normalized = imported || {};
+  currentSocialImportResult = normalized;
+  if (mediaLinkNameInput && normalized.title && !mediaLinkNameInput.value.trim()) mediaLinkNameInput.value = normalized.title;
+  if (mediaLinkCaptionFallbackInput && normalized.description && !mediaLinkCaptionFallbackInput.value.trim()) mediaLinkCaptionFallbackInput.value = normalized.description;
+  if (mediaLinkPlatformInput && normalized.sourcePlatform && mediaLinkPlatformInput.value === "auto") mediaLinkPlatformInput.value = normalized.sourcePlatform;
+  if (mediaLinkTypeInput && normalized.metadata?.image) mediaLinkTypeInput.value = "image";
+  renderMediaLinkPreview(normalized);
+}
+
+function renderSocialCardUploadPreview() {
+  if (!mediaLinkUploadPreview) return;
+  if (!socialCardUpload?.previewUrl) {
+    mediaLinkUploadPreview.classList.add("hidden");
+    mediaLinkUploadPreview.classList.remove("flex");
+    mediaLinkUploadPreview.innerHTML = "";
+    return;
+  }
+  mediaLinkUploadPreview.classList.remove("hidden");
+  mediaLinkUploadPreview.classList.add("flex");
+  mediaLinkUploadPreview.innerHTML = `<img src="${escapeHtml(socialCardUpload.previewUrl)}" alt="${escapeHtml(socialCardUpload.name || "Social card upload")}" class="w-full h-full object-cover" onerror="handleBrokenMediaPreview(this)">`;
+}
+
+function renderMediaLinkPreview(importedResult = null) {
+  if (!mediaLinkPreviewBody) return;
+  const activeImport = importedResult || currentSocialImportResult;
+  const { sourceUrl, detected, fallback, title, likelyBlocked, imageUrl, importedAt } = getSocialCardState();
+  const mode = activeImport?.mode || inferSocialImportMode({ detected });
+  const account = getConnectedAccount(detected);
+  if (!sourceUrl) {
+    mediaLinkPreviewBody.textContent = "Paste a URL to preview the detected source.";
+    if (saveLinkToMediaBtn) saveLinkToMediaBtn.disabled = true;
+    if (mediaLinkImportModeChip) mediaLinkImportModeChip.textContent = "Manual Social Card";
+    if (mediaLinkImportStatusText) mediaLinkImportStatusText.textContent = "Paste a URL to detect the safest import mode.";
+    renderConnectedAccountActions({ detected });
+    return;
+  }
+  const previewImage = imageUrl
+    ? `<img src="${escapeHtml(imageUrl)}" alt="Preview" class="w-24 h-24 rounded-xl object-cover border border-white/5" onerror="handleBrokenMediaPreview(this)">`
+    : `<div class="w-24 h-24 rounded-xl bg-[#181125] border border-white/5 flex items-center justify-center text-[#c77dff]"><i class="ph-bold ${detected === "linkedin" ? "ph-linkedin-logo" : detected === "instagram" ? "ph-instagram-logo" : detected === "threads" ? "ph-chat-circle-dots" : detected === "bluesky" ? "ph-cloud" : "ph-link"} text-3xl"></i></div>`;
+  const metadataMessage = activeImport?.diagnostics?.length
+    ? activeImport.diagnostics.join(" ")
+    : mode === "authenticated_import"
+    ? `${toTitleCase(detected)} connected-account import is the preferred path when permissions exist.`
+    : mode === "instagram_oembed"
+    ? "Instagram oEmbed is configured. If the request is blocked by app review or permissions, use the manual Social Card."
+    : likelyBlocked
+    ? "Metadata could not be pulled automatically. Paste the caption or upload the image to turn this into a post."
+    : "Open Graph metadata can be used when the source exposes it. Review the imported fields before saving.";
+  if (saveLinkToMediaBtn) saveLinkToMediaBtn.disabled = !imageUrl;
+  if (mediaLinkImportModeChip) mediaLinkImportModeChip.textContent = formatSocialImportModeLabel(mode);
+  if (mediaLinkImportStatusText) {
+    mediaLinkImportStatusText.textContent = account?.accessStatus === "missing_permissions"
+      ? `${toTitleCase(detected)} is connected, but permissions are missing. Use the manual Social Card until the account scopes are fixed.`
+      : account?.accessStatus === "expired"
+      ? `${toTitleCase(detected)} connection has expired. Reconnect or use the manual Social Card.`
+      : metadataMessage;
+  }
+  renderConnectedAccountActions({ detected });
   mediaLinkPreviewBody.innerHTML = `
     <div class="flex gap-4 items-start">
       ${previewImage}
       <div class="min-w-0">
-        <div class="text-sm font-bold text-white wrap-safe mb-1">${escapeHtml(deriveSourceLabel(sourceUrl))}</div>
-        <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">${escapeHtml(toTitleCase(detected))}</div>
-        <div class="text-xs text-gray-400 wrap-safe">${escapeHtml(fallback || sourceUrl)}</div>
+        <div class="text-sm font-bold text-white wrap-safe mb-1">${escapeHtml(title || activeImport?.title || deriveSourceLabel(sourceUrl))}</div>
+        <div class="flex items-center gap-2 flex-wrap text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">
+          <span>${escapeHtml(toTitleCase(detected))}</span>
+          <span>•</span>
+          <span>${escapeHtml(formatSocialImportModeLabel(mode))}</span>
+          <span>•</span>
+          <span>${escapeHtml(importedAt)}</span>
+        </div>
+        <div class="text-xs text-gray-400 wrap-safe mb-2">${escapeHtml(sourceUrl)}</div>
+        <div class="text-xs text-yellow-200 wrap-safe">${escapeHtml(metadataMessage)}</div>
+        ${fallback ? `<div class="mt-2 text-xs text-gray-300 wrap-safe">${escapeHtml(fallback)}</div>` : ""}
       </div>
     </div>
   `;
+  renderSocialCardUploadPreview();
+}
+
+async function saveLinkToInspoFromModal() {
+  const state = getSocialCardState();
+  if (!state.sourceUrl) {
+    showToast("Missing link", "Paste a URL before saving to Inspo.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  const inspo = {
+    title: state.title || deriveSourceLabel(state.sourceUrl),
+    type: state.imageUrl ? "image" : "article",
+    url: state.sourceUrl,
+    notes: state.fallback || mediaLinkMetaInput?.value || "",
+    sourceLabel: toTitleCase(state.detected || "external")
+  };
+  try {
+    await apiSaveInspo(inspo);
+    if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
+      await syncRemoteIfConfigured();
+    }
+    showToast("Saved to Inspo", "Social card saved to Inspo Vault.", "ph-check", "text-[#00ffaa]");
+  } catch (err) {
+    console.error(err);
+    showToast("Inspo save failed", err.message || "Could not save this social card to Inspo.", "ph-warning", "text-yellow-400");
+  }
+}
+
+async function saveSocialCardToMedia() {
+  const state = getSocialCardState();
+  if (!state.imageUrl) {
+    showToast("Image required", "Add or upload an image before saving this social card to Media.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  try {
+    if (socialCardUpload?.file) {
+      const base64Data = await fileToBase64(socialCardUpload.file);
+      await apiPost("uploadMedia", {
+        fileName: socialCardUpload.file.name,
+        mimeType: socialCardUpload.file.type,
+        base64Data,
+        assetBadge: String(mediaLinkBadgeInput?.value || "Social Card").trim(),
+        assetMeta: String(mediaLinkMetaInput?.value || state.fallback || "").trim(),
+        linkedPostId: "",
+        campaign: ""
+      });
+    } else {
+      await apiPost("saveMediaLink", {
+        sourceUrl: state.imageUrl,
+        assetName: state.title || deriveSourceLabel(state.sourceUrl),
+        assetType: "image",
+        assetBadge: String(mediaLinkBadgeInput?.value || "Social Card").trim(),
+        assetMeta: String(mediaLinkMetaInput?.value || state.fallback || "").trim(),
+        sourceType: state.detected,
+        notes: String(mediaLinkMetaInput?.value || state.fallback || "").trim(),
+        campaign: ""
+      });
+    }
+    await refreshMediaFromRemote();
+    showToast("Saved to Media", "Social card media saved to the vault.", "ph-check", "text-[#00ffaa]");
+  } catch (err) {
+    console.error(err);
+    showToast("Media save failed", err.message || "Could not save this social card to Media.", "ph-warning", "text-yellow-400");
+  }
 }
 
 async function saveMediaLinkFromModal() {
@@ -5373,12 +6350,13 @@ function createPostFromLinkModal() {
     return;
   }
   const detected = (mediaLinkPlatformInput?.value || "auto") === "auto"
-    ? (detectSourcePlatform(sourceUrl) || "linkedin")
-    : (mediaLinkPlatformInput?.value || "linkedin");
+    ? (detectSourcePlatform(sourceUrl) || "external")
+    : (mediaLinkPlatformInput?.value || "external");
+  const postPlatform = detected === "instagram" ? "instagram" : "linkedin";
   closeMediaLinkModal();
   openPostModal(
     String(mediaLinkNameInput?.value || deriveSourceLabel(sourceUrl)).trim(),
-    detected === "instagram" ? "instagram" : "linkedin",
+    postPlatform,
     detected === "instagram" ? "application" : "authority",
     "",
     "draft",
@@ -5394,9 +6372,9 @@ function createPostFromLinkModal() {
     sourcePlatform: detected,
     title: String(titleInput?.value || "").trim(),
     description: String(descInput?.value || "").trim(),
-    platform: detected === "instagram" ? "instagram" : "linkedin",
+    platform: postPlatform,
     publishStatus: "draft",
-    platformTargets: [detected === "instagram" ? "instagram" : "linkedin"]
+    platformTargets: [postPlatform]
   });
 }
 
@@ -5406,9 +6384,32 @@ function setupMediaLinkModal() {
   cancelMediaLinkBtn?.addEventListener("click", closeMediaLinkModal);
   saveMediaLinkBtn?.addEventListener("click", saveMediaLinkFromModal);
   createPostFromLinkBtn?.addEventListener("click", createPostFromLinkModal);
-  mediaLinkSourceInput?.addEventListener("input", renderMediaLinkPreview);
-  mediaLinkPlatformInput?.addEventListener("change", renderMediaLinkPreview);
+  saveLinkToInspoBtn?.addEventListener("click", () => saveLinkToInspoFromModal().catch((err) => console.error(err)));
+  saveLinkToMediaBtn?.addEventListener("click", () => saveSocialCardToMedia().catch((err) => console.error(err)));
+  mediaLinkSourceInput?.addEventListener("input", () => {
+    currentSocialImportResult = null;
+    renderMediaLinkPreview();
+  });
+  mediaLinkPlatformInput?.addEventListener("change", () => {
+    currentSocialImportResult = null;
+    renderMediaLinkPreview();
+  });
   mediaLinkCaptionFallbackInput?.addEventListener("input", renderMediaLinkPreview);
+  mediaLinkNameInput?.addEventListener("input", renderMediaLinkPreview);
+  mediaLinkUploadBtn?.addEventListener("click", () => mediaLinkUploadInput?.click());
+  mediaLinkUploadInput?.addEventListener("change", (event) => {
+    const file = Array.from(event.target?.files || [])[0];
+    if (!file) return;
+    const error = validateUploadFile(file, "vault");
+    socialCardUpload = fileToPreview(file);
+    socialCardUpload.error = error;
+    if (error) {
+      showToast("Invalid image", error, "ph-warning", "text-yellow-400");
+      socialCardUpload = null;
+    }
+    renderMediaLinkPreview();
+    if (mediaLinkUploadInput) mediaLinkUploadInput.value = "";
+  });
 
   mediaLinkModal?.addEventListener("click", (e) => {
     if (e.target === mediaLinkModal) closeMediaLinkModal();
@@ -6638,7 +7639,7 @@ async function importPostSourceIntoModal() {
   try {
     let imported;
     if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
-      const result = await apiImportPostFromUrl({ url: sourceUrl, captionFallback });
+      const result = await apiImportSocialPostByUrl({ url: sourceUrl, captionFallback });
       imported = result.imported || result;
     } else {
       const platform = detectSourcePlatform(sourceUrl) || "linkedin";
@@ -6650,6 +7651,7 @@ async function importPostSourceIntoModal() {
         platform: platform === "instagram" ? "instagram" : "linkedin",
         status: "draft",
         sourceImportStatus: captionFallback ? "manual" : "limited",
+        mode: ["linkedin", "instagram", "threads", "bluesky"].includes(platform) ? "manual_social_card" : "open_graph",
         diagnostics: ["Remote import is unavailable, so only the local fallback fields were applied."]
       };
     }
@@ -6678,16 +7680,16 @@ async function importPostSourceIntoModal() {
 
     if (importDiagnosticsEl) {
       importDiagnosticsEl.textContent = diagnostics.length
-        ? diagnostics.join(" ")
-        : `Imported for ${toTitleCase(postState.sourcePlatform || "source")}.`;
+        ? `${formatSocialImportModeLabel(imported.mode || "manual_social_card")} • ${diagnostics.join(" ")}`
+        : `${formatSocialImportModeLabel(imported.mode || "manual_social_card")} • Imported for ${toTitleCase(postState.sourcePlatform || "source")}.`;
     }
     setModalSourceContext("link", "Create Post from Link", diagnostics.length ? "Link imported with fallback diagnostics. Review the source fields before saving." : "This draft was enriched from a source URL.", sourceUrl);
     renderPublishingReadiness(postState);
     showToast("Imported", diagnostics.length ? "Source imported with fallback diagnostics." : "Source details applied to the post.", "ph-check", "text-[#00ffaa]");
   } catch (err) {
     console.error(err);
-    if (importDiagnosticsEl) importDiagnosticsEl.textContent = `Import failed: ${err.message || "Unknown error"}`;
-    showToast("Import failed", err.message || "Could not import the source URL.", "ph-warning", "text-yellow-400");
+    if (importDiagnosticsEl) importDiagnosticsEl.textContent = "Metadata could not be pulled automatically. Paste the caption or upload the image to turn this into a post.";
+    showToast("Import fallback", "Automatic metadata is unavailable for this source. Use manual caption or image fallback.", "ph-warning", "text-yellow-400");
   }
 }
 
@@ -7069,7 +8071,7 @@ async function syncRemoteIfConfigured() {
   }
 
   try {
-    const [settingsResult, postsResult, mediaResult, inspoResult, notesResult, campaignsResult, aiDraftsResult, brandFrameworkResult] = await Promise.allSettled([
+    const [settingsResult, postsResult, mediaResult, inspoResult, notesResult, campaignsResult, aiDraftsResult, brandFrameworkResult, socialCapabilitiesResult, connectedAccountsResult] = await Promise.allSettled([
       apiGetSettings(),
       apiGetPosts(),
       apiGetMedia(),
@@ -7077,7 +8079,9 @@ async function syncRemoteIfConfigured() {
       apiGetNotes(),
       apiGetCampaigns(),
       apiGetAIDrafts(),
-      apiGetBrandFramework()
+      apiGetBrandFramework(),
+      apiGetSocialImportCapabilities(),
+      apiGetConnectedAccounts()
     ]);
 
     const settings = settingsResult.status === "fulfilled" ? settingsResult.value : {};
@@ -7088,6 +8092,8 @@ async function syncRemoteIfConfigured() {
     const campaigns = campaignsResult.status === "fulfilled" ? campaignsResult.value : [];
     const aiDrafts = aiDraftsResult.status === "fulfilled" ? aiDraftsResult.value : [];
     const brandFramework = brandFrameworkResult.status === "fulfilled" ? brandFrameworkResult.value : [];
+    socialImportCapabilities = socialCapabilitiesResult.status === "fulfilled" ? (socialCapabilitiesResult.value?.capabilities || socialCapabilitiesResult.value) : socialImportCapabilities;
+    connectedAccounts = connectedAccountsResult.status === "fulfilled" ? (connectedAccountsResult.value?.accounts || connectedAccountsResult.value || []) : connectedAccounts;
 
     appState.settings = normalizeRemoteSettings(settings);
 
@@ -7211,6 +8217,29 @@ async function apiGetDiagnostics() {
   return result.diagnostics || result.data || result;
 }
 
+async function apiGetSocialImportCapabilities() {
+  const result = await apiGet("getSocialImportCapabilities");
+  return result.capabilities || result.data || result;
+}
+
+async function apiGetConnectedAccounts() {
+  const result = await apiGet("getConnectedAccounts");
+  return result.accounts || result.data || result;
+}
+
+async function apiGetSocialAuthUrl(platform) {
+  const result = await apiPost("getSocialAuthUrl", { platform });
+  return result.auth || result.data || result;
+}
+
+async function apiDisconnectSocialAccount(platform) {
+  return apiPost("disconnectSocialAccount", { platform });
+}
+
+async function apiImportSocialPostByUrl(payload) {
+  return apiPost("importSocialPostByUrl", payload);
+}
+
 async function apiGetAICreationOptions() {
   const result = await apiGet("getAICreationOptions");
   return result.options || result.data || result;
@@ -7278,12 +8307,51 @@ function renderDeployChecklist() {
   `).join("");
 }
 
+function formatDetailedDiagnostics(items, formatter) {
+  if (!Array.isArray(items) || !items.length) return "None";
+  return items.slice(0, 5).map((item) => formatter(item)).join(" | ") + (items.length > 5 ? ` +${items.length - 5} more` : "");
+}
+
+function getDiagnosticsSummaryText(diagnostics = {}) {
+  const semanticDiagnostics = diagnostics.semanticDiagnostics || {};
+  const socialDiagnostics = diagnostics.socialImportDiagnostics || {};
+  return [
+    `Backend reachable: ${backendReachable ? "Yes" : "No"}`,
+    `Backend version: ${getBackendVersion() || "Unavailable"}`,
+    `Frontend version: ${APP_FRONTEND_VERSION}`,
+    `Service worker version: ${serviceWorkerStatus.version}`,
+    `Missing sheets: ${(diagnostics.missingSheets || []).join(", ") || "None"}`,
+    `Missing headers: ${diagnostics.missingHeaders ? Object.entries(diagnostics.missingHeaders).filter(([, headers]) => Array.isArray(headers) && headers.length).map(([sheet, headers]) => `${sheet}: ${headers.join(", ")}`).join(" | ") || "None" : "None"}`,
+    `Malformed scheduled_at rows: ${(diagnostics.malformedScheduledRows || []).length}`,
+    `Date mismatch warnings: ${(diagnostics.dateMismatchRows || []).length}`,
+    `Missing campaign IDs/names: ${(diagnostics.missingCampaignRows || []).length}`,
+    `Campaign layout issues: ${(diagnostics.campaignLayoutIssues || []).length}`,
+    `Overused hooks/structures: ${((semanticDiagnostics.overusedHookPatterns || []).length || 0)}`,
+    `Campaign overlap/confusion: ${((semanticDiagnostics.campaignOverlapIssues || []).length || 0)}`,
+    `Orphaned records: ${((semanticDiagnostics.orphanedRecords || []).length || 0)}`,
+    `Instagram oEmbed configured: ${socialDiagnostics.instagramOEmbedConfigured ? "Yes" : "No"}`,
+    `Open Graph fetch works: ${socialDiagnostics.openGraphFetchWorks ? "Yes" : "No"}`,
+    `Connected platforms: ${(socialDiagnostics.connectedPlatforms || []).join(", ") || "None"}`,
+    `Scheduling note: Scheduling organizes posts in StellarSync only. Live platform posting is not connected yet.`
+  ].join("\n");
+}
+
 function renderDiagnosticsPanel() {
   const target = document.getElementById("audit-system-health");
   const warning = document.getElementById("audit-version-warning");
+  const refreshBtn = document.getElementById("audit-refresh-diagnostics-btn");
   if (!target) return;
 
   const diagnostics = backendDiagnostics || {};
+  const socialDiagnostics = diagnostics.socialImportDiagnostics || {};
+  const bridgeDensityWarning = (() => {
+    const constellation = buildSemanticConstellation();
+    const config = getBridgeDensityConfig();
+    if (config.maxPerCampaign === 0) return 0;
+    const rows = buildConstellationRows();
+    const estimatedVisible = (constellation.bridges || []).filter((bridge) => (bridge.strength || 0) >= config.threshold).length;
+    return estimatedVisible > Math.max(6, rows.length * 3) ? estimatedVisible : 0;
+  })();
   const missingSheets = Array.isArray(diagnostics.missingSheets) ? diagnostics.missingSheets : [];
   const missingHeaders = diagnostics.missingHeaders && typeof diagnostics.missingHeaders === "object"
     ? Object.entries(diagnostics.missingHeaders).filter(([, headers]) => Array.isArray(headers) && headers.length)
@@ -7292,6 +8360,7 @@ function renderDiagnosticsPanel() {
     "GitHub Pages service workers can cache the StellarSync app shell and same-origin assets only. Cross-origin Apps Script GET/POST responses stay network-only, so offline mode relies on localStorage fallback instead of cached backend data.",
     ...(Array.isArray(diagnostics.frontendBackendMismatchNotes) ? diagnostics.frontendBackendMismatchNotes : [])
   ];
+  const semanticDiagnostics = diagnostics.semanticDiagnostics || {};
   const metrics = [
     { label: "Backend reachable", value: backendReachable ? "Yes" : "No", color: backendReachable ? "#00ffaa" : "#fbbf24" },
     { label: "Backend version", value: getBackendVersion() || "Unavailable", color: "#c77dff" },
@@ -7299,20 +8368,34 @@ function renderDiagnosticsPanel() {
     { label: "Service worker version", value: serviceWorkerStatus.version, color: serviceWorkerStatus.updateAvailable ? "#ffd700" : "#9ca3af" }
   ];
   const issueRows = [
-    { label: "Missing sheets", value: missingSheets.length, detail: missingSheets.join(", ") || "None" },
-    { label: "Missing headers", value: missingHeaders.reduce((sum, [, headers]) => sum + headers.length, 0), detail: missingHeaders.length ? missingHeaders.map(([sheet, headers]) => `${sheet}: ${headers.join(", ")}`).join(" | ") : "None" },
-    { label: "Malformed scheduled_at rows", value: (diagnostics.malformedScheduledRows || []).length, detail: formatDiagnosticIds(diagnostics.malformedScheduledRows, "postId") },
-    { label: "Date mismatch rows", value: (diagnostics.dateMismatchRows || []).length, detail: formatDiagnosticIds(diagnostics.dateMismatchRows, "postId") },
-    { label: "Missing campaign IDs/names", value: (diagnostics.missingCampaignRows || []).length, detail: formatDiagnosticIds(diagnostics.missingCampaignRows, "postId") },
-    { label: "Campaign layout issues", value: (diagnostics.campaignLayoutIssues || []).length, detail: formatDiagnosticIds(diagnostics.campaignLayoutIssues, "campaignId") },
-    { label: "Carousel posts missing assets", value: (diagnostics.carouselMissingAssets || []).length, detail: formatDiagnosticIds(diagnostics.carouselMissingAssets, "postId") },
-    { label: "Notes missing required fields", value: (diagnostics.noteFieldIssues || []).length, detail: formatDiagnosticIds(diagnostics.noteFieldIssues, "noteId") },
-    { label: "Invalid publishing states", value: (diagnostics.publishingStateIssues || []).length, detail: formatDiagnosticIds(diagnostics.publishingStateIssues, "postId") },
-    { label: "Import rows missing source URLs", value: (diagnostics.importIssues || []).length, detail: formatDiagnosticIds(diagnostics.importIssues, "postId") },
-    { label: "AI drafts missing provenance or review", value: (diagnostics.aiDraftIssues || []).length, detail: formatDiagnosticIds(diagnostics.aiDraftIssues, "aiDraftId") },
-    { label: "AI-created posts with missing metadata", value: (diagnostics.aiPostIssues || []).length, detail: formatDiagnosticIds(diagnostics.aiPostIssues, "postId") },
-    { label: "Brand OS framework issues", value: (diagnostics.brandFrameworkIssues || []).length, detail: formatDiagnosticIds(diagnostics.brandFrameworkIssues, "frameworkKey") }
+    { label: "Missing sheets", severity: "error", value: missingSheets.length, detail: missingSheets.join(", ") || "None", guidance: "Errors need action." },
+    { label: "Missing headers", severity: "error", value: missingHeaders.reduce((sum, [, headers]) => sum + headers.length, 0), detail: missingHeaders.length ? missingHeaders.map(([sheet, headers]) => `${sheet}: ${headers.join(", ")}`).join(" | ") : "None", guidance: "Errors need action." },
+    { label: "Malformed scheduled_at rows", severity: "error", value: (diagnostics.malformedScheduledRows || []).length, detail: formatDiagnosticIds(diagnostics.malformedScheduledRows, "postId"), guidance: "Errors need action." },
+    { label: "Date mismatch rows", severity: "warning", value: (diagnostics.dateMismatchRows || []).length, detail: formatDetailedDiagnostics(diagnostics.dateMismatchRows, (item) => `${item.postId || "unknown"}: ${Array.isArray(item.diagnostics) ? item.diagnostics.join(", ") : "date warning"}`), guidance: "Warnings are okay when queue_date_label is the intended calendar day." },
+    { label: "Missing campaign IDs/names", severity: "error", value: (diagnostics.missingCampaignRows || []).length, detail: formatDetailedDiagnostics(diagnostics.missingCampaignRows, (item) => `${item.postId || "unknown"}: ${item.issue || "missing campaign_id or campaign_name"}`), guidance: "Assign campaign or mark uncategorized." },
+    { label: "Campaign layout issues", severity: "warning", value: (diagnostics.campaignLayoutIssues || []).length, detail: formatDetailedDiagnostics(diagnostics.campaignLayoutIssues, (item) => `${item.campaignId || "unknown"}: ${item.issue || "layout issue"}`), guidance: "Warnings are okay unless the map is visibly cramped." },
+    { label: "Carousel posts missing assets", severity: "error", value: (diagnostics.carouselMissingAssets || []).length, detail: formatDiagnosticIds(diagnostics.carouselMissingAssets, "postId"), guidance: "Errors need action." },
+    { label: "Notes missing required fields", severity: "error", value: (diagnostics.noteFieldIssues || []).length, detail: formatDiagnosticIds(diagnostics.noteFieldIssues, "noteId"), guidance: "Errors need action." },
+    { label: "Invalid publishing states", severity: "error", value: (diagnostics.publishingStateIssues || []).length, detail: formatDiagnosticIds(diagnostics.publishingStateIssues, "postId"), guidance: "Errors need action." },
+    { label: "Import rows missing source URLs", severity: "error", value: (diagnostics.importIssues || []).length, detail: formatDiagnosticIds(diagnostics.importIssues, "postId"), guidance: "Errors need action." },
+    { label: "AI drafts missing provenance or review", severity: "warning", value: (diagnostics.aiDraftIssues || []).length, detail: formatDiagnosticIds(diagnostics.aiDraftIssues, "aiDraftId"), guidance: "Warnings are okay while AI drafting is scaffolded." },
+    { label: "AI-created posts with missing metadata", severity: "warning", value: (diagnostics.aiPostIssues || []).length, detail: formatDiagnosticIds(diagnostics.aiPostIssues, "postId"), guidance: "Warnings are okay while AI drafting is scaffolded." },
+    { label: "Brand OS framework issues", severity: "warning", value: (diagnostics.brandFrameworkIssues || []).length, detail: formatDiagnosticIds(diagnostics.brandFrameworkIssues, "frameworkKey"), guidance: "Warnings are okay until the framework is fully tuned." },
+    { label: "Social import failures by platform", severity: "warning", value: Object.values(socialDiagnostics.importFailuresByPlatform || {}).reduce((sum, value) => sum + Number(value || 0), 0), detail: Object.entries(socialDiagnostics.importFailuresByPlatform || {}).map(([platform, count]) => `${platform}: ${count}`).join(" | ") || "None", guidance: "Warnings are okay if the platform requires manual fallback or authenticated access." },
+    { label: "Connected account token / permission issues", severity: "warning", value: (socialDiagnostics.expiredTokens || []).length + (socialDiagnostics.missingPermissions || []).length, detail: [`Expired: ${(socialDiagnostics.expiredTokens || []).join(", ") || "none"}`, `Missing permissions: ${(socialDiagnostics.missingPermissions || []).join(", ") || "none"}`].join(" | "), guidance: "Warnings are okay until OAuth, app review, and scopes are finalized." },
+    { label: "Bridge density visibility risk", severity: "warning", value: bridgeDensityWarning ? 1 : 0, detail: bridgeDensityWarning ? `${bridgeDensityWarning} semantic bridges may visually crowd the star map at the current density.` : "None", guidance: "Warnings are okay. Lower bridge density if semantic links start obscuring campaign paths." },
+    { label: "Overused hooks / structures", severity: "warning", value: (semanticDiagnostics.overusedHookPatterns || []).length, detail: formatDetailedDiagnostics(semanticDiagnostics.overusedHookPatterns, (item) => `${item.pattern}: ${item.count}`), guidance: "Warnings are okay, but vary hook and structure choices before they flatten into repetition." },
+    { label: "Campaign overlap / confusion", severity: "warning", value: (semanticDiagnostics.campaignOverlapIssues || []).length, detail: formatDetailedDiagnostics(semanticDiagnostics.campaignOverlapIssues, (item) => `${item.campaigns}: ${Math.round((item.strength || 0) * 100)}% overlap`), guidance: "Warnings are okay until the campaigns become indistinguishable." },
+    { label: "Weak classification signals", severity: "warning", value: (semanticDiagnostics.weakClassificationSignals || []).length, detail: formatDetailedDiagnostics(semanticDiagnostics.weakClassificationSignals, (item) => `${toTitleCase(item.platform || "unknown")}: ${(item.tags || []).join(", ") || "weak signal"}`), guidance: "Warnings are okay, but stronger classification helps campaign memory stay legible." },
+    { label: "Isolated campaigns", severity: "warning", value: (semanticDiagnostics.isolatedCampaigns || []).length, detail: formatDetailedDiagnostics(semanticDiagnostics.isolatedCampaigns, (item) => `${item.campaignKey || "unknown"}: isolated`), guidance: "Warnings are okay unless the campaign should clearly connect to a broader territory." },
+    { label: "Orphaned notes / inspo", severity: "warning", value: (semanticDiagnostics.orphanedRecords || []).length, detail: formatDetailedDiagnostics(semanticDiagnostics.orphanedRecords, (item) => `${item.recordType} ${item.recordId}: ${item.issue}`), guidance: "Warnings are okay, but linking or tagging them improves semantic memory." },
+    { label: "Semantic drift", severity: "warning", value: (semanticDiagnostics.semanticDrift || []).length, detail: formatDetailedDiagnostics(semanticDiagnostics.semanticDrift, (item) => `${item.issue}${item.overlap != null ? ` (${item.overlap} overlapping tags)` : ""}`), guidance: "Warnings are okay if the drift is intentional; otherwise reinforce continuity with campaign framing." }
   ];
+  if (refreshBtn) {
+    refreshBtn.disabled = diagnosticsRefreshing;
+    refreshBtn.textContent = diagnosticsRefreshing ? "Refreshing..." : "Refresh Diagnostics";
+    refreshBtn.classList.toggle("opacity-50", diagnosticsRefreshing);
+  }
 
   if (warning) {
     if (hasVersionMismatch()) {
@@ -7341,14 +8424,42 @@ function renderDiagnosticsPanel() {
     </div>
     <div class="space-y-3">
       ${issueRows.map((row) => `
-        <div class="p-3 rounded-xl bg-[#181125] border border-white/5">
+        <div class="p-3 rounded-xl ${row.severity === "error" ? "bg-[#251218] border border-red-400/15" : "bg-[#2b2311] border border-yellow-400/15"}">
           <div class="flex items-center justify-between gap-3 mb-1">
-            <span class="text-sm text-gray-300 wrap-safe">${escapeHtml(row.label)}</span>
-            <span class="text-sm font-bold text-white shrink-0">${escapeHtml(String(row.value))}</span>
+            <span class="text-sm ${row.severity === "error" ? "text-red-100" : "text-yellow-100"} wrap-safe">${escapeHtml(row.label)}</span>
+            <span class="text-sm font-bold ${row.severity === "error" ? "text-red-200" : "text-yellow-200"} shrink-0">${escapeHtml(String(row.value))}</span>
           </div>
-          <div class="text-[11px] text-gray-500 wrap-safe">${escapeHtml(row.detail || "None")}</div>
+          <div class="text-[11px] ${row.severity === "error" ? "text-red-200/80" : "text-yellow-100/80"} wrap-safe mb-1">${escapeHtml(row.detail || "None")}</div>
+          <div class="text-[10px] uppercase tracking-widest ${row.severity === "error" ? "text-red-200/70" : "text-yellow-100/70"}">${escapeHtml(row.guidance)}</div>
         </div>
       `).join("")}
+    </div>
+    <div class="p-4 rounded-xl bg-[#181125] border border-white/5">
+      <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Scheduling Note</div>
+      <div class="text-sm text-gray-300 wrap-safe">Scheduling organizes posts inside StellarSync. Live platform posting is not connected yet.</div>
+    </div>
+    <div class="p-4 rounded-xl bg-[#181125] border border-white/5 space-y-3">
+      <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Connected Accounts</div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        ${(connectedAccounts.length ? connectedAccounts : (socialImportCapabilities?.connectedAccounts || [])).map((account) => `
+          <div class="p-3 rounded-xl bg-[#120c1d] border border-white/5">
+            <div class="flex items-center justify-between gap-3 mb-1">
+              <span class="text-sm font-bold text-white">${escapeHtml(toTitleCase(account.platform || "unknown"))}</span>
+              <span class="text-[10px] uppercase tracking-widest font-bold ${account.accessStatus === "connected" ? "text-emerald-300" : account.accessStatus === "expired" || account.accessStatus === "missing_permissions" ? "text-yellow-300" : "text-gray-400"}">${escapeHtml(String(account.accessStatus || "not_connected").replace(/_/g, " "))}</span>
+            </div>
+            <div class="text-[11px] text-gray-400 wrap-safe">${escapeHtml(account.accountLabel || "No connected account label stored.")}</div>
+            <div class="mt-2 text-[10px] text-gray-500 wrap-safe">
+              ${escapeHtml(`Import: ${account.importSupported ? "supported" : "manual fallback"} • Publish: ${account.publishSupported ? "live" : "scaffolded"}`)}
+            </div>
+          </div>
+        `).join("") || `<div class="text-sm text-gray-400">Connected account diagnostics unavailable.</div>`}
+      </div>
+      <div class="text-[11px] text-gray-400 wrap-safe">
+        ${escapeHtml(`Instagram oEmbed configured: ${socialDiagnostics.instagramOEmbedConfigured ? "Yes" : "No"} • Open Graph fetch works: ${socialDiagnostics.openGraphFetchWorks ? "Yes" : "No"}`)}
+      </div>
+      <div class="text-[11px] text-gray-400 wrap-safe">
+        ${escapeHtml(`Unsupported import modes: ${(socialDiagnostics.unsupportedImportModes || []).join(", ") || "None"} • Expired tokens: ${(socialDiagnostics.expiredTokens || []).join(", ") || "None"}`)}
+      </div>
     </div>
     <div class="p-4 rounded-xl bg-[#181125] border border-white/5">
       <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Action Coverage Notes</div>
@@ -7463,6 +8574,8 @@ async function refreshBackendDiagnostics(options = {}) {
   }
 
   try {
+    diagnosticsRefreshing = true;
+    rerenderAll();
     const diagnostics = await apiGetDiagnostics();
     backendDiagnostics = diagnostics || null;
     backendReachable = !!diagnostics?.backendReachable;
@@ -7479,6 +8592,9 @@ async function refreshBackendDiagnostics(options = {}) {
     }
     rerenderAll();
     return null;
+  } finally {
+    diagnosticsRefreshing = false;
+    rerenderAll();
   }
 }
 
@@ -7696,6 +8812,7 @@ function openAIWorkspaceModal() {
   }
   renderAIWorkspaceControls();
   renderAIDraftList();
+  renderAISemanticMemoryCards();
 }
 
 function closeAIWorkspaceModal() {
@@ -7750,6 +8867,7 @@ async function generateAIDraftPreview() {
       { label: "Source", value: sourceType }
     ].map((item) => `<div class="p-3 rounded-xl bg-[#181125] border border-white/5"><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">${escapeHtml(item.label)}</div><div class="text-sm text-white">${escapeHtml(item.value)}</div></div>`).join("");
   }
+  renderAISemanticMemoryCards();
 }
 
 function loadAIDraftIntoWorkspace(aiDraftId) {
@@ -7764,9 +8882,11 @@ function loadAIDraftIntoWorkspace(aiDraftId) {
   if (aiWorkspacePrompt) aiWorkspacePrompt.value = draft.prompt || "";
   if (aiDraftStatusInput) aiDraftStatusInput.value = draft.draftStatus || "needs_review";
   if (aiReviewNotesInput) aiReviewNotesInput.value = draft.reviewNotes || "";
+  renderAISemanticMemoryCards();
 }
 
 async function saveCurrentAIDraft() {
+  const semanticPayload = buildSemanticAIDraftPayload();
   const payload = {
     aiDraftId: currentAIDraftId || "",
     title: String(aiDraftTitleInput?.value || "").trim() || "AI Draft",
@@ -7783,7 +8903,8 @@ async function saveCurrentAIDraft() {
     draftStatus: aiDraftStatusInput?.value || "needs_review",
     reviewNotes: String(aiReviewNotesInput?.value || "").trim(),
     brandFrameworkVersion: "brand-os-2026.05.09",
-    alignmentScore: 78
+    alignmentScore: 78,
+    ...semanticPayload
   };
   const localDraft = normalizeRemoteAIDraft(payload);
   currentAIDraftId = localDraft.aiDraftId || currentAIDraftId || `local-${Date.now()}`;
@@ -7823,7 +8944,8 @@ async function createPostFromCurrentAIDraft() {
     aiGenerationMode: aiGenerationModeInput?.value || "",
     aiBrandFrameworkVersion: "brand-os-2026.05.09",
     aiDraftStatus: aiDraftStatusInput?.value || "needs_review",
-    aiReviewNotes: String(aiReviewNotesInput?.value || "").trim()
+    aiReviewNotes: String(aiReviewNotesInput?.value || "").trim(),
+    ...buildSemanticAIDraftPayload()
   };
   if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
     try {
@@ -7894,6 +9016,8 @@ function normalizeRemotePost(post, campaigns = [], mediaItems = []) {
   const postId = String(pickRemoteValue(post?.postId, post?.post_id, post?.id, "")).trim();
   const title = String(pickRemoteValue(post?.title, post?.postTitle, "")).trim();
   const scheduledAt = String(pickRemoteValue(post?.scheduledAt, post?.scheduled_at, post?.date, "")).trim();
+  const queueDateLabel = String(pickRemoteValue(post?.queueDateLabel, post?.queue_date_label, "")).trim();
+  const queueTimeLabel = String(pickRemoteValue(post?.queueTimeLabel, post?.queue_time_label, "")).trim();
   const linkedAsset = mediaItems.find(asset => String(asset.postId || asset.linkedPostId || "") === postId);
   const carouselAssetIds = Array.isArray(post?.carouselAssetIds)
     ? post.carouselAssetIds
@@ -7911,6 +9035,8 @@ function normalizeRemotePost(post, campaigns = [], mediaItems = []) {
     assetId: String(pickRemoteValue(post?.assetId, post?.asset_id, "")).trim(),
     hubTitle: String(pickRemoteValue(post?.hubTitle, post?.hub_title, title)).trim(),
     hubPillarLabel: formatContentPillarLabel(pickRemoteValue(post?.hubPillarLabel, post?.hub_pillar_label, post?.pillar, matchedCampaign?.pillar, (appState.settings?.pillars || [])[0] || "authority")),
+    queueDateLabel,
+    queueTimeLabel,
     mediaLabel: String(pickRemoteValue(post?.mediaLabel, post?.media_label, linkedAsset?.title, linkedAsset?.assetName, "")).trim(),
     createdFromInspoId: String(pickRemoteValue(post?.createdFromInspoId, post?.created_from_inspo_id, "")).trim(),
     createdFromNoteId: String(pickRemoteValue(post?.createdFromNoteId, post?.created_from_note_id, "")).trim(),
@@ -7952,11 +9078,11 @@ function normalizeRemotePost(post, campaigns = [], mediaItems = []) {
     aiBrandFrameworkVersion: String(pickRemoteValue(post?.aiBrandFrameworkVersion, post?.ai_brand_framework_version, "")).trim(),
     aiDraftStatus: String(pickRemoteValue(post?.aiDraftStatus, post?.ai_draft_status, "")).trim(),
     aiReviewNotes: String(pickRemoteValue(post?.aiReviewNotes, post?.ai_review_notes, "")).trim(),
-    scheduledDateKey: String(pickRemoteValue(post?.scheduledDateKey, post?.scheduled_date_key, scheduledAt ? scheduledAt.slice(0, 10) : "")).trim(),
-    dateDiagnostics: Array.isArray(post?.dateDiagnostics) ? post.dateDiagnostics : []
+    scheduledDateKey: String(pickRemoteValue(post?.scheduledDateKey, post?.scheduled_date_key, queueDateLabel ? parseDisplayDateKey(queueDateLabel) : "", scheduledAt ? scheduledAt.slice(0, 10) : "")).trim(),
+    dateDiagnostics: Array.isArray(post?.dateDiagnostics) ? post.dateDiagnostics : [],
+    createdAt: String(pickRemoteValue(post?.createdAt, post?.created_at, "")).trim()
   };
-
-  return hydratePostCampaign(normalizedPost, campaigns);
+  return hydratePostCampaign({ ...normalizedPost, ...normalizeRemoteSemanticFields(post) }, campaigns);
 }
 
 function normalizeRemoteCampaign(campaign) {
@@ -7971,7 +9097,8 @@ function normalizeRemoteCampaign(campaign) {
     iconShape: String(pickRemoteValue(campaign?.iconShape, campaign?.icon_shape, "")).trim().toLowerCase(),
     sortOrder: Number(pickRemoteValue(campaign?.sortOrder, campaign?.sort_order, 0)) || 0,
     isArchived: normalizeRemoteBoolean(pickRemoteValue(campaign?.isArchived, campaign?.is_archived, false)),
-    createdAt: String(pickRemoteValue(campaign?.createdAt, campaign?.created_at, "")).trim()
+    createdAt: String(pickRemoteValue(campaign?.createdAt, campaign?.created_at, "")).trim(),
+    ...normalizeRemoteSemanticFields(campaign)
   };
 }
 
@@ -7990,7 +9117,8 @@ function normalizeRemoteInspo(item) {
     notes: String(pickRemoteValue(item?.notes, "")).trim(),
     url: String(pickRemoteValue(item?.url, item?.notes, item?.domainOrMeta, item?.domain_or_meta, "")).trim(),
     status: String(pickRemoteValue(item?.status, "active")).trim() || "active",
-    convertedPostId: String(pickRemoteValue(item?.convertedPostId, item?.converted_post_id, "")).trim()
+    convertedPostId: String(pickRemoteValue(item?.convertedPostId, item?.converted_post_id, "")).trim(),
+    ...normalizeRemoteSemanticFields(item)
   };
 }
 
@@ -8010,7 +9138,8 @@ function normalizeRemoteNote(item) {
     convertedPostId: String(pickRemoteValue(item?.convertedPostId, item?.converted_post_id, "")).trim(),
     sourceUrl: String(pickRemoteValue(item?.sourceUrl, item?.source_url, "")).trim(),
     sourcePlatform: String(pickRemoteValue(item?.sourcePlatform, item?.source_platform, "")).trim(),
-    sourceLabel: String(pickRemoteValue(item?.sourceLabel, item?.source_label, "")).trim()
+    sourceLabel: String(pickRemoteValue(item?.sourceLabel, item?.source_label, "")).trim(),
+    ...normalizeRemoteSemanticFields(item)
   };
 }
 
@@ -8043,7 +9172,8 @@ function normalizeRemoteMedia(asset) {
     driveFileId: String(pickRemoteValue(asset?.driveFileId, asset?.drive_file_id, "")).trim(),
     sourceUrl: String(pickRemoteValue(asset?.sourceUrl, asset?.source_url, "")).trim(),
     sourceType: String(pickRemoteValue(asset?.sourceType, asset?.source_type, "")).trim(),
-    mimeType: String(pickRemoteValue(asset?.mimeType, asset?.mime_type, "")).trim()
+    mimeType: String(pickRemoteValue(asset?.mimeType, asset?.mime_type, "")).trim(),
+    ...normalizeRemoteSemanticFields(asset)
   };
 }
 
@@ -8069,7 +9199,8 @@ function normalizeRemoteAIDraft(draft) {
     alignmentScore: normalizeMetricNumber(pickRemoteValue(draft?.alignmentScore, draft?.alignment_score, 0)),
     diversityControls: String(pickRemoteValue(draft?.diversityControls, draft?.diversity_controls, "")).trim(),
     antiPatternFlags: String(pickRemoteValue(draft?.antiPatternFlags, draft?.anti_pattern_flags, "")).trim(),
-    createdPostId: String(pickRemoteValue(draft?.createdPostId, draft?.created_post_id, "")).trim()
+    createdPostId: String(pickRemoteValue(draft?.createdPostId, draft?.created_post_id, "")).trim(),
+    ...normalizeRemoteSemanticFields(draft)
   };
 }
 
@@ -8253,9 +9384,9 @@ function renderQueue(queueItems) {
         ? `<div class="text-gray-400"><i class="ph-fill ph-instagram-logo"></i></div>`
         : `<div class="text-gray-400"><i class="ph-fill ph-linkedin-logo"></i></div>`;
 
-    const dateParts = String(item.queueDateLabel || "").split(" ");
-    const month = dateParts[0] || "";
-    const day = dateParts[1] || "";
+    const badgeDate = getQueueBadgeParts(item.queueDateLabel, item.scheduledAt);
+    const month = badgeDate.month;
+    const day = badgeDate.day;
 
     return `
       <div class="bg-[#181125] border border-white/5 rounded-xl p-4 flex gap-4 items-center cursor-pointer hover:border-white/10 transition-colors"
@@ -8502,6 +9633,16 @@ function pillarColor(pillar) {
 }
 
 function formatLedgerDate(value) {
+  if (value && typeof value === "object") {
+    const dateKey = normalizePostCalendarDateKey(value);
+    const displayDate = dateKey ? parsePostDate(dateKey) : parsePostDate(value.date || value.scheduledAt || value.createdAt);
+    if (!displayDate || isNaN(displayDate)) return "No date";
+    const dateLabel = value.queueDateLabel
+      ? String(value.queueDateLabel).trim()
+      : displayDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const timeLabel = formatLocalQueueTime(value.date || value.scheduledAt);
+    return timeLabel ? `${dateLabel} • ${timeLabel}` : dateLabel;
+  }
   const d = parsePostDate(value);
   if (!d || isNaN(d)) return "No date";
   return `${d.toLocaleDateString("en-US", { month: "short", day: "numeric" })} • ${d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
@@ -8517,6 +9658,20 @@ function formatLocalQueueTime(value) {
   const d = parsePostDate(value);
   if (!d || isNaN(d)) return "";
   return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+}
+
+function getQueueBadgeParts(label, fallbackValue = "") {
+  const text = String(label || "").trim();
+  const key = parseDisplayDateKey(text);
+  const parsed = key ? parsePostDate(key) : parsePostDate(fallbackValue);
+  if (!parsed || isNaN(parsed)) {
+    const parts = text.split(" ");
+    return { month: parts[0] || "", day: parts[1] || "" };
+  }
+  return {
+    month: parsed.toLocaleDateString("en-US", { month: "short" }),
+    day: String(parsed.getDate())
+  };
 }
 
 function capitalize(str) {
@@ -8551,6 +9706,9 @@ window.removePendingUploadFile = removePendingUploadFile;
 window.handleBrokenMediaPreview = handleBrokenMediaPreview;
 window.loadAIDraftIntoWorkspace = loadAIDraftIntoWorkspace;
 window.setBrandFrameworkSection = setBrandFrameworkSection;
+window.connectSocialAccount = connectSocialAccount;
+window.disconnectConnectedAccount = disconnectConnectedAccount;
+window.importConnectedSocialPost = importConnectedSocialPost;
 
 window.openModal = function(
   title = "",
