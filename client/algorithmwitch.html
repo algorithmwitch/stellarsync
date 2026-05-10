@@ -130,10 +130,10 @@
   .overview-toggle-handle {
     position: absolute;
     top: 50%;
-    left: -12px;
+    left: -18px;
     transform: translateY(-50%);
-    width: 24px;
-    height: 44px;
+    width: 30px;
+    height: 52px;
     border-radius: 999px;
     border: 1px solid rgba(255,255,255,0.08);
     background: rgba(18,12,29,0.95);
@@ -143,7 +143,8 @@
     justify-content: center;
     box-shadow: 0 12px 24px rgba(0,0,0,0.28);
     transition: background 160ms ease, color 160ms ease;
-    z-index: 12;
+    z-index: 60;
+    pointer-events: auto;
   }
 
   .overview-toggle-handle:hover {
@@ -157,6 +158,8 @@
     min-width: 0;
     min-height: 0;
     display: flex;
+    overflow: visible;
+    padding-left: 12px;
   }
 
   #signal-overview-panel {
@@ -165,6 +168,8 @@
     min-height: 0;
     overflow: hidden;
     transition: width 180ms ease, flex-basis 180ms ease, opacity 180ms ease, padding 180ms ease, border-color 180ms ease;
+    position: relative;
+    z-index: 40;
   }
 
   #signal-overview-panel .signals-scroll,
@@ -226,6 +231,63 @@
     background: rgba(18,12,29,0.85);
     border-radius: 1rem;
     padding: 1rem;
+  }
+
+  .write-idea-artifact-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 0.8rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(24,17,37,0.92);
+    color: #e5e7eb;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .write-idea-artifact-chip button {
+    background: transparent;
+    border: 0;
+    color: #9ca3af;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+  }
+
+  .write-idea-history-item {
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(15,10,24,0.88);
+    border-radius: 1rem;
+    padding: 0.85rem 1rem;
+  }
+
+  .write-idea-artifact-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-top: 0.85rem;
+  }
+
+  .write-idea-card-action {
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(24,17,37,0.92);
+    color: #c77dff;
+    border-radius: 999px;
+    padding: 0.45rem 0.7rem;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+  }
+
+  .write-idea-card-action:hover {
+    background: rgba(45,27,78,0.95);
+    color: #fff;
+    border-color: rgba(199,125,255,0.4);
   }
 
   .pillar-shape {
@@ -1454,6 +1516,34 @@
           </div>
 
           <div class="write-idea-review-card">
+            <div class="flex items-center justify-between gap-3 flex-wrap mb-4">
+              <div>
+                <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Transformation Mode</div>
+                <div class="text-sm text-white mt-1">Branch any artifact into the next artifact, analysis, or follow-up step.</div>
+              </div>
+              <span class="diagnostic-chip">Recursive chain</span>
+            </div>
+            <div id="write-idea-transformation-modes" class="flex flex-wrap gap-2">
+              <button type="button" class="write-idea-chip" data-write-idea-transform="expand">Expand</button>
+              <button type="button" class="write-idea-chip" data-write-idea-transform="rewrite">Rewrite</button>
+              <button type="button" class="write-idea-chip" data-write-idea-transform="adapt_platform">Adapt platform</button>
+              <button type="button" class="write-idea-chip" data-write-idea-transform="analyze_performance">Analyze performance</button>
+              <button type="button" class="write-idea-chip" data-write-idea-transform="extract_hooks">Extract hooks</button>
+              <button type="button" class="write-idea-chip" data-write-idea-transform="turn_into_carousel">Turn into carousel</button>
+              <button type="button" class="write-idea-chip" data-write-idea-transform="turn_into_caption">Turn into caption</button>
+              <button type="button" class="write-idea-chip" data-write-idea-transform="turn_into_thread">Turn into thread</button>
+              <button type="button" class="write-idea-chip" data-write-idea-transform="turn_into_video_script">Turn into video script</button>
+              <button type="button" class="write-idea-chip" data-write-idea-transform="generate_follow_up">Generate follow-up</button>
+              <button type="button" class="write-idea-chip" data-write-idea-transform="generate_campaign">Generate campaign</button>
+              <button type="button" class="write-idea-chip" data-write-idea-transform="generate_variants">Generate variants</button>
+              <button type="button" class="write-idea-chip" data-write-idea-transform="improve_clarity">Improve clarity</button>
+              <button type="button" class="write-idea-chip" data-write-idea-transform="improve_hook">Improve hook</button>
+              <button type="button" class="write-idea-chip" data-write-idea-transform="shorten">Shorten</button>
+              <button type="button" class="write-idea-chip" data-write-idea-transform="long_form_expansion">Long-form expansion</button>
+            </div>
+          </div>
+
+          <div class="write-idea-review-card">
             <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3">Output Targets</div>
             <div id="write-idea-output-targets" class="grid grid-cols-1 md:grid-cols-2 gap-2">
               <button type="button" class="write-idea-output-btn" data-write-idea-output="create_one_post">Create one post</button>
@@ -1492,12 +1582,24 @@
 
         <div class="space-y-5">
           <div class="write-idea-review-card">
+            <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
+              <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Artifact Chain</div>
+              <span id="write-idea-breadcrumbs" class="text-[10px] text-gray-500 uppercase tracking-wider">No chain yet</span>
+            </div>
+            <div id="write-idea-artifact-chips" class="flex flex-wrap gap-2 mb-4"></div>
+            <div id="write-idea-generated-artifacts" class="space-y-3"></div>
+          </div>
+          <div class="write-idea-review-card">
             <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3">Workspace Guidance</div>
             <div id="write-idea-guidance-list" class="space-y-3"></div>
           </div>
           <div class="write-idea-review-card">
             <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3">Related Campaigns</div>
             <div id="write-idea-related-campaigns" class="space-y-3"></div>
+          </div>
+          <div class="write-idea-review-card">
+            <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3">Transformation History</div>
+            <div id="write-idea-history-list" class="space-y-3"></div>
           </div>
           <div class="write-idea-review-card">
             <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3">Recent Idea Drafts</div>
@@ -2393,6 +2495,9 @@
         <button id="media-asset-create-post-btn" type="button" class="px-4 py-2 bg-[#181125] hover:bg-[#231738] text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all border border-white/10">
           Create Post
         </button>
+        <button id="media-asset-write-idea-btn" type="button" class="px-4 py-2 bg-[#181125] hover:bg-[#231738] text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all border border-white/10">
+          Use in Write an Idea
+        </button>
         <a id="media-asset-modal-open-link" href="#" target="_blank" rel="noopener noreferrer" class="px-4 py-2 bg-gradient-to-r from-[#9d4edd] to-[#c77dff] hover:opacity-90 text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all border border-white/10">
           Open Asset
         </a>
@@ -2692,6 +2797,8 @@
               <button id="repair-date-fields-btn" type="button" class="px-4 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Repair Date Fields</button>
               <button id="workspace-open-accounts-from-diagnostics-btn" type="button" class="px-4 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Connected Accounts</button>
             </div>
+            <div id="repair-date-fields-status" class="text-xs text-gray-400 wrap-safe"></div>
+            <div id="repair-date-fields-preview" class="space-y-3"></div>
             <div id="workspace-diagnostics-panel" class="space-y-4"></div>
           </section>
         </div>
@@ -2972,7 +3079,20 @@ let writeIdeaState = {
   targetPlatforms: ["linkedin"],
   targetDate: normalizeQueueDateLabel(new Date()),
   targetDateRange: "",
-  selectedDraftIndexes: [0]
+  selectedDraftIndexes: [0],
+  transformationType: "expand",
+  analysisMode: "",
+  inputArtifacts: [],
+  outputArtifacts: [],
+  sourceArtifactIds: [],
+  derivedFromIds: [],
+  currentChain: [],
+  transformationHistory: [],
+  warnings: [],
+  semanticTags: [],
+  campaignAssociations: [],
+  mediaIds: [],
+  performanceContext: []
 };
 
 const modal = document.getElementById("scheduling-modal");
@@ -3050,6 +3170,7 @@ const mediaAssetModalMeta = document.getElementById("media-asset-modal-meta");
 const mediaAssetModalPerformance = document.getElementById("media-asset-modal-performance");
 const mediaAssetModalOpenLink = document.getElementById("media-asset-modal-open-link");
 const mediaAssetCreatePostBtn = document.getElementById("media-asset-create-post-btn");
+const mediaAssetWriteIdeaBtn = document.getElementById("media-asset-write-idea-btn");
 const installAppBtn = document.getElementById("install-app-btn");
 const mobileInstallAppBtn = document.getElementById("mobile-install-app-btn");
 const appStatusBanner = document.getElementById("app-status-banner");
@@ -3070,6 +3191,8 @@ const settingsOpenAccountsBtn = document.getElementById("settings-open-accounts-
 const workspaceRefreshDiagnosticsBtn = document.getElementById("workspace-refresh-diagnostics-btn");
 const workspaceOpenAccountsFromDiagnosticsBtn = document.getElementById("workspace-open-accounts-from-diagnostics-btn");
 const repairDateFieldsBtn = document.getElementById("repair-date-fields-btn");
+const repairDateFieldsStatus = document.getElementById("repair-date-fields-status");
+const repairDateFieldsPreview = document.getElementById("repair-date-fields-preview");
 const workspaceDiagnosticsPanel = document.getElementById("workspace-diagnostics-panel");
 const connectionSetupModal = document.getElementById("connection-setup-modal");
 const connectionSetupModalCard = document.getElementById("connection-setup-modal-card");
@@ -3099,6 +3222,10 @@ const signalOverviewPanel = document.getElementById("signal-overview-panel");
 const signalOverviewToggle = document.getElementById("signal-overview-toggle");
 const signalOverviewToggleIcon = document.getElementById("signal-overview-toggle-icon");
 const writeIdeaPromptInput = document.getElementById("write-idea-prompt");
+const writeIdeaArtifactChips = document.getElementById("write-idea-artifact-chips");
+const writeIdeaGeneratedArtifacts = document.getElementById("write-idea-generated-artifacts");
+const writeIdeaHistoryList = document.getElementById("write-idea-history-list");
+const writeIdeaBreadcrumbs = document.getElementById("write-idea-breadcrumbs");
 const writeIdeaChipList = document.getElementById("write-idea-chip-list");
 const writeIdeaSourceSelectors = document.getElementById("write-idea-source-selectors");
 const writeIdeaOutputTargets = document.getElementById("write-idea-output-targets");
@@ -4726,9 +4853,7 @@ function parsePlanningDateLocal(value) {
   if (slash) {
     return new Date(Number(slash[3]), Number(slash[1]) - 1, Number(slash[2]));
   }
-
-  const parsed = new Date(raw);
-  return !Number.isNaN(parsed.getTime()) ? parsed : null;
+  return null;
 }
 
 function parseDisplayDateKey(value) {
@@ -4802,16 +4927,18 @@ function normalizeScheduledAt(value, queueDateLabel, queueTimeLabel) {
   const fallback = buildScheduledAtFromPlanningFields(normalizedDate, normalizedTime);
   const parsed = parsePostDate(value);
   if (!parsed || Number.isNaN(parsed.getTime())) return fallback;
-  const dateKey = parseDisplayDateKey(normalizedDate) || toDateKey(parsed);
+  const dateKey = parseDisplayDateKey(normalizedDate) || getPlanningDateKeyFromValue(value) || toDateKey(parsed);
   return buildScheduledAtFromPlanningFields(dateKey, normalizedTime || parsed.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }));
 }
 
 function getPostPlanningDateKey(post = {}) {
   return (
+    getPlanningDateKeyFromValue(post.scheduledAt || post.scheduled_at || post.date || "") ||
     parseDisplayDateKey(post.queueDateLabel) ||
     parseDisplayDateKey(post.queue_date_label) ||
     parseDisplayDateKey(post.scheduledDateKey) ||
     parseDisplayDateKey(formatQueueDateLabel(post.scheduledAt || post.scheduled_at || post.date || "")) ||
+    getPlanningDateKeyFromValue(post.createdAt || post.created_at) ||
     toDateKey(post.scheduledAt || post.scheduled_at || post.date || post.createdAt || post.created_at)
   );
 }
@@ -4828,7 +4955,7 @@ function getPlanningCalendarParts(post = {}) {
 }
 
 function normalizePostPlanningFields(post = {}, existing = {}) {
-  const queueDateLabel = normalizeQueueDateLabel(post.queueDateLabel || post.queue_date_label || existing.queueDateLabel || existing.queue_date_label || post.scheduledAt || post.scheduled_at || post.date || existing.scheduledAt || existing.scheduled_at || existing.date || "");
+  const queueDateLabel = normalizeQueueDateLabel(post.scheduledAt || post.scheduled_at || post.date || existing.scheduledAt || existing.scheduled_at || existing.date || post.queueDateLabel || post.queue_date_label || existing.queueDateLabel || existing.queue_date_label || "");
   const sourceHasExplicitTimeSelection = Object.prototype.hasOwnProperty.call(post, "hasUserSelectedTime")
     || Object.prototype.hasOwnProperty.call(post, "has_user_selected_time")
     || Object.prototype.hasOwnProperty.call(post, "queueTimeLabel")
@@ -4867,9 +4994,6 @@ function getPostDateKey(postOrValue) {
   const rawValue = typeof postOrValue === "object" && postOrValue !== null
     ? normalizePostCalendarDateKey(postOrValue) || postOrValue.scheduledDateKey || postOrValue.date || postOrValue.scheduledAt
     : postOrValue;
-  if (typeof rawValue === "string" && /^\d{4}-\d{2}-\d{2}/.test(rawValue)) {
-    return rawValue.slice(0, 10);
-  }
   return getPlanningDateKeyFromValue(rawValue) || toDateKey(rawValue);
 }
 
@@ -5273,6 +5397,12 @@ function initApp() {
 function rerenderAll() {
   const bridgeControl = document.getElementById("semantic-bridge-density");
   if (bridgeControl) bridgeControl.value = semanticBridgeDensity;
+  console.table((appState.posts || []).map((p) => ({
+    title: p.title,
+    scheduledAt: p.scheduledAt,
+    date: p.date,
+    calendarKey: normalizePostCalendarDateKey(p)
+  })));
   updateHeaderForView(currentView);
   populateCampaignDropdown();
   setBackendActionAvailability();
@@ -5664,9 +5794,14 @@ function setupWorkspaceUI() {
     refreshBackendDiagnostics().then(() => renderWorkspaceHub()).catch(() => undefined);
   });
   repairDateFieldsBtn?.addEventListener("click", async () => {
-    if (!window.confirm("Repair date fields across POSTS using the backend normalizer?")) return;
+    const preview = backendDiagnostics?.dateRepairPreview || {};
+    if (!preview.safeToRepair) {
+      showToast("Repair disabled", preview.message || "Frontend date parser is not trusted yet.", "ph-warning", "text-yellow-400");
+      return;
+    }
+    if (!window.confirm("Repair derived date fields from scheduled_at after preview verification?")) return;
     try {
-      const result = await apiRepairDateFields();
+      const result = await apiRepairDateFields({ apply: true });
       await syncRemoteIfConfigured();
       await refreshBackendDiagnostics({ silent: true });
       renderWorkspaceHub();
@@ -5848,6 +5983,12 @@ function setupWriteIdeaWorkspace() {
     const button = event.target.closest("[data-write-idea-output]");
     if (!button) return;
     writeIdeaState.outputType = button.dataset.writeIdeaOutput || "create_one_post";
+    renderWriteIdeaScaffold();
+  });
+  document.getElementById("write-idea-transformation-modes")?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-write-idea-transform]");
+    if (!button) return;
+    writeIdeaState.transformationType = button.dataset.writeIdeaTransform || "expand";
     renderWriteIdeaScaffold();
   });
   writeIdeaChipList?.addEventListener("click", (event) => {
@@ -6471,7 +6612,7 @@ function buildConstellationRows() {
       return aSort - bSort;
     });
 
-  return campaigns.map((campaign) => {
+  const mapped = campaigns.map((campaign) => {
     const posts = [...(appState.posts || [])]
       .map((post) => hydratePostCampaign(post, campaigns))
       .filter((post) => {
@@ -6492,9 +6633,36 @@ function buildConstellationRows() {
       posts
     };
   });
+  const maxRowWidth = 6400;
+  let cursorX = 760;
+  let cursorY = 620;
+  let currentRowHeight = 0;
+  return mapped.map((campaign, index) => {
+    const layout = getConstellationLayoutConfig(campaign, index);
+    const rowWidth = layout.labelWidth + layout.rowLength + 520;
+    const rowHeight = layout.rowHeight + layout.labelHeight + 280;
+    if (cursorX + rowWidth > maxRowWidth - 360) {
+      cursorX = 720 + Math.round(seededUnit(`${campaign.campaignId || campaign.campaignName || index}:row`) * 260);
+      cursorY += currentRowHeight + 360 + Math.round(seededUnit(`${campaign.campaignId || campaign.campaignName || index}:row-gap`) * 180);
+      currentRowHeight = 0;
+    }
+    const anchor = {
+      x: cursorX + layout.labelWidth + 180 + Math.round(seededSymmetric(`${campaign.campaignId || campaign.campaignName || index}:anchor-x`) * 90),
+      y: cursorY + Math.round(rowHeight * 0.46) + Math.round(seededSymmetric(`${campaign.campaignId || campaign.campaignName || index}:anchor-y`) * 80)
+    };
+    cursorX += rowWidth + 180 + Math.round(seededUnit(`${campaign.campaignId || campaign.campaignName || index}:next-gap`) * 180);
+    currentRowHeight = Math.max(currentRowHeight, rowHeight);
+    return {
+      ...campaign,
+      _constellationAnchor: anchor,
+      _constellationLayout: layout,
+      _constellationFootprint: { width: rowWidth, height: rowHeight }
+    };
+  });
 }
 
 function getConstellationAnchor(campaign, index) {
+  if (campaign?._constellationAnchor) return campaign._constellationAnchor;
   const layout = getConstellationLayoutConfig(campaign, index);
   return {
     x: clamp(Number(campaign.x || 0) || layout.anchorX, 420, 5600),
@@ -6510,21 +6678,22 @@ function getConstellationTier(postCount) {
 }
 
 function getConstellationLayoutConfig(campaign, index = 0) {
+  if (campaign?._constellationLayout) return campaign._constellationLayout;
   const postCount = Math.max((campaign.posts || []).length, 1);
   const tier = getConstellationTier(postCount);
-  const columns = tier === "huge" ? 1 : 2;
-  const column = index % columns;
-  const row = Math.floor(index / columns);
   const shape = String(campaign.iconShape || "").trim().toLowerCase();
   const stretchAxis = shape === "leaf" || shape === "moon" || shape === "spiral" ? "vertical" : "horizontal";
+  const labelWidth = clamp(170 + String(campaign.campaignName || "").length * 7, 190, 420);
+  const labelHeight = 72;
+  const dotGap = tier === "huge" ? 118 : tier === "large" ? 108 : tier === "medium" ? 98 : 90;
+  const rowLength = clamp(460 + postCount * dotGap, 700, 2600);
+  const rowHeight = clamp(260 + (shape === "spiral" ? 190 : 0) + (stretchAxis === "vertical" ? 120 : 0) + Math.max(postCount - 4, 0) * 18, 280, tier === "huge" ? 760 : 620);
   const tierConfig = {
     small: { pathLength: 1, spacing: 1, radius: 1, hoverPadding: 1, labelOffset: 1, columnGap: 1520, rowGap: 1020 },
     medium: { pathLength: 1.18, spacing: 1.15, radius: 1.12, hoverPadding: 1.15, labelOffset: 1.14, columnGap: 1660, rowGap: 1120 },
     large: { pathLength: 1.34, spacing: 1.32, radius: 1.28, hoverPadding: 1.28, labelOffset: 1.25, columnGap: 1880, rowGap: 1280 },
     huge: { pathLength: 1.7, spacing: 1.55, radius: 1.52, hoverPadding: 1.48, labelOffset: 1.42, columnGap: stretchAxis === "horizontal" ? 2480 : 1820, rowGap: stretchAxis === "vertical" ? 1680 : 1380 }
   }[tier];
-  const anchorX = 820 + column * tierConfig.columnGap;
-  const anchorY = 580 + row * tierConfig.rowGap;
   return {
     tier,
     pathStretch: tierConfig.pathLength * (tier === "huge" && stretchAxis === "horizontal" ? 1.18 : 1),
@@ -6534,8 +6703,13 @@ function getConstellationLayoutConfig(campaign, index = 0) {
     hoverPadding: tierConfig.hoverPadding,
     labelOffset: tierConfig.labelOffset,
     stretchAxis,
-    anchorX,
-    anchorY,
+    anchorX: 820,
+    anchorY: 580,
+    rowLength,
+    rowHeight,
+    labelWidth,
+    labelHeight,
+    dotGap,
     crowded: postCount >= 10,
     overlapRisk: postCount >= 14,
     labelCollisionRisk: postCount >= 9
@@ -6547,39 +6721,41 @@ function getIconPathPoints(shape, count, anchorX, anchorY, layout = {}) {
   const points = [];
   const pathStretch = Number(layout.pathStretch || 1);
   const verticalStretch = Number(layout.verticalStretch || pathStretch);
+  const rowLength = Number(layout.rowLength || 720);
+  const rowHeight = Number(layout.rowHeight || 320);
   for (let index = 0; index < safeCount; index += 1) {
     const t = safeCount === 1 ? 0.5 : index / Math.max(safeCount - 1, 1);
     let x = anchorX;
     let y = anchorY;
     if (shape === "leaf") {
-      x += Math.sin(t * Math.PI) * 320 * pathStretch;
-      y += (Math.cos(t * Math.PI * 2) * 140 - 55) * verticalStretch;
+      x += Math.sin(t * Math.PI) * (rowLength * 0.42) * pathStretch;
+      y += (Math.cos(t * Math.PI * 2) * (rowHeight * 0.34) - rowHeight * 0.14) * verticalStretch;
     } else if (shape === "spark" || shape === "star") {
-      x += (t - 0.5) * 640 * pathStretch;
-      y += Math.sin(t * Math.PI * 4) * 145 * verticalStretch;
+      x += (t - 0.5) * rowLength * pathStretch;
+      y += Math.sin(t * Math.PI * 4) * (rowHeight * 0.36) * verticalStretch;
     } else if (shape === "sun") {
-      x += Math.cos(t * Math.PI * 2) * 280 * pathStretch;
-      y += Math.sin(t * Math.PI * 2) * 280 * verticalStretch;
+      x += Math.cos(t * Math.PI * 2) * Math.min(rowLength * 0.36, 420) * pathStretch;
+      y += Math.sin(t * Math.PI * 2) * Math.min(rowHeight * 0.46, 420) * verticalStretch;
     } else if (shape === "moon") {
-      x += Math.cos((0.2 + t * 0.8) * Math.PI) * 310 * pathStretch;
-      y += Math.sin((0.2 + t * 0.8) * Math.PI) * 260 * verticalStretch;
+      x += Math.cos((0.2 + t * 0.8) * Math.PI) * Math.min(rowLength * 0.38, 430) * pathStretch;
+      y += Math.sin((0.2 + t * 0.8) * Math.PI) * Math.min(rowHeight * 0.42, 360) * verticalStretch;
     } else if (shape === "bolt") {
-      x += (t < 0.5 ? -220 + t * 440 : -35 + (t - 0.5) * 500) * pathStretch;
-      y += (t < 0.5 ? -260 + t * 420 : -70 + (t - 0.5) * 460) * verticalStretch;
+      x += (t < 0.5 ? (-rowLength * 0.32) + t * rowLength * 0.62 : (-rowLength * 0.06) + (t - 0.5) * rowLength * 0.72) * pathStretch;
+      y += (t < 0.5 ? (-rowHeight * 0.52) + t * rowHeight * 0.84 : (-rowHeight * 0.14) + (t - 0.5) * rowHeight * 0.9) * verticalStretch;
     } else if (shape === "map") {
-      x += (t - 0.5) * 620 * pathStretch;
-      y += (Math.sin(t * Math.PI * 3) * 120 + Math.cos(t * Math.PI) * 90) * verticalStretch;
+      x += (t - 0.5) * rowLength * pathStretch;
+      y += (Math.sin(t * Math.PI * 3) * (rowHeight * 0.28) + Math.cos(t * Math.PI) * (rowHeight * 0.18)) * verticalStretch;
     } else if (shape === "book") {
-      x += (t - 0.5) * 560 * pathStretch;
-      y += Math.sin((t - 0.5) * Math.PI) * 160 * verticalStretch;
+      x += (t - 0.5) * (rowLength * 0.9) * pathStretch;
+      y += Math.sin((t - 0.5) * Math.PI) * (rowHeight * 0.34) * verticalStretch;
     } else if (shape === "spiral") {
       const angle = t * Math.PI * 3.6;
-      const radius = (75 + t * 320) * pathStretch;
+      const radius = (78 + t * Math.min(rowLength * 0.46, 480)) * pathStretch;
       x += Math.cos(angle) * radius;
       y += Math.sin(angle) * radius * (verticalStretch / Math.max(pathStretch, 0.001));
     } else {
-      x += (t - 0.5) * 700 * pathStretch;
-      y += Math.sin(t * Math.PI * 2) * 95 * verticalStretch;
+      x += (t - 0.5) * rowLength * pathStretch;
+      y += Math.sin(t * Math.PI * 2) * (rowHeight * 0.22) * verticalStretch;
     }
     points.push({
       x: clamp(x, 220, 5600),
@@ -6611,13 +6787,15 @@ function renderConstellation() {
   if (!canvas) return;
 
   const rows = buildConstellationRows();
+  const totalFootprintWidth = rows.reduce((max, campaign) => Math.max(max, Number(campaign?._constellationAnchor?.x || 0) + Number(campaign?._constellationFootprint?.width || 0)), 0);
+  const totalFootprintHeight = rows.reduce((max, campaign) => Math.max(max, Number(campaign?._constellationAnchor?.y || 0) + Number(campaign?._constellationFootprint?.height || 0)), 0);
   const semanticConstellation = buildSemanticConstellation();
   const bridgeConfig = getBridgeDensityConfig();
   const largestCount = rows.reduce((max, campaign) => Math.max(max, Math.max((campaign.posts || []).length, 1)), 1);
   const largestTier = getConstellationTier(largestCount);
   const columns = rows.some((campaign) => getConstellationTier((campaign.posts || []).length) === "huge") ? 1 : 2;
-  const worldWidth = Math.max(4300, columns === 1 ? 5200 : 4600, largestTier === "huge" ? 5600 : 0);
-  const minCanvasHeight = Math.max(3800, (Math.ceil(rows.length / Math.max(columns, 1)) + 1) * (largestTier === "huge" ? 1560 : 1220));
+  const worldWidth = Math.max(5200, columns === 1 ? 6200 : 5600, largestTier === "huge" ? 6600 : 0, totalFootprintWidth + 900);
+  const minCanvasHeight = Math.max(4200, (Math.ceil(rows.length / Math.max(columns, 1)) + 1) * (largestTier === "huge" ? 1700 : 1340), totalFootprintHeight + 820);
   const worldBounds = { minX: 999999, minY: 999999, maxX: 0, maxY: 0 };
 
   canvas.style.height = `${minCanvasHeight}px`;
@@ -6690,8 +6868,8 @@ function renderConstellation() {
     const label = document.createElement("div");
     label.style.cssText = `
       position:absolute;
-      left:${Math.max(48, points[0].x - (150 * layout.labelOffset))}px;
-      top:${Math.max(52, points[0].y - (170 * layout.labelOffset))}px;
+      left:${Math.max(48, anchor.x - layout.labelWidth - 170)}px;
+      top:${Math.max(52, anchor.y - Math.max(layout.rowHeight * 0.5, 180))}px;
       padding:10px 18px;
       background:rgba(18,12,29,0.18);
       border:1px solid rgba(255,255,255,0.12);
@@ -6700,8 +6878,8 @@ function renderConstellation() {
       backdrop-filter:none;
       box-shadow:none;
       z-index:6;
-      min-width:170px;
-      max-width:${layout.tier === "huge" ? 320 : 250}px;
+      min-width:${layout.labelWidth}px;
+      max-width:${layout.tier === "huge" ? 420 : 320}px;
       pointer-events:none;
     `;
     label.innerHTML = `
@@ -6984,7 +7162,7 @@ function setupConstellationInteractions() {
     const worldY = (mouseY - panY) / scale;
 
     const zoomAmount = e.deltaY < 0 ? 1.1 : 0.9;
-    scale = clamp(scale * zoomAmount, 0.22, 3.1);
+    scale = clamp(scale * zoomAmount, 0.22, 4);
 
     panX = mouseX - worldX * scale;
     panY = mouseY - worldY * scale;
@@ -7027,7 +7205,7 @@ function zoomConstellation(multiplier) {
   const worldX = (centerX - panX) / scale;
   const worldY = (centerY - panY) / scale;
 
-  scale = clamp(scale * multiplier, 0.18, 3.8);
+  scale = clamp(scale * multiplier, 0.18, 4);
   panX = centerX - worldX * scale;
   panY = centerY - worldY * scale;
 
@@ -7052,7 +7230,7 @@ function fitConstellation({ preserveUserView = false } = {}) {
   const worldWidth = Math.max(1, worldMaxX - worldMinX);
   const worldHeight = Math.max(1, worldMaxY - worldMinY);
   const fitScale = Math.min(rect.width / worldWidth, rect.height / worldHeight);
-  scale = clamp(fitScale * 1.14, 0.2, 3.8);
+  scale = clamp(fitScale * 1.08, 0.18, 4);
 
   panX = Math.round((rect.width - worldWidth * scale) / 2) - Math.round(worldMinX * scale);
   panY = Math.round((rect.height - worldHeight * scale) / 2) - Math.round(worldMinY * scale);
@@ -7863,6 +8041,155 @@ function getWriteIdeaTargetPlatforms() {
     : ["linkedin"];
 }
 
+function seededUnit(seed) {
+  const text = String(seed || "");
+  let hash = 2166136261;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return ((hash >>> 0) % 1000) / 999;
+}
+
+function seededSymmetric(seed) {
+  return seededUnit(seed) * 2 - 1;
+}
+
+function getWriteIdeaTransformationLabel(mode) {
+  return toTitleCase(String(mode || "expand").replace(/_/g, " "));
+}
+
+function normalizeWriteIdeaArtifact(item = {}) {
+  const artifactId = String(item.artifactId || item.id || item.postId || item.noteId || item.assetId || item.inspoId || item.aiDraftId || "").trim();
+  const artifactType = String(item.artifactType || item.type || item.kind || "artifact").trim().toLowerCase() || "artifact";
+  return {
+    artifactId,
+    artifactType,
+    title: String(item.title || item.name || item.campaignName || item.campaign || `${toTitleCase(artifactType)} artifact`).trim(),
+    summary: String(item.summary || item.description || item.body || item.notes || item.draftText || item.carouselOutline || "").trim(),
+    platform: String(item.platform || item.suggestedPlatform || "").trim(),
+    pillar: String(item.pillar || item.suggestedPillar || "").trim(),
+    campaignName: String(item.campaignName || item.campaign || "").trim(),
+    mediaIds: Array.isArray(item.mediaIds) ? item.mediaIds.map((value) => String(value || "").trim()).filter(Boolean) : []
+  };
+}
+
+function getArtifactRecordById(type, id) {
+  const recordId = String(id || "").trim();
+  if (!recordId) return null;
+  if (type === "note") return (appState.notes || []).find((item) => String(item.noteId || item.id || "") === recordId) || null;
+  if (type === "inspo") return (appState.inspo || []).find((item) => String(item.id || "") === recordId) || null;
+  if (type === "draft") return (appState.aiDrafts || []).find((item) => String(item.aiDraftId || "") === recordId) || null;
+  if (type === "campaign") return (appState.campaigns || []).find((item) => String(item.campaignId || "") === recordId) || null;
+  if (type === "post") return (appState.posts || []).find((item) => String(item.id || item.postId || "") === recordId) || null;
+  if (type === "media") return buildMediaVaultItems().find((item) => String(item.id || item.assetId || "") === recordId) || null;
+  return null;
+}
+
+function buildWriteIdeaArtifactFromRecord(type, record) {
+  if (!record) return null;
+  if (type === "note") {
+    return normalizeWriteIdeaArtifact({
+      artifactId: record.noteId || record.id,
+      artifactType: "note",
+      title: record.title || "Untitled note",
+      summary: record.body || "",
+      platform: record.suggestedPlatform || "",
+      pillar: record.suggestedPillar || ""
+    });
+  }
+  if (type === "inspo") {
+    return normalizeWriteIdeaArtifact({
+      artifactId: record.id,
+      artifactType: "inspo",
+      title: record.title || "Untitled inspo",
+      summary: record.description || record.notes || "",
+      platform: record.suggestedPlatform || "",
+      pillar: record.suggestedPillar || ""
+    });
+  }
+  if (type === "draft") {
+    return normalizeWriteIdeaArtifact({
+      artifactId: record.aiDraftId,
+      artifactType: "draft",
+      title: record.title || record.ideaPrompt || "Idea draft",
+      summary: record.draftText || record.ideaPrompt || ""
+    });
+  }
+  if (type === "campaign") {
+    return normalizeWriteIdeaArtifact({
+      artifactId: record.campaignId,
+      artifactType: "campaign",
+      title: formatCampaignDisplayName(record.campaignName || "Campaign"),
+      summary: `Campaign pillar: ${formatContentPillarLabel(record.pillar || "authority")}`,
+      campaignName: record.campaignName || ""
+    });
+  }
+  if (type === "post") {
+    return normalizeWriteIdeaArtifact({
+      artifactId: record.id || record.postId,
+      artifactType: record.status === "published" ? "published_post" : "post",
+      title: record.title || "Untitled post",
+      summary: record.description || "",
+      platform: record.platform || "",
+      campaignName: record.campaignName || ""
+    });
+  }
+  if (type === "media") {
+    const assetIds = Array.isArray(record.assets) ? record.assets.map((item) => item.assetId || item.id).filter(Boolean) : [record.assetId || record.id].filter(Boolean);
+    return normalizeWriteIdeaArtifact({
+      artifactId: record.id || record.assetId,
+      artifactType: "media",
+      title: record.title || record.assetName || "Media asset",
+      summary: record.meta || record.notes || record.sourceUrl || "",
+      mediaIds: assetIds
+    });
+  }
+  return null;
+}
+
+function recordWriteIdeaHistory(label, detail = "") {
+  writeIdeaState.transformationHistory = [{
+    id: `history-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    label: String(label || "").trim(),
+    detail: String(detail || "").trim(),
+    transformationType: writeIdeaState.transformationType,
+    timestampLabel: new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+  }, ...(writeIdeaState.transformationHistory || [])].slice(0, 18);
+}
+
+function addWriteIdeaArtifact(artifact) {
+  const normalized = normalizeWriteIdeaArtifact(artifact);
+  if (!normalized.artifactId) return;
+  const existing = new Map((writeIdeaState.inputArtifacts || []).map((item) => [item.artifactId, item]));
+  existing.set(normalized.artifactId, { ...(existing.get(normalized.artifactId) || {}), ...normalized });
+  writeIdeaState.inputArtifacts = Array.from(existing.values());
+  writeIdeaState.sourceArtifactIds = writeIdeaState.inputArtifacts.map((item) => item.artifactId);
+  writeIdeaState.mediaIds = Array.from(new Set(writeIdeaState.inputArtifacts.flatMap((item) => item.mediaIds || []).filter(Boolean)));
+  if (normalized.campaignName) {
+    writeIdeaState.campaignAssociations = Array.from(new Set([...(writeIdeaState.campaignAssociations || []), normalized.campaignName]));
+  }
+  if (normalized.platform) {
+    writeIdeaState.performanceContext = Array.from(new Set([...(writeIdeaState.performanceContext || []), `Platform: ${normalized.platform}`]));
+  }
+  if (!String(writeIdeaPromptInput?.value || writeIdeaState.prompt || "").trim()) {
+    writeIdeaState.prompt = `${getWriteIdeaTransformationLabel(writeIdeaState.transformationType)} this ${normalized.artifactType.replace(/_/g, " ")}: ${normalized.summary || normalized.title}`;
+    if (writeIdeaPromptInput) writeIdeaPromptInput.value = writeIdeaState.prompt;
+  }
+}
+
+function openArtifactInWriteIdea(type, id, mode = "use", transformationType = "") {
+  const record = getArtifactRecordById(type, id);
+  const artifact = buildWriteIdeaArtifactFromRecord(type, record);
+  if (!artifact) return;
+  if (transformationType) writeIdeaState.transformationType = transformationType;
+  if (mode === "analyze") writeIdeaState.analysisMode = transformationType || "analyze_performance";
+  addWriteIdeaArtifact(artifact);
+  recordWriteIdeaHistory(`${toTitleCase(mode)} in Write an Idea`, artifact.title);
+  renderWriteIdeaScaffold();
+  switchView("write-idea");
+}
+
 function syncWriteIdeaStateFromInputs() {
   writeIdeaState.prompt = String(writeIdeaPromptInput?.value || "").trim();
   writeIdeaState.targetDate = normalizeQueueDateLabel(writeIdeaTargetDateInput?.value || writeIdeaState.targetDate || "") || normalizeQueueDateLabel(new Date());
@@ -7889,7 +8216,19 @@ function getWriteIdeaPayload() {
     postType,
     targetDate: writeIdeaState.targetDate,
     targetDateRange: writeIdeaState.targetDateRange,
-    generationMode: "write_an_idea"
+    generationMode: "write_an_idea",
+    transformationType: writeIdeaState.transformationType,
+    analysisMode: writeIdeaState.analysisMode,
+    inputArtifacts: writeIdeaState.inputArtifacts,
+    outputArtifacts: writeIdeaState.outputArtifacts.map((artifact) => artifact.title || artifact.artifactId),
+    sourceArtifactIds: writeIdeaState.sourceArtifactIds,
+    derivedFromIds: writeIdeaState.derivedFromIds,
+    generatedOutputs: writeIdeaState.outputArtifacts.map((artifact) => artifact.title || artifact.artifactId),
+    generationStage: writeIdeaState.outputArtifacts.length ? "transforming" : "captured",
+    semanticTags: writeIdeaState.semanticTags,
+    campaignName: (writeIdeaState.campaignAssociations || [])[0] || "",
+    mediaIds: writeIdeaState.mediaIds,
+    performanceContext: writeIdeaState.performanceContext
   };
 }
 
@@ -7913,6 +8252,10 @@ function renderWriteIdeaGuidance() {
         <div class="p-3 rounded-xl bg-[#181125] border border-white/5">
           <div class="text-sm font-bold text-white wrap-safe">${escapeHtml(formatCampaignDisplayName(campaign.campaignName))}</div>
           <div class="text-[11px] text-gray-400 wrap-safe mt-1">${escapeHtml(formatContentPillarLabel(campaign.pillar || "authority"))} • ${escapeHtml(campaign.iconShape || "star")}</div>
+          <div class="write-idea-artifact-actions">
+            <button type="button" class="write-idea-card-action" onclick="openArtifactInWriteIdea('campaign','${escapeHtml(campaign.campaignId)}','use','generate_campaign')">Use in Write an Idea</button>
+            <button type="button" class="write-idea-card-action" onclick="openArtifactInWriteIdea('campaign','${escapeHtml(campaign.campaignId)}','continue','generate_follow_up')">Continue in Write an Idea</button>
+          </div>
         </div>
       `).join("")
       : makeEmptyState("No campaigns yet", "Create a campaign to reuse it as idea context.", "ph-planet");
@@ -7924,13 +8267,20 @@ function renderWriteIdeaDraftList() {
   const drafts = (appState.aiDrafts || []).filter((draft) => draft.generationMode === "write_an_idea" || draft.ideaPrompt || draft.outputType).slice(0, 6);
   writeIdeaDraftList.innerHTML = drafts.length
     ? drafts.map((draft) => `
-      <button type="button" class="w-full p-3 rounded-xl bg-[#181125] border border-white/5 text-left hover:bg-[#231738] transition-colors" onclick="loadWriteIdeaDraft('${escapeHtml(draft.aiDraftId)}')">
-        <div class="flex items-center justify-between gap-3 mb-1">
-          <div class="text-sm font-bold text-white wrap-safe">${escapeHtml(draft.title || draft.ideaPrompt || "Idea Draft")}</div>
-          <span class="diagnostic-chip">${escapeHtml((draft.draftStatus || "draft").replace(/_/g, " "))}</span>
+      <div class="w-full p-3 rounded-xl bg-[#181125] border border-white/5 text-left">
+        <button type="button" class="w-full text-left hover:bg-[#231738] rounded-xl transition-colors" onclick="loadWriteIdeaDraft('${escapeHtml(draft.aiDraftId)}')">
+          <div class="flex items-center justify-between gap-3 mb-1">
+            <div class="text-sm font-bold text-white wrap-safe">${escapeHtml(draft.title || draft.ideaPrompt || "Idea Draft")}</div>
+            <span class="diagnostic-chip">${escapeHtml((draft.draftStatus || "draft").replace(/_/g, " "))}</span>
+          </div>
+          <div class="text-[11px] text-gray-400 wrap-safe">${escapeHtml(draft.outputType ? draft.outputType.replace(/_/g, " ") : "write an idea")}</div>
+        </button>
+        <div class="write-idea-artifact-actions">
+          <button type="button" class="write-idea-card-action" onclick="openArtifactInWriteIdea('draft','${escapeHtml(draft.aiDraftId)}','continue','rewrite')">Continue in Write an Idea</button>
+          <button type="button" class="write-idea-card-action" onclick="openArtifactInWriteIdea('draft','${escapeHtml(draft.aiDraftId)}','analyze','analyze_performance')">Analyze in Write an Idea</button>
+          <button type="button" class="write-idea-card-action" onclick="openArtifactInWriteIdea('draft','${escapeHtml(draft.aiDraftId)}','transform','generate_variants')">Transform in Write an Idea</button>
         </div>
-        <div class="text-[11px] text-gray-400 wrap-safe">${escapeHtml(draft.outputType ? draft.outputType.replace(/_/g, " ") : "write an idea")}</div>
-      </button>
+      </div>
     `).join("")
     : makeEmptyState("No idea drafts yet", "Generate or save a scaffold to keep idea records here.", "ph-sparkle");
 }
@@ -7955,8 +8305,12 @@ function renderWriteIdeaScaffold() {
       : false;
     btn.classList.toggle("active", active);
   });
+  document.querySelectorAll("[data-write-idea-transform]").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.writeIdeaTransform === writeIdeaState.transformationType);
+  });
   if (writeIdeaTargetDateInput) writeIdeaTargetDateInput.value = toInputDateValue(writeIdeaState.targetDate);
   if (writeIdeaTargetRangeInput) writeIdeaTargetRangeInput.value = writeIdeaState.targetDateRange || "";
+  renderWriteIdeaArtifactWorkspace();
   if (!writeIdeaLastScaffold) {
     if (writeIdeaReviewSummary) writeIdeaReviewSummary.textContent = "Idea captured state will appear here after you generate a scaffold.";
     if (writeIdeaStatusChip) writeIdeaStatusChip.textContent = "Scaffold only";
@@ -7993,6 +8347,58 @@ function renderWriteIdeaScaffold() {
   }
 }
 
+function renderWriteIdeaArtifactWorkspace() {
+  if (writeIdeaArtifactChips) {
+    writeIdeaArtifactChips.innerHTML = (writeIdeaState.inputArtifacts || []).length
+      ? writeIdeaState.inputArtifacts.map((artifact) => `
+        <div class="write-idea-artifact-chip">
+          <span>${escapeHtml(`${toTitleCase(artifact.artifactType.replace(/_/g, " "))}: ${artifact.title}`)}</span>
+          <button type="button" aria-label="Remove artifact" onclick="removeWriteIdeaArtifact('${escapeHtml(artifact.artifactId)}')"><i class="ph-bold ph-x"></i></button>
+        </div>
+      `).join("")
+      : `<div class="text-xs text-gray-500">Bring notes, inspo, drafts, posts, campaigns, media, or performance context into the chain.</div>`;
+  }
+  if (writeIdeaBreadcrumbs) {
+    writeIdeaBreadcrumbs.textContent = (writeIdeaState.inputArtifacts || []).length
+      ? writeIdeaState.inputArtifacts.map((artifact) => artifact.title).join(" → ")
+      : "No chain yet";
+  }
+  if (writeIdeaGeneratedArtifacts) {
+    const outputs = Array.isArray(writeIdeaState.outputArtifacts) ? writeIdeaState.outputArtifacts : [];
+    writeIdeaGeneratedArtifacts.innerHTML = outputs.length
+      ? outputs.map((artifact) => `
+        <div class="write-idea-history-item">
+          <div class="flex items-center justify-between gap-3 mb-2">
+            <div class="text-sm font-bold text-white wrap-safe">${escapeHtml(artifact.title || "Generated artifact")}</div>
+            <span class="diagnostic-chip">${escapeHtml(toTitleCase((artifact.artifactType || "artifact").replace(/_/g, " ")))}</span>
+          </div>
+          <div class="text-xs text-gray-400 wrap-safe">${escapeHtml(artifact.summary || "Awaiting manual review.")}</div>
+        </div>
+      `).join("")
+      : `<div class="text-xs text-gray-500">Generated outputs will appear here as reusable artifacts after scaffold generation.</div>`;
+  }
+  if (writeIdeaHistoryList) {
+    writeIdeaHistoryList.innerHTML = (writeIdeaState.transformationHistory || []).length
+      ? writeIdeaState.transformationHistory.map((entry) => `
+        <div class="write-idea-history-item">
+          <div class="flex items-center justify-between gap-3">
+            <div class="text-xs uppercase tracking-widest text-gray-500 font-bold">${escapeHtml(getWriteIdeaTransformationLabel(entry.transformationType))}</div>
+            <div class="text-[10px] text-gray-500">${escapeHtml(entry.timestampLabel || "")}</div>
+          </div>
+          <div class="text-sm text-white wrap-safe mt-2">${escapeHtml(entry.label || "Transformation")}</div>
+          ${entry.detail ? `<div class="text-xs text-gray-400 wrap-safe mt-1">${escapeHtml(entry.detail)}</div>` : ""}
+        </div>
+      `).join("")
+      : `<div class="text-xs text-gray-500">Transformations, branches, and analysis steps will accumulate here.</div>`;
+  }
+}
+
+function removeWriteIdeaArtifact(artifactId) {
+  writeIdeaState.inputArtifacts = (writeIdeaState.inputArtifacts || []).filter((artifact) => artifact.artifactId !== artifactId);
+  writeIdeaState.sourceArtifactIds = writeIdeaState.inputArtifacts.map((artifact) => artifact.artifactId);
+  renderWriteIdeaScaffold();
+}
+
 function loadWriteIdeaDraft(aiDraftId) {
   const draft = (appState.aiDrafts || []).find((item) => item.aiDraftId === aiDraftId);
   if (!draft) return;
@@ -8003,6 +8409,12 @@ function loadWriteIdeaDraft(aiDraftId) {
   writeIdeaState.targetPlatforms = (draft.targetPlatforms || draft.platform || "linkedin").split(/[|,\n]/).map((item) => String(item || "").trim()).filter(Boolean);
   writeIdeaState.targetDate = normalizeQueueDateLabel(draft.targetDate || new Date()) || normalizeQueueDateLabel(new Date());
   writeIdeaState.targetDateRange = draft.targetDateRange || "";
+  writeIdeaState.transformationType = draft.transformationType || "expand";
+  writeIdeaState.analysisMode = draft.analysisMode || "";
+  writeIdeaState.inputArtifacts = Array.isArray(draft.inputArtifacts) ? draft.inputArtifacts.map((item) => normalizeWriteIdeaArtifact(item)).filter((item) => item.artifactId) : [];
+  writeIdeaState.outputArtifacts = Array.isArray(draft.outputArtifacts) ? draft.outputArtifacts.map((item) => normalizeWriteIdeaArtifact(item)).filter((item) => item.artifactId) : [];
+  writeIdeaState.sourceArtifactIds = String(draft.sourceArtifactIds || "").split(/[|,\n]/).map((item) => String(item || "").trim()).filter(Boolean);
+  writeIdeaState.derivedFromIds = String(draft.derivedFromIds || "").split(/[|,\n]/).map((item) => String(item || "").trim()).filter(Boolean);
   writeIdeaLastScaffold = {
     idea: draft,
     scaffold: {
@@ -8010,6 +8422,7 @@ function loadWriteIdeaDraft(aiDraftId) {
       draftStatus: draft.draftStatus || "scaffold_only",
       warnings: (draft.reviewNotes || "").split("|").map((item) => item.trim()).filter(Boolean),
       summaryText: draft.draftText || "Saved idea draft loaded.",
+      generatedOutputs: writeIdeaState.outputArtifacts,
       proposedPosts: [{
         title: draft.title || "Idea Draft",
         description: draft.draftText || "",
@@ -8058,15 +8471,35 @@ async function generateWriteIdeaScaffold() {
     else appState.aiDrafts.unshift(localDraft);
     persistLocalState();
   }
+  writeIdeaState.outputArtifacts = (writeIdeaLastScaffold?.scaffold?.generatedOutputs || []).map((item) => normalizeWriteIdeaArtifact(item)).filter((item) => item.artifactId);
   writeIdeaState.selectedDraftIndexes = (writeIdeaLastScaffold?.scaffold?.proposedPosts || []).map((_, index) => index);
+  recordWriteIdeaHistory("Generated scaffold", writeIdeaLastScaffold?.scaffold?.title || deriveIdeaTitle(payload.ideaPrompt));
   renderWriteIdeaScaffold();
 }
 
 function buildLocalIdeaScaffold(payload) {
   const title = deriveIdeaTitle(payload.ideaPrompt);
+  const generatedOutputs = [{
+    artifactId: `artifact-${Date.now()}-1`,
+    artifactType: payload.transformationType === "turn_into_carousel" || payload.outputType === "draft_carousel_outline"
+      ? "carousel_outline"
+      : payload.transformationType === "turn_into_caption"
+      ? "caption"
+      : payload.transformationType === "turn_into_video_script" || payload.outputType === "draft_short_video_script"
+      ? "video_script"
+      : payload.transformationType === "generate_campaign"
+      ? "campaign"
+      : payload.transformationType === "analyze_performance"
+      ? "analysis"
+      : "draft",
+    title: `${title} ${payload.transformationType === "analyze_performance" ? "Analysis" : "Output"}`,
+    summary: payload.mediaIds?.length
+      ? "Output scaffold includes attached media context and avoids reusing slide text verbatim."
+      : "Output scaffold derived from the current artifact chain."
+  }];
   const proposedPosts = [{
     title,
-    description: `Scaffold only.\nPrompt: ${payload.ideaPrompt}\nOutput: ${payload.outputType.replace(/_/g, " ")}`,
+    description: `Scaffold only.\nPrompt: ${payload.ideaPrompt}\nTransformation: ${getWriteIdeaTransformationLabel(payload.transformationType)}\nOutput: ${payload.outputType.replace(/_/g, " ")}`,
     platform: payload.platform || "linkedin",
     postType: payload.outputType === "draft_carousel_outline" ? "carousel" : "text",
     queueDateLabel: payload.targetDate || normalizeQueueDateLabel(new Date())
@@ -8076,7 +8509,8 @@ function buildLocalIdeaScaffold(payload) {
     draftStatus: "scaffold_only",
     warnings: payload.ideaPrompt.length < 18 ? ["too generic", "weak classification"] : ["scaffold only"],
     semanticTags: payload.ideaPrompt.toLowerCase().split(/[^a-z0-9]+/).filter((token) => token.length >= 5).slice(0, 6),
-    summaryText: "Idea captured. Local scaffold mode is active. Create manually or save draft.",
+    generatedOutputs,
+    summaryText: "Idea captured. Local scaffold mode is active. Branch, reuse, or save any generated artifact.",
     proposedPosts,
     carouselOutline: "Slide 1: Idea\nSlide 2: Observation\nSlide 3: Why it matters\nSlide 4: Application\nSlide 5: CTA"
   };
@@ -8097,11 +8531,12 @@ async function saveWriteIdeaDraft() {
     else appState.aiDrafts.unshift(draft);
     persistLocalState();
   } else {
-    const localDraft = normalizeRemoteAIDraft({ aiDraftId: currentWriteIdeaDraftId || `local-${Date.now()}`, title: deriveIdeaTitle(payload.ideaPrompt), ideaPrompt: payload.ideaPrompt, outputType: payload.outputType, targetPlatforms: payload.targetPlatforms.join("|"), targetDate: payload.targetDate, draftStatus: "idea_captured", generationMode: "write_an_idea" });
+    const localDraft = normalizeRemoteAIDraft({ aiDraftId: currentWriteIdeaDraftId || `local-${Date.now()}`, title: deriveIdeaTitle(payload.ideaPrompt), ideaPrompt: payload.ideaPrompt, outputType: payload.outputType, targetPlatforms: payload.targetPlatforms.join("|"), targetDate: payload.targetDate, draftStatus: "idea_captured", generationMode: "write_an_idea", transformationType: payload.transformationType, analysisMode: payload.analysisMode, inputArtifacts: payload.inputArtifacts, outputArtifacts: payload.outputArtifacts, sourceArtifactIds: payload.sourceArtifactIds, derivedFromIds: payload.derivedFromIds, mediaIds: payload.mediaIds, performanceContext: payload.performanceContext });
     currentWriteIdeaDraftId = localDraft.aiDraftId;
     appState.aiDrafts.unshift(localDraft);
     persistLocalState();
   }
+  recordWriteIdeaHistory("Saved draft", deriveIdeaTitle(payload.ideaPrompt));
   renderWriteIdeaDraftList();
   showToast("Idea saved", "Idea prompt saved as a draft scaffold.", "ph-check", "text-[#00ffaa]");
 }
@@ -8775,6 +9210,12 @@ function openMediaAssetModal(item) {
   mediaAssetModalCard.classList.add("scale-100");
   if (mediaAssetCreatePostBtn) {
     mediaAssetCreatePostBtn.onclick = () => createPostFromMediaItem(item, linkedPost);
+  }
+  if (mediaAssetWriteIdeaBtn) {
+    mediaAssetWriteIdeaBtn.onclick = () => {
+      closeMediaAssetModal();
+      openArtifactInWriteIdea("media", item.id || item.assetId || "", "use", linkedPost?.postType === "carousel" ? "turn_into_caption" : "expand");
+    };
   }
 }
 
@@ -10076,6 +10517,12 @@ function renderInspo() {
           <p class="text-gray-500 text-[10px] font-medium wrap-safe">
             ${escapeHtml(meta || "Saved reference")}
           </p>
+          <div class="write-idea-artifact-actions">
+            <button type="button" class="write-idea-card-action" onclick="openArtifactInWriteIdea('inspo','${escapeHtml(item.id)}','use','expand')">Use in Write an Idea</button>
+            <button type="button" class="write-idea-card-action" onclick="openArtifactInWriteIdea('inspo','${escapeHtml(item.id)}','continue','rewrite')">Continue in Write an Idea</button>
+            <button type="button" class="write-idea-card-action" onclick="openArtifactInWriteIdea('inspo','${escapeHtml(item.id)}','analyze','extract_hooks')">Analyze in Write an Idea</button>
+            <button type="button" class="write-idea-card-action" onclick="openArtifactInWriteIdea('inspo','${escapeHtml(item.id)}','transform','adapt_platform')">Transform in Write an Idea</button>
+          </div>
         </div>
 
         <div class="p-5 flex-1 flex flex-col justify-between">
@@ -10138,6 +10585,12 @@ function renderNotes() {
         </div>
         <p class="text-gray-300 text-sm leading-relaxed wrap-safe mb-4">${escapeHtml(item.body || "No note body yet.")}</p>
         ${bullets.length ? `<ul class="note-bullet-list text-sm mb-4">${bullets.map(bullet => `<li class="wrap-safe">${escapeHtml(bullet)}</li>`).join("")}</ul>` : ""}
+        <div class="write-idea-artifact-actions">
+          <button type="button" class="write-idea-card-action" onclick="openArtifactInWriteIdea('note','${escapeHtml(item.noteId || item.id)}','use','turn_into_carousel')">Use in Write an Idea</button>
+          <button type="button" class="write-idea-card-action" onclick="openArtifactInWriteIdea('note','${escapeHtml(item.noteId || item.id)}','continue','expand')">Continue in Write an Idea</button>
+          <button type="button" class="write-idea-card-action" onclick="openArtifactInWriteIdea('note','${escapeHtml(item.noteId || item.id)}','analyze','extract_hooks')">Analyze in Write an Idea</button>
+          <button type="button" class="write-idea-card-action" onclick="openArtifactInWriteIdea('note','${escapeHtml(item.noteId || item.id)}','transform','turn_into_caption')">Transform in Write an Idea</button>
+        </div>
         <div class="mt-auto pt-4 border-t border-white/5 flex items-center justify-between gap-3">
           <span class="text-[10px] text-gray-500 font-medium wrap-safe">${escapeHtml(statusLine)}</span>
           <button type="button" onclick="noteToPost('${escapeHtml(item.noteId || item.id)}')" class="text-[#c77dff] text-xs font-bold hover:text-white transition-colors flex items-center gap-1.5 shrink-0">
@@ -10488,6 +10941,7 @@ function renderDiagnosticsPanel() {
   if (!target) return;
 
   const diagnostics = backendDiagnostics || {};
+  const repairPreview = diagnostics.dateRepairPreview || {};
   const socialDiagnostics = diagnostics.socialImportDiagnostics || {};
   const bridgeDensityWarning = (() => {
     const constellation = buildSemanticConstellation();
@@ -10541,6 +10995,51 @@ function renderDiagnosticsPanel() {
     { label: "Orphaned notes / inspo", severity: "warning", value: (semanticDiagnostics.orphanedRecords || []).length, detail: formatDetailedDiagnostics(semanticDiagnostics.orphanedRecords, (item) => `${item.recordType} ${item.recordId}: ${item.issue}`), guidance: "Warnings are okay, but linking or tagging them improves semantic memory." },
     { label: "Semantic drift", severity: "warning", value: (semanticDiagnostics.semanticDrift || []).length, detail: formatDetailedDiagnostics(semanticDiagnostics.semanticDrift, (item) => `${item.issue}${item.overlap != null ? ` (${item.overlap} overlapping tags)` : ""}`), guidance: "Warnings are okay if the drift is intentional; otherwise reinforce continuity with campaign framing." }
   ];
+  if (repairDateFieldsBtn) {
+    const canRepair = !!repairPreview.safeToRepair;
+    repairDateFieldsBtn.disabled = !canRepair;
+    repairDateFieldsBtn.classList.toggle("opacity-50", !canRepair);
+    repairDateFieldsBtn.classList.toggle("cursor-not-allowed", !canRepair);
+  }
+  if (repairDateFieldsStatus) {
+    repairDateFieldsStatus.textContent = repairPreview.safeToRepair
+      ? (repairPreview.message || "Repair preview verified. Derived date fields can be repaired safely.")
+      : (repairPreview.message || "Repair disabled: frontend date parser is not trusted yet.");
+  }
+  if (repairDateFieldsPreview) {
+    const previewRows = Array.isArray(repairPreview.rows) ? repairPreview.rows : [];
+    repairDateFieldsPreview.innerHTML = previewRows.length
+      ? `
+        <div class="platform-card overflow-hidden">
+          <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3">Repair Preview</div>
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-xs text-left">
+              <thead>
+                <tr class="text-gray-500 uppercase tracking-wider">
+                  <th class="py-2 pr-4">Post</th>
+                  <th class="py-2 pr-4">scheduled_at</th>
+                  <th class="py-2 pr-4">Stored date key</th>
+                  <th class="py-2 pr-4">Proposed date key</th>
+                  <th class="py-2 pr-4">Proposed queue label</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${previewRows.slice(0, 8).map((row) => `
+                  <tr class="border-t border-white/5">
+                    <td class="py-2 pr-4 text-white">${escapeHtml(row.postId || row.title || "Unknown")}</td>
+                    <td class="py-2 pr-4 text-gray-300">${escapeHtml(row.scheduledAt || "")}</td>
+                    <td class="py-2 pr-4 text-gray-300">${escapeHtml(row.currentStoredDateKey || "")}</td>
+                    <td class="py-2 pr-4 text-gray-300">${escapeHtml(row.proposedDateKey || "")}</td>
+                    <td class="py-2 pr-4 text-gray-300">${escapeHtml(row.proposedQueueDateLabel || "")}</td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `
+      : `<div class="text-xs text-gray-500">No repair preview rows were generated.</div>`;
+  }
   if (refreshBtn) {
     refreshBtn.disabled = diagnosticsRefreshing;
     refreshBtn.textContent = diagnosticsRefreshing ? "Refreshing..." : "Refresh Diagnostics";
@@ -11357,21 +11856,36 @@ function normalizeRemoteAIDraft(draft) {
   return {
     aiDraftId: String(pickRemoteValue(draft?.aiDraftId, draft?.ai_draft_id, "")).trim(),
     ideaId: String(pickRemoteValue(draft?.ideaId, draft?.idea_id, draft?.aiDraftId, draft?.ai_draft_id, "")).trim(),
+    artifactId: String(pickRemoteValue(draft?.artifactId, draft?.artifact_id, draft?.aiDraftId, draft?.ai_draft_id, "")).trim(),
+    artifactType: String(pickRemoteValue(draft?.artifactType, draft?.artifact_type, "ai_draft")).trim() || "ai_draft",
+    parentArtifactId: String(pickRemoteValue(draft?.parentArtifactId, draft?.parent_artifact_id, "")).trim(),
+    rootArtifactId: String(pickRemoteValue(draft?.rootArtifactId, draft?.root_artifact_id, "")).trim(),
     ideaPrompt: String(pickRemoteValue(draft?.ideaPrompt, draft?.idea_prompt, draft?.prompt, "")).trim(),
     title: String(pickRemoteValue(draft?.title, "")).trim(),
     platform: String(pickRemoteValue(draft?.platform, "linkedin")).trim() || "linkedin",
     postType: String(pickRemoteValue(draft?.postType, draft?.post_type, "text")).trim() || "text",
     generationMode: String(pickRemoteValue(draft?.generationMode, draft?.generation_mode, "")).trim(),
+    transformationType: String(pickRemoteValue(draft?.transformationType, draft?.transformation_type, "expand")).trim() || "expand",
+    analysisMode: String(pickRemoteValue(draft?.analysisMode, draft?.analysis_mode, "")).trim(),
     sourceType: String(pickRemoteValue(draft?.sourceType, draft?.source_type, "")).trim(),
     sourceId: String(pickRemoteValue(draft?.sourceId, draft?.source_id, "")).trim(),
     sourceIds: String(pickRemoteValue(draft?.sourceIds, draft?.source_ids, "")).trim(),
+    sourceArtifactIds: String(pickRemoteValue(draft?.sourceArtifactIds, draft?.source_artifact_ids, "")).trim(),
+    derivedFromIds: String(pickRemoteValue(draft?.derivedFromIds, draft?.derived_from_ids, "")).trim(),
     outputType: String(pickRemoteValue(draft?.outputType, draft?.output_type, "")).trim(),
+    outputArtifacts: Array.isArray(draft?.outputArtifacts)
+      ? draft.outputArtifacts
+      : String(pickRemoteValue(draft?.outputArtifacts, draft?.output_artifacts, "")).split("|").filter(Boolean).map((item, index) => ({ artifactId: `${draft?.aiDraftId || draft?.ai_draft_id || "draft"}-output-${index + 1}`, artifactType: "artifact", title: item, summary: item })),
     targetPlatforms: String(pickRemoteValue(draft?.targetPlatforms, draft?.target_platforms, "")).trim(),
     targetCampaignId: String(pickRemoteValue(draft?.targetCampaignId, draft?.target_campaign_id, "")).trim(),
     targetDate: String(pickRemoteValue(draft?.targetDate, draft?.target_date, "")).trim(),
     targetDateRange: String(pickRemoteValue(draft?.targetDateRange, draft?.target_date_range, "")).trim(),
+    generationStage: String(pickRemoteValue(draft?.generationStage, draft?.generation_stage, "")).trim(),
     generatedPostIds: String(pickRemoteValue(draft?.generatedPostIds, draft?.generated_post_ids, "")).trim(),
     generatedCampaignId: String(pickRemoteValue(draft?.generatedCampaignId, draft?.generated_campaign_id, "")).trim(),
+    generatedOutputs: Array.isArray(draft?.generatedOutputs)
+      ? draft.generatedOutputs
+      : String(pickRemoteValue(draft?.generatedOutputs, draft?.generated_outputs, "")).split("|").filter(Boolean).map((item, index) => ({ artifactId: `${draft?.aiDraftId || draft?.ai_draft_id || "draft"}-generated-${index + 1}`, artifactType: "artifact", title: item, summary: item })),
     campaignId: String(pickRemoteValue(draft?.campaignId, draft?.campaign_id, "")).trim(),
     campaignName: String(pickRemoteValue(draft?.campaignName, draft?.campaign_name, "")).trim(),
     prompt: String(pickRemoteValue(draft?.prompt, "")).trim(),
@@ -11385,6 +11899,11 @@ function normalizeRemoteAIDraft(draft) {
     alignmentScore: normalizeMetricNumber(pickRemoteValue(draft?.alignmentScore, draft?.alignment_score, 0)),
     diversityControls: String(pickRemoteValue(draft?.diversityControls, draft?.diversity_controls, "")).trim(),
     antiPatternFlags: String(pickRemoteValue(draft?.antiPatternFlags, draft?.anti_pattern_flags, "")).trim(),
+    inputArtifacts: Array.isArray(draft?.inputArtifacts)
+      ? draft.inputArtifacts
+      : String(pickRemoteValue(draft?.sourceArtifactIds, draft?.source_artifact_ids, "")).split("|").filter(Boolean).map((item) => ({ artifactId: item, artifactType: "artifact", title: item, summary: item })),
+    mediaIds: String(pickRemoteValue(draft?.mediaIds, draft?.media_ids, "")).trim(),
+    performanceContext: String(pickRemoteValue(draft?.performanceContext, draft?.performance_context, "")).trim(),
     createdPostId: String(pickRemoteValue(draft?.createdPostId, draft?.created_post_id, "")).trim(),
     ...normalizeRemoteSemanticFields(draft)
   };
@@ -11563,8 +12082,8 @@ async function apiArchiveInspo(inspoId, convertedPostId = "") {
   return apiPost("archiveInspo", { inspoId, convertedPostId });
 }
 
-async function apiRepairDateFields() {
-  const result = await apiPost("repairDateFields", {});
+async function apiRepairDateFields(payload = {}) {
+  const result = await apiPost("repairDateFields", payload);
   return result?.results || result;
 }
 
@@ -11855,6 +12374,14 @@ function toDateKey(date) {
 }
 
 function getPlanningDateKeyFromValue(value) {
+  if (!value) return "";
+  if (typeof value === "string") {
+    const text = String(value).trim();
+    if (!text) return "";
+    const datePart = text.includes("T") ? text.split("T")[0] : text.split(" ")[0];
+    const directKey = parseDisplayDateKey(datePart) || parseDisplayDateKey(text);
+    if (directKey) return directKey;
+  }
   const parsed = parsePlanningDateLocal(value);
   if (!parsed || Number.isNaN(parsed.getTime())) return "";
   return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, "0")}-${String(parsed.getDate()).padStart(2, "0")}`;
