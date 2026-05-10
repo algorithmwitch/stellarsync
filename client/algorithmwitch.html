@@ -122,6 +122,50 @@
     z-index: 12;
   }
 
+  .overview-toggle-handle {
+    position: absolute;
+    top: 50%;
+    left: -12px;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 44px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(18,12,29,0.95);
+    color: #cbd5e1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 12px 24px rgba(0,0,0,0.28);
+    transition: background 160ms ease, color 160ms ease;
+    z-index: 12;
+  }
+
+  .overview-toggle-handle:hover {
+    background: #231738;
+    color: #fff;
+  }
+
+  #signal-overview-shell {
+    position: relative;
+    flex: 0 0 auto;
+    min-width: 0;
+  }
+
+  #signal-overview-panel {
+    transition: width 180ms ease, flex-basis 180ms ease, opacity 180ms ease, padding 180ms ease, border-color 180ms ease;
+  }
+
+  #signal-overview-shell.panel-collapsed #signal-overview-panel {
+    width: 18px !important;
+    min-width: 18px !important;
+    flex-basis: 18px !important;
+    opacity: 0;
+    border-color: transparent;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
   .sidebar-toggle-handle:hover {
     background: #231738;
     color: #fff;
@@ -1592,6 +1636,10 @@
         
         <div id="shell-resize-handle" class="shell-resize-handle hidden lg:block" aria-hidden="true"></div>
         
+        <div id="signal-overview-shell">
+        <button id="signal-overview-toggle" type="button" class="overview-toggle-handle hidden lg:inline-flex" aria-label="Collapse Signals Overview">
+            <i id="signal-overview-toggle-icon" class="ph-bold ph-caret-right"></i>
+        </button>
         <aside id="signal-overview-panel" class="w-[360px] bg-[#120c1d] border border-white/5 rounded-2xl flex flex-col min-h-0 shrink-0 z-40 overflow-hidden" vid="470">
             <div class="p-6 border-b border-white/5" vid="471">
                 <h3 class="text-sm font-bold text-white tracking-widest uppercase" vid="472">Signals Overview</h3>
@@ -1697,6 +1745,7 @@
                 </div>
             </div>
         </aside>
+        </div>
 
     </div>
 
@@ -2631,7 +2680,7 @@
 </div>
 <script>
 const APP_CONFIG = {
-  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbxpD08VAqZZVScSrKemzkTvcZEudj9unrszwGuH4CqCJGfIhMGvtexrvfL0pYrBK7w6/exec",
+  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbxlbKVGKFPDRAGQzypDWpK-DQwWR_k8eZAjU-K6UFPw0SR2NVSTD15YIx5CO7bcZppl/exec",
   ENABLE_REMOTE_SYNC: true,
   STORAGE_KEY: "stellarsync_local_state_v5",
   SHELL_LAYOUT_KEY: "stellarsync_shell_layout_v2"
@@ -2639,6 +2688,7 @@ const APP_CONFIG = {
 
 const APP_FRONTEND_VERSION = "2026.05.09.10";
 const APP_SERVICE_WORKER_VERSION = "2026.05.09.10";
+const RIGHT_PANEL_COLLAPSED_KEY = "stellarsync_right_panel_collapsed_v1";
 const MAX_UPLOAD_IMAGE_BYTES = 10 * 1024 * 1024;
 const MAX_UPLOAD_VIDEO_BYTES = 50 * 1024 * 1024;
 
@@ -2766,6 +2816,7 @@ let startPanY = 0;
 let pointerStartX = 0;
 let pointerStartY = 0;
 let isResizingShell = false;
+let isSignalOverviewCollapsed = safeStorageGet(RIGHT_PANEL_COLLAPSED_KEY) === "true";
 
 let ledgerFilters = {
   pillar: "all",
@@ -2920,6 +2971,10 @@ const mobileAiNavBtn = document.getElementById("mobile-ai-nav-btn");
 const desktopSidebarNav = document.getElementById("desktop-sidebar-nav");
 const desktopSidebarToggle = document.getElementById("desktop-sidebar-toggle");
 const desktopSidebarToggleIcon = document.getElementById("desktop-sidebar-toggle-icon");
+const signalOverviewShell = document.getElementById("signal-overview-shell");
+const signalOverviewPanel = document.getElementById("signal-overview-panel");
+const signalOverviewToggle = document.getElementById("signal-overview-toggle");
+const signalOverviewToggleIcon = document.getElementById("signal-overview-toggle-icon");
 const writeIdeaPromptInput = document.getElementById("write-idea-prompt");
 const writeIdeaChipList = document.getElementById("write-idea-chip-list");
 const writeIdeaSourceSelectors = document.getElementById("write-idea-source-selectors");
@@ -4521,7 +4576,35 @@ function parsePostDate(value) {
     );
   }
 
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text) || /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(text)) {
+    const planningDate = parsePlanningDateLocal(text);
+    if (planningDate) return planningDate;
+  }
+
   const parsed = new Date(text);
+  return !Number.isNaN(parsed.getTime()) ? parsed : null;
+}
+
+function parsePlanningDateLocal(value) {
+  if (!value) return null;
+  const raw = String(value).trim();
+  if (!raw) return null;
+
+  const datePart = raw.includes("T")
+    ? raw.split("T")[0]
+    : raw.split(" ")[0];
+
+  const match = datePart.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (match) {
+    return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  }
+
+  const slash = datePart.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (slash) {
+    return new Date(Number(slash[3]), Number(slash[1]) - 1, Number(slash[2]));
+  }
+
+  const parsed = new Date(raw);
   return !Number.isNaN(parsed.getTime()) ? parsed : null;
 }
 
@@ -4543,7 +4626,7 @@ function normalizeQueueDateLabel(value) {
     const [year, month, day] = directKey.split("-");
     return `${Number(month)}/${Number(day)}/${year}`;
   }
-  const parsed = parsePostDate(value);
+  const parsed = parsePlanningDateLocal(value) || parsePostDate(value);
   if (!parsed || Number.isNaN(parsed.getTime())) return "";
   return `${parsed.getMonth() + 1}/${parsed.getDate()}/${parsed.getFullYear()}`;
 }
@@ -4652,6 +4735,7 @@ function normalizePostCalendarDateKey(post) {
     parseDisplayDateKey(post.scheduledDateKey) ||
     parseDisplayDateKey(String(post.scheduledAt || post.scheduled_at || post.date || "").slice(0, 10)) ||
     parseDisplayDateKey(String(post.createdAt || post.created_at || "").slice(0, 10)) ||
+    getPlanningDateKeyFromValue(post.scheduledAt || post.scheduled_at || post.date || post.createdAt || post.created_at) ||
     toDateKey(post.scheduledAt || post.scheduled_at || post.date || post.createdAt || post.created_at)
   );
 }
@@ -4663,7 +4747,7 @@ function getPostDateKey(postOrValue) {
   if (typeof rawValue === "string" && /^\d{4}-\d{2}-\d{2}/.test(rawValue)) {
     return rawValue.slice(0, 10);
   }
-  return toDateKey(rawValue);
+  return getPlanningDateKeyFromValue(rawValue) || toDateKey(rawValue);
 }
 
 function getRangeStart(range) {
@@ -5513,6 +5597,15 @@ function setupWorkspaceUI() {
   desktopSidebarToggle?.addEventListener("click", () => {
     shellLayout.sidebarCollapsed = !shellLayout.sidebarCollapsed;
     persistShellLayout();
+    applyShellLayout();
+    rerenderAll();
+    requestAnimationFrame(() => {
+      if (currentView === "constellation") fitConstellation();
+    });
+  });
+  signalOverviewToggle?.addEventListener("click", () => {
+    isSignalOverviewCollapsed = !isSignalOverviewCollapsed;
+    safeStorageSet(RIGHT_PANEL_COLLAPSED_KEY, String(isSignalOverviewCollapsed));
     applyShellLayout();
     rerenderAll();
     requestAnimationFrame(() => {
@@ -11036,7 +11129,7 @@ function normalizeRemotePost(post, campaigns = [], mediaItems = []) {
     aiBrandFrameworkVersion: String(pickRemoteValue(post?.aiBrandFrameworkVersion, post?.ai_brand_framework_version, "")).trim(),
     aiDraftStatus: String(pickRemoteValue(post?.aiDraftStatus, post?.ai_draft_status, "")).trim(),
     aiReviewNotes: String(pickRemoteValue(post?.aiReviewNotes, post?.ai_review_notes, "")).trim(),
-    scheduledDateKey: String(pickRemoteValue(post?.scheduledDateKey, post?.scheduled_date_key, planning.queueDateLabel ? parseDisplayDateKey(planning.queueDateLabel) : "", planning.scheduledAt ? planning.scheduledAt.slice(0, 10) : "")).trim(),
+    scheduledDateKey: String(pickRemoteValue(post?.scheduledDateKey, post?.scheduled_date_key, planning.queueDateLabel ? parseDisplayDateKey(planning.queueDateLabel) : "", getPlanningDateKeyFromValue(planning.scheduledAt) || "")).trim(),
     hasUserSelectedTime: planning.hasUserSelectedTime,
     dateDiagnostics: Array.isArray(post?.dateDiagnostics) ? post.dateDiagnostics : [],
     createdAt: String(pickRemoteValue(post?.createdAt, post?.created_at, "")).trim()
@@ -11476,22 +11569,30 @@ function persistShellLayout() {
 }
 
 function applyShellLayout() {
-  const overviewPanel = document.getElementById("signal-overview-panel");
   const resizeHandle = document.getElementById("shell-resize-handle");
-  if (!overviewPanel) return;
-
   applySidebarLayout();
+  applySignalOverviewLayout();
 
   if (window.innerWidth < 1180) {
-    overviewPanel.style.width = "";
-    overviewPanel.style.flexBasis = "";
+    if (resizeHandle) resizeHandle.classList.add("hidden");
+    return;
+  }
+
+  if (!signalOverviewPanel) {
+    if (resizeHandle) resizeHandle.classList.add("hidden");
+    return;
+  }
+
+  if (isSignalOverviewCollapsed) {
+    signalOverviewPanel.style.width = "";
+    signalOverviewPanel.style.flexBasis = "";
     if (resizeHandle) resizeHandle.classList.add("hidden");
     return;
   }
 
   const width = clamp(Number(shellLayout.overviewWidth || 360), 340, 520);
-  overviewPanel.style.width = `${width}px`;
-  overviewPanel.style.flexBasis = `${width}px`;
+  signalOverviewPanel.style.width = `${width}px`;
+  signalOverviewPanel.style.flexBasis = `${width}px`;
   if (resizeHandle) resizeHandle.classList.remove("hidden");
 }
 
@@ -11504,11 +11605,24 @@ function applySidebarLayout() {
   }
 }
 
+function applySignalOverviewLayout() {
+  if (!signalOverviewShell || !signalOverviewPanel) return;
+  const desktopMode = window.innerWidth >= 1180;
+  const collapsed = !!isSignalOverviewCollapsed && desktopMode;
+  signalOverviewShell.classList.toggle("panel-collapsed", collapsed);
+  if (!desktopMode) {
+    signalOverviewPanel.style.width = "";
+    signalOverviewPanel.style.flexBasis = "";
+  }
+  if (signalOverviewToggleIcon) {
+    signalOverviewToggleIcon.className = `ph-bold ${collapsed ? "ph-caret-left" : "ph-caret-right"}`;
+  }
+}
+
 function setupSplitPane() {
   const resizeHandle = document.getElementById("shell-resize-handle");
-  const overviewPanel = document.getElementById("signal-overview-panel");
   const shellRow = resizeHandle?.parentElement;
-  if (!resizeHandle || !overviewPanel || !shellRow) return;
+  if (!resizeHandle || !signalOverviewPanel || !shellRow) return;
 
   applyShellLayout();
 
@@ -11522,6 +11636,7 @@ function setupSplitPane() {
 
     window.addEventListener("pointermove", (event) => {
       if (!isResizingShell) return;
+      if (isSignalOverviewCollapsed) return;
       const shellRect = shellRow.getBoundingClientRect();
       const nextWidth = shellRect.right - event.clientX;
       shellLayout.overviewWidth = clamp(nextWidth, 340, 520);
@@ -11594,7 +11709,7 @@ function cleanInvalidImportantToken() {
 }
 
 function addDays(date, days) {
-  const base = parsePostDate(date) || new Date(date);
+  const base = parsePlanningDateLocal(date) || parsePostDate(date) || new Date(date);
   const next = new Date(base);
   next.setDate(next.getDate() + days);
   next.setHours(0, 0, 0, 0);
@@ -11602,7 +11717,7 @@ function addDays(date, days) {
 }
 
 function startOfWeek(date) {
-  const d = parsePostDate(date) || new Date(date);
+  const d = parsePlanningDateLocal(date) || parsePostDate(date) || new Date(date);
   const day = d.getDay();
   d.setDate(d.getDate() - day);
   d.setHours(0, 0, 0, 0);
@@ -11610,7 +11725,13 @@ function startOfWeek(date) {
 }
 
 function toDateKey(date) {
-  const parsed = parsePostDate(date) || (date instanceof Date ? new Date(date) : null);
+  const parsed = parsePlanningDateLocal(date) || parsePostDate(date) || (date instanceof Date ? new Date(date) : null);
+  if (!parsed || Number.isNaN(parsed.getTime())) return "";
+  return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, "0")}-${String(parsed.getDate()).padStart(2, "0")}`;
+}
+
+function getPlanningDateKeyFromValue(value) {
+  const parsed = parsePlanningDateLocal(value);
   if (!parsed || Number.isNaN(parsed.getTime())) return "";
   return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, "0")}-${String(parsed.getDate()).padStart(2, "0")}`;
 }
