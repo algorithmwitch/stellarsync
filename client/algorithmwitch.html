@@ -76,6 +76,95 @@
     min-width: 0;
   }
 
+  #desktop-sidebar-nav {
+    position: relative;
+    transition: width 180ms ease, flex-basis 180ms ease, padding 180ms ease;
+  }
+
+  #desktop-sidebar-nav.sidebar-collapsed {
+    width: 34px !important;
+    min-width: 34px !important;
+    flex-basis: 34px !important;
+    padding-left: 0.35rem;
+    padding-right: 0.35rem;
+  }
+
+  #desktop-sidebar-nav.sidebar-collapsed .sidebar-nav-content {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .sidebar-nav-content {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    flex: 1 1 auto;
+    transition: opacity 160ms ease;
+  }
+
+  .sidebar-toggle-handle {
+    position: absolute;
+    top: 18px;
+    right: -12px;
+    width: 24px;
+    height: 44px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(18,12,29,0.95);
+    color: #cbd5e1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 12px 24px rgba(0,0,0,0.28);
+    transition: background 160ms ease, color 160ms ease, transform 160ms ease;
+    z-index: 12;
+  }
+
+  .sidebar-toggle-handle:hover {
+    background: #231738;
+    color: #fff;
+  }
+
+  .write-idea-chip,
+  .write-idea-source-btn,
+  .write-idea-output-btn {
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(24,17,37,0.92);
+    color: #d1d5db;
+    border-radius: 999px;
+    padding: 0.7rem 1rem;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    transition: background 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
+  }
+
+  .write-idea-chip:hover,
+  .write-idea-source-btn:hover,
+  .write-idea-output-btn:hover {
+    background: rgba(45,27,78,0.95);
+    color: #fff;
+    transform: translateY(-1px);
+  }
+
+  .write-idea-chip.active,
+  .write-idea-source-btn.active,
+  .write-idea-output-btn.active {
+    background: linear-gradient(135deg, rgba(157,78,221,0.9), rgba(0,240,255,0.22));
+    border-color: rgba(199,125,255,0.55);
+    color: #fff;
+  }
+
+  .write-idea-review-card {
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(18,12,29,0.85);
+    border-radius: 1rem;
+    padding: 1rem;
+  }
+
   .pillar-shape {
     width: 10px;
     height: 10px;
@@ -406,6 +495,124 @@
             display: none;
         }
 
+        .sheet-backdrop {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(14px);
+        }
+
+        .workspace-menu {
+            position: absolute;
+            top: calc(100% + 0.75rem);
+            right: 0;
+            width: min(320px, calc(100vw - 2rem));
+            background: rgba(18, 12, 29, 0.98);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 1rem;
+            box-shadow: 0 24px 50px rgba(0,0,0,0.45);
+            padding: 0.75rem;
+            display: none;
+            z-index: 120;
+        }
+
+        .workspace-menu.active {
+            display: block;
+        }
+
+        .workspace-menu-btn {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.85rem 0.95rem;
+            border-radius: 0.9rem;
+            border: 1px solid transparent;
+            background: transparent;
+            color: #e5e7eb;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+
+        .workspace-menu-btn:hover {
+            background: #1a1128;
+            border-color: rgba(255,255,255,0.06);
+            color: white;
+        }
+
+        .settings-tab-btn.active,
+        .mobile-sheet-tab.active {
+            background: #2d1b4e;
+            color: white;
+            border-color: rgba(199,125,255,0.35);
+        }
+
+        .platform-card {
+            background: #181125;
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 1rem;
+            padding: 1rem;
+        }
+
+        .platform-meta-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.75rem;
+        }
+
+        .diagnostic-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.28rem 0.6rem;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: #0f0a18;
+            color: #cbd5e1;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .mobile-sheet {
+            position: fixed;
+            inset: 0;
+            z-index: 125;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .mobile-sheet.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .mobile-sheet-card {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #120c1d;
+            border-radius: 1.5rem 1.5rem 0 0;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-bottom: 0;
+            max-height: min(84vh, 760px);
+            min-height: 40vh;
+            transform: translateY(100%);
+            transition: transform 0.24s ease;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .mobile-sheet.active .mobile-sheet-card {
+            transform: translateY(0);
+        }
+
         #install-app-btn.hidden,
         #mobile-install-app-btn.hidden {
             display: none !important;
@@ -428,16 +635,33 @@
                 font-size: 1rem;
             }
 
+            #topbar-new-post-btn {
+                width: 2.75rem;
+                height: 2.75rem;
+                padding: 0 !important;
+                justify-content: center;
+                font-size: 0 !important;
+            }
+
+            #topbar-new-post-btn i {
+                font-size: 1rem;
+                margin: 0;
+            }
+
+            #app-header-title {
+                font-size: 1rem;
+            }
+
+            #app-header-subtitle {
+                display: block !important;
+            }
+
             header .hidden.md\\:flex {
                 display: none !important;
             }
 
             header > div:last-child {
-                gap: 0.5rem !important;
-            }
-
-            header > div:last-child > div:last-child {
-                display: none !important;
+                gap: 0.45rem !important;
             }
 
             #desktop-sidebar-nav,
@@ -528,7 +752,7 @@
 
             .mobile-bottom-nav {
                 display: grid;
-                grid-template-columns: repeat(6, minmax(0, 1fr));
+                grid-template-columns: repeat(7, minmax(0, 1fr));
                 gap: 0.25rem;
                 position: fixed;
                 left: 0.75rem;
@@ -567,6 +791,35 @@
                 background: #2d1b4e !important;
                 color: white !important;
             }
+
+            .platform-meta-grid {
+                grid-template-columns: 1fr;
+            }
+
+            #profile-menu {
+                position: fixed;
+                top: 5rem;
+                right: 0.75rem;
+                width: min(320px, calc(100vw - 1.5rem));
+            }
+
+            #workspace-hub-modal-card,
+            #connection-setup-modal-card {
+                width: 100% !important;
+                max-width: 100% !important;
+                height: calc(100vh - 1rem) !important;
+                max-height: calc(100vh - 1rem) !important;
+                border-radius: 1.25rem !important;
+            }
+
+            #workspace-hub-modal-card .lg\\:grid-cols-\\[240px_minmax\\(0\\,1fr\\)\\] {
+                grid-template-columns: 1fr !important;
+            }
+
+            #workspace-settings-sidebar {
+                border-right: 0 !important;
+                border-bottom: 1px solid rgba(255,255,255,0.05) !important;
+            }
         }
     </style>
 </head>
@@ -584,9 +837,15 @@
             <div class="w-10 h-10 rounded-xl bg-[#231738] flex items-center justify-center" vid="19">
                 <i class="ph-fill ph-planet text-[#c77dff] text-2xl" vid="20"></i>
             </div>
-            <span class="font-bold text-xl text-white tracking-wide" vid="21">StellarSync</span>
+            <div class="min-w-0">
+              <div class="flex items-center gap-3 min-w-0">
+                <span id="app-header-title" class="font-bold text-xl text-white tracking-wide truncate" vid="21">StellarSync</span>
+                <span id="app-header-subtitle" class="hidden text-[10px] uppercase tracking-[0.24em] text-gray-500 font-bold">Calendar</span>
+              </div>
+              <p id="app-header-view-detail" class="hidden md:block text-[10px] uppercase tracking-[0.22em] text-gray-500 font-bold mt-1">Content command center</p>
+            </div>
         </div>
-        <div class="flex items-center gap-6" vid="22">
+        <div class="flex items-center gap-3 relative" vid="22">
             <div id="app-status-banner" class="hidden md:flex items-center gap-2 px-4 py-2 bg-[#0a2016] border border-[#0d4029] rounded-full cursor-pointer status-banner" vid="23">
                 <div id="app-status-dot" class="w-1.5 h-1.5 rounded-full bg-[#00ffaa] shadow-[0_0_8px_#00ffaa] status-dot" vid="24"></div>
                 <span id="app-status-text" class="text-[10px] uppercase tracking-wider text-[#00ffaa] font-semibold" vid="25">Data Synced</span>
@@ -597,21 +856,52 @@
             <button id="install-app-btn" type="button" class="hidden px-4 py-2 bg-[#1a1128] hover:bg-[#231738] text-white text-[10px] uppercase tracking-wider font-bold rounded-xl transition-all items-center gap-2 border border-white/10">
                 <i class="ph-bold ph-download-simple"></i> Install App
             </button>
-            <button onclick="openModal()" class="px-6 py-2 bg-gradient-to-r from-[#9d4edd] to-[#c77dff] hover:opacity-90 text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(157,78,221,0.2)] border border-white/10" vid="26">
+            <button id="topbar-new-post-btn" onclick="openModal()" class="px-4 md:px-6 py-2 bg-gradient-to-r from-[#9d4edd] to-[#c77dff] hover:opacity-90 text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(157,78,221,0.2)] border border-white/10" vid="26">
                 <i class="ph-bold ph-plus" vid="27"></i> New Post
             </button>
-    <button id="return-to-workspace-btn" type="button" title="Return to Workspace" class="w-10 h-10 rounded-xl bg-[#1e152d] border border-white/5 flex items-center justify-center text-xs font-bold cursor-pointer text-gray-300 hover:text-white transition-colors" vid="28">
-        AW
-    </button>
-    <button id="mobile-install-app-btn" type="button" class="hidden md:hidden w-10 h-10 rounded-xl bg-[#1e152d] border border-white/5 items-center justify-center text-gray-300 hover:text-white transition-colors">
+            <button id="mobile-filter-trigger" type="button" class="w-10 h-10 rounded-xl bg-[#1e152d] border border-white/5 flex items-center justify-center text-gray-300 hover:text-white transition-colors" title="Filters">
+              <i class="ph-bold ph-funnel"></i>
+            </button>
+            <div class="relative">
+              <button id="profile-menu-trigger" type="button" title="Workspace and Settings" class="w-10 h-10 rounded-xl bg-[#1e152d] border border-white/5 flex items-center justify-center text-xs font-bold cursor-pointer text-gray-300 hover:text-white transition-colors" vid="28">
+                  AW
+              </button>
+              <div id="profile-menu" class="workspace-menu">
+                <button type="button" class="workspace-menu-btn" data-workspace-action="workspace">
+                  <span class="flex items-center gap-3"><i class="ph-bold ph-user-circle text-[#c77dff]"></i> Profile / Workspace</span>
+                  <i class="ph-bold ph-caret-right text-gray-500"></i>
+                </button>
+                <button type="button" class="workspace-menu-btn" data-workspace-action="settings">
+                  <span class="flex items-center gap-3"><i class="ph-bold ph-sliders text-[#00f0ff]"></i> Settings</span>
+                  <i class="ph-bold ph-caret-right text-gray-500"></i>
+                </button>
+                <button type="button" class="workspace-menu-btn" data-workspace-action="accounts">
+                  <span class="flex items-center gap-3"><i class="ph-bold ph-plugs-connected text-[#ffd700]"></i> Connected Accounts</span>
+                  <i class="ph-bold ph-caret-right text-gray-500"></i>
+                </button>
+                <button type="button" class="workspace-menu-btn" data-workspace-action="diagnostics">
+                  <span class="flex items-center gap-3"><i class="ph-bold ph-shield-check text-[#00ffaa]"></i> Diagnostics</span>
+                  <i class="ph-bold ph-caret-right text-gray-500"></i>
+                </button>
+                <button type="button" class="workspace-menu-btn" data-workspace-action="install">
+                  <span class="flex items-center gap-3"><i class="ph-bold ph-download-simple text-white"></i> Install App</span>
+                  <i class="ph-bold ph-caret-right text-gray-500"></i>
+                </button>
+              </div>
+            </div>
+            <button id="mobile-install-app-btn" type="button" class="hidden md:hidden w-10 h-10 rounded-xl bg-[#1e152d] border border-white/5 items-center justify-center text-gray-300 hover:text-white transition-colors">
         <i class="ph-bold ph-download-simple"></i>
-    </button>
+            </button>
         </div>
     </header>
 
     <div class="flex flex-1 min-h-0 overflow-hidden relative z-10 w-full gap-4" vid="29">
         
         <aside id="desktop-sidebar-nav" class="w-[88px] bg-[#120c1d] border border-white/5 rounded-2xl flex flex-col items-center py-6 gap-4 shrink-0 z-40" vid="30">
+            <button id="desktop-sidebar-toggle" type="button" class="sidebar-toggle-handle" aria-label="Collapse sidebar">
+                <i id="desktop-sidebar-toggle-icon" class="ph-bold ph-caret-left"></i>
+            </button>
+            <div class="sidebar-nav-content">
             <button id="nav-calendar" data-view-target="calendar" onclick="switchView('calendar')" class="w-12 h-12 rounded-xl bg-[#2d1b4e] text-white flex items-center justify-center relative group nav-btn active transition-colors" vid="31">
                 <i class="ph-fill ph-calendar-blank text-2xl" vid="32"></i>
                 <span class="absolute left-16 bg-[#181125] border border-white/5 text-white text-[10px] px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-xl" vid="33">Calendar</span>
@@ -645,10 +935,15 @@
                 <i class="ph-fill ph-note-pencil text-2xl"></i>
                 <span class="absolute left-16 bg-[#181125] border border-white/5 text-white text-[10px] px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-xl">Notes</span>
             </button>
+            <button id="nav-write-idea" data-view-target="write-idea" onclick="switchView('write-idea')" class="w-12 h-12 rounded-xl text-gray-500 hover:text-white hover:bg-[#1a1128] flex items-center justify-center relative group nav-btn transition-colors">
+                <i class="ph-fill ph-sparkle text-2xl"></i>
+                <span class="absolute left-16 bg-[#181125] border border-white/5 text-white text-[10px] px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-xl">Write an Idea</span>
+            </button>
             <div class="mt-auto" vid="47">
                 <button id="workspace-settings-btn" title="Open Brand OS" class="w-12 h-12 rounded-xl text-gray-500 hover:text-white hover:bg-[#1a1128] flex items-center justify-center transition-colors" vid="48">
                     <i class="ph-fill ph-gear text-xl" vid="49"></i>
                 </button>
+            </div>
             </div>
         </aside>
 
@@ -747,36 +1042,6 @@
       <!-- script renders campaign rows, dots, and clickable labels here -->
     </div>
 
-    <nav class="mobile-bottom-nav">
-        <button type="button" data-view-target="calendar" onclick="switchView('calendar')" class="nav-btn active">
-            <i class="ph-fill ph-calendar-blank"></i>
-            <span>Calendar</span>
-        </button>
-        <button type="button" data-view-target="constellation" onclick="switchView('constellation')" class="nav-btn">
-            <i class="ph-fill ph-planet"></i>
-            <span>Constellation</span>
-        </button>
-        <button type="button" data-view-target="ledger" onclick="switchView('ledger')" class="nav-btn">
-            <i class="ph-fill ph-table"></i>
-            <span>Ledger</span>
-        </button>
-        <button type="button" data-view-target="media" onclick="switchView('media')" class="nav-btn">
-            <i class="ph-fill ph-images"></i>
-            <span>Media</span>
-        </button>
-        <button type="button" data-view-target="inspo" onclick="switchView('inspo')" class="nav-btn">
-            <i class="ph-fill ph-lightbulb"></i>
-            <span>Inspo</span>
-        </button>
-        <button type="button" data-view-target="notes" onclick="switchView('notes')" class="nav-btn">
-            <i class="ph-fill ph-note-pencil"></i>
-            <span>Notes</span>
-        </button>
-        <button type="button" data-view-target="performance" onclick="switchView('performance')" class="nav-btn">
-            <i class="ph-fill ph-chart-line-up"></i>
-            <span>Performance</span>
-        </button>
-    </nav>
   </div>
 </section>
             
@@ -965,6 +1230,116 @@
   </div>
 
   <div id="notes-grid" class="grid grid-cols-3 gap-4 overflow-y-auto custom-scrollbar flex-1 pb-4 content-start"></div>
+</section>
+
+<section id="view-write-idea" class="view-section hidden w-full h-full p-8 min-h-0 flex-col overflow-y-auto custom-scrollbar bg-[#120c1d] border border-white/5 rounded-2xl relative overflow-hidden">
+  <div class="absolute inset-0 pointer-events-none">
+    <div class="absolute top-12 left-10 w-56 h-56 rounded-full bg-[#9d4edd]/10 blur-3xl"></div>
+    <div class="absolute right-12 top-20 w-72 h-72 rounded-full bg-[#00f0ff]/8 blur-3xl"></div>
+    <div class="absolute bottom-8 left-1/3 w-80 h-80 rounded-full bg-[#ffd700]/6 blur-3xl"></div>
+  </div>
+  <div class="relative z-10 flex flex-col gap-6 flex-1">
+    <div class="text-center max-w-3xl mx-auto pt-8">
+      <p class="text-[10px] text-gray-400 uppercase tracking-[0.35em] font-bold mb-3">AI Writing Workspace</p>
+      <h2 class="text-4xl md:text-5xl font-bold text-white tracking-tight">Write an Idea</h2>
+      <p class="text-sm text-gray-400 mt-3">Use Brand OS and semantic context to scaffold a post, a campaign, a calendar plan, a note, or an inspo draft. Live AI output is not connected yet.</p>
+    </div>
+    <div class="max-w-4xl w-full mx-auto space-y-5">
+      <div class="rounded-[28px] border border-white/10 bg-[#0f0a18]/90 shadow-2xl p-5 md:p-6">
+        <textarea id="write-idea-prompt" class="form-input min-h-[140px] md:min-h-[180px] text-base md:text-lg bg-transparent border-white/0 px-0 py-0 focus:ring-0 focus:border-white/0" placeholder="Write an idea…&#10;Turn this into a campaign…&#10;Make this a LinkedIn post…&#10;Build a week of posts from this…"></textarea>
+        <div class="flex flex-wrap gap-2 mt-4" id="write-idea-chip-list">
+          <button type="button" class="write-idea-chip" data-write-idea-chip="one-post">One post</button>
+          <button type="button" class="write-idea-chip" data-write-idea-chip="campaign">Campaign</button>
+          <button type="button" class="write-idea-chip" data-write-idea-chip="carousel">Carousel</button>
+          <button type="button" class="write-idea-chip" data-write-idea-chip="linkedin">LinkedIn</button>
+          <button type="button" class="write-idea-chip" data-write-idea-chip="instagram">Instagram</button>
+          <button type="button" class="write-idea-chip" data-write-idea-chip="notes">Notes</button>
+          <button type="button" class="write-idea-chip" data-write-idea-chip="inspo">Inspo</button>
+          <button type="button" class="write-idea-chip" data-write-idea-chip="job-board-promo">Job board promo</button>
+          <button type="button" class="write-idea-chip" data-write-idea-chip="alternate-realities">Alternate realities</button>
+          <button type="button" class="write-idea-chip" data-write-idea-chip="local-infrastructure">Local infrastructure</button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 xl:grid-cols-[1.3fr_0.7fr] gap-5">
+        <div class="space-y-5">
+          <div class="write-idea-review-card">
+            <div class="flex items-center justify-between gap-3 flex-wrap mb-4">
+              <div>
+                <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Source Context</div>
+                <div class="text-sm text-white mt-1">Choose which StellarSync sources should inform the scaffold.</div>
+              </div>
+              <button id="write-idea-refresh-context-btn" type="button" class="px-4 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white hover:bg-[#231738] transition-colors">Refresh Context</button>
+            </div>
+            <div id="write-idea-source-selectors" class="flex flex-wrap gap-2">
+              <button type="button" class="write-idea-source-btn" data-write-idea-source="notes">Use Notes</button>
+              <button type="button" class="write-idea-source-btn" data-write-idea-source="inspo">Use Inspo</button>
+              <button type="button" class="write-idea-source-btn" data-write-idea-source="media">Use Media</button>
+              <button type="button" class="write-idea-source-btn" data-write-idea-source="link">Use Link</button>
+              <button type="button" class="write-idea-source-btn" data-write-idea-source="campaign">Use Campaign</button>
+              <button type="button" class="write-idea-source-btn" data-write-idea-source="brand_os">Use Brand OS</button>
+              <button type="button" class="write-idea-source-btn" data-write-idea-source="semantic_memory">Use Semantic Memory</button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+              <input id="write-idea-target-date" type="date" class="form-input text-sm" />
+              <input id="write-idea-target-range" type="text" class="form-input text-sm" placeholder="Date range (M/D/YYYY|M/D/YYYY|...)" />
+            </div>
+          </div>
+
+          <div class="write-idea-review-card">
+            <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3">Output Targets</div>
+            <div id="write-idea-output-targets" class="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <button type="button" class="write-idea-output-btn" data-write-idea-output="create_one_post">Create one post</button>
+              <button type="button" class="write-idea-output-btn" data-write-idea-output="create_campaign">Create campaign</button>
+              <button type="button" class="write-idea-output-btn" data-write-idea-output="add_to_notes">Add to Notes</button>
+              <button type="button" class="write-idea-output-btn" data-write-idea-output="add_to_inspo">Add to Inspo</button>
+              <button type="button" class="write-idea-output-btn" data-write-idea-output="draft_carousel_outline">Draft carousel outline</button>
+              <button type="button" class="write-idea-output-btn" data-write-idea-output="draft_short_video_script">Draft short video script</button>
+              <button type="button" class="write-idea-output-btn" data-write-idea-output="populate_calendar_week">Populate calendar week</button>
+              <button type="button" class="write-idea-output-btn" data-write-idea-output="populate_campaign_queue">Populate campaign queue</button>
+            </div>
+            <div class="flex flex-wrap gap-3 mt-5">
+              <button id="write-idea-generate-btn" type="button" class="px-5 py-3 rounded-2xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs uppercase tracking-[0.2em] font-bold border border-white/10">Generate Scaffold</button>
+              <button id="write-idea-save-draft-btn" type="button" class="px-5 py-3 rounded-2xl bg-[#181125] border border-white/5 text-white text-xs uppercase tracking-[0.2em] font-bold">Save Draft</button>
+              <button id="write-idea-save-manual-btn" type="button" class="px-5 py-3 rounded-2xl bg-[#181125] border border-white/5 text-white text-xs uppercase tracking-[0.2em] font-bold">Create Manually</button>
+            </div>
+          </div>
+
+          <div class="write-idea-review-card">
+            <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
+              <div>
+                <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Review Before Save</div>
+                <div class="text-sm text-white mt-1">Approve selected drafts before anything is written into POSTS.</div>
+              </div>
+              <span id="write-idea-status-chip" class="diagnostic-chip">Scaffold only</span>
+            </div>
+            <div id="write-idea-review-summary" class="text-sm text-gray-300 wrap-safe mb-4">Idea captured state will appear here after you generate a scaffold.</div>
+            <div id="write-idea-warning-list" class="flex flex-wrap gap-2 mb-4"></div>
+            <div id="write-idea-proposed-posts" class="space-y-3"></div>
+            <div class="flex flex-wrap gap-3 mt-5">
+              <button id="write-idea-approve-btn" type="button" class="px-4 py-3 rounded-2xl bg-[#231738] border border-white/5 text-white text-xs uppercase tracking-[0.2em] font-bold">Approve Selected</button>
+              <button id="write-idea-save-drafts-btn" type="button" class="px-4 py-3 rounded-2xl bg-[#181125] border border-white/5 text-white text-xs uppercase tracking-[0.2em] font-bold">Save as Drafts</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-5">
+          <div class="write-idea-review-card">
+            <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3">Workspace Guidance</div>
+            <div id="write-idea-guidance-list" class="space-y-3"></div>
+          </div>
+          <div class="write-idea-review-card">
+            <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3">Related Campaigns</div>
+            <div id="write-idea-related-campaigns" class="space-y-3"></div>
+          </div>
+          <div class="write-idea-review-card">
+            <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3">Recent Idea Drafts</div>
+            <div id="write-idea-draft-list" class="space-y-3"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </section>
 
             
@@ -1548,8 +1923,12 @@
 
                     <div class="space-y-5" vid="561">
                         <div vid="562">
-                            <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2" vid="563">Scheduled Date &amp; Time</label>
-                            <input type="datetime-local" id="modal-date" class="form-input font-medium" value="2024-10-01T12:00" vid="564">
+                            <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2" vid="563">Planning Date</label>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              <input type="date" id="modal-date" class="form-input font-medium" vid="564">
+                              <input type="time" id="modal-time" class="form-input font-medium" placeholder="Optional time">
+                            </div>
+                            <p class="text-[10px] text-gray-500 mt-2">If no time is chosen, StellarSync stores an internal 9:15 AM scheduled timestamp while leaving the visible time blank.</p>
                         </div>
                         <div vid="565">
                             <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2" vid="566">Status</label>
@@ -2055,6 +2434,190 @@
   </div>
 </div>
 
+<nav class="mobile-bottom-nav">
+  <button type="button" data-view-target="calendar" onclick="switchView('calendar')" class="nav-btn active">
+    <i class="ph-fill ph-calendar-blank"></i>
+    <span>Calendar</span>
+  </button>
+  <button type="button" data-view-target="ledger" onclick="switchView('ledger')" class="nav-btn">
+    <i class="ph-fill ph-table"></i>
+    <span>Ledger</span>
+  </button>
+  <button type="button" data-view-target="media" onclick="switchView('media')" class="nav-btn">
+    <i class="ph-fill ph-images"></i>
+    <span>Media</span>
+  </button>
+  <button type="button" data-view-target="inspo" onclick="switchView('inspo')" class="nav-btn">
+    <i class="ph-fill ph-lightbulb"></i>
+    <span>Inspo</span>
+  </button>
+  <button type="button" data-view-target="notes" onclick="switchView('notes')" class="nav-btn">
+    <i class="ph-fill ph-note-pencil"></i>
+    <span>Notes</span>
+  </button>
+  <button type="button" id="mobile-ai-nav-btn" data-view-target="write-idea" class="nav-btn">
+    <i class="ph-fill ph-sparkle"></i>
+    <span>Write</span>
+  </button>
+  <button type="button" id="mobile-more-trigger" class="nav-btn">
+    <i class="ph-fill ph-dots-three-outline"></i>
+    <span>More</span>
+  </button>
+</nav>
+
+<div id="workspace-hub-modal" class="fixed inset-0 z-[134] sheet-backdrop opacity-0 pointer-events-none transition-opacity duration-200">
+  <div class="w-full h-full flex items-center justify-center p-4">
+    <div id="workspace-hub-modal-card" class="w-full max-w-6xl h-[88vh] bg-[#120c1d] border border-white/10 rounded-2xl shadow-2xl transform scale-95 transition-transform duration-200 overflow-hidden flex flex-col">
+      <div class="flex items-center justify-between px-6 py-5 border-b border-white/5">
+        <div>
+          <h3 class="text-white font-bold text-lg">Workspace Settings</h3>
+          <p class="text-xs text-gray-500 mt-1">Settings, connected accounts, diagnostics, and Brand OS access.</p>
+        </div>
+        <button id="close-workspace-hub-btn" type="button" class="w-10 h-10 rounded-xl bg-[#1a1128] hover:bg-[#231738] text-gray-400 hover:text-white border border-white/5 transition-colors flex items-center justify-center">
+          <i class="ph-bold ph-x"></i>
+        </button>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)] flex-1 min-h-0">
+        <aside id="workspace-settings-sidebar" class="p-5 border-r border-white/5 overflow-y-auto custom-scrollbar space-y-2">
+          <button type="button" class="settings-tab-btn w-full text-left px-4 py-3 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold uppercase tracking-wider text-white active" data-settings-tab="settings">Settings</button>
+          <button type="button" class="settings-tab-btn w-full text-left px-4 py-3 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold uppercase tracking-wider text-gray-300" data-settings-tab="accounts">Connected Accounts</button>
+          <button type="button" class="settings-tab-btn w-full text-left px-4 py-3 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold uppercase tracking-wider text-gray-300" data-settings-tab="diagnostics">Diagnostics</button>
+          <button type="button" id="workspace-open-brand-os-btn" class="w-full text-left px-4 py-3 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold uppercase tracking-wider text-gray-300">Brand OS</button>
+        </aside>
+        <div class="p-6 overflow-y-auto custom-scrollbar min-h-0">
+          <section data-settings-panel="settings" class="space-y-5">
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+              <div class="platform-card"><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Platforms</div><div id="settings-platform-summary" class="text-sm text-white wrap-safe"></div></div>
+              <div class="platform-card"><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Pillars</div><div id="settings-pillar-summary" class="text-sm text-white wrap-safe"></div></div>
+              <div class="platform-card"><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Post Types</div><div id="settings-posttype-summary" class="text-sm text-white wrap-safe"></div></div>
+              <div class="platform-card"><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Queue Limit</div><div id="settings-queue-summary" class="text-sm text-white wrap-safe"></div></div>
+            </div>
+            <div class="platform-card">
+              <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
+                <div>
+                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Connected Accounts</div>
+                  <div class="text-sm text-white mt-1">Use the same account controls from Settings or the profile menu.</div>
+                </div>
+                <button type="button" id="settings-open-accounts-btn" class="px-4 py-2 rounded-xl bg-[#231738] border border-white/5 text-xs font-bold text-white hover:bg-[#2d1b4e] transition-colors">Open Connected Accounts</button>
+              </div>
+              <div id="settings-connected-accounts-inline" class="space-y-3"></div>
+            </div>
+            <div class="platform-card">
+              <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
+                <div>
+                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Planning Behavior</div>
+                  <div class="text-sm text-gray-300 mt-1">Internal scheduling uses a local-safe planning date, with 9:15 AM as the default internal time when no time is chosen.</div>
+                </div>
+                <span class="diagnostic-chip"><i class="ph-bold ph-clock"></i> Internal Scheduling</span>
+              </div>
+              <div class="text-xs text-gray-400 wrap-safe">Planned in StellarSync. Live platform posting is not connected yet.</div>
+            </div>
+          </section>
+          <section data-settings-panel="accounts" class="hidden space-y-4"></section>
+          <section data-settings-panel="diagnostics" class="hidden space-y-4">
+            <div class="flex items-center gap-2 flex-wrap">
+              <button id="workspace-refresh-diagnostics-btn" type="button" class="px-4 py-2 rounded-xl bg-[#1a1128] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Refresh Diagnostics</button>
+              <button id="repair-date-fields-btn" type="button" class="px-4 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Repair Date Fields</button>
+              <button id="workspace-open-accounts-from-diagnostics-btn" type="button" class="px-4 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Connected Accounts</button>
+            </div>
+            <div id="workspace-diagnostics-panel" class="space-y-4"></div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="connection-setup-modal" class="fixed inset-0 z-[135] sheet-backdrop opacity-0 pointer-events-none transition-opacity duration-200">
+  <div class="w-full h-full flex items-center justify-center p-4">
+    <div id="connection-setup-modal-card" class="w-full max-w-2xl bg-[#120c1d] border border-white/10 rounded-2xl shadow-2xl transform scale-95 transition-transform duration-200 overflow-hidden">
+      <div class="flex items-center justify-between px-6 py-5 border-b border-white/5">
+        <div>
+          <h3 id="connection-setup-title" class="text-white font-bold text-lg">Connection Setup</h3>
+          <p id="connection-setup-subtitle" class="text-xs text-gray-500 mt-1">OAuth scaffolding requirements for this platform.</p>
+        </div>
+        <button id="close-connection-setup-btn" type="button" class="w-10 h-10 rounded-xl bg-[#1a1128] hover:bg-[#231738] text-gray-400 hover:text-white border border-white/5 transition-colors flex items-center justify-center">
+          <i class="ph-bold ph-x"></i>
+        </button>
+      </div>
+      <div class="p-6 space-y-5">
+        <div class="platform-card">
+          <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Required Setup</div>
+          <div id="connection-setup-checklist" class="space-y-2 text-sm text-gray-300"></div>
+        </div>
+        <div class="platform-card">
+          <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Scopes / Permissions</div>
+          <div id="connection-setup-scopes" class="flex flex-wrap gap-2"></div>
+        </div>
+        <div class="platform-card">
+          <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">App Review Notes</div>
+          <div id="connection-setup-notes" class="text-sm text-gray-300 wrap-safe"></div>
+        </div>
+        <div class="text-xs text-yellow-200 border border-yellow-500/15 bg-yellow-500/10 rounded-xl px-3 py-3">
+          Do not enter client secrets or tokens here. Secrets must stay in Apps Script `PropertiesService` or another secure backend store.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="mobile-more-sheet" class="mobile-sheet">
+  <div class="absolute inset-0 sheet-backdrop"></div>
+  <div class="mobile-sheet-card">
+    <div class="px-5 py-4 border-b border-white/5">
+      <div class="w-12 h-1 rounded-full bg-white/10 mx-auto mb-4"></div>
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <h3 class="text-white font-bold">More</h3>
+          <p class="text-xs text-gray-500 mt-1">Reach every secondary view and utility on mobile.</p>
+        </div>
+        <button id="close-mobile-more-btn" type="button" class="w-10 h-10 rounded-xl bg-[#1a1128] border border-white/5 text-gray-300 hover:text-white flex items-center justify-center"><i class="ph-bold ph-x"></i></button>
+      </div>
+    </div>
+    <div id="mobile-more-list" class="p-5 grid grid-cols-2 gap-3 overflow-y-auto custom-scrollbar"></div>
+  </div>
+</div>
+
+<div id="mobile-filter-sheet" class="mobile-sheet">
+  <div class="absolute inset-0 sheet-backdrop"></div>
+  <div class="mobile-sheet-card">
+    <div class="px-5 py-4 border-b border-white/5">
+      <div class="w-12 h-1 rounded-full bg-white/10 mx-auto mb-4"></div>
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <h3 class="text-white font-bold">Filters</h3>
+          <p id="mobile-filter-subtitle" class="text-xs text-gray-500 mt-1">Active view filters.</p>
+        </div>
+        <button id="close-mobile-filter-btn" type="button" class="w-10 h-10 rounded-xl bg-[#1a1128] border border-white/5 text-gray-300 hover:text-white flex items-center justify-center"><i class="ph-bold ph-x"></i></button>
+      </div>
+    </div>
+    <div id="mobile-filter-content" class="p-5 overflow-y-auto custom-scrollbar"></div>
+  </div>
+</div>
+
+<div id="mobile-utility-sheet" class="mobile-sheet">
+  <div class="absolute inset-0 sheet-backdrop"></div>
+  <div class="mobile-sheet-card">
+    <div class="px-5 py-4 border-b border-white/5">
+      <div class="w-12 h-1 rounded-full bg-white/10 mx-auto mb-4"></div>
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <h3 class="text-white font-bold">Workspace Panels</h3>
+          <p class="text-xs text-gray-500 mt-1">Context, Brand OS guidance, semantic memory, and diagnostics.</p>
+        </div>
+        <button id="close-mobile-utility-btn" type="button" class="w-10 h-10 rounded-xl bg-[#1a1128] border border-white/5 text-gray-300 hover:text-white flex items-center justify-center"><i class="ph-bold ph-x"></i></button>
+      </div>
+      <div class="grid grid-cols-4 gap-2 mt-4">
+        <button type="button" class="mobile-sheet-tab px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white active" data-mobile-panel-tab="context">Context</button>
+        <button type="button" class="mobile-sheet-tab px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300" data-mobile-panel-tab="brand">Brand</button>
+        <button type="button" class="mobile-sheet-tab px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300" data-mobile-panel-tab="semantic">Semantic</button>
+        <button type="button" class="mobile-sheet-tab px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300" data-mobile-panel-tab="diagnostics">Diagnostics</button>
+      </div>
+    </div>
+    <div id="mobile-utility-content" class="p-5 overflow-y-auto custom-scrollbar"></div>
+  </div>
+</div>
+
 <div id="ai-toast" class="fixed bottom-8 right-8 z-[110] opacity-0 pointer-events-none transition-opacity duration-300">
   <div class="bg-[#181125] px-5 py-4 rounded-xl border border-white/5 shadow-2xl flex items-center gap-4">
     <div class="w-10 h-10 rounded-full bg-[#2d1b4e] flex items-center justify-center text-[#c77dff]">
@@ -2071,11 +2634,11 @@ const APP_CONFIG = {
   APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbxlbKVGKFPDRAGQzypDWpK-DQwWR_k8eZAjU-K6UFPw0SR2NVSTD15YIx5CO7bcZppl/exec",
   ENABLE_REMOTE_SYNC: true,
   STORAGE_KEY: "stellarsync_local_state_v5",
-  SHELL_LAYOUT_KEY: "stellarsync_shell_layout_v1"
+  SHELL_LAYOUT_KEY: "stellarsync_shell_layout_v2"
 };
 
-const APP_FRONTEND_VERSION = "2026.05.09.8";
-const APP_SERVICE_WORKER_VERSION = "2026.05.09.8";
+const APP_FRONTEND_VERSION = "2026.05.09.10";
+const APP_SERVICE_WORKER_VERSION = "2026.05.09.10";
 const MAX_UPLOAD_IMAGE_BYTES = 10 * 1024 * 1024;
 const MAX_UPLOAD_VIDEO_BYTES = 50 * 1024 * 1024;
 
@@ -2169,6 +2732,16 @@ let socialImportCapabilities = null;
 let connectedAccounts = [];
 let semanticBridgeDensity = safeStorageGet("stellarsync_bridge_density") || "low";
 let currentSocialImportResult = null;
+let currentWorkspaceSettingsTab = "settings";
+let currentMobileUtilityTab = "context";
+let currentWriteIdeaDraftId = "";
+let writeIdeaLastScaffold = null;
+let mobileFilterState = {
+  calendar: { platform: "all", status: "all", query: "" },
+  inspo: { type: "all", query: "" },
+  notes: { platform: "all", pillar: "all", query: "" }
+};
+let activeConnectionSetupPlatform = "";
 let installContext = {
   isIos: /iphone|ipad|ipod/i.test(navigator.userAgent || ""),
   isStandalone: false
@@ -2218,6 +2791,16 @@ let performanceFilters = {
   range: "30"
 };
 
+let writeIdeaState = {
+  prompt: "",
+  outputType: "create_one_post",
+  sourceTypes: ["brand_os", "semantic_memory"],
+  targetPlatforms: ["linkedin"],
+  targetDate: normalizeQueueDateLabel(new Date()),
+  targetDateRange: "",
+  selectedDraftIndexes: [0]
+};
+
 const modal = document.getElementById("scheduling-modal");
 const titleInput = document.getElementById("modal-title");
 const campaignSelect = document.getElementById("modal-campaign");
@@ -2225,6 +2808,7 @@ const addCampaignBtnModal = document.getElementById("modal-add-campaign-btn");
 const platSelect = document.getElementById("modal-platform");
 const postTypeSelect = document.getElementById("modal-post-type");
 const dateInput = document.getElementById("modal-date");
+const timeInput = document.getElementById("modal-time");
 const statusSelect = document.getElementById("modal-status");
 const descInput = document.getElementById("modal-description");
 const pillarBtns = Array.from(document.querySelectorAll(".pillar-btn"));
@@ -2298,6 +2882,63 @@ const appStatusBanner = document.getElementById("app-status-banner");
 const appStatusDot = document.getElementById("app-status-dot");
 const appStatusText = document.getElementById("app-status-text");
 const appUpdateBtn = document.getElementById("app-update-btn");
+const appHeaderSubtitle = document.getElementById("app-header-subtitle");
+const appHeaderViewDetail = document.getElementById("app-header-view-detail");
+const mobileFilterTrigger = document.getElementById("mobile-filter-trigger");
+const profileMenuTrigger = document.getElementById("profile-menu-trigger");
+const profileMenu = document.getElementById("profile-menu");
+const workspaceHubModal = document.getElementById("workspace-hub-modal");
+const workspaceHubModalCard = document.getElementById("workspace-hub-modal-card");
+const closeWorkspaceHubBtn = document.getElementById("close-workspace-hub-btn");
+const workspaceSettingsSidebar = document.getElementById("workspace-settings-sidebar");
+const workspaceOpenBrandOsBtn = document.getElementById("workspace-open-brand-os-btn");
+const settingsOpenAccountsBtn = document.getElementById("settings-open-accounts-btn");
+const workspaceRefreshDiagnosticsBtn = document.getElementById("workspace-refresh-diagnostics-btn");
+const workspaceOpenAccountsFromDiagnosticsBtn = document.getElementById("workspace-open-accounts-from-diagnostics-btn");
+const repairDateFieldsBtn = document.getElementById("repair-date-fields-btn");
+const workspaceDiagnosticsPanel = document.getElementById("workspace-diagnostics-panel");
+const connectionSetupModal = document.getElementById("connection-setup-modal");
+const connectionSetupModalCard = document.getElementById("connection-setup-modal-card");
+const closeConnectionSetupBtn = document.getElementById("close-connection-setup-btn");
+const connectionSetupTitle = document.getElementById("connection-setup-title");
+const connectionSetupSubtitle = document.getElementById("connection-setup-subtitle");
+const connectionSetupChecklist = document.getElementById("connection-setup-checklist");
+const connectionSetupScopes = document.getElementById("connection-setup-scopes");
+const connectionSetupNotes = document.getElementById("connection-setup-notes");
+const mobileMoreSheet = document.getElementById("mobile-more-sheet");
+const mobileMoreTrigger = document.getElementById("mobile-more-trigger");
+const closeMobileMoreBtn = document.getElementById("close-mobile-more-btn");
+const mobileMoreList = document.getElementById("mobile-more-list");
+const mobileFilterSheet = document.getElementById("mobile-filter-sheet");
+const closeMobileFilterBtn = document.getElementById("close-mobile-filter-btn");
+const mobileFilterSubtitle = document.getElementById("mobile-filter-subtitle");
+const mobileFilterContent = document.getElementById("mobile-filter-content");
+const mobileUtilitySheet = document.getElementById("mobile-utility-sheet");
+const closeMobileUtilityBtn = document.getElementById("close-mobile-utility-btn");
+const mobileUtilityContent = document.getElementById("mobile-utility-content");
+const mobileAiNavBtn = document.getElementById("mobile-ai-nav-btn");
+const desktopSidebarNav = document.getElementById("desktop-sidebar-nav");
+const desktopSidebarToggle = document.getElementById("desktop-sidebar-toggle");
+const desktopSidebarToggleIcon = document.getElementById("desktop-sidebar-toggle-icon");
+const writeIdeaPromptInput = document.getElementById("write-idea-prompt");
+const writeIdeaChipList = document.getElementById("write-idea-chip-list");
+const writeIdeaSourceSelectors = document.getElementById("write-idea-source-selectors");
+const writeIdeaOutputTargets = document.getElementById("write-idea-output-targets");
+const writeIdeaTargetDateInput = document.getElementById("write-idea-target-date");
+const writeIdeaTargetRangeInput = document.getElementById("write-idea-target-range");
+const writeIdeaRefreshContextBtn = document.getElementById("write-idea-refresh-context-btn");
+const writeIdeaGenerateBtn = document.getElementById("write-idea-generate-btn");
+const writeIdeaSaveDraftBtn = document.getElementById("write-idea-save-draft-btn");
+const writeIdeaSaveManualBtn = document.getElementById("write-idea-save-manual-btn");
+const writeIdeaApproveBtn = document.getElementById("write-idea-approve-btn");
+const writeIdeaSaveDraftsBtn = document.getElementById("write-idea-save-drafts-btn");
+const writeIdeaStatusChip = document.getElementById("write-idea-status-chip");
+const writeIdeaReviewSummary = document.getElementById("write-idea-review-summary");
+const writeIdeaWarningList = document.getElementById("write-idea-warning-list");
+const writeIdeaProposedPosts = document.getElementById("write-idea-proposed-posts");
+const writeIdeaGuidanceList = document.getElementById("write-idea-guidance-list");
+const writeIdeaRelatedCampaigns = document.getElementById("write-idea-related-campaigns");
+const writeIdeaDraftList = document.getElementById("write-idea-draft-list");
 
 const viewport = document.getElementById("starmap-viewport");
 const canvas = document.getElementById("starmap-canvas");
@@ -3896,11 +4537,118 @@ function parseDisplayDateKey(value) {
   return "";
 }
 
-function normalizePostCalendarDateKey(post) {
-  if (!post || typeof post !== "object") return getPostDateKey(post);
+function normalizeQueueDateLabel(value) {
+  const directKey = parseDisplayDateKey(value);
+  if (directKey) {
+    const [year, month, day] = directKey.split("-");
+    return `${Number(month)}/${Number(day)}/${year}`;
+  }
+  const parsed = parsePostDate(value);
+  if (!parsed || Number.isNaN(parsed.getTime())) return "";
+  return `${parsed.getMonth() + 1}/${parsed.getDate()}/${parsed.getFullYear()}`;
+}
+
+function formatQueueDateLabel(dateOrValue) {
+  return normalizeQueueDateLabel(dateOrValue);
+}
+
+function normalizeQueueTimeLabel(value) {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  const match = text.match(/^(\d{1,2}):(\d{2})(?:\s*([AP]M))?$/i);
+  if (match) {
+    let hours = Number(match[1]);
+    const minutes = String(match[2]).padStart(2, "0");
+    let meridiem = String(match[3] || "").toUpperCase();
+    if (!meridiem) {
+      meridiem = hours >= 12 ? "PM" : "AM";
+      hours = hours % 24;
+      hours = hours === 0 ? 12 : (hours > 12 ? hours - 12 : hours);
+    }
+    return `${hours}:${minutes} ${meridiem}`;
+  }
+  const parsed = parsePostDate(value);
+  if (!parsed || Number.isNaN(parsed.getTime())) return "";
+  return parsed.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+}
+
+function hasUserSelectedTime(post = {}) {
+  if (typeof post.hasUserSelectedTime === "boolean") return post.hasUserSelectedTime;
+  if (typeof post.has_user_selected_time === "boolean") return post.has_user_selected_time;
+  return !!String(post.queueTimeLabel || post.queue_time_label || "").trim();
+}
+
+function buildScheduledAtFromPlanningFields(queueDateLabel, queueTimeLabel) {
+  const normalizedDate = normalizeQueueDateLabel(queueDateLabel);
+  const dateKey = parseDisplayDateKey(normalizedDate);
+  if (!dateKey) return "";
+  const timeLabel = normalizeQueueTimeLabel(queueTimeLabel) || "9:15 AM";
+  const match = timeLabel.match(/^(\d{1,2}):(\d{2})\s*([AP]M)$/i);
+  if (!match) return `${dateKey}T09:15`;
+  let hours = Number(match[1]) % 12;
+  if (String(match[3]).toUpperCase() === "PM") hours += 12;
+  return `${dateKey}T${String(hours).padStart(2, "0")}:${String(Number(match[2])).padStart(2, "0")}`;
+}
+
+function normalizeScheduledAt(value, queueDateLabel, queueTimeLabel) {
+  const normalizedDate = normalizeQueueDateLabel(queueDateLabel);
+  const normalizedTime = normalizeQueueTimeLabel(queueTimeLabel);
+  const fallback = buildScheduledAtFromPlanningFields(normalizedDate, normalizedTime);
+  const parsed = parsePostDate(value);
+  if (!parsed || Number.isNaN(parsed.getTime())) return fallback;
+  const dateKey = parseDisplayDateKey(normalizedDate) || toDateKey(parsed);
+  return buildScheduledAtFromPlanningFields(dateKey, normalizedTime || parsed.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }));
+}
+
+function getPostPlanningDateKey(post = {}) {
   return (
     parseDisplayDateKey(post.queueDateLabel) ||
     parseDisplayDateKey(post.queue_date_label) ||
+    parseDisplayDateKey(post.scheduledDateKey) ||
+    parseDisplayDateKey(formatQueueDateLabel(post.scheduledAt || post.scheduled_at || post.date || "")) ||
+    toDateKey(post.scheduledAt || post.scheduled_at || post.date || post.createdAt || post.created_at)
+  );
+}
+
+function getPlanningCalendarParts(post = {}) {
+  const dateKey = getPostPlanningDateKey(post);
+  if (!dateKey) return { calendarMonth: "", calendarYear: "", calendarDay: "" };
+  const [year, month, day] = dateKey.split("-");
+  return {
+    calendarMonth: String(Number(month)),
+    calendarYear: year,
+    calendarDay: String(Number(day))
+  };
+}
+
+function normalizePostPlanningFields(post = {}, existing = {}) {
+  const queueDateLabel = normalizeQueueDateLabel(post.queueDateLabel || post.queue_date_label || existing.queueDateLabel || existing.queue_date_label || post.scheduledAt || post.scheduled_at || post.date || existing.scheduledAt || existing.scheduled_at || existing.date || "");
+  const sourceHasExplicitTimeSelection = Object.prototype.hasOwnProperty.call(post, "hasUserSelectedTime")
+    || Object.prototype.hasOwnProperty.call(post, "has_user_selected_time")
+    || Object.prototype.hasOwnProperty.call(post, "queueTimeLabel")
+    || Object.prototype.hasOwnProperty.call(post, "queue_time_label");
+  const selectedTime = sourceHasExplicitTimeSelection ? hasUserSelectedTime(post) : (hasUserSelectedTime(post) || hasUserSelectedTime(existing));
+  const queueTimeLabel = selectedTime
+    ? normalizeQueueTimeLabel(post.queueTimeLabel || post.queue_time_label || existing.queueTimeLabel || existing.queue_time_label || "")
+    : "";
+  const scheduledAt = normalizeScheduledAt(post.scheduledAt || post.scheduled_at || post.date || existing.scheduledAt || existing.scheduled_at || existing.date || "", queueDateLabel, queueTimeLabel);
+  const planningShape = { queueDateLabel, scheduledAt };
+  const parts = getPlanningCalendarParts(planningShape);
+  return {
+    queueDateLabel,
+    queueTimeLabel,
+    scheduledAt,
+    calendarMonth: String(post.calendarMonth || post.calendar_month || existing.calendarMonth || existing.calendar_month || parts.calendarMonth || "").trim(),
+    calendarYear: String(post.calendarYear || post.calendar_year || existing.calendarYear || existing.calendar_year || parts.calendarYear || "").trim(),
+    calendarDay: String(post.calendarDay || post.calendar_day || existing.calendarDay || existing.calendar_day || parts.calendarDay || "").trim(),
+    hasUserSelectedTime: !!selectedTime
+  };
+}
+
+function normalizePostCalendarDateKey(post) {
+  if (!post || typeof post !== "object") return getPostDateKey(post);
+  return (
+    getPostPlanningDateKey(post) ||
     parseDisplayDateKey(post.scheduledDateKey) ||
     parseDisplayDateKey(String(post.scheduledAt || post.scheduled_at || post.date || "").slice(0, 10)) ||
     parseDisplayDateKey(String(post.createdAt || post.created_at || "").slice(0, 10)) ||
@@ -4268,7 +5016,9 @@ function initApp() {
   setupNoteModal();
   setupCampaignControls();
   setupWorkspaceReturnButtons();
+  setupWorkspaceUI();
   setupAIAndBrandWorkspaces();
+  setupWriteIdeaWorkspace();
   setupConstellationInteractions();
   setupLedgerControls();
   setupMediaAdvancedFilters();
@@ -4316,6 +5066,7 @@ function initApp() {
 function rerenderAll() {
   const bridgeControl = document.getElementById("semantic-bridge-density");
   if (bridgeControl) bridgeControl.value = semanticBridgeDensity;
+  updateHeaderForView(currentView);
   populateCampaignDropdown();
   setBackendActionAvailability();
   updateAppStatusBanner();
@@ -4331,10 +5082,12 @@ function rerenderAll() {
   renderMedia();
   renderInspo();
   renderNotes();
+  renderWriteIdeaScaffold();
   renderConstellation();
   renderPerformanceView();
   renderAuditView();
   renderAISemanticMemoryCards();
+  if (!workspaceHubModal?.classList.contains("opacity-0")) renderWorkspaceHub();
 }
 
 function inspoTypeLabel(type) {
@@ -4593,10 +5346,10 @@ function getScheduledQueue() {
       displayTitle: getDisplayTitle(post.title),
       platform: post.platform,
       pillar: getPostContentPillar(post),
-      scheduledAt: post.date,
+      scheduledAt: normalizeScheduledAt(post.date, post.queueDateLabel, post.queueTimeLabel),
       status: post.status,
-      queueDateLabel: post.queueDateLabel || formatLocalQueueDate(post.date),
-      queueTimeLabel: post.queueTimeLabel || formatLocalQueueTime(post.date)
+      queueDateLabel: post.queueDateLabel || formatQueueDateLabel(post.date),
+      queueTimeLabel: post.queueTimeLabel || ""
     }));
 }
 
@@ -4650,6 +5403,121 @@ function setupWorkspaceReturnButtons() {
 
   document.getElementById("workspace-settings-btn")?.addEventListener("click", () => {
     openBrandFrameworkModal();
+  });
+}
+
+function setupWorkspaceUI() {
+  profileMenuTrigger?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    toggleProfileMenu();
+  });
+  profileMenu?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-workspace-action]");
+    if (!button) return;
+    const action = button.dataset.workspaceAction;
+    if (action === "workspace") {
+      toggleProfileMenu(false);
+      switchView("calendar");
+      return;
+    }
+    if (action === "settings") return openWorkspaceHub("settings");
+    if (action === "accounts") return openWorkspaceHub("accounts");
+    if (action === "diagnostics") return openWorkspaceHub("diagnostics");
+    if (action === "install") {
+      toggleProfileMenu(false);
+      openInstallHelperModal();
+    }
+  });
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest("#profile-menu") && !event.target.closest("#profile-menu-trigger")) toggleProfileMenu(false);
+  });
+  closeWorkspaceHubBtn?.addEventListener("click", closeWorkspaceHub);
+  workspaceHubModal?.addEventListener("click", (event) => {
+    if (event.target === workspaceHubModal) closeWorkspaceHub();
+  });
+  document.querySelectorAll(".settings-tab-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      currentWorkspaceSettingsTab = btn.dataset.settingsTab || "settings";
+      renderWorkspaceHub();
+    });
+  });
+  workspaceOpenBrandOsBtn?.addEventListener("click", () => {
+    closeWorkspaceHub();
+    openBrandFrameworkModal();
+  });
+  settingsOpenAccountsBtn?.addEventListener("click", () => {
+    currentWorkspaceSettingsTab = "accounts";
+    renderWorkspaceHub();
+  });
+  workspaceOpenAccountsFromDiagnosticsBtn?.addEventListener("click", () => {
+    currentWorkspaceSettingsTab = "accounts";
+    renderWorkspaceHub();
+  });
+  workspaceRefreshDiagnosticsBtn?.addEventListener("click", () => {
+    refreshBackendDiagnostics().then(() => renderWorkspaceHub()).catch(() => undefined);
+  });
+  repairDateFieldsBtn?.addEventListener("click", async () => {
+    if (!window.confirm("Repair date fields across POSTS using the backend normalizer?")) return;
+    try {
+      const result = await apiRepairDateFields();
+      await syncRemoteIfConfigured();
+      await refreshBackendDiagnostics({ silent: true });
+      renderWorkspaceHub();
+      showToast("Date fields repaired", `${result?.repairedCount || result?.results?.repairedCount || 0} rows normalized.`, "ph-check", "text-[#00ffaa]");
+    } catch (err) {
+      console.error(err);
+      showToast("Repair failed", err.message || "Could not repair date fields.", "ph-warning", "text-yellow-400");
+    }
+  });
+  closeConnectionSetupBtn?.addEventListener("click", closeConnectionSetupModal);
+  connectionSetupModal?.addEventListener("click", (event) => {
+    if (event.target === connectionSetupModal) closeConnectionSetupModal();
+  });
+  mobileMoreTrigger?.addEventListener("click", openMobileMoreSheet);
+  closeMobileMoreBtn?.addEventListener("click", () => closeMobileSheet(mobileMoreSheet));
+  mobileMoreSheet?.addEventListener("click", (event) => {
+    if (event.target === mobileMoreSheet || event.target === mobileMoreSheet.querySelector(".sheet-backdrop")) closeMobileSheet(mobileMoreSheet);
+  });
+  mobileMoreList?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-mobile-more-action]");
+    if (!button) return;
+    const action = button.dataset.mobileMoreAction;
+    const value = button.dataset.mobileMoreValue;
+    closeMobileSheet(mobileMoreSheet);
+    if (action === "view" && value) return switchView(value);
+    if (action === "brand") return openBrandFrameworkModal();
+    if (action === "settings") return openWorkspaceHub("settings");
+    if (action === "accounts") return openWorkspaceHub("accounts");
+    if (action === "diagnostics") return openWorkspaceHub("diagnostics");
+    if (action === "utility") {
+      renderMobileUtilitySheet();
+      openMobileSheet(mobileUtilitySheet);
+    }
+  });
+  mobileFilterTrigger?.addEventListener("click", openMobileFilterSheet);
+  closeMobileFilterBtn?.addEventListener("click", () => closeMobileSheet(mobileFilterSheet));
+  mobileFilterSheet?.addEventListener("click", (event) => {
+    if (event.target === mobileFilterSheet || event.target === mobileFilterSheet.querySelector(".sheet-backdrop")) closeMobileSheet(mobileFilterSheet);
+  });
+  closeMobileUtilityBtn?.addEventListener("click", () => closeMobileSheet(mobileUtilitySheet));
+  mobileUtilitySheet?.addEventListener("click", (event) => {
+    if (event.target === mobileUtilitySheet || event.target === mobileUtilitySheet.querySelector(".sheet-backdrop")) closeMobileSheet(mobileUtilitySheet);
+  });
+  document.querySelectorAll(".mobile-sheet-tab").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      currentMobileUtilityTab = btn.dataset.mobilePanelTab || "context";
+      renderMobileUtilitySheet();
+    });
+  });
+  mobileAiNavBtn?.addEventListener("click", () => switchView("write-idea"));
+  desktopSidebarToggle?.addEventListener("click", () => {
+    shellLayout.sidebarCollapsed = !shellLayout.sidebarCollapsed;
+    persistShellLayout();
+    applyShellLayout();
+    rerenderAll();
+    requestAnimationFrame(() => {
+      if (currentView === "constellation") fitConstellation();
+    });
   });
 }
 
@@ -4739,6 +5607,90 @@ function setupAIAndBrandWorkspaces() {
     }
     showToast("Framework saved", "Brand OS updates were saved.", "ph-check", "text-[#00ffaa]");
   });
+}
+
+function setupWriteIdeaWorkspace() {
+  writeIdeaPromptInput?.addEventListener("input", () => {
+    writeIdeaState.prompt = String(writeIdeaPromptInput.value || "").trim();
+  });
+  writeIdeaTargetDateInput?.addEventListener("change", () => {
+    writeIdeaState.targetDate = normalizeQueueDateLabel(writeIdeaTargetDateInput.value || "") || writeIdeaState.targetDate;
+  });
+  writeIdeaTargetRangeInput?.addEventListener("input", () => {
+    writeIdeaState.targetDateRange = String(writeIdeaTargetRangeInput.value || "").trim();
+  });
+  writeIdeaSourceSelectors?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-write-idea-source]");
+    if (!button) return;
+    const source = button.dataset.writeIdeaSource;
+    const index = writeIdeaState.sourceTypes.indexOf(source);
+    if (index >= 0) writeIdeaState.sourceTypes.splice(index, 1);
+    else writeIdeaState.sourceTypes.push(source);
+    renderWriteIdeaScaffold();
+  });
+  writeIdeaOutputTargets?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-write-idea-output]");
+    if (!button) return;
+    writeIdeaState.outputType = button.dataset.writeIdeaOutput || "create_one_post";
+    renderWriteIdeaScaffold();
+  });
+  writeIdeaChipList?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-write-idea-chip]");
+    if (!button) return;
+    const token = button.dataset.writeIdeaChip;
+    if (token === "linkedin" || token === "instagram") {
+      const list = new Set(getWriteIdeaTargetPlatforms());
+      if (list.has(token)) list.delete(token);
+      else list.add(token);
+      writeIdeaState.targetPlatforms = Array.from(list).filter(Boolean);
+      if (!writeIdeaState.targetPlatforms.length) writeIdeaState.targetPlatforms = ["linkedin"];
+    } else if (token === "campaign") {
+      writeIdeaState.outputType = "create_campaign";
+    } else if (token === "one-post") {
+      writeIdeaState.outputType = "create_one_post";
+    } else if (token === "carousel") {
+      writeIdeaState.outputType = "draft_carousel_outline";
+    } else {
+      const current = String(writeIdeaPromptInput?.value || writeIdeaState.prompt || "").trim();
+      const next = current ? `${current}\n${token.replace(/-/g, " ")}` : token.replace(/-/g, " ");
+      if (writeIdeaPromptInput) writeIdeaPromptInput.value = next;
+      writeIdeaState.prompt = next;
+    }
+    renderWriteIdeaScaffold();
+  });
+  writeIdeaRefreshContextBtn?.addEventListener("click", async () => {
+    if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
+      try {
+        await apiPrepareIdeaGenerationContext(getWriteIdeaPayload());
+        showToast("Context refreshed", "Brand OS and semantic context refreshed for this idea.", "ph-check", "text-[#00ffaa]");
+      } catch (err) {
+        console.error(err);
+        showToast("Context warning", err.message || "Could not refresh context.", "ph-warning", "text-yellow-400");
+      }
+    } else {
+      showToast("Local context", "Remote context is unavailable, so only local workspace context is shown.", "ph-warning", "text-yellow-400");
+    }
+  });
+  writeIdeaGenerateBtn?.addEventListener("click", () => generateWriteIdeaScaffold().catch((err) => {
+    console.error(err);
+    showToast("Scaffold failed", err.message || "Could not generate the idea scaffold.", "ph-warning", "text-yellow-400");
+  }));
+  writeIdeaSaveDraftBtn?.addEventListener("click", () => saveWriteIdeaDraft().catch((err) => {
+    console.error(err);
+    showToast("Save failed", err.message || "Could not save the idea draft.", "ph-warning", "text-yellow-400");
+  }));
+  writeIdeaSaveManualBtn?.addEventListener("click", () => createWriteIdeaManualDraft().catch((err) => {
+    console.error(err);
+    showToast("Manual draft failed", err.message || "Could not open a manual draft from this idea.", "ph-warning", "text-yellow-400");
+  }));
+  writeIdeaApproveBtn?.addEventListener("click", () => approveWriteIdeaSelection().catch((err) => {
+    console.error(err);
+    showToast("Approval failed", err.message || "Could not approve the selected idea drafts.", "ph-warning", "text-yellow-400");
+  }));
+  writeIdeaSaveDraftsBtn?.addEventListener("click", () => saveWriteIdeaDraft().catch((err) => {
+    console.error(err);
+    showToast("Save failed", err.message || "Could not save the selected idea drafts.", "ph-warning", "text-yellow-400");
+  }));
 }
 
 function populateCampaignDropdown() {
@@ -5027,6 +5979,7 @@ function renderCalendarCell(dateObj, inCurrentMonth = true, isWeekMode = false) 
 
   const posts = (appState.posts || [])
     .filter(post => normalizePostCalendarDateKey(post) === key)
+    .filter(postMatchesCalendarViewFilters)
     .sort((a, b) => (parsePostDate(normalizePostCalendarDateKey(a) || a.date)?.getTime() || 0) - (parsePostDate(normalizePostCalendarDateKey(b) || b.date)?.getTime() || 0));
 
   const cellClasses = [
@@ -5066,6 +6019,7 @@ function renderMobileDayCalendar() {
 
   const posts = (appState.posts || [])
     .filter(post => normalizePostCalendarDateKey(post) === selectedCalendarDateKey)
+    .filter(postMatchesCalendarViewFilters)
     .sort((a, b) => (parsePostDate(normalizePostCalendarDateKey(a) || a.date)?.getTime() || 0) - (parsePostDate(normalizePostCalendarDateKey(b) || b.date)?.getTime() || 0));
 
   if (!posts.length) {
@@ -5079,7 +6033,7 @@ function renderMobileDayCalendar() {
       <button type="button" class="mobile-day-post w-full text-left p-4 rounded-2xl bg-[#181125] border border-white/5" onclick="openModalById('${escapeHtml(post.id)}')">
         <div class="flex items-start justify-between gap-3 mb-2">
           <div>
-            <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${escapeHtml(formatLocalQueueTime(post.date) || "No time")}</div>
+            <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${escapeHtml(post.queueTimeLabel || "No time")}</div>
             <h4 class="text-white text-sm font-bold wrap-safe mt-1">${escapeHtml(post.title || "Untitled post")}</h4>
           </div>
           <span class="publishing-chip" style="color:${badge.color};border-color:${badge.color}33;">
@@ -5107,7 +6061,7 @@ function renderCalendarPill(post, isWeekMode = false) {
 
   const displayTitle = getDisplayTitle(post.title);
   const pillTitle = isWeekMode
-    ? `${formatLocalQueueTime(post.date)} ${displayTitle}`
+    ? `${post.queueTimeLabel || ""} ${displayTitle}`.trim()
     : displayTitle;
   const hydrated = hydratePostCampaign(post);
   const campaignColor = getCampaignColor(hydrated, getPostContentPillar(hydrated));
@@ -5123,6 +6077,18 @@ function renderCalendarPill(post, isWeekMode = false) {
       <span class="text-[9px] text-gray-300 wrap-safe w-full block mt-0.5">${escapeHtml(pillTitle)}</span>
     </button>
   `;
+}
+
+function postMatchesCalendarViewFilters(post) {
+  const filters = mobileFilterState.calendar || {};
+  if ((filters.platform || "all") !== "all" && String(post.platform || "").toLowerCase() !== String(filters.platform || "").toLowerCase()) return false;
+  if ((filters.status || "all") !== "all" && String(post.status || "").toLowerCase() !== String(filters.status || "").toLowerCase()) return false;
+  const query = String(filters.query || "").trim().toLowerCase();
+  if (query) {
+    const haystack = `${post.title || ""} ${post.description || ""} ${post.campaignName || ""}`.toLowerCase();
+    if (!haystack.includes(query)) return false;
+  }
+  return true;
 }
 
 function renderLedger() {
@@ -5313,55 +6279,95 @@ function buildConstellationRows() {
 }
 
 function getConstellationAnchor(campaign, index) {
-  const columns = 2;
-  const column = index % columns;
-  const row = Math.floor(index / columns);
+  const layout = getConstellationLayoutConfig(campaign, index);
   return {
-    x: clamp(Number(campaign.x || 0) || (760 + column * 1560), 520, 3660),
-    y: clamp(Number(campaign.y || 0) || (520 + row * 1080), 360, 4140)
+    x: clamp(Number(campaign.x || 0) || layout.anchorX, 420, 5600),
+    y: clamp(Number(campaign.y || 0) || layout.anchorY, 260, 5200)
   };
 }
 
-function getIconPathPoints(shape, count, anchorX, anchorY) {
+function getConstellationTier(postCount) {
+  if (postCount >= 20) return "huge";
+  if (postCount >= 10) return "large";
+  if (postCount >= 5) return "medium";
+  return "small";
+}
+
+function getConstellationLayoutConfig(campaign, index = 0) {
+  const postCount = Math.max((campaign.posts || []).length, 1);
+  const tier = getConstellationTier(postCount);
+  const columns = tier === "huge" ? 1 : 2;
+  const column = index % columns;
+  const row = Math.floor(index / columns);
+  const shape = String(campaign.iconShape || "").trim().toLowerCase();
+  const stretchAxis = shape === "leaf" || shape === "moon" || shape === "spiral" ? "vertical" : "horizontal";
+  const tierConfig = {
+    small: { pathLength: 1, spacing: 1, radius: 1, hoverPadding: 1, labelOffset: 1, columnGap: 1520, rowGap: 1020 },
+    medium: { pathLength: 1.18, spacing: 1.15, radius: 1.12, hoverPadding: 1.15, labelOffset: 1.14, columnGap: 1660, rowGap: 1120 },
+    large: { pathLength: 1.34, spacing: 1.32, radius: 1.28, hoverPadding: 1.28, labelOffset: 1.25, columnGap: 1880, rowGap: 1280 },
+    huge: { pathLength: 1.7, spacing: 1.55, radius: 1.52, hoverPadding: 1.48, labelOffset: 1.42, columnGap: stretchAxis === "horizontal" ? 2480 : 1820, rowGap: stretchAxis === "vertical" ? 1680 : 1380 }
+  }[tier];
+  const anchorX = 820 + column * tierConfig.columnGap;
+  const anchorY = 580 + row * tierConfig.rowGap;
+  return {
+    tier,
+    pathStretch: tierConfig.pathLength * (tier === "huge" && stretchAxis === "horizontal" ? 1.18 : 1),
+    verticalStretch: tierConfig.pathLength * (tier === "huge" && stretchAxis === "vertical" ? 1.18 : 1),
+    internalSpacing: tierConfig.spacing,
+    campaignRadius: tierConfig.radius,
+    hoverPadding: tierConfig.hoverPadding,
+    labelOffset: tierConfig.labelOffset,
+    stretchAxis,
+    anchorX,
+    anchorY,
+    crowded: postCount >= 10,
+    overlapRisk: postCount >= 14,
+    labelCollisionRisk: postCount >= 9
+  };
+}
+
+function getIconPathPoints(shape, count, anchorX, anchorY, layout = {}) {
   const safeCount = Math.max(count, 1);
   const points = [];
+  const pathStretch = Number(layout.pathStretch || 1);
+  const verticalStretch = Number(layout.verticalStretch || pathStretch);
   for (let index = 0; index < safeCount; index += 1) {
     const t = safeCount === 1 ? 0.5 : index / Math.max(safeCount - 1, 1);
     let x = anchorX;
     let y = anchorY;
     if (shape === "leaf") {
-      x += Math.sin(t * Math.PI) * 320;
-      y += Math.cos(t * Math.PI * 2) * 140 - 55;
+      x += Math.sin(t * Math.PI) * 320 * pathStretch;
+      y += (Math.cos(t * Math.PI * 2) * 140 - 55) * verticalStretch;
     } else if (shape === "spark" || shape === "star") {
-      x += (t - 0.5) * 640;
-      y += Math.sin(t * Math.PI * 4) * 145;
+      x += (t - 0.5) * 640 * pathStretch;
+      y += Math.sin(t * Math.PI * 4) * 145 * verticalStretch;
     } else if (shape === "sun") {
-      x += Math.cos(t * Math.PI * 2) * 280;
-      y += Math.sin(t * Math.PI * 2) * 280;
+      x += Math.cos(t * Math.PI * 2) * 280 * pathStretch;
+      y += Math.sin(t * Math.PI * 2) * 280 * verticalStretch;
     } else if (shape === "moon") {
-      x += Math.cos((0.2 + t * 0.8) * Math.PI) * 310;
-      y += Math.sin((0.2 + t * 0.8) * Math.PI) * 260;
+      x += Math.cos((0.2 + t * 0.8) * Math.PI) * 310 * pathStretch;
+      y += Math.sin((0.2 + t * 0.8) * Math.PI) * 260 * verticalStretch;
     } else if (shape === "bolt") {
-      x += (t < 0.5 ? -220 + t * 440 : -35 + (t - 0.5) * 500);
-      y += (t < 0.5 ? -260 + t * 420 : -70 + (t - 0.5) * 460);
+      x += (t < 0.5 ? -220 + t * 440 : -35 + (t - 0.5) * 500) * pathStretch;
+      y += (t < 0.5 ? -260 + t * 420 : -70 + (t - 0.5) * 460) * verticalStretch;
     } else if (shape === "map") {
-      x += (t - 0.5) * 620;
-      y += Math.sin(t * Math.PI * 3) * 120 + Math.cos(t * Math.PI) * 90;
+      x += (t - 0.5) * 620 * pathStretch;
+      y += (Math.sin(t * Math.PI * 3) * 120 + Math.cos(t * Math.PI) * 90) * verticalStretch;
     } else if (shape === "book") {
-      x += (t - 0.5) * 560;
-      y += Math.sin((t - 0.5) * Math.PI) * 160;
+      x += (t - 0.5) * 560 * pathStretch;
+      y += Math.sin((t - 0.5) * Math.PI) * 160 * verticalStretch;
     } else if (shape === "spiral") {
       const angle = t * Math.PI * 3.6;
-      const radius = 75 + t * 320;
+      const radius = (75 + t * 320) * pathStretch;
       x += Math.cos(angle) * radius;
-      y += Math.sin(angle) * radius;
+      y += Math.sin(angle) * radius * (verticalStretch / Math.max(pathStretch, 0.001));
     } else {
-      x += (t - 0.5) * 700;
-      y += Math.sin(t * Math.PI * 2) * 95;
+      x += (t - 0.5) * 700 * pathStretch;
+      y += Math.sin(t * Math.PI * 2) * 95 * verticalStretch;
     }
     points.push({
-      x: clamp(x, 320, 3980),
-      y: clamp(y, 220, 4380)
+      x: clamp(x, 220, 5600),
+      y: clamp(y, 160, 5600)
     });
   }
   return points;
@@ -5391,8 +6397,12 @@ function renderConstellation() {
   const rows = buildConstellationRows();
   const semanticConstellation = buildSemanticConstellation();
   const bridgeConfig = getBridgeDensityConfig();
-  const minCanvasHeight = Math.max(3800, (Math.ceil(rows.length / 2) + 1) * 1180);
-  const worldWidth = 4300;
+  const largestCount = rows.reduce((max, campaign) => Math.max(max, Math.max((campaign.posts || []).length, 1)), 1);
+  const largestTier = getConstellationTier(largestCount);
+  const columns = rows.some((campaign) => getConstellationTier((campaign.posts || []).length) === "huge") ? 1 : 2;
+  const worldWidth = Math.max(4300, columns === 1 ? 5200 : 4600, largestTier === "huge" ? 5600 : 0);
+  const minCanvasHeight = Math.max(3800, (Math.ceil(rows.length / Math.max(columns, 1)) + 1) * (largestTier === "huge" ? 1560 : 1220));
+  const worldBounds = { minX: 999999, minY: 999999, maxX: 0, maxY: 0 };
 
   canvas.style.height = `${minCanvasHeight}px`;
   canvas.style.width = `${worldWidth}px`;
@@ -5443,6 +6453,7 @@ function renderConstellation() {
 
   rows.forEach((campaign, index) => {
     const anchor = getConstellationAnchor(campaign, index);
+    const layout = getConstellationLayoutConfig(campaign, index);
     const pillarValue = getCampaignContentPillar(campaign);
     const color = getCampaignColor(campaign, pillarValue);
     const summary = buildCampaignSummary(campaign);
@@ -5451,14 +6462,20 @@ function renderConstellation() {
     rowGroup.style.width = `${worldWidth}px`;
     rowGroup.style.height = `${minCanvasHeight}px`;
 
-    const points = getIconPathPoints(String(campaign.iconShape || "").trim().toLowerCase(), Math.max((campaign.posts || []).length, 1), anchor.x, anchor.y);
+    const points = getIconPathPoints(String(campaign.iconShape || "").trim().toLowerCase(), Math.max((campaign.posts || []).length, 1), anchor.x, anchor.y, layout);
     const pathData = points.map((point, pointIndex) => `${pointIndex === 0 ? "M" : "L"} ${point.x} ${point.y}`).join(" ");
+    points.forEach((point) => {
+      worldBounds.minX = Math.min(worldBounds.minX, point.x - 360 * layout.hoverPadding);
+      worldBounds.minY = Math.min(worldBounds.minY, point.y - 240 * layout.hoverPadding);
+      worldBounds.maxX = Math.max(worldBounds.maxX, point.x + 360 * layout.hoverPadding);
+      worldBounds.maxY = Math.max(worldBounds.maxY, point.y + 240 * layout.hoverPadding);
+    });
 
     const label = document.createElement("div");
     label.style.cssText = `
       position:absolute;
-      left:${Math.max(48, points[0].x - 130)}px;
-      top:${Math.max(52, points[0].y - 160)}px;
+      left:${Math.max(48, points[0].x - (150 * layout.labelOffset))}px;
+      top:${Math.max(52, points[0].y - (170 * layout.labelOffset))}px;
       padding:10px 18px;
       background:rgba(18,12,29,0.18);
       border:1px solid rgba(255,255,255,0.12);
@@ -5468,7 +6485,7 @@ function renderConstellation() {
       box-shadow:none;
       z-index:6;
       min-width:170px;
-      max-width:250px;
+      max-width:${layout.tier === "huge" ? 320 : 250}px;
       pointer-events:none;
     `;
     label.innerHTML = `
@@ -5526,8 +6543,8 @@ function renderConstellation() {
       dot.style.cssText = `
         left:${dotX}px;
         top:${dotY}px;
-        width:14px;
-        height:14px;
+        width:${layout.tier === "huge" ? 16 : 14}px;
+        height:${layout.tier === "huge" ? 16 : 14}px;
         transform:translate(-50%,-50%);
         background:${color};
         border:1px solid rgba(255,255,255,0.35);
@@ -5553,9 +6570,10 @@ function renderConstellation() {
       const dotLabel = document.createElement("button");
       dotLabel.type = "button";
       dotLabel.className = "constellation-label-btn";
-      dotLabel.style.left = `${Math.min(dotX + 22, worldWidth - 260)}px`;
+      dotLabel.style.left = `${Math.min(dotX + (22 * layout.labelOffset), worldWidth - (layout.tier === "huge" ? 340 : 260))}px`;
       dotLabel.style.top = `${dotY}px`;
       dotLabel.style.borderColor = `${color}40`;
+      if (layout.tier === "huge") dotLabel.style.maxWidth = "320px";
       dotLabel.innerHTML = `${pillarShape}<span>${escapeHtml(getConstellationLabel(post.title))}</span>`;
       dotLabel.style.display = "inline-flex";
       dotLabel.style.alignItems = "center";
@@ -5568,8 +6586,8 @@ function renderConstellation() {
     });
 
     const lastPoint = points[Math.max(points.length - 1, 0)] || anchor;
-    const addX = clamp(lastPoint.x + 220, 220, worldWidth - 180);
-    const addY = clamp(lastPoint.y + 48, 220, minCanvasHeight - 180);
+    const addX = clamp(lastPoint.x + (220 * layout.labelOffset), 220, worldWidth - 180);
+    const addY = clamp(lastPoint.y + (48 * layout.labelOffset), 220, minCanvasHeight - 180);
 
     const addDot = document.createElement("button");
     addDot.type = "button";
@@ -5642,6 +6660,10 @@ function renderConstellation() {
     </button>
   `;
   canvas.appendChild(addCampaignRow);
+  canvas.dataset.worldMinX = String(Math.max(0, worldBounds.minX === 999999 ? 0 : worldBounds.minX - 140));
+  canvas.dataset.worldMinY = String(Math.max(0, worldBounds.minY === 999999 ? 0 : worldBounds.minY - 140));
+  canvas.dataset.worldMaxX = String(Math.min(worldWidth, worldBounds.maxX + 220));
+  canvas.dataset.worldMaxY = String(Math.min(minCanvasHeight, worldBounds.maxY + 220));
 
   document.getElementById("constellation-create-campaign-btn")?.addEventListener("click", () => {
     campaignModalTargetSelect = null;
@@ -5807,14 +6829,17 @@ function fitConstellation({ preserveUserView = false } = {}) {
   const rect = viewport.getBoundingClientRect();
   if (!rect.width || !rect.height) return;
 
-  const worldWidth = Number(canvas.dataset.worldWidth || canvas.offsetWidth || 4300);
-  const worldHeight = Number(canvas.dataset.worldHeight || canvas.offsetHeight || 3800);
-
+  const worldMinX = Number(canvas.dataset.worldMinX || 0);
+  const worldMinY = Number(canvas.dataset.worldMinY || 0);
+  const worldMaxX = Number(canvas.dataset.worldMaxX || canvas.dataset.worldWidth || canvas.offsetWidth || 4300);
+  const worldMaxY = Number(canvas.dataset.worldMaxY || canvas.dataset.worldHeight || canvas.offsetHeight || 3800);
+  const worldWidth = Math.max(1, worldMaxX - worldMinX);
+  const worldHeight = Math.max(1, worldMaxY - worldMinY);
   const fitScale = Math.min(rect.width / worldWidth, rect.height / worldHeight);
   scale = clamp(fitScale * 1.14, 0.2, 3.8);
 
-  panX = Math.round((rect.width - worldWidth * scale) / 2);
-  panY = Math.round((rect.height - worldHeight * scale) / 2);
+  panX = Math.round((rect.width - worldWidth * scale) / 2) - Math.round(worldMinX * scale);
+  panY = Math.round((rect.height - worldHeight * scale) / 2) - Math.round(worldMinY * scale);
 
   updateTransform();
 }
@@ -6082,16 +7107,18 @@ async function connectSocialAccount(platform) {
   try {
     const result = await apiGetSocialAuthUrl(platform);
     const auth = result?.auth || result;
+    openConnectionSetupModal(platform, auth);
     if (auth?.url) {
       window.open(auth.url, "_blank", "noopener,noreferrer");
-      showToast("OAuth scaffold", "Connection flow opened in a new tab.", "ph-link-simple", "text-[#00ffaa]");
-      return;
     }
-    showToast("Connection scaffold", (auth?.diagnostics || []).join(" ") || "OAuth is scaffolded only right now.", "ph-warning", "text-yellow-400");
   } catch (err) {
     console.error(err);
     showToast("Connect failed", err.message || "Could not initialize the account connection scaffold.", "ph-warning", "text-yellow-400");
   }
+}
+
+async function reconnectSocialAccount(platform) {
+  return connectSocialAccount(platform);
 }
 
 async function disconnectConnectedAccount(platform) {
@@ -6114,6 +7141,7 @@ async function refreshSocialImportContext() {
     ]);
     socialImportCapabilities = capabilitiesResult?.capabilities || capabilitiesResult || null;
     connectedAccounts = accountsResult?.accounts || accountsResult || [];
+    if (!workspaceHubModal?.classList.contains("opacity-0")) renderWorkspaceHub();
   } catch (err) {
     console.error(err);
   }
@@ -6133,6 +7161,11 @@ function renderConnectedAccountActions(state) {
         </button>
       `);
       buttons.push(`
+        <button type="button" onclick="reconnectSocialAccount('${escapeHtml(platform)}')" class="px-3 py-2 rounded-xl bg-[#120c1d] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">
+          Reconnect
+        </button>
+      `);
+      buttons.push(`
         <button type="button" onclick="disconnectConnectedAccount('${escapeHtml(platform)}')" class="px-3 py-2 rounded-xl bg-[#120c1d] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 transition-colors">
           Disconnect
         </button>
@@ -6140,13 +7173,825 @@ function renderConnectedAccountActions(state) {
     } else {
       buttons.push(`
         <button type="button" onclick="connectSocialAccount('${escapeHtml(platform)}')" class="px-3 py-2 rounded-xl bg-[#120c1d] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">
-          Connect Account
+          ${account?.accessStatus === "expired" ? "Reconnect" : "Connect Account"}
         </button>
       `);
     }
   }
   buttons.push(`<div class="text-[10px] text-gray-500 self-center">${escapeHtml(formatSocialImportModeLabel(mode))}</div>`);
   mediaLinkConnectedAccountActions.innerHTML = buttons.join("");
+}
+
+function getWorkspaceViewMeta(viewName = currentView) {
+  const meta = {
+    calendar: { title: "Calendar", detail: "Content calendar and day planning." },
+    ledger: { title: "Ledger", detail: "Detailed scheduler records and editing." },
+    media: { title: "Media", detail: "Vault of uploaded and linked assets." },
+    inspo: { title: "Inspo", detail: "Links, references, and source material." },
+    notes: { title: "Notes", detail: "Hooks, bullets, and text-first seeds." },
+    "write-idea": { title: "Write an Idea", detail: "Dedicated workspace for idea-to-post and idea-to-campaign scaffolding." },
+    performance: { title: "Performance", detail: "Scheduler signals and campaign comparisons." },
+    audit: { title: "Audit", detail: "System health, diagnostics, and readiness." },
+    constellation: { title: "Constellation", detail: "Campaign map and semantic territory." }
+  };
+  return meta[viewName] || { title: "StellarSync", detail: "Content command center." };
+}
+
+function updateHeaderForView(viewName = currentView) {
+  const meta = getWorkspaceViewMeta(viewName);
+  if (appHeaderSubtitle) appHeaderSubtitle.textContent = meta.title;
+  if (appHeaderViewDetail) appHeaderViewDetail.textContent = meta.detail;
+}
+
+function toggleProfileMenu(force) {
+  if (!profileMenu) return;
+  const next = typeof force === "boolean" ? force : !profileMenu.classList.contains("active");
+  profileMenu.classList.toggle("active", next);
+}
+
+function openWorkspaceHub(tab = "settings") {
+  currentWorkspaceSettingsTab = tab;
+  workspaceHubModal?.classList.remove("opacity-0", "pointer-events-none");
+  workspaceHubModalCard?.classList.remove("scale-95");
+  workspaceHubModalCard?.classList.add("scale-100");
+  toggleProfileMenu(false);
+  renderWorkspaceHub();
+}
+
+function closeWorkspaceHub() {
+  workspaceHubModal?.classList.add("opacity-0", "pointer-events-none");
+  workspaceHubModalCard?.classList.remove("scale-100");
+  workspaceHubModalCard?.classList.add("scale-95");
+}
+
+function openConnectionSetupModal(platform, auth = null) {
+  activeConnectionSetupPlatform = platform;
+  const account = getConnectedAccount(platform) || {};
+  const scopes = auth?.requiredScopes || account.requiredScopes || [];
+  const checklist = auth?.setupChecklist || account.setupChecklist || [];
+  if (connectionSetupTitle) connectionSetupTitle.textContent = `${toTitleCase(platform)} Connection Setup`;
+  if (connectionSetupSubtitle) connectionSetupSubtitle.textContent = account.connectionStatusLabel || auth?.status || "Scaffold only";
+  if (connectionSetupChecklist) {
+    connectionSetupChecklist.innerHTML = checklist.map((item) => `<div class="text-sm text-gray-300 wrap-safe flex gap-2"><i class="ph-bold ph-check-circle text-[#c77dff] mt-0.5"></i><span>${escapeHtml(item)}</span></div>`).join("") || `<div class="text-sm text-gray-400">OAuth scaffolding details unavailable.</div>`;
+  }
+  if (connectionSetupScopes) {
+    connectionSetupScopes.innerHTML = scopes.length
+      ? scopes.map((scope) => `<span class="diagnostic-chip">${escapeHtml(scope)}</span>`).join("")
+      : `<span class="text-sm text-gray-400">No scopes declared yet.</span>`;
+  }
+  if (connectionSetupNotes) {
+    connectionSetupNotes.textContent = auth?.appReviewNotes || account.appReviewNotes || "Live OAuth, app review, and token refresh are still scaffold-only.";
+  }
+  connectionSetupModal?.classList.remove("opacity-0", "pointer-events-none");
+  connectionSetupModalCard?.classList.remove("scale-95");
+  connectionSetupModalCard?.classList.add("scale-100");
+}
+
+function closeConnectionSetupModal() {
+  connectionSetupModal?.classList.add("opacity-0", "pointer-events-none");
+  connectionSetupModalCard?.classList.remove("scale-100");
+  connectionSetupModalCard?.classList.add("scale-95");
+}
+
+function getConnectedAccountsMarkup(options = {}) {
+  const accounts = Array.isArray(connectedAccounts) ? connectedAccounts : [];
+  const platforms = ["linkedin", "instagram", "threads", "bluesky"];
+  return platforms.map((platform) => {
+    const account = accounts.find((item) => item.platform === platform) || {
+      platform,
+      accessStatus: "not_connected",
+      connectionStatusLabel: "Scaffold only",
+      importSupported: false,
+      publishSupported: false,
+      requiredScopes: [],
+      setupChecklist: []
+    };
+    const statusLabel = account.connectionStatusLabel || toTitleCase(account.accessStatus || "not connected");
+    const lastSync = account.lastSyncAt || "Never";
+    const lastError = account.lastError || "None";
+    const accountLabel = account.accountLabel || "No account label yet";
+    const permissions = Array.isArray(account.scopesGranted) && account.scopesGranted.length
+      ? account.scopesGranted.join(", ")
+      : (account.requiredScopes || []).join(", ") || "Scaffold only";
+    const tokenStatus = account.tokenStatus || (account.accessStatus === "expired" ? "Expired" : account.accessStatus === "connected" ? "Active" : "Missing");
+    return `
+      <div class="platform-card">
+        <div class="flex items-start justify-between gap-3 mb-4">
+          <div>
+            <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${escapeHtml(toTitleCase(platform))}</div>
+            <div class="text-lg font-bold text-white mt-1">${escapeHtml(statusLabel)}</div>
+          </div>
+          <span class="diagnostic-chip">${escapeHtml(account.importSupported ? "Import Live" : "Import Scaffold")}</span>
+        </div>
+        <div class="platform-meta-grid">
+          <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Account</div><div class="text-sm text-white wrap-safe">${escapeHtml(accountLabel)}</div></div>
+          <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Permissions / Scopes</div><div class="text-sm text-white wrap-safe">${escapeHtml(permissions)}</div></div>
+          <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Token Status</div><div class="text-sm text-white wrap-safe">${escapeHtml(tokenStatus)}</div></div>
+          <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Publish Support</div><div class="text-sm text-white wrap-safe">${escapeHtml(account.publishSupported ? "Live" : "Scaffold only")}</div></div>
+          <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Last Sync</div><div class="text-sm text-white wrap-safe">${escapeHtml(lastSync)}</div></div>
+          <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Last Error</div><div class="text-sm text-white wrap-safe">${escapeHtml(lastError)}</div></div>
+        </div>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <button type="button" onclick="connectSocialAccount('${escapeHtml(platform)}')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Connect</button>
+          <button type="button" onclick="reconnectSocialAccount('${escapeHtml(platform)}')" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Reconnect</button>
+          <button type="button" onclick="disconnectConnectedAccount('${escapeHtml(platform)}')" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 transition-colors">Disconnect</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderWorkspaceHub() {
+  document.querySelectorAll(".settings-tab-btn").forEach((btn) => {
+    const active = btn.dataset.settingsTab === currentWorkspaceSettingsTab;
+    btn.classList.toggle("active", active);
+    btn.classList.toggle("text-white", active);
+    btn.classList.toggle("text-gray-300", !active);
+  });
+  document.querySelectorAll("[data-settings-panel]").forEach((panel) => {
+    panel.classList.toggle("hidden", panel.dataset.settingsPanel !== currentWorkspaceSettingsTab);
+  });
+  const settings = appState.settings || {};
+  document.getElementById("settings-platform-summary").textContent = (settings.platforms || []).map(toTitleCase).join(", ") || "None";
+  document.getElementById("settings-pillar-summary").textContent = (settings.pillars || []).map(formatContentPillarLabel).join(", ") || "None";
+  document.getElementById("settings-posttype-summary").textContent = (settings.postTypes || []).map(toTitleCase).join(", ") || "None";
+  document.getElementById("settings-queue-summary").textContent = settings.queueLimit || "No queue limit";
+  const inlineTarget = document.getElementById("settings-connected-accounts-inline");
+  if (inlineTarget) inlineTarget.innerHTML = getConnectedAccountsMarkup({ compact: true });
+  const accountsPanel = document.querySelector('[data-settings-panel="accounts"]');
+  if (accountsPanel) accountsPanel.innerHTML = getConnectedAccountsMarkup();
+  renderWorkspaceDiagnosticsPanel();
+}
+
+function buildLocalConstellationDiagnostics() {
+  const rows = buildConstellationRows();
+  const diagnostics = [];
+  rows.forEach((campaign, index) => {
+    const layout = getConstellationLayoutConfig(campaign, index);
+    if (layout.tier === "huge" && layout.pathStretch <= 1.05) diagnostics.push({ severity: "warning", label: "Huge campaign needs expanded path", detail: formatCampaignDisplayName(campaign.campaignName || campaign.campaignId || "Unknown") });
+    if (layout.crowded) diagnostics.push({ severity: "warning", label: "Crowded campaign", detail: formatCampaignDisplayName(campaign.campaignName || campaign.campaignId || "Unknown") });
+    if (layout.overlapRisk) diagnostics.push({ severity: "warning", label: "Overlapping nodes", detail: formatCampaignDisplayName(campaign.campaignName || campaign.campaignId || "Unknown") });
+    if (layout.labelCollisionRisk) diagnostics.push({ severity: "warning", label: "Label collision risk", detail: formatCampaignDisplayName(campaign.campaignName || campaign.campaignId || "Unknown") });
+  });
+  const mobileRouteIssues = ["calendar", "ledger", "media", "inspo", "notes", "write-idea", "constellation", "performance", "audit"].filter((view) => !document.getElementById(`view-${view}`)).map((view) => ({
+    severity: "warning",
+    label: "Mobile nav target has no visible route",
+    detail: view
+  }));
+  return diagnostics.concat(mobileRouteIssues);
+}
+
+function renderWorkspaceDiagnosticsPanel() {
+  if (!workspaceDiagnosticsPanel) return;
+  const localDiagnostics = buildLocalConstellationDiagnostics();
+  const backend = backendDiagnostics || {};
+  const dateIssues = [
+    ...(backend.invalidQueueDateLabelRows || []).map((item) => ({ label: "Invalid queue_date_label", detail: `${item.postId}: ${item.queueDateLabel || "missing"}`, severity: "error" })),
+    ...(backend.malformedScheduledRows || []).map((item) => ({ label: "Invalid scheduled_at", detail: `${item.postId}: ${item.scheduledAt || "missing"}`, severity: "error" })),
+    ...(backend.dateMismatchRows || []).map((item) => ({ label: "Date mismatch", detail: `${item.postId}: ${(item.diagnostics || []).join(", ")}`, severity: item.severity || "warning" })),
+    ...(backend.defaultInternalTimeRows || []).map((item) => ({ label: "Default internal time", detail: `${item.postId}: ${item.scheduledAt}`, severity: "warning" }))
+  ];
+  const accountDiagnostics = (connectedAccounts || []).map((account) => ({
+    label: `${toTitleCase(account.platform)} account`,
+    detail: `${account.connectionStatusLabel || account.accessStatus || "not connected"} • import ${account.importSupported ? "live" : "scaffold"} • publish ${account.publishSupported ? "live" : "scaffold"}`,
+    severity: account.accessStatus === "expired" || account.accessStatus === "missing_permissions" ? "warning" : "info"
+  }));
+  const cards = dateIssues.concat(accountDiagnostics).concat(localDiagnostics);
+  workspaceDiagnosticsPanel.innerHTML = cards.length
+    ? cards.map((item) => `
+      <div class="platform-card">
+        <div class="flex items-center justify-between gap-3 mb-2">
+          <div class="text-sm font-bold text-white">${escapeHtml(item.label)}</div>
+          <span class="diagnostic-chip">${escapeHtml((item.severity || "info").toUpperCase())}</span>
+        </div>
+        <div class="text-sm text-gray-300 wrap-safe">${escapeHtml(item.detail)}</div>
+      </div>
+    `).join("")
+    : `<div class="platform-card text-sm text-gray-300">No workspace diagnostics available yet.</div>`;
+}
+
+function openMobileSheet(sheet) {
+  sheet?.classList.add("active");
+}
+
+function closeMobileSheet(sheet) {
+  sheet?.classList.remove("active");
+}
+
+function openMobileMoreSheet() {
+  renderMobileMoreSheet();
+  openMobileSheet(mobileMoreSheet);
+}
+
+function renderMobileMoreSheet() {
+  if (!mobileMoreList) return;
+  const items = [
+    { label: "Write an Idea", icon: "ph-sparkle", action: "view", value: "write-idea" },
+    { label: "Constellation", icon: "ph-planet", action: "view", value: "constellation" },
+    { label: "Performance", icon: "ph-chart-line-up", action: "view", value: "performance" },
+    { label: "Audit", icon: "ph-shield-check", action: "view", value: "audit" },
+    { label: "Brand OS", icon: "ph-book-open-text", action: "brand" },
+    { label: "Settings", icon: "ph-sliders", action: "settings" },
+    { label: "Connected Accounts", icon: "ph-plugs-connected", action: "accounts" },
+    { label: "Diagnostics", icon: "ph-bug-beetle", action: "diagnostics" },
+    { label: "Panels", icon: "ph-sidebar", action: "utility" }
+  ];
+  mobileMoreList.innerHTML = items.map((item) => `
+    <button type="button" class="platform-card text-left" data-mobile-more-action="${escapeHtml(item.action)}" data-mobile-more-value="${escapeHtml(item.value || "")}">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-[#231738] border border-white/5 flex items-center justify-center text-[#c77dff]"><i class="ph-bold ${escapeHtml(item.icon)}"></i></div>
+        <div class="min-w-0">
+          <div class="text-sm font-bold text-white wrap-safe">${escapeHtml(item.label)}</div>
+        </div>
+      </div>
+    </button>
+  `).join("");
+}
+
+function currentViewSupportsFilters() {
+  return ["calendar", "ledger", "media", "inspo", "notes", "performance"].includes(currentView);
+}
+
+function openMobileFilterSheet() {
+  if (!currentViewSupportsFilters()) {
+    showToast("No filters", "This view has no mobile filter controls.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  renderMobileFilterSheet();
+  openMobileSheet(mobileFilterSheet);
+}
+
+function renderMobileFilterSheet() {
+  if (!mobileFilterContent) return;
+  if (mobileFilterSubtitle) mobileFilterSubtitle.textContent = `${toTitleCase(currentView)} filters`;
+  if (currentView === "ledger") {
+    mobileFilterContent.innerHTML = `
+      <div class="space-y-4">
+        <select id="mobile-ledger-filter-pillar" class="form-input text-sm">${['<option value="all">All Pillars</option>'].concat(getAvailableContentPillars().map((pillar) => `<option value="${escapeHtml(pillar)}">${escapeHtml(formatContentPillarLabel(pillar))}</option>`)).join("")}</select>
+        <select id="mobile-ledger-filter-campaign" class="form-input text-sm">${['<option value="all">All Campaigns</option>'].concat((appState.campaigns || []).filter((item) => !item.isArchived).map((item) => `<option value="${escapeHtml(item.campaignId)}">${escapeHtml(formatCampaignDisplayName(item.campaignName))}</option>`)).join("")}</select>
+        <select id="mobile-ledger-filter-type" class="form-input text-sm">${['all', 'image', 'carousel', 'video', 'article', 'text', 'poll'].map((value) => `<option value="${value}">${value === 'all' ? 'All Types' : toTitleCase(value)}</option>`).join("")}</select>
+        <select id="mobile-ledger-filter-status" class="form-input text-sm">${['all', 'draft', 'scheduled', 'published'].map((value) => `<option value="${value}">${value === 'all' ? 'All Statuses' : toTitleCase(value)}</option>`).join("")}</select>
+        <div class="flex gap-2">
+          <button type="button" id="mobile-ledger-filter-apply" class="flex-1 px-4 py-3 rounded-xl bg-[#2d1b4e] text-white text-xs uppercase tracking-wider font-bold">Apply</button>
+          <button type="button" id="mobile-ledger-filter-reset" class="flex-1 px-4 py-3 rounded-xl bg-[#181125] text-gray-300 text-xs uppercase tracking-wider font-bold border border-white/5">Reset</button>
+        </div>
+      </div>
+    `;
+    document.getElementById("mobile-ledger-filter-pillar").value = ledgerFilters.pillar || "all";
+    document.getElementById("mobile-ledger-filter-campaign").value = ledgerFilters.campaign || "all";
+    document.getElementById("mobile-ledger-filter-type").value = ledgerFilters.type || "all";
+    document.getElementById("mobile-ledger-filter-status").value = ledgerFilters.status || "all";
+    document.getElementById("mobile-ledger-filter-apply")?.addEventListener("click", () => {
+      ledgerFilters.pillar = document.getElementById("mobile-ledger-filter-pillar")?.value || "all";
+      ledgerFilters.campaign = document.getElementById("mobile-ledger-filter-campaign")?.value || "all";
+      ledgerFilters.type = document.getElementById("mobile-ledger-filter-type")?.value || "all";
+      ledgerFilters.status = document.getElementById("mobile-ledger-filter-status")?.value || "all";
+      updateLedgerFilterLabels();
+      renderLedger();
+      closeMobileSheet(mobileFilterSheet);
+    });
+    document.getElementById("mobile-ledger-filter-reset")?.addEventListener("click", () => {
+      ledgerFilters = { pillar: "all", campaign: "all", type: "all", status: "all" };
+      updateLedgerFilterLabels();
+      renderLedger();
+      closeMobileSheet(mobileFilterSheet);
+    });
+    return;
+  }
+  if (currentView === "media") {
+    mobileFilterContent.innerHTML = `
+      <div class="space-y-4">
+        <select id="mobile-media-filter-type" class="form-input text-sm">
+          <option value="all">All Types</option>
+          <option value="image">Image</option>
+          <option value="video">Video</option>
+          <option value="carousel">Carousel</option>
+          <option value="article">Article</option>
+        </select>
+        <select id="mobile-media-filter-campaign" class="form-input text-sm">${['<option value="all">All Campaigns</option>'].concat((appState.campaigns || []).filter((item) => !item.isArchived).map((item) => `<option value="${escapeHtml(item.campaignId)}">${escapeHtml(formatCampaignDisplayName(item.campaignName))}</option>`)).join("")}</select>
+        <div class="flex gap-2">
+          <button type="button" id="mobile-media-filter-apply" class="flex-1 px-4 py-3 rounded-xl bg-[#2d1b4e] text-white text-xs uppercase tracking-wider font-bold">Apply</button>
+          <button type="button" id="mobile-media-filter-reset" class="flex-1 px-4 py-3 rounded-xl bg-[#181125] text-gray-300 text-xs uppercase tracking-wider font-bold border border-white/5">Reset</button>
+        </div>
+      </div>
+    `;
+    document.getElementById("mobile-media-filter-type").value = mediaFilters.type || "all";
+    document.getElementById("mobile-media-filter-campaign").value = mediaFilters.campaign || "all";
+    document.getElementById("mobile-media-filter-apply")?.addEventListener("click", () => {
+      mediaFilters.type = document.getElementById("mobile-media-filter-type")?.value || "all";
+      mediaFilters.campaign = document.getElementById("mobile-media-filter-campaign")?.value || "all";
+      renderMedia();
+      closeMobileSheet(mobileFilterSheet);
+    });
+    document.getElementById("mobile-media-filter-reset")?.addEventListener("click", () => {
+      mediaFilters = { type: "all", campaign: "all" };
+      renderMedia();
+      closeMobileSheet(mobileFilterSheet);
+    });
+    return;
+  }
+  if (currentView === "performance") {
+    mobileFilterContent.innerHTML = `
+      <div class="space-y-4">
+        <select id="mobile-performance-range" class="form-input text-sm">
+          <option value="30">Last 30 Days</option>
+          <option value="60">Last 60 Days</option>
+          <option value="90">Last 90 Days</option>
+          <option value="all">All Time</option>
+        </select>
+        <select id="mobile-performance-platform" class="form-input text-sm">
+          <option value="all">All Platforms</option>
+          <option value="linkedin">LinkedIn</option>
+          <option value="instagram">Instagram</option>
+          <option value="both">Both</option>
+        </select>
+        <button type="button" id="mobile-performance-filter-apply" class="w-full px-4 py-3 rounded-xl bg-[#2d1b4e] text-white text-xs uppercase tracking-wider font-bold">Apply</button>
+      </div>
+    `;
+    document.getElementById("mobile-performance-range").value = performanceFilters.range || "30";
+    document.getElementById("mobile-performance-platform").value = performanceFilters.platform || "all";
+    document.getElementById("mobile-performance-filter-apply")?.addEventListener("click", () => {
+      performanceFilters.range = document.getElementById("mobile-performance-range")?.value || "30";
+      performanceFilters.platform = document.getElementById("mobile-performance-platform")?.value || "all";
+      renderPerformanceView();
+      closeMobileSheet(mobileFilterSheet);
+    });
+    return;
+  }
+  const viewFilter = mobileFilterState[currentView] || {};
+  if (currentView === "calendar") {
+    mobileFilterContent.innerHTML = `
+      <div class="space-y-4">
+        <select id="mobile-calendar-filter-platform" class="form-input text-sm">
+          <option value="all">All Platforms</option>
+          <option value="linkedin">LinkedIn</option>
+          <option value="instagram">Instagram</option>
+          <option value="both">Both</option>
+        </select>
+        <select id="mobile-calendar-filter-status" class="form-input text-sm">
+          <option value="all">All Statuses</option>
+          <option value="draft">Draft</option>
+          <option value="scheduled">Scheduled</option>
+          <option value="published">Published</option>
+        </select>
+        <input id="mobile-calendar-filter-query" class="form-input text-sm" placeholder="Search title or caption">
+        <button type="button" id="mobile-calendar-filter-apply" class="w-full px-4 py-3 rounded-xl bg-[#2d1b4e] text-white text-xs uppercase tracking-wider font-bold">Apply</button>
+      </div>
+    `;
+    document.getElementById("mobile-calendar-filter-platform").value = viewFilter.platform || "all";
+    document.getElementById("mobile-calendar-filter-status").value = viewFilter.status || "all";
+    document.getElementById("mobile-calendar-filter-query").value = viewFilter.query || "";
+    document.getElementById("mobile-calendar-filter-apply")?.addEventListener("click", () => {
+      mobileFilterState.calendar = {
+        platform: document.getElementById("mobile-calendar-filter-platform")?.value || "all",
+        status: document.getElementById("mobile-calendar-filter-status")?.value || "all",
+        query: document.getElementById("mobile-calendar-filter-query")?.value || ""
+      };
+      renderCalendar();
+      closeMobileSheet(mobileFilterSheet);
+    });
+    return;
+  }
+  if (currentView === "inspo") {
+    mobileFilterContent.innerHTML = `
+      <div class="space-y-4">
+        <select id="mobile-inspo-filter-type" class="form-input text-sm">
+          <option value="all">All Types</option>
+          <option value="article">Article</option>
+          <option value="video">Video</option>
+          <option value="trend">Trend</option>
+          <option value="image">Image</option>
+        </select>
+        <input id="mobile-inspo-filter-query" class="form-input text-sm" placeholder="Search title or notes">
+        <button type="button" id="mobile-inspo-filter-apply" class="w-full px-4 py-3 rounded-xl bg-[#2d1b4e] text-white text-xs uppercase tracking-wider font-bold">Apply</button>
+      </div>
+    `;
+    document.getElementById("mobile-inspo-filter-type").value = viewFilter.type || "all";
+    document.getElementById("mobile-inspo-filter-query").value = viewFilter.query || "";
+    document.getElementById("mobile-inspo-filter-apply")?.addEventListener("click", () => {
+      mobileFilterState.inspo = {
+        type: document.getElementById("mobile-inspo-filter-type")?.value || "all",
+        query: document.getElementById("mobile-inspo-filter-query")?.value || ""
+      };
+      renderInspo();
+      closeMobileSheet(mobileFilterSheet);
+    });
+    return;
+  }
+  mobileFilterContent.innerHTML = `
+    <div class="space-y-4">
+      <select id="mobile-notes-filter-platform" class="form-input text-sm">
+        <option value="all">All Platforms</option>
+        <option value="linkedin">LinkedIn</option>
+        <option value="instagram">Instagram</option>
+        <option value="both">Both</option>
+      </select>
+      <select id="mobile-notes-filter-pillar" class="form-input text-sm">${['<option value="all">All Pillars</option>'].concat(getAvailableContentPillars().map((pillar) => `<option value="${escapeHtml(pillar)}">${escapeHtml(formatContentPillarLabel(pillar))}</option>`)).join("")}</select>
+      <input id="mobile-notes-filter-query" class="form-input text-sm" placeholder="Search title or body">
+      <button type="button" id="mobile-notes-filter-apply" class="w-full px-4 py-3 rounded-xl bg-[#2d1b4e] text-white text-xs uppercase tracking-wider font-bold">Apply</button>
+    </div>
+  `;
+  document.getElementById("mobile-notes-filter-platform").value = viewFilter.platform || "all";
+  document.getElementById("mobile-notes-filter-pillar").value = viewFilter.pillar || "all";
+  document.getElementById("mobile-notes-filter-query").value = viewFilter.query || "";
+  document.getElementById("mobile-notes-filter-apply")?.addEventListener("click", () => {
+    mobileFilterState.notes = {
+      platform: document.getElementById("mobile-notes-filter-platform")?.value || "all",
+      pillar: document.getElementById("mobile-notes-filter-pillar")?.value || "all",
+      query: document.getElementById("mobile-notes-filter-query")?.value || ""
+    };
+    renderNotes();
+    closeMobileSheet(mobileFilterSheet);
+  });
+}
+
+function renderMobileUtilitySheet() {
+  if (!mobileUtilityContent) return;
+  document.querySelectorAll(".mobile-sheet-tab").forEach((btn) => {
+    const active = btn.dataset.mobilePanelTab === currentMobileUtilityTab;
+    btn.classList.toggle("active", active);
+    btn.classList.toggle("text-white", active);
+    btn.classList.toggle("text-gray-300", !active);
+  });
+  if (currentMobileUtilityTab === "context") {
+    mobileUtilityContent.innerHTML = document.getElementById("contextual-guidance-panel")?.innerHTML || makeEmptyState("Context unavailable", "No contextual guidance is available right now.", "ph-book-open-text");
+    return;
+  }
+  if (currentMobileUtilityTab === "semantic") {
+    mobileUtilityContent.innerHTML = document.getElementById("semantic-memory-panel")?.innerHTML || makeEmptyState("Semantic memory unavailable", "No semantic memory summary is available right now.", "ph-planet");
+    return;
+  }
+  if (currentMobileUtilityTab === "brand") {
+    mobileUtilityContent.innerHTML = `
+      <div class="space-y-4">
+        <div class="platform-card">
+          <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Brand OS Context</div>
+          <div class="text-sm text-gray-300 wrap-safe">Brand Voice, Brand OS rules, and semantic guidance remain available on mobile through this sheet and the full Brand OS workspace.</div>
+        </div>
+        <button type="button" id="mobile-open-brand-os-btn" class="w-full px-4 py-3 rounded-xl bg-[#231738] border border-white/5 text-xs uppercase tracking-wider font-bold text-white">Open Brand OS</button>
+      </div>
+    `;
+    document.getElementById("mobile-open-brand-os-btn")?.addEventListener("click", () => {
+      closeMobileSheet(mobileUtilitySheet);
+      openBrandFrameworkModal();
+    });
+    return;
+  }
+  renderWorkspaceDiagnosticsPanel();
+  mobileUtilityContent.innerHTML = workspaceDiagnosticsPanel?.innerHTML || makeEmptyState("Diagnostics unavailable", "No diagnostics summary is available right now.", "ph-bug-beetle");
+}
+
+function getWriteIdeaTargetPlatforms() {
+  return Array.isArray(writeIdeaState.targetPlatforms) && writeIdeaState.targetPlatforms.length
+    ? writeIdeaState.targetPlatforms
+    : ["linkedin"];
+}
+
+function syncWriteIdeaStateFromInputs() {
+  writeIdeaState.prompt = String(writeIdeaPromptInput?.value || "").trim();
+  writeIdeaState.targetDate = normalizeQueueDateLabel(writeIdeaTargetDateInput?.value || writeIdeaState.targetDate || "") || normalizeQueueDateLabel(new Date());
+  writeIdeaState.targetDateRange = String(writeIdeaTargetRangeInput?.value || "").trim();
+}
+
+function getWriteIdeaPayload() {
+  syncWriteIdeaStateFromInputs();
+  const postType = writeIdeaState.outputType === "draft_carousel_outline"
+    ? "carousel"
+    : writeIdeaState.outputType === "draft_short_video_script"
+    ? "video"
+    : "text";
+  return {
+    aiDraftId: currentWriteIdeaDraftId || "",
+    ideaPrompt: writeIdeaState.prompt,
+    prompt: writeIdeaState.prompt,
+    outputType: writeIdeaState.outputType,
+    sourceType: writeIdeaState.sourceTypes[0] || "manual",
+    sourceIds: writeIdeaState.sourceTypes,
+    sourceTypes: writeIdeaState.sourceTypes,
+    targetPlatforms: getWriteIdeaTargetPlatforms(),
+    platform: getWriteIdeaTargetPlatforms()[0] || "linkedin",
+    postType,
+    targetDate: writeIdeaState.targetDate,
+    targetDateRange: writeIdeaState.targetDateRange,
+    generationMode: "write_an_idea"
+  };
+}
+
+function renderWriteIdeaGuidance() {
+  if (writeIdeaGuidanceList) {
+    const framework = (appState.brandFramework || []).filter((item) => item.enabled !== false).slice(0, 4);
+    writeIdeaGuidanceList.innerHTML = framework.length
+      ? framework.map((item) => `
+        <div class="p-3 rounded-xl bg-[#181125] border border-white/5">
+          <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">${escapeHtml(item.section || item.ruleType || "Brand")}</div>
+          <div class="text-sm font-bold text-white wrap-safe mb-1">${escapeHtml(item.title || item.frameworkKey || "Rule")}</div>
+          <div class="text-[11px] text-gray-400 wrap-safe">${escapeHtml(item.content || "")}</div>
+        </div>
+      `).join("")
+      : makeEmptyState("Brand guidance unavailable", "Save Brand OS rules to populate writing guidance here.", "ph-book-open-text");
+  }
+  if (writeIdeaRelatedCampaigns) {
+    const campaigns = (appState.campaigns || []).filter((item) => !item.isArchived).slice(0, 4);
+    writeIdeaRelatedCampaigns.innerHTML = campaigns.length
+      ? campaigns.map((campaign) => `
+        <div class="p-3 rounded-xl bg-[#181125] border border-white/5">
+          <div class="text-sm font-bold text-white wrap-safe">${escapeHtml(formatCampaignDisplayName(campaign.campaignName))}</div>
+          <div class="text-[11px] text-gray-400 wrap-safe mt-1">${escapeHtml(formatContentPillarLabel(campaign.pillar || "authority"))} • ${escapeHtml(campaign.iconShape || "star")}</div>
+        </div>
+      `).join("")
+      : makeEmptyState("No campaigns yet", "Create a campaign to reuse it as idea context.", "ph-planet");
+  }
+}
+
+function renderWriteIdeaDraftList() {
+  if (!writeIdeaDraftList) return;
+  const drafts = (appState.aiDrafts || []).filter((draft) => draft.generationMode === "write_an_idea" || draft.ideaPrompt || draft.outputType).slice(0, 6);
+  writeIdeaDraftList.innerHTML = drafts.length
+    ? drafts.map((draft) => `
+      <button type="button" class="w-full p-3 rounded-xl bg-[#181125] border border-white/5 text-left hover:bg-[#231738] transition-colors" onclick="loadWriteIdeaDraft('${escapeHtml(draft.aiDraftId)}')">
+        <div class="flex items-center justify-between gap-3 mb-1">
+          <div class="text-sm font-bold text-white wrap-safe">${escapeHtml(draft.title || draft.ideaPrompt || "Idea Draft")}</div>
+          <span class="diagnostic-chip">${escapeHtml((draft.draftStatus || "draft").replace(/_/g, " "))}</span>
+        </div>
+        <div class="text-[11px] text-gray-400 wrap-safe">${escapeHtml(draft.outputType ? draft.outputType.replace(/_/g, " ") : "write an idea")}</div>
+      </button>
+    `).join("")
+    : makeEmptyState("No idea drafts yet", "Generate or save a scaffold to keep idea records here.", "ph-sparkle");
+}
+
+function renderWriteIdeaScaffold() {
+  renderWriteIdeaGuidance();
+  renderWriteIdeaDraftList();
+  document.querySelectorAll("[data-write-idea-source]").forEach((btn) => {
+    btn.classList.toggle("active", writeIdeaState.sourceTypes.includes(btn.dataset.writeIdeaSource));
+  });
+  document.querySelectorAll("[data-write-idea-output]").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.writeIdeaOutput === writeIdeaState.outputType);
+  });
+  document.querySelectorAll("[data-write-idea-chip]").forEach((btn) => {
+    const token = btn.dataset.writeIdeaChip;
+    const active = token === "linkedin"
+      ? getWriteIdeaTargetPlatforms().includes("linkedin")
+      : token === "instagram"
+      ? getWriteIdeaTargetPlatforms().includes("instagram")
+      : ["campaign", "one-post", "carousel"].includes(token)
+      ? (token === "campaign" && ["create_campaign", "populate_campaign_queue"].includes(writeIdeaState.outputType)) || (token === "one-post" && writeIdeaState.outputType === "create_one_post") || (token === "carousel" && writeIdeaState.outputType === "draft_carousel_outline")
+      : false;
+    btn.classList.toggle("active", active);
+  });
+  if (writeIdeaTargetDateInput) writeIdeaTargetDateInput.value = toInputDateValue(writeIdeaState.targetDate);
+  if (writeIdeaTargetRangeInput) writeIdeaTargetRangeInput.value = writeIdeaState.targetDateRange || "";
+  if (!writeIdeaLastScaffold) {
+    if (writeIdeaReviewSummary) writeIdeaReviewSummary.textContent = "Idea captured state will appear here after you generate a scaffold.";
+    if (writeIdeaStatusChip) writeIdeaStatusChip.textContent = "Scaffold only";
+    if (writeIdeaWarningList) writeIdeaWarningList.innerHTML = "";
+    if (writeIdeaProposedPosts) writeIdeaProposedPosts.innerHTML = makeEmptyState("No scaffold yet", "Generate a scaffold to review proposed posts, dates, campaign links, and warnings.", "ph-sparkle");
+    return;
+  }
+  const scaffold = writeIdeaLastScaffold.scaffold || writeIdeaLastScaffold;
+  if (writeIdeaStatusChip) writeIdeaStatusChip.textContent = scaffold.draftStatus === "scaffold_only" ? "Scaffold only" : toTitleCase(scaffold.draftStatus || "draft");
+  if (writeIdeaReviewSummary) writeIdeaReviewSummary.textContent = scaffold.summaryText || "Idea scaffold ready for manual review.";
+  if (writeIdeaWarningList) {
+    writeIdeaWarningList.innerHTML = (scaffold.warnings || []).map((warning) => `<span class="diagnostic-chip">${escapeHtml(warning)}</span>`).join("");
+  }
+  if (writeIdeaProposedPosts) {
+    writeIdeaProposedPosts.innerHTML = (scaffold.proposedPosts || []).map((post, index) => `
+      <div class="p-4 rounded-2xl bg-[#181125] border border-white/5">
+        <label class="flex items-center gap-3 mb-3 text-xs text-gray-300 uppercase tracking-widest font-bold">
+          <input type="checkbox" data-write-idea-select-index="${index}" ${writeIdeaState.selectedDraftIndexes.includes(index) ? "checked" : ""} />
+          Approve this draft
+        </label>
+        <input data-write-idea-post-title="${index}" class="form-input text-sm mb-3" value="${escapeHtml(post.title || "")}" />
+        <textarea data-write-idea-post-description="${index}" class="form-input min-h-[110px] text-sm mb-3">${escapeHtml(post.description || "")}</textarea>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <input data-write-idea-post-date="${index}" type="date" class="form-input text-sm" value="${escapeHtml(toInputDateValue(post.queueDateLabel || ""))}" />
+          <select data-write-idea-post-platform="${index}" class="form-input text-sm">
+            ${["linkedin", "instagram", "both"].map((value) => `<option value="${value}" ${value === (post.platform || "linkedin") ? "selected" : ""}>${toTitleCase(value)}</option>`).join("")}
+          </select>
+          <select data-write-idea-post-type="${index}" class="form-input text-sm">
+            ${["text", "carousel", "video", "article", "image"].map((value) => `<option value="${value}" ${value === (post.postType || "text") ? "selected" : ""}>${toTitleCase(value)}</option>`).join("")}
+          </select>
+        </div>
+      </div>
+    `).join("");
+  }
+}
+
+function loadWriteIdeaDraft(aiDraftId) {
+  const draft = (appState.aiDrafts || []).find((item) => item.aiDraftId === aiDraftId);
+  if (!draft) return;
+  currentWriteIdeaDraftId = aiDraftId;
+  writeIdeaState.prompt = draft.ideaPrompt || draft.prompt || "";
+  writeIdeaState.outputType = draft.outputType || "create_one_post";
+  writeIdeaState.sourceTypes = (draft.sourceIds || draft.sourceType || "brand_os|semantic_memory").split(/[|,\n]/).map((item) => String(item || "").trim()).filter(Boolean);
+  writeIdeaState.targetPlatforms = (draft.targetPlatforms || draft.platform || "linkedin").split(/[|,\n]/).map((item) => String(item || "").trim()).filter(Boolean);
+  writeIdeaState.targetDate = normalizeQueueDateLabel(draft.targetDate || new Date()) || normalizeQueueDateLabel(new Date());
+  writeIdeaState.targetDateRange = draft.targetDateRange || "";
+  writeIdeaLastScaffold = {
+    idea: draft,
+    scaffold: {
+      title: draft.title || draft.ideaPrompt || "Idea Draft",
+      draftStatus: draft.draftStatus || "scaffold_only",
+      warnings: (draft.reviewNotes || "").split("|").map((item) => item.trim()).filter(Boolean),
+      summaryText: draft.draftText || "Saved idea draft loaded.",
+      proposedPosts: [{
+        title: draft.title || "Idea Draft",
+        description: draft.draftText || "",
+        platform: draft.platform || "linkedin",
+        postType: draft.postType || "text",
+        queueDateLabel: draft.targetDate || normalizeQueueDateLabel(new Date())
+      }]
+    }
+  };
+  if (writeIdeaPromptInput) writeIdeaPromptInput.value = writeIdeaState.prompt;
+  renderWriteIdeaScaffold();
+  switchView("write-idea");
+}
+
+function collectWriteIdeaSelectedPosts() {
+  const scaffold = writeIdeaLastScaffold?.scaffold;
+  if (!scaffold) return [];
+  return (scaffold.proposedPosts || []).map((post, index) => {
+    const selected = !!document.querySelector(`[data-write-idea-select-index="${index}"]`)?.checked;
+    return {
+      selected,
+      title: String(document.querySelector(`[data-write-idea-post-title="${index}"]`)?.value || post.title || "").trim(),
+      description: String(document.querySelector(`[data-write-idea-post-description="${index}"]`)?.value || post.description || "").trim(),
+      platform: String(document.querySelector(`[data-write-idea-post-platform="${index}"]`)?.value || post.platform || "linkedin").trim(),
+      postType: String(document.querySelector(`[data-write-idea-post-type="${index}"]`)?.value || post.postType || "text").trim(),
+      queueDateLabel: normalizeQueueDateLabel(document.querySelector(`[data-write-idea-post-date="${index}"]`)?.value || post.queueDateLabel || writeIdeaState.targetDate || "")
+    };
+  }).filter((item) => item.selected);
+}
+
+async function generateWriteIdeaScaffold() {
+  const payload = getWriteIdeaPayload();
+  if (!payload.ideaPrompt) {
+    showToast("Missing idea", "Add an idea prompt first.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  const result = APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()
+    ? await apiGenerateIdeaDraftScaffold(payload)
+    : { scaffold: { idea: normalizeRemoteAIDraft({ aiDraftId: `local-${Date.now()}`, title: deriveIdeaTitle(payload.ideaPrompt), ideaPrompt: payload.ideaPrompt, outputType: payload.outputType, targetPlatforms: payload.targetPlatforms.join("|"), targetDate: payload.targetDate, draftStatus: "scaffold_only" }), scaffold: buildLocalIdeaScaffold(payload) } };
+  writeIdeaLastScaffold = result.scaffold || result;
+  currentWriteIdeaDraftId = writeIdeaLastScaffold?.idea?.aiDraftId || currentWriteIdeaDraftId;
+  if (writeIdeaLastScaffold?.idea) {
+    const localDraft = normalizeRemoteAIDraft(writeIdeaLastScaffold.idea);
+    const existingIndex = (appState.aiDrafts || []).findIndex((item) => item.aiDraftId === localDraft.aiDraftId);
+    if (existingIndex >= 0) appState.aiDrafts[existingIndex] = localDraft;
+    else appState.aiDrafts.unshift(localDraft);
+    persistLocalState();
+  }
+  writeIdeaState.selectedDraftIndexes = (writeIdeaLastScaffold?.scaffold?.proposedPosts || []).map((_, index) => index);
+  renderWriteIdeaScaffold();
+}
+
+function buildLocalIdeaScaffold(payload) {
+  const title = deriveIdeaTitle(payload.ideaPrompt);
+  const proposedPosts = [{
+    title,
+    description: `Scaffold only.\nPrompt: ${payload.ideaPrompt}\nOutput: ${payload.outputType.replace(/_/g, " ")}`,
+    platform: payload.platform || "linkedin",
+    postType: payload.outputType === "draft_carousel_outline" ? "carousel" : "text",
+    queueDateLabel: payload.targetDate || normalizeQueueDateLabel(new Date())
+  }];
+  return {
+    title,
+    draftStatus: "scaffold_only",
+    warnings: payload.ideaPrompt.length < 18 ? ["too generic", "weak classification"] : ["scaffold only"],
+    semanticTags: payload.ideaPrompt.toLowerCase().split(/[^a-z0-9]+/).filter((token) => token.length >= 5).slice(0, 6),
+    summaryText: "Idea captured. Local scaffold mode is active. Create manually or save draft.",
+    proposedPosts,
+    carouselOutline: "Slide 1: Idea\nSlide 2: Observation\nSlide 3: Why it matters\nSlide 4: Application\nSlide 5: CTA"
+  };
+}
+
+async function saveWriteIdeaDraft() {
+  const payload = getWriteIdeaPayload();
+  if (!payload.ideaPrompt) {
+    showToast("Missing idea", "Add an idea prompt first.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
+    const result = await apiSaveIdeaPrompt(payload);
+    const draft = normalizeRemoteAIDraft(result.idea || result.draft || result);
+    currentWriteIdeaDraftId = draft.aiDraftId || currentWriteIdeaDraftId;
+    const existingIndex = (appState.aiDrafts || []).findIndex((item) => item.aiDraftId === draft.aiDraftId);
+    if (existingIndex >= 0) appState.aiDrafts[existingIndex] = draft;
+    else appState.aiDrafts.unshift(draft);
+    persistLocalState();
+  } else {
+    const localDraft = normalizeRemoteAIDraft({ aiDraftId: currentWriteIdeaDraftId || `local-${Date.now()}`, title: deriveIdeaTitle(payload.ideaPrompt), ideaPrompt: payload.ideaPrompt, outputType: payload.outputType, targetPlatforms: payload.targetPlatforms.join("|"), targetDate: payload.targetDate, draftStatus: "idea_captured", generationMode: "write_an_idea" });
+    currentWriteIdeaDraftId = localDraft.aiDraftId;
+    appState.aiDrafts.unshift(localDraft);
+    persistLocalState();
+  }
+  renderWriteIdeaDraftList();
+  showToast("Idea saved", "Idea prompt saved as a draft scaffold.", "ph-check", "text-[#00ffaa]");
+}
+
+async function approveWriteIdeaSelection() {
+  if (!writeIdeaLastScaffold) {
+    showToast("No scaffold", "Generate a scaffold first.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  const selectedPosts = collectWriteIdeaSelectedPosts();
+  if (!selectedPosts.length && !["add_to_notes", "add_to_inspo", "draft_carousel_outline"].includes(writeIdeaState.outputType)) {
+    showToast("Nothing selected", "Select at least one proposed draft.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  const payload = {
+    ...getWriteIdeaPayload(),
+    scaffold: {
+      ...(writeIdeaLastScaffold.scaffold || {}),
+      proposedPosts: selectedPosts,
+      targetDate: writeIdeaState.targetDate
+    }
+  };
+  if (writeIdeaState.outputType === "add_to_notes") {
+    const note = {
+      title: deriveIdeaTitle(writeIdeaState.prompt),
+      body: writeIdeaState.prompt,
+      bullets: selectedPosts.map((item) => item.title),
+      suggestedPlatform: getWriteIdeaTargetPlatforms()[0] || "linkedin",
+      suggestedPillar: "authority"
+    };
+    if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) await apiSaveNote(note);
+    else appState.notes.unshift({ id: generateId("note"), ...note });
+    showToast("Saved to Notes", "Idea saved to Notes for manual development.", "ph-check", "text-[#00ffaa]");
+    return;
+  }
+  if (writeIdeaState.outputType === "add_to_inspo") {
+    const inspo = {
+      title: deriveIdeaTitle(writeIdeaState.prompt),
+      summary: writeIdeaState.prompt,
+      inspoType: "article",
+      sourceLabel: "Write an Idea",
+      suggestedPlatform: getWriteIdeaTargetPlatforms()[0] || "linkedin",
+      suggestedPillar: "authority"
+    };
+    if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) await apiSaveInspo(inspo);
+    else appState.inspo.unshift({ id: generateId("inspo"), ...inspo });
+    showToast("Saved to Inspo", "Idea saved to Inspo.", "ph-check", "text-[#00ffaa]");
+    return;
+  }
+  if (writeIdeaState.outputType === "draft_carousel_outline") {
+    await (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured() ? apiCreateCarouselOutlineFromIdea(payload) : saveWriteIdeaDraft());
+    showToast("Outline saved", "Carousel outline saved as a scaffold draft.", "ph-check", "text-[#00ffaa]");
+    return;
+  }
+  if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
+    const result = ["create_campaign", "populate_campaign_queue", "populate_calendar_week"].includes(writeIdeaState.outputType)
+      ? await apiCreateCampaignFromIdea(payload)
+      : await apiCreatePostFromIdea(payload);
+    await syncRemoteIfConfigured();
+    showToast("Drafts created", `${(result?.result?.createdPosts || result?.createdPosts || []).length || 1} drafts created from the approved scaffold.`, "ph-check", "text-[#00ffaa]");
+  } else {
+    selectedPosts.forEach((post) => {
+      const planning = normalizePostPlanningFields({ queueDateLabel: post.queueDateLabel });
+      appState.posts.unshift({
+        id: generateId("post"),
+        title: post.title,
+        description: post.description,
+        platform: post.platform,
+        postType: post.postType,
+        pillar: "authority",
+        status: "draft",
+        date: planning.scheduledAt,
+        queueDateLabel: planning.queueDateLabel,
+        queueTimeLabel: "",
+        calendarMonth: planning.calendarMonth,
+        calendarYear: planning.calendarYear,
+        calendarDay: planning.calendarDay,
+        hasUserSelectedTime: false
+      });
+    });
+    persistLocalState();
+    rerenderAll();
+    showToast("Drafts created", `${selectedPosts.length} local drafts created from the approved scaffold.`, "ph-check", "text-[#00ffaa]");
+  }
+}
+
+async function createWriteIdeaManualDraft() {
+  const payload = getWriteIdeaPayload();
+  if (!payload.ideaPrompt) {
+    showToast("Missing idea", "Add an idea prompt first.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  const planning = normalizePostPlanningFields({ queueDateLabel: payload.targetDate });
+  openPostModal(deriveIdeaTitle(payload.ideaPrompt), getWriteIdeaTargetPlatforms()[0] || "linkedin", "authority", planning.scheduledAt, "draft", payload.ideaPrompt, payload.outputType === "draft_carousel_outline" ? "carousel" : "text", null);
+  setModalSourceContext("idea", "Create Post from Idea", "This draft started from the Write an Idea workspace. Scheduling remains internal to StellarSync.", currentWriteIdeaDraftId || "");
+}
+
+function toInputDateValue(value) {
+  const normalized = normalizeQueueDateLabel(value);
+  if (!normalized) return "";
+  const parts = normalized.split("/");
+  return `${parts[2]}-${String(parts[0]).padStart(2, "0")}-${String(parts[1]).padStart(2, "0")}`;
+}
+
+function deriveIdeaTitle(prompt) {
+  return String(prompt || "").trim().split(/[.!?\n]/)[0].trim().slice(0, 72) || "Untitled Idea";
 }
 
 async function importConnectedSocialPost() {
@@ -7144,9 +8989,12 @@ function openPostModal(
     }
   );
 
+  const planning = normalizePostPlanningFields(matched, matched);
+
   if (titleInput) titleInput.value = title;
   if (platSelect) platSelect.value = platform || "linkedin";
-  if (dateInput) dateInput.value = date || formatDateTimeLocal(new Date());
+  if (dateInput) dateInput.value = formatDateInputValue(planning.queueDateLabel || matched?.date || date || new Date());
+  if (timeInput) timeInput.value = planning.hasUserSelectedTime ? formatTimeInputValue(buildScheduledAtFromPlanningFields(planning.queueDateLabel, planning.queueTimeLabel)) : "";
   if (statusSelect) statusSelect.value = status || "draft";
   if (postTypeSelect) postTypeSelect.value = postType || "text";
   if (descInput) descInput.value = matched?.description || description || "";
@@ -7291,6 +9139,18 @@ function formatDateTimeLocal(date) {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
+function formatDateInputValue(date) {
+  const d = parsePostDate(date);
+  if (!d || Number.isNaN(d.getTime())) return "";
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function formatTimeInputValue(date) {
+  const d = parsePostDate(date);
+  if (!d || Number.isNaN(d.getTime())) return "";
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
 function closeModal() {
   modal?.classList.remove("active");
   document.body.style.overflow = "";
@@ -7302,6 +9162,8 @@ function closeModal() {
   setModalSourceContext("manual", "Create Post from Calendar", "This post starts as a manual draft.", "");
   if (modalMediaStatus) modalMediaStatus.textContent = "No media linked";
   if (campaignSelect) campaignSelect.value = "";
+  if (dateInput) dateInput.value = "";
+  if (timeInput) timeInput.value = "";
   if (sourceUrlInput) sourceUrlInput.value = "";
   if (importCaptionFallbackInput) importCaptionFallbackInput.value = "";
   if (importDiagnosticsEl) importDiagnosticsEl.textContent = "";
@@ -7328,13 +9190,18 @@ function setupSaveHandler() {
     const selectedCampaign = getCampaignById(selectedCampaignId, getAvailableCampaignRecords()) || getCampaignByName(selectedCampaignId, getAvailableCampaignRecords());
     const selectedContentPillar = normalizePillar(getActivePillar() || existing?.hubPillarLabel || existing?.pillar || (appState.settings?.pillars || [])[0] || "authority");
     const selectedCampaignName = selectedCampaign?.campaignName || normalizeCampaignName(selectedCampaignId);
+    const planning = normalizePostPlanningFields({
+      queueDateLabel: dateInput?.value || "",
+      queueTimeLabel: timeInput?.value || "",
+      scheduledAt: existing?.date || ""
+    }, existing || {});
 
     const payload = {
       id: currentEditingPostId || generateId("post"),
       title: titleInput?.value.trim() || "",
       platform: platSelect?.value || "linkedin",
       pillar: selectedContentPillar,
-      date: dateInput?.value || "",
+      date: planning.scheduledAt || "",
       status: statusSelect?.value || "draft",
       postType: postTypeSelect?.value || "text",
       description: descInput?.value.trim() || "",
@@ -7344,6 +9211,12 @@ function setupSaveHandler() {
         : Array.isArray(existing?.carouselAssetIds) ? existing.carouselAssetIds : [],
       hubTitle: selectedCampaignName || existing?.hubTitle || titleInput?.value.trim() || "",
       hubPillarLabel: formatContentPillarLabel(selectedContentPillar),
+      queueDateLabel: planning.queueDateLabel,
+      queueTimeLabel: planning.queueTimeLabel,
+      calendarMonth: planning.calendarMonth,
+      calendarYear: planning.calendarYear,
+      calendarDay: planning.calendarDay,
+      hasUserSelectedTime: planning.hasUserSelectedTime,
       mediaLabel: currentModalAsset?.title || existing?.mediaLabel || "",
       createdFromInspoId: inspoIdToConvert,
       createdFromNoteId: noteIdToConvert,
@@ -7487,6 +9360,8 @@ async function duplicatePostById(postId) {
 function switchView(viewName) {
   currentView = viewName;
   const mainShell = document.getElementById("main-shell-panel");
+  updateHeaderForView(viewName);
+  if (mobileFilterTrigger) mobileFilterTrigger.classList.toggle("opacity-50", !currentViewSupportsFilters());
 
   document.querySelectorAll(".nav-btn").forEach((btn) => {
     btn.classList.remove("bg-[#2d1b4e]", "text-white", "active");
@@ -7548,6 +9423,11 @@ function switchView(viewName) {
         return;
       }
 
+      if (viewName === "write-idea") {
+        renderWriteIdeaScaffold();
+        return;
+      }
+
       if (viewName === "performance") {
         renderPerformanceView();
         return;
@@ -7562,6 +9442,7 @@ function switchView(viewName) {
         renderConstellation();
         fitConstellation();
       }
+      renderMobileUtilitySheet();
     });
   });
 }
@@ -7911,7 +9792,15 @@ function renderInspo() {
   const grid = document.getElementById("inspo-grid");
   if (!grid) return;
 
-  const items = [...(appState.inspo || [])];
+  const filters = mobileFilterState.inspo || {};
+  let items = [...(appState.inspo || [])];
+  if ((filters.type || "all") !== "all") {
+    items = items.filter((item) => String(item.type || "").toLowerCase() === String(filters.type || "").toLowerCase());
+  }
+  if (String(filters.query || "").trim()) {
+    const query = String(filters.query).trim().toLowerCase();
+    items = items.filter((item) => `${item.title || ""} ${item.description || ""} ${item.notes || ""}`.toLowerCase().includes(query));
+  }
 
   if (!items.length) {
     grid.innerHTML = makeEmptyState("No inspo", "Save links, references, videos, or visual cues here before turning them into posts.", "ph-lightbulb");
@@ -7994,7 +9883,18 @@ function renderNotes() {
   const grid = document.getElementById("notes-grid");
   if (!grid) return;
 
-  const items = [...(appState.notes || [])];
+  const filters = mobileFilterState.notes || {};
+  let items = [...(appState.notes || [])];
+  if ((filters.platform || "all") !== "all") {
+    items = items.filter((item) => String(item.suggestedPlatform || "").toLowerCase() === String(filters.platform || "").toLowerCase());
+  }
+  if ((filters.pillar || "all") !== "all") {
+    items = items.filter((item) => normalizePillarToken(item.suggestedPillar || "") === normalizePillarToken(filters.pillar));
+  }
+  if (String(filters.query || "").trim()) {
+    const query = String(filters.query).trim().toLowerCase();
+    items = items.filter((item) => `${item.title || ""} ${item.body || ""} ${(item.bullets || []).join(" ")}`.toLowerCase().includes(query));
+  }
   if (!items.length) {
     grid.innerHTML = makeEmptyState("No notes", "Capture hooks, one-line insights, or bullet ideas here before drafting posts.", "ph-note-pencil");
     return;
@@ -8249,6 +10149,34 @@ async function apiPrepareAIGenerationContext(payload) {
   return apiPost("prepareAIGenerationContext", payload);
 }
 
+async function apiSaveIdeaPrompt(payload) {
+  return apiPost("saveIdeaPrompt", payload);
+}
+
+async function apiPrepareIdeaGenerationContext(payload) {
+  return apiPost("prepareIdeaGenerationContext", payload);
+}
+
+async function apiGenerateIdeaDraftScaffold(payload) {
+  return apiPost("generateIdeaDraftScaffold", payload);
+}
+
+async function apiCreatePostFromIdea(payload) {
+  return apiPost("createPostFromIdea", payload);
+}
+
+async function apiCreateCampaignFromIdea(payload) {
+  return apiPost("createCampaignFromIdea", payload);
+}
+
+async function apiCreateCalendarPlanFromIdea(payload) {
+  return apiPost("createCalendarPlanFromIdea", payload);
+}
+
+async function apiCreateCarouselOutlineFromIdea(payload) {
+  return apiPost("createCarouselOutlineFromIdea", payload);
+}
+
 async function apiSaveAIDraft(payload) {
   return apiPost("saveAIDraft", payload);
 }
@@ -8371,7 +10299,11 @@ function renderDiagnosticsPanel() {
     { label: "Missing sheets", severity: "error", value: missingSheets.length, detail: missingSheets.join(", ") || "None", guidance: "Errors need action." },
     { label: "Missing headers", severity: "error", value: missingHeaders.reduce((sum, [, headers]) => sum + headers.length, 0), detail: missingHeaders.length ? missingHeaders.map(([sheet, headers]) => `${sheet}: ${headers.join(", ")}`).join(" | ") : "None", guidance: "Errors need action." },
     { label: "Malformed scheduled_at rows", severity: "error", value: (diagnostics.malformedScheduledRows || []).length, detail: formatDiagnosticIds(diagnostics.malformedScheduledRows, "postId"), guidance: "Errors need action." },
-    { label: "Date mismatch rows", severity: "warning", value: (diagnostics.dateMismatchRows || []).length, detail: formatDetailedDiagnostics(diagnostics.dateMismatchRows, (item) => `${item.postId || "unknown"}: ${Array.isArray(item.diagnostics) ? item.diagnostics.join(", ") : "date warning"}`), guidance: "Warnings are okay when queue_date_label is the intended calendar day." },
+    { label: "Invalid queue_date_label rows", severity: "error", value: (diagnostics.invalidQueueDateLabelRows || []).length, detail: formatDetailedDiagnostics(diagnostics.invalidQueueDateLabelRows, (item) => `${item.postId || "unknown"}: ${item.queueDateLabel || "missing"}${item.scheduledAt ? ` • normalized display ${formatQueueDateLabel(item.scheduledAt)}` : ""}`), guidance: "Repair or normalize queue_date_label to M/D/YYYY." },
+    { label: "Date mismatch rows", severity: "warning", value: (diagnostics.dateMismatchRows || []).length, detail: formatDetailedDiagnostics(diagnostics.dateMismatchRows, (item) => `${item.postId || "unknown"}: ${Array.isArray(item.diagnostics) ? item.diagnostics.join(", ") : "date warning"}${item.normalizedDisplayDate ? ` • display ${item.normalizedDisplayDate}` : ""}`), guidance: "Warnings are okay when queue_date_label is the intended calendar day." },
+    { label: "Date exists but scheduled_at missing", severity: "error", value: (diagnostics.missingScheduledAtRows || []).length, detail: formatDiagnosticIds(diagnostics.missingScheduledAtRows, "postId"), guidance: "Errors need action." },
+    { label: "scheduled_at exists but queue_date_label missing", severity: "warning", value: (diagnostics.scheduledWithoutQueueDateRows || []).length, detail: formatDiagnosticIds(diagnostics.scheduledWithoutQueueDateRows, "postId"), guidance: "Warnings are okay temporarily, but date labels should be restored." },
+    { label: "Default internal time rows", severity: "warning", value: (diagnostics.defaultInternalTimeRows || []).length, detail: formatDiagnosticIds(diagnostics.defaultInternalTimeRows, "postId"), guidance: "Warnings are okay when time was intentionally left blank by the user." },
     { label: "Missing campaign IDs/names", severity: "error", value: (diagnostics.missingCampaignRows || []).length, detail: formatDetailedDiagnostics(diagnostics.missingCampaignRows, (item) => `${item.postId || "unknown"}: ${item.issue || "missing campaign_id or campaign_name"}`), guidance: "Assign campaign or mark uncategorized." },
     { label: "Campaign layout issues", severity: "warning", value: (diagnostics.campaignLayoutIssues || []).length, detail: formatDetailedDiagnostics(diagnostics.campaignLayoutIssues, (item) => `${item.campaignId || "unknown"}: ${item.issue || "layout issue"}`), guidance: "Warnings are okay unless the map is visibly cramped." },
     { label: "Carousel posts missing assets", severity: "error", value: (diagnostics.carouselMissingAssets || []).length, detail: formatDiagnosticIds(diagnostics.carouselMissingAssets, "postId"), guidance: "Errors need action." },
@@ -8383,6 +10315,7 @@ function renderDiagnosticsPanel() {
     { label: "Brand OS framework issues", severity: "warning", value: (diagnostics.brandFrameworkIssues || []).length, detail: formatDiagnosticIds(diagnostics.brandFrameworkIssues, "frameworkKey"), guidance: "Warnings are okay until the framework is fully tuned." },
     { label: "Social import failures by platform", severity: "warning", value: Object.values(socialDiagnostics.importFailuresByPlatform || {}).reduce((sum, value) => sum + Number(value || 0), 0), detail: Object.entries(socialDiagnostics.importFailuresByPlatform || {}).map(([platform, count]) => `${platform}: ${count}`).join(" | ") || "None", guidance: "Warnings are okay if the platform requires manual fallback or authenticated access." },
     { label: "Connected account token / permission issues", severity: "warning", value: (socialDiagnostics.expiredTokens || []).length + (socialDiagnostics.missingPermissions || []).length, detail: [`Expired: ${(socialDiagnostics.expiredTokens || []).join(", ") || "none"}`, `Missing permissions: ${(socialDiagnostics.missingPermissions || []).join(", ") || "none"}`].join(" | "), guidance: "Warnings are okay until OAuth, app review, and scopes are finalized." },
+    { label: "OAuth configured platforms", severity: "warning", value: (socialDiagnostics.oauthConfigured || []).length, detail: (socialDiagnostics.oauthConfigured || []).join(", ") || "None", guidance: "Connected Accounts stays scaffold-only until callback handling and refresh are finished." },
     { label: "Bridge density visibility risk", severity: "warning", value: bridgeDensityWarning ? 1 : 0, detail: bridgeDensityWarning ? `${bridgeDensityWarning} semantic bridges may visually crowd the star map at the current density.` : "None", guidance: "Warnings are okay. Lower bridge density if semantic links start obscuring campaign paths." },
     { label: "Overused hooks / structures", severity: "warning", value: (semanticDiagnostics.overusedHookPatterns || []).length, detail: formatDetailedDiagnostics(semanticDiagnostics.overusedHookPatterns, (item) => `${item.pattern}: ${item.count}`), guidance: "Warnings are okay, but vary hook and structure choices before they flatten into repetition." },
     { label: "Campaign overlap / confusion", severity: "warning", value: (semanticDiagnostics.campaignOverlapIssues || []).length, detail: formatDetailedDiagnostics(semanticDiagnostics.campaignOverlapIssues, (item) => `${item.campaigns}: ${Math.round((item.strength || 0) * 100)}% overlap`), guidance: "Warnings are okay until the campaigns become indistinguishable." },
@@ -8439,17 +10372,20 @@ function renderDiagnosticsPanel() {
       <div class="text-sm text-gray-300 wrap-safe">Scheduling organizes posts inside StellarSync. Live platform posting is not connected yet.</div>
     </div>
     <div class="p-4 rounded-xl bg-[#181125] border border-white/5 space-y-3">
-      <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Connected Accounts</div>
+      <div class="flex items-center justify-between gap-3 flex-wrap">
+        <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Connected Accounts</div>
+        <button type="button" onclick="openWorkspaceHub('accounts')" class="px-3 py-2 rounded-xl bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white hover:bg-[#2d1b4e] transition-colors">Open Full Panel</button>
+      </div>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         ${(connectedAccounts.length ? connectedAccounts : (socialImportCapabilities?.connectedAccounts || [])).map((account) => `
           <div class="p-3 rounded-xl bg-[#120c1d] border border-white/5">
             <div class="flex items-center justify-between gap-3 mb-1">
               <span class="text-sm font-bold text-white">${escapeHtml(toTitleCase(account.platform || "unknown"))}</span>
-              <span class="text-[10px] uppercase tracking-widest font-bold ${account.accessStatus === "connected" ? "text-emerald-300" : account.accessStatus === "expired" || account.accessStatus === "missing_permissions" ? "text-yellow-300" : "text-gray-400"}">${escapeHtml(String(account.accessStatus || "not_connected").replace(/_/g, " "))}</span>
+              <span class="text-[10px] uppercase tracking-widest font-bold ${account.accessStatus === "connected" ? "text-emerald-300" : account.accessStatus === "expired" || account.accessStatus === "missing_permissions" ? "text-yellow-300" : "text-gray-400"}">${escapeHtml(account.connectionStatusLabel || String(account.accessStatus || "not_connected").replace(/_/g, " "))}</span>
             </div>
             <div class="text-[11px] text-gray-400 wrap-safe">${escapeHtml(account.accountLabel || "No connected account label stored.")}</div>
             <div class="mt-2 text-[10px] text-gray-500 wrap-safe">
-              ${escapeHtml(`Import: ${account.importSupported ? "supported" : "manual fallback"} • Publish: ${account.publishSupported ? "live" : "scaffolded"}`)}
+              ${escapeHtml(`Import: ${account.importSupported ? "live" : "scaffold"} • Publish: ${account.publishSupported ? "live" : "scaffold"} • Token: ${account.tokenStatus || "missing"}`)}
             </div>
           </div>
         `).join("") || `<div class="text-sm text-gray-400">Connected account diagnostics unavailable.</div>`}
@@ -8460,6 +10396,10 @@ function renderDiagnosticsPanel() {
       <div class="text-[11px] text-gray-400 wrap-safe">
         ${escapeHtml(`Unsupported import modes: ${(socialDiagnostics.unsupportedImportModes || []).join(", ") || "None"} • Expired tokens: ${(socialDiagnostics.expiredTokens || []).join(", ") || "None"}`)}
       </div>
+    </div>
+    <div class="p-4 rounded-xl bg-[#181125] border border-white/5">
+      <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Formula / Sheet Guidance</div>
+      <div class="text-sm text-gray-300 wrap-safe">${escapeHtml(diagnostics.sheetFormulaGuidance?.note || "Derived planning fields can be handled by formulas or by the backend when formulas are absent.")}</div>
     </div>
     <div class="p-4 rounded-xl bg-[#181125] border border-white/5">
       <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Action Coverage Notes</div>
@@ -8479,6 +10419,7 @@ function getContextualGuidanceItems() {
   const map = {
     inspo: ["participation", "orientation", "systems"],
     notes: ["hook", "orientation", "structure"],
+    "write-idea": ["hook", "classification", "systems"],
     calendar: ["classification", "cta", "platform"],
     ledger: ["classification", "legibility", "platform"],
     media: ["carousel", "platform", "systems"],
@@ -8955,10 +10896,17 @@ async function createPostFromCurrentAIDraft() {
       console.error(err);
     }
   } else {
+    const planning = normalizePostPlanningFields({ scheduledAt: new Date(), queueDateLabel: new Date() });
     appState.posts.unshift({
       ...postPayload,
       id: generateId("post"),
-      date: formatDateTimeLocal(new Date()),
+      date: planning.scheduledAt,
+      queueDateLabel: planning.queueDateLabel,
+      queueTimeLabel: "",
+      calendarMonth: planning.calendarMonth,
+      calendarYear: planning.calendarYear,
+      calendarDay: planning.calendarDay,
+      hasUserSelectedTime: false,
       status: "draft",
       pillar: "authority",
       platformTargets: postPayload.platform === "both" ? ["linkedin", "instagram"] : [postPayload.platform]
@@ -9016,8 +10964,15 @@ function normalizeRemotePost(post, campaigns = [], mediaItems = []) {
   const postId = String(pickRemoteValue(post?.postId, post?.post_id, post?.id, "")).trim();
   const title = String(pickRemoteValue(post?.title, post?.postTitle, "")).trim();
   const scheduledAt = String(pickRemoteValue(post?.scheduledAt, post?.scheduled_at, post?.date, "")).trim();
-  const queueDateLabel = String(pickRemoteValue(post?.queueDateLabel, post?.queue_date_label, "")).trim();
-  const queueTimeLabel = String(pickRemoteValue(post?.queueTimeLabel, post?.queue_time_label, "")).trim();
+  const planning = normalizePostPlanningFields({
+    scheduledAt,
+    queueDateLabel: String(pickRemoteValue(post?.queueDateLabel, post?.queue_date_label, "")).trim(),
+    queueTimeLabel: String(pickRemoteValue(post?.queueTimeLabel, post?.queue_time_label, "")).trim(),
+    calendarMonth: pickRemoteValue(post?.calendarMonth, post?.calendar_month, ""),
+    calendarYear: pickRemoteValue(post?.calendarYear, post?.calendar_year, ""),
+    calendarDay: pickRemoteValue(post?.calendarDay, post?.calendar_day, ""),
+    hasUserSelectedTime: pickRemoteValue(post?.hasUserSelectedTime, post?.has_user_selected_time, "")
+  });
   const linkedAsset = mediaItems.find(asset => String(asset.postId || asset.linkedPostId || "") === postId);
   const carouselAssetIds = Array.isArray(post?.carouselAssetIds)
     ? post.carouselAssetIds
@@ -9027,7 +10982,7 @@ function normalizeRemotePost(post, campaigns = [], mediaItems = []) {
     title,
     platform: String(pickRemoteValue(post?.platform, "linkedin")).trim() || "linkedin",
     pillar: getCanonicalPillarValue(pickRemoteValue(post?.pillar, post?.hubPillarLabel, post?.hub_pillar_label, matchedCampaign?.pillar), (appState.settings?.pillars || [])[0] || "authority") || ((appState.settings?.pillars || [])[0] || "authority"),
-    date: scheduledAt,
+    date: planning.scheduledAt || scheduledAt,
     status: String(pickRemoteValue(post?.status, "draft")).trim() || "draft",
     postType: String(pickRemoteValue(post?.postType, post?.post_type, "text")).trim() || "text",
     description: String(pickRemoteValue(post?.description, post?.caption, post?.body, "")).trim(),
@@ -9035,8 +10990,11 @@ function normalizeRemotePost(post, campaigns = [], mediaItems = []) {
     assetId: String(pickRemoteValue(post?.assetId, post?.asset_id, "")).trim(),
     hubTitle: String(pickRemoteValue(post?.hubTitle, post?.hub_title, title)).trim(),
     hubPillarLabel: formatContentPillarLabel(pickRemoteValue(post?.hubPillarLabel, post?.hub_pillar_label, post?.pillar, matchedCampaign?.pillar, (appState.settings?.pillars || [])[0] || "authority")),
-    queueDateLabel,
-    queueTimeLabel,
+    queueDateLabel: planning.queueDateLabel,
+    queueTimeLabel: planning.queueTimeLabel,
+    calendarMonth: planning.calendarMonth,
+    calendarYear: planning.calendarYear,
+    calendarDay: planning.calendarDay,
     mediaLabel: String(pickRemoteValue(post?.mediaLabel, post?.media_label, linkedAsset?.title, linkedAsset?.assetName, "")).trim(),
     createdFromInspoId: String(pickRemoteValue(post?.createdFromInspoId, post?.created_from_inspo_id, "")).trim(),
     createdFromNoteId: String(pickRemoteValue(post?.createdFromNoteId, post?.created_from_note_id, "")).trim(),
@@ -9078,7 +11036,8 @@ function normalizeRemotePost(post, campaigns = [], mediaItems = []) {
     aiBrandFrameworkVersion: String(pickRemoteValue(post?.aiBrandFrameworkVersion, post?.ai_brand_framework_version, "")).trim(),
     aiDraftStatus: String(pickRemoteValue(post?.aiDraftStatus, post?.ai_draft_status, "")).trim(),
     aiReviewNotes: String(pickRemoteValue(post?.aiReviewNotes, post?.ai_review_notes, "")).trim(),
-    scheduledDateKey: String(pickRemoteValue(post?.scheduledDateKey, post?.scheduled_date_key, queueDateLabel ? parseDisplayDateKey(queueDateLabel) : "", scheduledAt ? scheduledAt.slice(0, 10) : "")).trim(),
+    scheduledDateKey: String(pickRemoteValue(post?.scheduledDateKey, post?.scheduled_date_key, planning.queueDateLabel ? parseDisplayDateKey(planning.queueDateLabel) : "", planning.scheduledAt ? planning.scheduledAt.slice(0, 10) : "")).trim(),
+    hasUserSelectedTime: planning.hasUserSelectedTime,
     dateDiagnostics: Array.isArray(post?.dateDiagnostics) ? post.dateDiagnostics : [],
     createdAt: String(pickRemoteValue(post?.createdAt, post?.created_at, "")).trim()
   };
@@ -9180,12 +11139,22 @@ function normalizeRemoteMedia(asset) {
 function normalizeRemoteAIDraft(draft) {
   return {
     aiDraftId: String(pickRemoteValue(draft?.aiDraftId, draft?.ai_draft_id, "")).trim(),
+    ideaId: String(pickRemoteValue(draft?.ideaId, draft?.idea_id, draft?.aiDraftId, draft?.ai_draft_id, "")).trim(),
+    ideaPrompt: String(pickRemoteValue(draft?.ideaPrompt, draft?.idea_prompt, draft?.prompt, "")).trim(),
     title: String(pickRemoteValue(draft?.title, "")).trim(),
     platform: String(pickRemoteValue(draft?.platform, "linkedin")).trim() || "linkedin",
     postType: String(pickRemoteValue(draft?.postType, draft?.post_type, "text")).trim() || "text",
     generationMode: String(pickRemoteValue(draft?.generationMode, draft?.generation_mode, "")).trim(),
     sourceType: String(pickRemoteValue(draft?.sourceType, draft?.source_type, "")).trim(),
     sourceId: String(pickRemoteValue(draft?.sourceId, draft?.source_id, "")).trim(),
+    sourceIds: String(pickRemoteValue(draft?.sourceIds, draft?.source_ids, "")).trim(),
+    outputType: String(pickRemoteValue(draft?.outputType, draft?.output_type, "")).trim(),
+    targetPlatforms: String(pickRemoteValue(draft?.targetPlatforms, draft?.target_platforms, "")).trim(),
+    targetCampaignId: String(pickRemoteValue(draft?.targetCampaignId, draft?.target_campaign_id, "")).trim(),
+    targetDate: String(pickRemoteValue(draft?.targetDate, draft?.target_date, "")).trim(),
+    targetDateRange: String(pickRemoteValue(draft?.targetDateRange, draft?.target_date_range, "")).trim(),
+    generatedPostIds: String(pickRemoteValue(draft?.generatedPostIds, draft?.generated_post_ids, "")).trim(),
+    generatedCampaignId: String(pickRemoteValue(draft?.generatedCampaignId, draft?.generated_campaign_id, "")).trim(),
     campaignId: String(pickRemoteValue(draft?.campaignId, draft?.campaign_id, "")).trim(),
     campaignName: String(pickRemoteValue(draft?.campaignName, draft?.campaign_name, "")).trim(),
     prompt: String(pickRemoteValue(draft?.prompt, "")).trim(),
@@ -9264,6 +11233,7 @@ async function apiImportPostFromUrl(payload) {
 
 async function apiSavePost(post) {
   const hydratedPost = hydratePostCampaign(post);
+  const planning = normalizePostPlanningFields(hydratedPost, hydratedPost);
   const platformTargets = Array.isArray(hydratedPost.platformTargets) && hydratedPost.platformTargets.length
     ? hydratedPost.platformTargets
     : hydratedPost.platform === "both"
@@ -9274,7 +11244,13 @@ async function apiSavePost(post) {
     title: hydratedPost.title || "",
     platform: hydratedPost.platform || "linkedin",
     pillar: normalizePillar(hydratedPost.pillar || hydratedPost.hubPillarLabel || (appState.settings?.pillars || [])[0] || "authority"),
-    scheduledAt: hydratedPost.date || "",
+    scheduledAt: planning.scheduledAt || hydratedPost.date || "",
+    queueDateLabel: planning.queueDateLabel,
+    queueTimeLabel: planning.queueTimeLabel,
+    calendarMonth: planning.calendarMonth,
+    calendarYear: planning.calendarYear,
+    calendarDay: planning.calendarDay,
+    hasUserSelectedTime: planning.hasUserSelectedTime,
     status: hydratedPost.status || "draft",
     postType: hydratedPost.postType || "text",
     description: hydratedPost.description || "",
@@ -9326,13 +11302,20 @@ async function apiDeletePost(postId) {
 async function apiDuplicatePost(postId) {
   const source = appState.posts.find(p => p.id === postId);
   if (!source) throw new Error("Missing source post for duplicate.");
+  const planning = normalizePostPlanningFields(source, source);
 
   return apiPost("duplicatePost", {
     duplicate: {
       title: `${source.title} Copy`,
       platform: source.platform,
       pillar: normalizePillar(source.pillar || source.hubPillarLabel || (appState.settings?.pillars || [])[0] || "authority"),
-      scheduledAt: source.date,
+      scheduledAt: planning.scheduledAt || source.date,
+      queueDateLabel: planning.queueDateLabel,
+      queueTimeLabel: planning.queueTimeLabel,
+      calendarMonth: planning.calendarMonth,
+      calendarYear: planning.calendarYear,
+      calendarDay: planning.calendarDay,
+      hasUserSelectedTime: planning.hasUserSelectedTime,
       status: "draft",
       postType: source.postType,
       description: source.description,
@@ -9361,6 +11344,11 @@ async function apiSaveInspo(inspo) {
 
 async function apiArchiveInspo(inspoId, convertedPostId = "") {
   return apiPost("archiveInspo", { inspoId, convertedPostId });
+}
+
+async function apiRepairDateFields() {
+  const result = await apiPost("repairDateFields", {});
+  return result?.results || result;
 }
 
 function renderQueue(queueItems) {
@@ -9475,10 +11463,11 @@ function loadShellLayout() {
     const parsed = raw ? JSON.parse(raw) : {};
     const overviewWidth = Number(parsed.overviewWidth || 360);
     return {
-      overviewWidth: clamp(overviewWidth, 340, 520)
+      overviewWidth: clamp(overviewWidth, 340, 520),
+      sidebarCollapsed: !!parsed.sidebarCollapsed
     };
   } catch (_) {
-    return { overviewWidth: 360 };
+    return { overviewWidth: 360, sidebarCollapsed: false };
   }
 }
 
@@ -9491,6 +11480,8 @@ function applyShellLayout() {
   const resizeHandle = document.getElementById("shell-resize-handle");
   if (!overviewPanel) return;
 
+  applySidebarLayout();
+
   if (window.innerWidth < 1180) {
     overviewPanel.style.width = "";
     overviewPanel.style.flexBasis = "";
@@ -9502,6 +11493,15 @@ function applyShellLayout() {
   overviewPanel.style.width = `${width}px`;
   overviewPanel.style.flexBasis = `${width}px`;
   if (resizeHandle) resizeHandle.classList.remove("hidden");
+}
+
+function applySidebarLayout() {
+  if (!desktopSidebarNav) return;
+  const collapsed = !!shellLayout.sidebarCollapsed && window.innerWidth >= 1024;
+  desktopSidebarNav.classList.toggle("sidebar-collapsed", collapsed);
+  if (desktopSidebarToggleIcon) {
+    desktopSidebarToggleIcon.className = `ph-bold ${collapsed ? "ph-caret-right" : "ph-caret-left"}`;
+  }
 }
 
 function setupSplitPane() {
@@ -9640,7 +11640,7 @@ function formatLedgerDate(value) {
     const dateLabel = value.queueDateLabel
       ? String(value.queueDateLabel).trim()
       : displayDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-    const timeLabel = formatLocalQueueTime(value.date || value.scheduledAt);
+    const timeLabel = String(value.queueTimeLabel || "").trim();
     return timeLabel ? `${dateLabel} • ${timeLabel}` : dateLabel;
   }
   const d = parsePostDate(value);
@@ -9696,6 +11696,7 @@ window.openModalById = openModalById;
 window.openMediaAsset = openMediaAsset;
 window.closeModal = closeModal;
 window.switchView = switchView;
+window.openWorkspaceHub = openWorkspaceHub;
 window.aiGenerate = aiGenerate;
 window.inspoToPost = inspoToPost;
 window.noteToPost = noteToPost;
@@ -9707,6 +11708,7 @@ window.handleBrokenMediaPreview = handleBrokenMediaPreview;
 window.loadAIDraftIntoWorkspace = loadAIDraftIntoWorkspace;
 window.setBrandFrameworkSection = setBrandFrameworkSection;
 window.connectSocialAccount = connectSocialAccount;
+window.reconnectSocialAccount = reconnectSocialAccount;
 window.disconnectConnectedAccount = disconnectConnectedAccount;
 window.importConnectedSocialPost = importConnectedSocialPost;
 
