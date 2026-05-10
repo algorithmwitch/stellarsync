@@ -14,6 +14,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" vid="8">
     <script src="https://unpkg.com/@phosphor-icons/web" vid="9"></script>
     <style vid="10">
+  html,
+  body {
+    height: 100%;
+  }
+
   main {
     overflow: hidden !important;
     min-height: 0 !important;
@@ -150,10 +155,24 @@
     position: relative;
     flex: 0 0 auto;
     min-width: 0;
+    min-height: 0;
+    display: flex;
   }
 
   #signal-overview-panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
     transition: width 180ms ease, flex-basis 180ms ease, opacity 180ms ease, padding 180ms ease, border-color 180ms ease;
+  }
+
+  #signal-overview-panel .signals-scroll,
+  #signal-overview-panel [data-signals-scroll] {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 
   #signal-overview-shell.panel-collapsed #signal-overview-panel {
@@ -663,7 +682,14 @@
         }
 
         @media (max-width: 768px) {
+            html,
             body {
+                height: 100%;
+                overflow: hidden !important;
+            }
+
+            body {
+                min-height: 100dvh;
                 padding: 0.75rem !important;
                 padding-bottom: 6.5rem !important;
                 gap: 0.75rem !important;
@@ -671,29 +697,56 @@
 
             header {
                 height: auto !important;
-                min-height: 56px;
-                padding: 0.75rem 1rem !important;
+                min-height: 52px !important;
+                padding: max(0.55rem, env(safe-area-inset-top)) 0.75rem 0.55rem !important;
+                gap: 0.5rem !important;
+                align-items: center !important;
+                overflow: hidden !important;
             }
 
             header .font-bold.text-xl {
-                font-size: 1rem;
+                font-size: 0.95rem !important;
+                white-space: nowrap !important;
+            }
+
+            header > div:first-child {
+                gap: 0.5rem !important;
+                min-width: 0 !important;
+                flex: 1 1 auto !important;
+            }
+
+            #app-header-logo {
+                width: 2rem !important;
+                height: 2rem !important;
+                border-radius: 0.7rem !important;
+                flex-shrink: 0 !important;
+            }
+
+            #app-header-logo i {
+                font-size: 1.15rem !important;
             }
 
             #topbar-new-post-btn {
-                width: 2.75rem;
-                height: 2.75rem;
+                width: 2.25rem !important;
+                height: 2.25rem !important;
                 padding: 0 !important;
-                justify-content: center;
+                justify-content: center !important;
+                border-radius: 0.75rem !important;
                 font-size: 0 !important;
+                flex-shrink: 0 !important;
             }
 
             #topbar-new-post-btn i {
-                font-size: 1rem;
-                margin: 0;
+                font-size: 1rem !important;
+                margin: 0 !important;
+            }
+
+            #topbar-new-post-btn .new-post-label {
+                display: none !important;
             }
 
             #app-header-title {
-                font-size: 1rem;
+                font-size: 0.95rem !important;
             }
 
             #app-header-subtitle {
@@ -705,7 +758,49 @@
             }
 
             header > div:last-child {
-                gap: 0.45rem !important;
+                gap: 0.35rem !important;
+                flex-shrink: 0 !important;
+                flex-wrap: nowrap !important;
+                min-width: 0 !important;
+            }
+
+            #install-app-btn {
+                width: 2.25rem !important;
+                height: 2.25rem !important;
+                padding: 0 !important;
+                justify-content: center !important;
+                border-radius: 0.75rem !important;
+                gap: 0 !important;
+                flex-shrink: 0 !important;
+            }
+
+            #install-app-btn span,
+            #install-app-btn .install-label,
+            #install-app-btn .label-text {
+                display: none !important;
+            }
+
+            #install-app-btn i {
+                margin: 0 !important;
+                font-size: 1rem !important;
+            }
+
+            #mobile-filter-trigger,
+            #profile-menu-trigger,
+            #mobile-install-app-btn {
+                width: 2.25rem !important;
+                height: 2.25rem !important;
+                border-radius: 0.75rem !important;
+                flex-shrink: 0 !important;
+            }
+
+            #mobile-filter-trigger i,
+            #mobile-install-app-btn i {
+                font-size: 1rem !important;
+            }
+
+            #profile-menu-trigger {
+                font-size: 0.65rem !important;
             }
 
             #desktop-sidebar-nav,
@@ -716,28 +811,36 @@
 
             #primary-layout {
                 display: block !important;
-                overflow: visible !important;
+                min-height: 0 !important;
+                height: calc(100dvh - 4.75rem - 5.75rem) !important;
+                overflow: hidden !important;
             }
 
             #main-shell-panel {
                 width: 100% !important;
-                min-height: calc(100vh - 8.5rem);
-                overflow: visible !important;
+                min-height: 0 !important;
+                height: 100% !important;
+                overflow: hidden !important;
             }
 
             .view-section {
-                height: auto !important;
-                min-height: calc(100vh - 9rem);
+                height: 100% !important;
+                min-height: 0 !important;
+                max-height: 100% !important;
                 padding: 1rem !important;
-                overflow: auto !important;
+                padding-bottom: 6.75rem !important;
+                overflow-y: auto !important;
+                overflow-x: hidden !important;
+                -webkit-overflow-scrolling: touch;
             }
 
             #view-constellation {
-                min-height: calc(100vh - 10rem);
+                overflow: hidden !important;
             }
 
             #view-constellation #starmap-viewport {
-                min-height: 60vh;
+                height: 100% !important;
+                min-height: 60dvh !important;
             }
 
             #view-media #media-grid,
@@ -765,22 +868,42 @@
                 margin-bottom: 1rem !important;
             }
 
+            #view-ledger,
+            #view-media,
+            #view-inspo,
+            #view-notes,
+            #view-write-idea,
+            #view-performance,
+            #view-audit,
+            #view-calendar {
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch;
+            }
+
             #scheduling-modal .modal-content,
             #campaign-modal .modal-content,
             #inspo-modal .modal-content,
             #media-link-modal-card,
-            #media-asset-modal-card {
+            #media-asset-modal-card,
+            #install-helper-modal-card,
+            #upload-staging-modal-card,
+            #workspace-hub-modal-card,
+            #connection-setup-modal-card {
                 width: 100% !important;
                 max-width: 100% !important;
-                max-height: calc(100vh - 2rem) !important;
+                max-height: calc(100dvh - 2rem) !important;
                 margin: 0 !important;
+                overflow: hidden !important;
             }
 
             #scheduling-modal .modal-content > div:nth-child(2),
             #campaign-modal .modal-content > div:nth-child(2),
             #inspo-modal .modal-content > div:nth-child(2),
             #media-link-modal .p-6,
-            #media-asset-modal .grid {
+            #media-asset-modal .grid,
+            #workspace-hub-modal-card,
+            #upload-staging-modal-card,
+            #connection-setup-modal-card {
                 overflow-y: auto !important;
             }
 
@@ -876,9 +999,9 @@
             <div id="stars-container" class="stars absolute inset-0" vid="16"></div>
         </div>
 
-    <header class="h-16 px-6 flex justify-between items-center bg-[#120c1d] border border-white/5 rounded-2xl relative z-50 shrink-0" vid="17">
-        <div class="flex items-center gap-4" vid="18">
-            <div class="w-10 h-10 rounded-xl bg-[#231738] flex items-center justify-center" vid="19">
+    <header class="h-16 px-6 flex justify-between items-center gap-3 bg-[#120c1d] border border-white/5 rounded-2xl relative z-50 shrink-0" vid="17">
+        <div class="flex items-center gap-4 min-w-0 flex-1" vid="18">
+            <div id="app-header-logo" class="w-10 h-10 rounded-xl bg-[#231738] flex items-center justify-center shrink-0" vid="19">
                 <i class="ph-fill ph-planet text-[#c77dff] text-2xl" vid="20"></i>
             </div>
             <div class="min-w-0">
@@ -889,7 +1012,7 @@
               <p id="app-header-view-detail" class="hidden md:block text-[10px] uppercase tracking-[0.22em] text-gray-500 font-bold mt-1">Content command center</p>
             </div>
         </div>
-        <div class="flex items-center gap-3 relative" vid="22">
+        <div id="app-header-actions" class="flex items-center gap-3 relative shrink-0 flex-nowrap" vid="22">
             <div id="app-status-banner" class="hidden md:flex items-center gap-2 px-4 py-2 bg-[#0a2016] border border-[#0d4029] rounded-full cursor-pointer status-banner" vid="23">
                 <div id="app-status-dot" class="w-1.5 h-1.5 rounded-full bg-[#00ffaa] shadow-[0_0_8px_#00ffaa] status-dot" vid="24"></div>
                 <span id="app-status-text" class="text-[10px] uppercase tracking-wider text-[#00ffaa] font-semibold" vid="25">Data Synced</span>
@@ -897,17 +1020,17 @@
             <button id="app-update-btn" type="button" class="hidden px-4 py-2 bg-[#20110a] hover:bg-[#2e170e] text-[#ffd7a3] text-[10px] uppercase tracking-wider font-bold rounded-xl transition-all items-center gap-2 border border-[#5b3118]">
                 <i class="ph-bold ph-arrow-clockwise"></i> Update Available
             </button>
-            <button id="install-app-btn" type="button" class="hidden px-4 py-2 bg-[#1a1128] hover:bg-[#231738] text-white text-[10px] uppercase tracking-wider font-bold rounded-xl transition-all items-center gap-2 border border-white/10">
-                <i class="ph-bold ph-download-simple"></i> Install App
+            <button id="install-app-btn" type="button" title="Install App" aria-label="Install App" class="hidden px-4 py-2 bg-[#1a1128] hover:bg-[#231738] text-white text-[10px] uppercase tracking-wider font-bold rounded-xl transition-all items-center gap-2 border border-white/10 shrink-0">
+                <i class="ph-bold ph-download-simple"></i><span class="install-label">Install App</span>
             </button>
-            <button id="topbar-new-post-btn" onclick="openModal()" class="px-4 md:px-6 py-2 bg-gradient-to-r from-[#9d4edd] to-[#c77dff] hover:opacity-90 text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(157,78,221,0.2)] border border-white/10" vid="26">
-                <i class="ph-bold ph-plus" vid="27"></i> New Post
+            <button id="topbar-new-post-btn" onclick="openModal()" class="px-4 md:px-6 py-2 bg-gradient-to-r from-[#9d4edd] to-[#c77dff] hover:opacity-90 text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(157,78,221,0.2)] border border-white/10 shrink-0" vid="26">
+                <i class="ph-bold ph-plus" vid="27"></i><span class="new-post-label">New Post</span>
             </button>
-            <button id="mobile-filter-trigger" type="button" class="w-10 h-10 rounded-xl bg-[#1e152d] border border-white/5 flex items-center justify-center text-gray-300 hover:text-white transition-colors" title="Filters">
+            <button id="mobile-filter-trigger" type="button" class="w-10 h-10 rounded-xl bg-[#1e152d] border border-white/5 flex items-center justify-center text-gray-300 hover:text-white transition-colors shrink-0" title="Filters">
               <i class="ph-bold ph-funnel"></i>
             </button>
             <div class="relative">
-              <button id="profile-menu-trigger" type="button" title="Workspace and Settings" class="w-10 h-10 rounded-xl bg-[#1e152d] border border-white/5 flex items-center justify-center text-xs font-bold cursor-pointer text-gray-300 hover:text-white transition-colors" vid="28">
+              <button id="profile-menu-trigger" type="button" title="Workspace and Settings" class="w-10 h-10 rounded-xl bg-[#1e152d] border border-white/5 flex items-center justify-center text-xs font-bold cursor-pointer text-gray-300 hover:text-white transition-colors shrink-0" vid="28">
                   AW
               </button>
               <div id="profile-menu" class="workspace-menu">
@@ -933,13 +1056,13 @@
                 </button>
               </div>
             </div>
-            <button id="mobile-install-app-btn" type="button" class="hidden md:hidden w-10 h-10 rounded-xl bg-[#1e152d] border border-white/5 items-center justify-center text-gray-300 hover:text-white transition-colors">
+            <button id="mobile-install-app-btn" type="button" class="hidden md:hidden w-10 h-10 rounded-xl bg-[#1e152d] border border-white/5 items-center justify-center text-gray-300 hover:text-white transition-colors shrink-0">
         <i class="ph-bold ph-download-simple"></i>
             </button>
         </div>
     </header>
 
-    <div class="flex flex-1 min-h-0 overflow-hidden relative z-10 w-full gap-4" vid="29">
+    <div id="primary-layout" class="flex flex-1 min-h-0 overflow-hidden relative z-10 w-full gap-4" vid="29">
         
         <aside id="desktop-sidebar-nav" class="w-[88px] bg-[#120c1d] border border-white/5 rounded-2xl flex flex-col items-center py-6 gap-4 shrink-0 z-40" vid="30">
             <button id="desktop-sidebar-toggle" type="button" class="sidebar-toggle-handle" aria-label="Collapse sidebar">
@@ -1083,7 +1206,7 @@
 
   <div id="starmap-viewport" class="w-full h-full relative overflow-hidden rounded-2xl bg-transparent">
     <div id="starmap-canvas" class="starmap-container absolute top-0 left-0 w-[2400px] h-[2200px] origin-top-left transition-transform duration-75 ease-out bg-transparent">
-      <!--  renders campaign rows, dots, and clickable labels here -->
+      <!-- script renders campaign rows, dots, and clickable labels here -->
     </div>
 
   </div>
@@ -1644,7 +1767,7 @@
             <div class="p-6 border-b border-white/5" vid="471">
                 <h3 class="text-sm font-bold text-white tracking-widest uppercase" vid="472">Signals Overview</h3>
             </div>
-            <div class="p-6 overflow-y-auto custom-scrollbar flex-1 min-h-0" vid="473">
+            <div class="signals-scroll p-6 overflow-y-auto overflow-x-hidden custom-scrollbar flex-1 min-h-0" data-signals-scroll vid="473">
                 <div class="mini-card p-4 mb-5">
                   <div class="flex items-center justify-between gap-3 mb-3">
                     <div>
@@ -2680,7 +2803,7 @@
 </div>
 <script>
 const APP_CONFIG = {
-  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbxpD08VAqZZVScSrKemzkTvcZEudj9unrszwGuH4CqCJGfIhMGvtexrvfL0pYrBK7w6/exec",
+  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbxlbKVGKFPDRAGQzypDWpK-DQwWR_k8eZAjU-K6UFPw0SR2NVSTD15YIx5CO7bcZppl/exec",
   ENABLE_REMOTE_SYNC: true,
   STORAGE_KEY: "stellarsync_local_state_v5",
   SHELL_LAYOUT_KEY: "stellarsync_shell_layout_v2"
@@ -9478,6 +9601,7 @@ function switchView(viewName) {
   if (targetView) {
     targetView.classList.remove("hidden");
     targetView.classList.add("flex");
+    targetView.scrollTop = 0;
   }
 
   if (mainShell) {
