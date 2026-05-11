@@ -608,13 +608,30 @@
             color: #e5e7eb;
             font-size: clamp(10px, 0.72vw, 12px);
             line-height: 1.2;
-            max-width: 260px;
+            max-width: 220px;
             min-width: 0;
             overflow: hidden;
-            white-space: nowrap;
-            text-overflow: ellipsis;
+            white-space: normal;
+            overflow-wrap: normal;
             word-break: normal;
+            hyphens: none;
             z-index: 11;
+        }
+        #starmap-canvas.constellation-zoom-compact .constellation-label-btn {
+            font-size: 10px;
+            padding: 0.3rem 0.5rem;
+            max-width: 170px;
+            line-height: 1.1;
+        }
+        #starmap-canvas.constellation-zoom-mini .constellation-label-btn {
+            font-size: 9px;
+            padding: 0.18rem 0.38rem;
+            max-width: 120px;
+            line-height: 1.05;
+            opacity: 0.9;
+        }
+        #starmap-canvas.constellation-zoom-mini .constellation-campaign-label p {
+            display: none;
         }
         .constellation-campaign-label {
             min-width: 0;
@@ -1726,12 +1743,6 @@
     <button id="zoom-reset" class="w-10 h-10 bg-[#1a1128] border border-white/5 rounded-xl text-white hover:bg-[#231738] flex items-center justify-center transition-colors" title="Reset">
       <i class="ph-bold ph-corners-out text-lg"></i>
     </button>
-    <select id="semantic-bridge-density" class="px-3 py-2 rounded-xl bg-[#1a1128] border border-white/5 text-[10px] uppercase tracking-widest font-bold text-white" aria-label="Connection strength filter">
-      <option value="off">Connections Off</option>
-      <option value="low" selected>Connections Low</option>
-      <option value="medium">Connections Medium</option>
-      <option value="high">Connections High</option>
-    </select>
   </div>
 
   <div id="constellation-badge" class="absolute top-6 right-6 z-30 bg-[#1a1128] border border-white/5 px-4 py-2 rounded-xl">
@@ -3563,6 +3574,20 @@ let startPanX = 0;
 let startPanY = 0;
 let pointerStartX = 0;
 let pointerStartY = 0;
+const CAMPAIGN_ROWS = {
+  "Messaging": 0,
+  "Offerings": 1,
+  "Community Shoutout": 2,
+  "Career Advice": 3,
+  "Algorithm Best Practices": 4,
+  "Job Posts": 5,
+  "Alternate Realities": 6
+};
+const ROW_HEIGHT = 260;
+const START_Y = 260;
+const NODE_START_X = 620;
+const NODE_GAP_X = 220;
+const LANE_LABEL_X = 74;
 let pinchStartDistance = 0;
 let pinchStartScale = 1;
 let pinchStartPanX = 0;
@@ -5976,8 +6001,6 @@ function initApp() {
 }
     
 function rerenderAll() {
-  const bridgeControl = document.getElementById("semantic-bridge-density");
-  if (bridgeControl) bridgeControl.value = semanticBridgeDensity;
   console.table((appState.posts || []).map((p) => ({
     title: p.title,
     scheduledAt: p.scheduledAt,
@@ -7306,82 +7329,69 @@ function buildConstellationRows() {
       _constellationLayout: getConstellationLayoutConfig({ ...campaign, posts }, 0)
     };
   });
-  const rows = [];
-  let rowCursor = 0;
-  let rowOccupancy = 0;
-  const rowGap = 1260;
-  const baseY = 660;
-  const leftColumnX = 1220;
-  const rightColumnX = 3920;
-  const fullRowX = 2570;
-
-  mapped.forEach((campaign) => {
-    const layout = getConstellationLayoutConfig(campaign, rows.length);
-    const priorityRow = shouldUseFullRowConstellationLane(campaign, layout);
-    let anchor;
-
-    if (priorityRow) {
-      if (rowOccupancy > 0) {
-        rowCursor += 1;
-        rowOccupancy = 0;
-      }
-      anchor = {
-        x: fullRowX,
-        y: baseY + (rowCursor * rowGap)
-      };
-      rowCursor += 1;
-    } else {
-      const column = rowOccupancy;
-      anchor = {
-        x: column === 0 ? leftColumnX : rightColumnX,
-        y: baseY + (rowCursor * rowGap)
-      };
-      rowOccupancy += 1;
-      if (rowOccupancy >= 2) {
-        rowCursor += 1;
-        rowOccupancy = 0;
-      }
+  const usedRows = new Set();
+  const fallbackStart = Object.keys(CAMPAIGN_ROWS).length;
+  let fallbackRowIndex = fallbackStart;
+  return mapped.map((campaign, index) => {
+    const layout = getConstellationLayoutConfig(campaign, index);
+    let rowIndex = getCampaignLaneRowIndex(campaign);
+    if (rowIndex == null || usedRows.has(rowIndex)) {
+      while (usedRows.has(fallbackRowIndex)) fallbackRowIndex += 1;
+      rowIndex = fallbackRowIndex;
+      fallbackRowIndex += 1;
     }
-
-    rows.push({
+    usedRows.add(rowIndex);
+    const anchor = {
+      x: getConstellationLaneCenterX(layout),
+      y: getCampaignBaseY(rowIndex)
+    };
+    return {
       ...campaign,
+      _constellationRowIndex: rowIndex,
       _constellationAnchor: {
-        x: clamp(anchor.x, 520, 4200),
-        y: clamp(anchor.y, 360, 5200)
+        x: clamp(anchor.x, 520, 5600),
+        y: clamp(anchor.y, 180, 6000)
       },
       _constellationLayout: layout,
       _constellationFootprint: {
         width: layout.rowLength + layout.labelWidth + 420,
-        height: layout.rowHeight + layout.labelHeight + 240
+        height: ROW_HEIGHT
       }
-    });
+    };
   });
-
-  return rows;
 }
 
-function isConstellationPriorityCampaign(campaign = {}) {
-  return /algorithm best practices|job posts|alternate realities/i.test(String(campaign.campaignName || ""));
+function normalizeCampaignLaneKey(value = "") {
+  const normalized = normalizeLookupValue(value);
+  if (normalized === "community shout outs" || normalized === "community shoutout") return "Community Shoutout";
+  if (normalized === "messaging") return "Messaging";
+  if (normalized === "offerings") return "Offerings";
+  if (normalized === "career advice") return "Career Advice";
+  if (normalized === "algorithm best practices") return "Algorithm Best Practices";
+  if (normalized === "job posts") return "Job Posts";
+  if (normalized === "alternate realities") return "Alternate Realities";
+  return "";
 }
 
-function shouldUseFullRowConstellationLane(campaign = {}, layout = null) {
-  const normalizedName = normalizeLookupValue(campaign.campaignName || "");
-  if ([
-    "algorithm best practices",
-    "job posts",
-    "alternate realities",
-    "company page",
-    "community shout outs"
-  ].includes(normalizedName)) {
-    return true;
-  }
-  const safeLayout = layout || getConstellationLayoutConfig(campaign, 0);
-  return Boolean(
-    safeLayout.priorityCampaign
-    || safeLayout.labelWidth >= 260
-    || safeLayout.rowLength >= 1650
-    || safeLayout.crowded
-  );
+function getCampaignLaneRowIndex(campaign = {}) {
+  const normalizedKey = normalizeCampaignLaneKey(campaign.campaignName || "");
+  if (!normalizedKey) return null;
+  return Number.isFinite(CAMPAIGN_ROWS[normalizedKey]) ? CAMPAIGN_ROWS[normalizedKey] : null;
+}
+
+function getCampaignBaseY(rowIndex) {
+  return START_Y + (Number(rowIndex || 0) * ROW_HEIGHT);
+}
+
+function getConstellationLaneCenterX(layout = {}) {
+  return NODE_START_X + (Math.max(Number(layout.rowLength || 0), NODE_GAP_X) / 2);
+}
+
+function getNodePosition(index, rowIndex) {
+  const x = NODE_START_X + (index * NODE_GAP_X);
+  const yBase = getCampaignBaseY(rowIndex);
+  const y = yBase + (Math.sin(index * 0.9) * 36) + (Math.cos(index * 0.45) * 18);
+  return { x, y };
 }
 
 function getConstellationAnchor(campaign, index) {
@@ -7403,63 +7413,46 @@ function getConstellationTier(postCount) {
 function getConstellationLayoutConfig(campaign, index = 0) {
   if (campaign?._constellationLayout) return campaign._constellationLayout;
   const postCount = Math.max((campaign.posts || []).length, 1);
-  const priorityCampaign = isConstellationPriorityCampaign(campaign);
-  const wideName = /company page|community shout outs/i.test(String(campaign.campaignName || ""));
-  const tier = priorityCampaign ? "huge" : getConstellationTier(postCount);
-  const labelWidth = clamp(170 + String(campaign.campaignName || "").length * 7, 200, priorityCampaign || wideName ? 420 : 320);
+  const tier = getConstellationTier(postCount);
+  const labelWidth = clamp(180 + String(campaign.campaignName || "").length * 6, 220, 360);
   const labelHeight = 72;
-  const dotGap = priorityCampaign ? 126 : wideName ? 112 : tier === "large" ? 108 : tier === "medium" ? 98 : 90;
-  const rowLength = clamp((priorityCampaign ? 1040 : wideName ? 760 : 540) + ((postCount - 1) * dotGap), priorityCampaign || wideName ? 1580 : 760, priorityCampaign ? 2580 : wideName ? 2200 : 1800);
-  const rowHeight = clamp((priorityCampaign ? 360 : wideName ? 290 : 240) + Math.max(postCount - 5, 0) * 10, priorityCampaign ? 380 : 240, priorityCampaign ? 540 : 380);
+  const rowLength = Math.max((postCount - 1) * NODE_GAP_X, NODE_GAP_X);
   const tierConfig = {
-    small: { amplitude: 0.9, spacing: 1, hoverPadding: 1, labelOffset: 1 },
-    medium: { amplitude: 1.02, spacing: 1.08, hoverPadding: 1.08, labelOffset: 1.06 },
-    large: { amplitude: 1.1, spacing: 1.14, hoverPadding: 1.12, labelOffset: 1.1 },
-    huge: { amplitude: 1.18, spacing: 1.2, hoverPadding: 1.18, labelOffset: 1.14 }
+    small: { amplitude: 0.92, spacing: 1, hoverPadding: 1, labelOffset: 1 },
+    medium: { amplitude: 1, spacing: 1, hoverPadding: 1.04, labelOffset: 1.02 },
+    large: { amplitude: 1.06, spacing: 1, hoverPadding: 1.08, labelOffset: 1.04 },
+    huge: { amplitude: 1.1, spacing: 1, hoverPadding: 1.1, labelOffset: 1.06 }
   }[tier];
   return {
     tier,
-    pathStretch: priorityCampaign ? 1.12 : 1,
+    pathStretch: 1,
     verticalStretch: tierConfig.amplitude,
     internalSpacing: tierConfig.spacing,
     campaignRadius: 1,
     hoverPadding: tierConfig.hoverPadding,
     labelOffset: tierConfig.labelOffset,
-    anchorX: 820,
-    anchorY: 580,
+    anchorX: NODE_START_X + (rowLength / 2),
+    anchorY: START_Y + (index * ROW_HEIGHT),
     rowLength,
-    rowHeight,
+    rowHeight: ROW_HEIGHT,
     labelWidth,
     labelHeight,
-    dotGap,
+    dotGap: NODE_GAP_X,
     crowded: postCount >= 10,
     overlapRisk: postCount >= 14,
     labelCollisionRisk: postCount >= 9,
-    priorityCampaign
+    priorityCampaign: false
   };
 }
 
 function getIconPathPoints(shape, count, anchorX, anchorY, layout = {}, seed = "") {
   const safeCount = Math.max(count, 1);
   const points = [];
-  const verticalStretch = Number(layout.verticalStretch || 1);
-  const rowLength = Number(layout.rowLength || 720);
-  const rowHeight = Number(layout.rowHeight || 320);
-  const amplitudeA = rowHeight * 0.22 * verticalStretch;
-  const amplitudeB = rowHeight * 0.06 * Math.min(verticalStretch, 1.2);
-  const laneLift = rowHeight * (layout.priorityCampaign ? 0.05 : 0.035);
   for (let index = 0; index < safeCount; index += 1) {
-    const t = safeCount === 1 ? 0.5 : index / Math.max(safeCount - 1, 1);
-    const x = anchorX + (t - 0.5) * rowLength;
-    const baseWave = Math.sin(t * Math.PI * 2);
-    const detailWave = Math.sin(t * Math.PI * 4);
-    const y = anchorY
-      + (baseWave * amplitudeA)
-      + (detailWave * amplitudeB)
-      - (Math.sin(t * Math.PI) * laneLift);
+    const point = getNodePosition(index, Number(layout.rowIndex || 0));
     points.push({
-      x: clamp(x, 320, 4300),
-      y: clamp(y, 220, 4600)
+      x: clamp(point.x, 240, 5600),
+      y: clamp(point.y, 160, 6000)
     });
   }
   return points;
@@ -7490,14 +7483,6 @@ function buildCampaignSummary(campaign) {
     topPlatform: platformCounts[0]?.[0] || "none",
     topStatus: statusCounts[0]?.[0] || "draft"
   };
-}
-
-function getBridgeDensityConfig(level = semanticBridgeDensity) {
-  const density = String(level || "low").toLowerCase();
-  if (density === "off") return { threshold: 1.1, maxPerCampaign: 0, opacity: 0 };
-  if (density === "medium") return { threshold: 0.32, maxPerCampaign: 4, opacity: 0.22 };
-  if (density === "high") return { threshold: 0.18, maxPerCampaign: 7, opacity: 0.28 };
-  return { threshold: 0.42, maxPerCampaign: 2, opacity: 0.18 };
 }
 
 function clearConstellationSelection() {
@@ -7533,17 +7518,15 @@ function renderConstellation() {
   if (!canvas) return;
 
   const rows = buildConstellationRows();
-  const semanticConstellation = buildSemanticConstellation();
-  const bridgeConfig = getBridgeDensityConfig();
-  const worldWidth = 5600;
-  const minCanvasHeight = Math.max(
-    4000,
-    rows.reduce((maxHeight, campaign) => {
-      const anchorY = Number(campaign?._constellationAnchor?.y || 0);
-      const footprintHeight = Number(campaign?._constellationFootprint?.height || 0);
-      return Math.max(maxHeight, anchorY + footprintHeight + 320);
+  const worldWidth = Math.max(
+    3600,
+    rows.reduce((maxWidth, campaign) => {
+      const postCount = Math.max((campaign.posts || []).length, 1);
+      return Math.max(maxWidth, NODE_START_X + ((postCount - 1) * NODE_GAP_X) + 680);
     }, 0)
   );
+  const mapRowCount = Math.max(rows.length + 2, Object.keys(CAMPAIGN_ROWS).length + 3);
+  const minCanvasHeight = Math.max(2400, mapRowCount * ROW_HEIGHT);
 
   canvas.style.height = `${minCanvasHeight}px`;
   canvas.style.width = `${worldWidth}px`;
@@ -7558,45 +7541,13 @@ function renderConstellation() {
     anchorByCampaign.set(String(campaign.campaignId || campaign.campaignName || `campaign-${index}`), getConstellationAnchor(campaign, index));
   });
 
-  if (semanticConstellation.bridges.length && bridgeConfig.maxPerCampaign > 0) {
-    const bridgeSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    bridgeSvg.setAttribute("width", String(worldWidth));
-    bridgeSvg.setAttribute("height", String(minCanvasHeight));
-    bridgeSvg.style.cssText = "position:absolute;left:0;top:0;pointer-events:none;z-index:0;overflow:visible;";
-    const bridgeCounts = new Map();
-    semanticConstellation.bridges
-      .filter((bridge) => (bridge.strength || 0) >= bridgeConfig.threshold)
-      .sort((a, b) => (b.strength || 0) - (a.strength || 0))
-      .forEach((bridge) => {
-      const fromCount = bridgeCounts.get(bridge.fromCampaign) || 0;
-      const toCount = bridgeCounts.get(bridge.toCampaign) || 0;
-      if (fromCount >= bridgeConfig.maxPerCampaign || toCount >= bridgeConfig.maxPerCampaign) return;
-      const fromAnchor = anchorByCampaign.get(String(bridge.fromCampaign || ""));
-      const toAnchor = anchorByCampaign.get(String(bridge.toCampaign || ""));
-      if (!fromAnchor || !toAnchor) return;
-      const bridgeLine = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      const midX = Math.round((fromAnchor.x + toAnchor.x) / 2);
-      const bendY = Math.round(Math.min(fromAnchor.y, toAnchor.y) - 120 - bridge.strength * 120);
-      bridgeLine.setAttribute("d", `M ${fromAnchor.x} ${fromAnchor.y} Q ${midX} ${bendY} ${toAnchor.x} ${toAnchor.y}`);
-      bridgeLine.setAttribute("fill", "none");
-      bridgeLine.setAttribute("stroke", "#8b5cf6");
-      bridgeLine.setAttribute("stroke-width", String(Math.max(1, bridge.strength * 3.6)));
-      bridgeLine.setAttribute("stroke-dasharray", "4 10");
-      bridgeLine.setAttribute("opacity", String(clamp(bridge.strength * bridgeConfig.opacity, 0.08, 0.3)));
-      bridgeLine.dataset.fromCampaign = String(bridge.fromCampaign || "");
-      bridgeLine.dataset.toCampaign = String(bridge.toCampaign || "");
-      bridgeLine.dataset.baseOpacity = String(clamp(bridge.strength * bridgeConfig.opacity, 0.08, 0.3));
-      bridgeLine.dataset.bridgeStrength = String(bridge.strength || 0);
-      bridgeSvg.appendChild(bridgeLine);
-      bridgeCounts.set(bridge.fromCampaign, fromCount + 1);
-      bridgeCounts.set(bridge.toCampaign, toCount + 1);
-    });
-    canvas.appendChild(bridgeSvg);
-  }
-
   rows.forEach((campaign, index) => {
     const anchor = getConstellationAnchor(campaign, index);
-    const layout = getConstellationLayoutConfig(campaign, index);
+    const rowIndex = Number(campaign?._constellationRowIndex || index);
+    const layout = {
+      ...getConstellationLayoutConfig(campaign, index),
+      rowIndex
+    };
     const pillarValue = getCampaignContentPillar(campaign);
     const color = getCampaignColor(campaign, pillarValue);
     const summary = buildCampaignSummary(campaign);
@@ -7607,13 +7558,14 @@ function renderConstellation() {
 
     const points = getIconPathPoints(String(campaign.iconShape || "").trim().toLowerCase(), Math.max((campaign.posts || []).length, 1), anchor.x, anchor.y, layout, String(campaign.campaignId || campaign.campaignName || index));
     const pathData = buildCanonicalSquigglePath(points);
+    const labelTop = clamp(getCampaignBaseY(rowIndex) - 94, 40, minCanvasHeight - 160);
 
     const label = document.createElement("div");
     label.className = "constellation-campaign-label";
     label.style.cssText = `
       position:absolute;
-      left:${Math.max(48, points[0].x - (layout.priorityCampaign ? 180 : 130))}px;
-      top:${Math.max(52, points[0].y - (layout.priorityCampaign ? 190 : 160))}px;
+      left:${LANE_LABEL_X}px;
+      top:${labelTop}px;
       padding:10px 18px;
       background:rgba(18,12,29,0.18);
       border:1px solid rgba(255,255,255,0.12);
@@ -7622,8 +7574,8 @@ function renderConstellation() {
       backdrop-filter:none;
       box-shadow:none;
       z-index:6;
-      min-width:${Math.min(layout.labelWidth, layout.priorityCampaign ? 260 : 170)}px;
-      max-width:${layout.priorityCampaign ? 360 : 250}px;
+      min-width:${Math.min(layout.labelWidth, 220)}px;
+      max-width:320px;
       pointer-events:none;
     `;
     label.innerHTML = `
@@ -7643,7 +7595,8 @@ function renderConstellation() {
     path.setAttribute("fill", "none");
     path.setAttribute("stroke", color);
     path.setAttribute("stroke-width", "2");
-    path.setAttribute("stroke-dasharray", "5 5");
+    path.setAttribute("stroke-linecap", "round");
+    path.setAttribute("stroke-linejoin", "round");
     path.setAttribute("opacity", "0.45");
     lineSvg.appendChild(path);
 
@@ -7716,10 +7669,9 @@ function renderConstellation() {
       dotLabel.type = "button";
       dotLabel.className = "constellation-label-btn";
       dotLabel.dataset.constellationPostId = String(post.id || "");
-      dotLabel.style.left = `${Math.min(dotX + (layout.priorityCampaign ? 26 : 22), worldWidth - (layout.priorityCampaign ? 340 : 260))}px`;
+      dotLabel.style.left = `${Math.min(dotX + 24, worldWidth - 260)}px`;
       dotLabel.style.top = `${dotY}px`;
       dotLabel.style.borderColor = `${color}40`;
-      if (layout.tier === "huge") dotLabel.style.maxWidth = "320px";
       dotLabel.innerHTML = `<span>${escapeHtml(getConstellationLabel(post.title))}</span>`;
       dotLabel.style.display = "inline-flex";
       dotLabel.style.alignItems = "center";
@@ -7732,8 +7684,8 @@ function renderConstellation() {
     });
 
     const lastPoint = points[Math.max(points.length - 1, 0)] || anchor;
-    const addX = clamp(lastPoint.x + 220, 220, worldWidth - 180);
-    const addY = clamp(lastPoint.y + (48 * layout.labelOffset), 220, minCanvasHeight - 180);
+    const addX = clamp(lastPoint.x + 180, 220, worldWidth - 180);
+    const addY = clamp(getCampaignBaseY(rowIndex), 180, minCanvasHeight - 180);
 
     const addDot = document.createElement("button");
     addDot.type = "button";
@@ -7760,17 +7712,10 @@ function renderConstellation() {
       hoverCard.style.display = "block";
       hoverCard.style.left = `${Math.min(points[0].x + 24, worldWidth - 280)}px`;
       hoverCard.style.top = `${Math.max(points[0].y - 34, 32)}px`;
-      canvas.querySelectorAll("path[data-from-campaign]").forEach((line) => {
-        const connected = line.dataset.fromCampaign === String(campaign.campaignId || campaign.campaignName || "") || line.dataset.toCampaign === String(campaign.campaignId || campaign.campaignName || "");
-        line.setAttribute("opacity", connected ? String(clamp(Number(line.dataset.baseOpacity || 0.12) * 2.2, 0.18, 0.65)) : "0.04");
-      });
     });
     rowGroup.addEventListener("mouseleave", () => {
       path.setAttribute("opacity", "0.45");
       hoverCard.style.display = "none";
-      canvas.querySelectorAll("path[data-from-campaign]").forEach((line) => {
-        line.setAttribute("opacity", String(line.dataset.baseOpacity || "0.12"));
-      });
     });
     canvas.appendChild(rowGroup);
   });
@@ -7979,12 +7924,6 @@ function setupConstellationInteractions() {
   document.getElementById("zoom-in")?.addEventListener("click", () => zoomConstellation(1.15));
   document.getElementById("zoom-out")?.addEventListener("click", () => zoomConstellation(0.87));
   document.getElementById("zoom-reset")?.addEventListener("click", () => fitConstellation());
-  document.getElementById("semantic-bridge-density")?.addEventListener("change", (event) => {
-    semanticBridgeDensity = String(event.target?.value || "low").toLowerCase();
-    safeStorageSet("stellarsync_bridge_density", semanticBridgeDensity);
-    renderConstellation();
-    if (currentView === "constellation") fitConstellation({ preserveUserView: true });
-  });
 
   let constellationResizeFrame = null;
 
@@ -8041,6 +7980,8 @@ function fitConstellation({ preserveUserView = false } = {}) {
 
 function updateTransform() {
   if (!canvas) return;
+  canvas.classList.toggle("constellation-zoom-compact", scale < 0.65);
+  canvas.classList.toggle("constellation-zoom-mini", scale < 0.45);
   canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
 }
 
@@ -11790,14 +11731,7 @@ function renderDiagnosticsPanel() {
   const diagnostics = backendDiagnostics || {};
   const repairPreview = diagnostics.dateRepairPreview || {};
   const socialDiagnostics = diagnostics.socialImportDiagnostics || {};
-  const bridgeDensityWarning = (() => {
-    const constellation = buildSemanticConstellation();
-    const config = getBridgeDensityConfig();
-    if (config.maxPerCampaign === 0) return 0;
-    const rows = buildConstellationRows();
-    const estimatedVisible = (constellation.bridges || []).filter((bridge) => (bridge.strength || 0) >= config.threshold).length;
-    return estimatedVisible > Math.max(6, rows.length * 3) ? estimatedVisible : 0;
-  })();
+  const bridgeDensityWarning = 0;
   const missingSheets = Array.isArray(diagnostics.missingSheets) ? diagnostics.missingSheets : [];
   const missingHeaders = diagnostics.missingHeaders && typeof diagnostics.missingHeaders === "object"
     ? Object.entries(diagnostics.missingHeaders).filter(([, headers]) => Array.isArray(headers) && headers.length)
