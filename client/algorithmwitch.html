@@ -7237,62 +7237,43 @@ function buildConstellationRows() {
       _constellationLayout: getConstellationLayoutConfig({ ...campaign, posts }, 0)
     };
   });
-  const worldWidth = 5000;
-  const laneGapX = 240;
-  const laneGapY = 1080;
-  const leftMargin = 520;
-  const topMargin = 520;
   const rows = [];
-  let rowIndex = 0;
-  let rowCursorX = leftMargin;
+  let gridIndex = 0;
+  let rowCursor = 0;
 
-  mapped.forEach((campaign, index) => {
-    const layout = getConstellationLayoutConfig(campaign, index);
-    const footprintWidth = layout.rowLength + layout.labelWidth + 420;
-    const fullRow = isConstellationPriorityCampaign(campaign)
-      || footprintWidth > 1800
-      || layout.labelWidth >= 300
-      || ((campaign.posts || []).length <= 2 && layout.labelWidth >= 250);
+  mapped.forEach((campaign) => {
+    const layout = getConstellationLayoutConfig(campaign, rows.length);
+    const priorityRow = isConstellationPriorityCampaign(campaign);
+    let anchor;
 
-    if (fullRow && rowCursorX !== leftMargin) {
-      rowIndex += 1;
-      rowCursorX = leftMargin;
+    if (priorityRow) {
+      anchor = {
+        x: 2300,
+        y: 620 + (rowCursor * 1120)
+      };
+      rowCursor += 1;
+    } else {
+      const column = gridIndex % 2;
+      const row = rowCursor + Math.floor(gridIndex / 2);
+      anchor = {
+        x: 760 + (column * 1560),
+        y: 520 + (row * 1080)
+      };
+      gridIndex += 1;
     }
-
-    if (!fullRow && rowCursorX + footprintWidth > worldWidth - leftMargin) {
-      rowIndex += 1;
-      rowCursorX = leftMargin;
-    }
-
-    const anchor = fullRow
-      ? {
-          x: Math.round(worldWidth / 2),
-          y: topMargin + (rowIndex * laneGapY)
-        }
-      : {
-          x: rowCursorX + layout.labelWidth + Math.round(layout.rowLength / 2) + 90,
-          y: topMargin + (rowIndex * laneGapY)
-        };
 
     rows.push({
       ...campaign,
       _constellationAnchor: {
-        x: clamp(anchor.x, 520, worldWidth - 520),
+        x: clamp(anchor.x, 520, 4200),
         y: clamp(anchor.y, 360, 5200)
       },
       _constellationLayout: layout,
       _constellationFootprint: {
-        width: footprintWidth,
+        width: layout.rowLength + layout.labelWidth + 420,
         height: layout.rowHeight + layout.labelHeight + 240
       }
     });
-
-    if (fullRow) {
-      rowIndex += 1;
-      rowCursorX = leftMargin;
-    } else {
-      rowCursorX += footprintWidth + laneGapX;
-    }
   });
 
   return rows;
@@ -7323,16 +7304,16 @@ function getConstellationLayoutConfig(campaign, index = 0) {
   const postCount = Math.max((campaign.posts || []).length, 1);
   const priorityCampaign = isConstellationPriorityCampaign(campaign);
   const tier = priorityCampaign ? "huge" : getConstellationTier(postCount);
-  const labelWidth = clamp(176 + String(campaign.campaignName || "").length * 7.8, 210, priorityCampaign ? 440 : 340);
+  const labelWidth = clamp(170 + String(campaign.campaignName || "").length * 7, 190, priorityCampaign ? 420 : 300);
   const labelHeight = 72;
-  const dotGap = priorityCampaign ? 126 : tier === "large" ? 110 : tier === "medium" ? 100 : 92;
-  const rowLength = clamp((priorityCampaign ? 1020 : 560) + ((postCount - 1) * dotGap), priorityCampaign ? 1600 : 780, priorityCampaign ? 2600 : 1900);
-  const rowHeight = clamp((priorityCampaign ? 340 : 240) + Math.max(postCount - 5, 0) * 10, priorityCampaign ? 360 : 240, priorityCampaign ? 540 : 360);
+  const dotGap = priorityCampaign ? 122 : tier === "large" ? 108 : tier === "medium" ? 98 : 90;
+  const rowLength = clamp((priorityCampaign ? 980 : 540) + ((postCount - 1) * dotGap), priorityCampaign ? 1500 : 760, priorityCampaign ? 2500 : 1800);
+  const rowHeight = clamp((priorityCampaign ? 340 : 240) + Math.max(postCount - 5, 0) * 10, priorityCampaign ? 360 : 240, priorityCampaign ? 520 : 360);
   const tierConfig = {
     small: { amplitude: 0.9, spacing: 1, hoverPadding: 1, labelOffset: 1 },
-    medium: { amplitude: 1.02, spacing: 1.06, hoverPadding: 1.08, labelOffset: 1.04 },
-    large: { amplitude: 1.1, spacing: 1.12, hoverPadding: 1.12, labelOffset: 1.08 },
-    huge: { amplitude: 1.18, spacing: 1.18, hoverPadding: 1.18, labelOffset: 1.1 }
+    medium: { amplitude: 1.02, spacing: 1.08, hoverPadding: 1.08, labelOffset: 1.06 },
+    large: { amplitude: 1.1, spacing: 1.14, hoverPadding: 1.12, labelOffset: 1.1 },
+    huge: { amplitude: 1.18, spacing: 1.2, hoverPadding: 1.18, labelOffset: 1.14 }
   }[tier];
   return {
     tier,
