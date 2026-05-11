@@ -367,6 +367,9 @@
     cursor: pointer;
     transition: border-color 0.2s ease, transform 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
     backdrop-filter: blur(10px);
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
   }
 
   .constellation-label-btn:hover {
@@ -379,6 +382,9 @@
     position: absolute;
     border-radius: 999px;
     transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
   }
 
   .constellation-node-selected,
@@ -508,9 +514,24 @@
             100% { opacity: 0; transform: scale(0.5); }
         }
 
-        #starmap-viewport {
+        #starmap-viewport,
+        #starmap-canvas,
+        .constellation-campaign-label,
+        .constellation-campaign-label h3,
+        .constellation-campaign-label p {
       touch-action: none;
       overscroll-behavior: contain;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+        body.constellation-dragging,
+        body.constellation-dragging * {
+      user-select: none !important;
+      -webkit-user-select: none !important;
+      -webkit-touch-callout: none !important;
+      cursor: grabbing !important;
     }
 
         .glass-panel {
@@ -1705,11 +1726,11 @@
     <button id="zoom-reset" class="w-10 h-10 bg-[#1a1128] border border-white/5 rounded-xl text-white hover:bg-[#231738] flex items-center justify-center transition-colors" title="Reset">
       <i class="ph-bold ph-corners-out text-lg"></i>
     </button>
-    <select id="semantic-bridge-density" class="px-3 py-2 rounded-xl bg-[#1a1128] border border-white/5 text-[10px] uppercase tracking-widest font-bold text-white">
-      <option value="off">Bridges Off</option>
-      <option value="low" selected>Bridges Low</option>
-      <option value="medium">Bridges Medium</option>
-      <option value="high">Bridges High</option>
+    <select id="semantic-bridge-density" class="px-3 py-2 rounded-xl bg-[#1a1128] border border-white/5 text-[10px] uppercase tracking-widest font-bold text-white" aria-label="Connection strength filter">
+      <option value="off">Connections Off</option>
+      <option value="low" selected>Connections Low</option>
+      <option value="medium">Connections Medium</option>
+      <option value="high">Connections High</option>
     </select>
   </div>
 
@@ -3019,6 +3040,33 @@
   </div>
 </div>
 
+<div id="confirm-action-modal" class="fixed inset-0 z-[131] bg-black/70 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-200">
+  <div class="w-full h-full flex items-center justify-center p-6">
+    <div id="confirm-action-modal-card" class="w-full max-w-lg bg-[#120c1d] border border-white/10 rounded-2xl shadow-2xl transform scale-95 transition-transform duration-200 overflow-hidden">
+      <div class="flex items-center justify-between px-6 py-5 border-b border-white/5">
+        <div class="min-w-0">
+          <h3 id="confirm-action-title" class="text-white font-bold text-lg wrap-safe">Confirm action</h3>
+          <p id="confirm-action-subtitle" class="text-xs text-gray-500 mt-1 wrap-safe">Review this action before continuing.</p>
+        </div>
+        <button id="close-confirm-action-modal-btn" type="button" class="w-10 h-10 rounded-xl bg-[#1a1128] hover:bg-[#231738] text-gray-400 hover:text-white border border-white/5 transition-colors flex items-center justify-center">
+          <i class="ph-bold ph-x"></i>
+        </button>
+      </div>
+      <div class="p-6">
+        <div id="confirm-action-message" class="p-4 rounded-2xl bg-[#181125] border border-white/5 text-sm text-gray-300 wrap-safe">Are you sure you want to continue?</div>
+      </div>
+      <div class="px-6 py-5 border-t border-white/5 flex justify-end gap-3">
+        <button id="confirm-action-cancel-btn" type="button" class="px-4 py-2 bg-[#1a1128] hover:bg-[#231738] text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all border border-white/10">
+          Cancel
+        </button>
+        <button id="confirm-action-confirm-btn" type="button" class="px-4 py-2 bg-gradient-to-r from-[#9d4edd] to-[#c77dff] hover:opacity-90 text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all border border-white/10">
+          Continue
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="upload-staging-modal" class="fixed inset-0 z-[131] bg-black/70 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-200">
   <div class="w-full h-full flex items-center justify-center p-6">
     <div id="upload-staging-modal-card" class="w-full max-w-5xl bg-[#120c1d] border border-white/10 rounded-2xl shadow-2xl transform scale-95 transition-transform duration-200 overflow-hidden">
@@ -3762,6 +3810,14 @@ const closeInstallHelperBtn = document.getElementById("close-install-helper-btn"
 const installHelperActionBtn = document.getElementById("install-helper-action-btn");
 const installHelperDesktopCopy = document.getElementById("install-helper-desktop-copy");
 const installHelperInstalledState = document.getElementById("install-helper-installed-state");
+const confirmActionModal = document.getElementById("confirm-action-modal");
+const confirmActionModalCard = document.getElementById("confirm-action-modal-card");
+const confirmActionTitle = document.getElementById("confirm-action-title");
+const confirmActionSubtitle = document.getElementById("confirm-action-subtitle");
+const confirmActionMessage = document.getElementById("confirm-action-message");
+const closeConfirmActionModalBtn = document.getElementById("close-confirm-action-modal-btn");
+const confirmActionCancelBtn = document.getElementById("confirm-action-cancel-btn");
+const confirmActionConfirmBtn = document.getElementById("confirm-action-confirm-btn");
 const uploadStagingModal = document.getElementById("upload-staging-modal");
 const uploadStagingModalCard = document.getElementById("upload-staging-modal-card");
 const uploadStagingSubtitle = document.getElementById("upload-staging-subtitle");
@@ -3793,6 +3849,7 @@ const aiDraftTitleInput = document.getElementById("ai-draft-title");
 const aiDraftPreviewInput = document.getElementById("ai-draft-preview");
 const aiDraftCarouselOutlineInput = document.getElementById("ai-draft-carousel-outline");
 const aiSemanticMemoryCards = document.getElementById("ai-semantic-memory-cards");
+let confirmActionResolver = null;
 const aiDraftMeta = document.getElementById("ai-draft-meta");
 const aiDraftList = document.getElementById("ai-draft-list");
 const aiSaveDraftBtn = document.getElementById("ai-save-draft-btn");
@@ -6323,7 +6380,13 @@ function setupWorkspaceUI() {
       showToast("Repair disabled", preview.message || "Frontend date parser is not trusted yet.", "ph-warning", "text-yellow-400");
       return;
     }
-    if (!window.confirm("Repair derived date fields from scheduled_at after preview verification?")) return;
+    const confirmed = await openConfirmActionModal({
+      title: "Repair date fields",
+      subtitle: "Review this normalization step before updating synced rows.",
+      message: "Repair derived date fields from scheduled_at after preview verification?",
+      confirmLabel: "Repair fields"
+    });
+    if (!confirmed) return;
     try {
       const result = await apiRepairDateFields({ apply: true });
       await syncRemoteIfConfigured();
@@ -6338,6 +6401,12 @@ function setupWorkspaceUI() {
   closeConnectionSetupBtn?.addEventListener("click", closeConnectionSetupModal);
   connectionSetupModal?.addEventListener("click", (event) => {
     if (event.target === connectionSetupModal) closeConnectionSetupModal();
+  });
+  closeConfirmActionModalBtn?.addEventListener("click", () => resolveConfirmAction(false));
+  confirmActionCancelBtn?.addEventListener("click", () => resolveConfirmAction(false));
+  confirmActionConfirmBtn?.addEventListener("click", () => resolveConfirmAction(true));
+  confirmActionModal?.addEventListener("click", (event) => {
+    if (event.target === confirmActionModal) resolveConfirmAction(false);
   });
   mobileMoreTrigger?.addEventListener("click", openMobileMoreSheet);
   closeMobileMoreBtn?.addEventListener("click", () => closeMobileSheet(mobileMoreSheet));
@@ -7238,28 +7307,40 @@ function buildConstellationRows() {
     };
   });
   const rows = [];
-  let gridIndex = 0;
   let rowCursor = 0;
+  let rowOccupancy = 0;
+  const rowGap = 1260;
+  const baseY = 660;
+  const leftColumnX = 1220;
+  const rightColumnX = 3920;
+  const fullRowX = 2570;
 
   mapped.forEach((campaign) => {
     const layout = getConstellationLayoutConfig(campaign, rows.length);
-    const priorityRow = isConstellationPriorityCampaign(campaign);
+    const priorityRow = shouldUseFullRowConstellationLane(campaign, layout);
     let anchor;
 
     if (priorityRow) {
+      if (rowOccupancy > 0) {
+        rowCursor += 1;
+        rowOccupancy = 0;
+      }
       anchor = {
-        x: 2300,
-        y: 620 + (rowCursor * 1120)
+        x: fullRowX,
+        y: baseY + (rowCursor * rowGap)
       };
       rowCursor += 1;
     } else {
-      const column = gridIndex % 2;
-      const row = rowCursor + Math.floor(gridIndex / 2);
+      const column = rowOccupancy;
       anchor = {
-        x: 760 + (column * 1560),
-        y: 520 + (row * 1080)
+        x: column === 0 ? leftColumnX : rightColumnX,
+        y: baseY + (rowCursor * rowGap)
       };
-      gridIndex += 1;
+      rowOccupancy += 1;
+      if (rowOccupancy >= 2) {
+        rowCursor += 1;
+        rowOccupancy = 0;
+      }
     }
 
     rows.push({
@@ -7280,7 +7361,27 @@ function buildConstellationRows() {
 }
 
 function isConstellationPriorityCampaign(campaign = {}) {
-  return /algorithm best practices/i.test(String(campaign.campaignName || ""));
+  return /algorithm best practices|job posts|alternate realities/i.test(String(campaign.campaignName || ""));
+}
+
+function shouldUseFullRowConstellationLane(campaign = {}, layout = null) {
+  const normalizedName = normalizeLookupValue(campaign.campaignName || "");
+  if ([
+    "algorithm best practices",
+    "job posts",
+    "alternate realities",
+    "company page",
+    "community shout outs"
+  ].includes(normalizedName)) {
+    return true;
+  }
+  const safeLayout = layout || getConstellationLayoutConfig(campaign, 0);
+  return Boolean(
+    safeLayout.priorityCampaign
+    || safeLayout.labelWidth >= 260
+    || safeLayout.rowLength >= 1650
+    || safeLayout.crowded
+  );
 }
 
 function getConstellationAnchor(campaign, index) {
@@ -7303,12 +7404,13 @@ function getConstellationLayoutConfig(campaign, index = 0) {
   if (campaign?._constellationLayout) return campaign._constellationLayout;
   const postCount = Math.max((campaign.posts || []).length, 1);
   const priorityCampaign = isConstellationPriorityCampaign(campaign);
+  const wideName = /company page|community shout outs/i.test(String(campaign.campaignName || ""));
   const tier = priorityCampaign ? "huge" : getConstellationTier(postCount);
-  const labelWidth = clamp(170 + String(campaign.campaignName || "").length * 7, 190, priorityCampaign ? 420 : 300);
+  const labelWidth = clamp(170 + String(campaign.campaignName || "").length * 7, 200, priorityCampaign || wideName ? 420 : 320);
   const labelHeight = 72;
-  const dotGap = priorityCampaign ? 122 : tier === "large" ? 108 : tier === "medium" ? 98 : 90;
-  const rowLength = clamp((priorityCampaign ? 980 : 540) + ((postCount - 1) * dotGap), priorityCampaign ? 1500 : 760, priorityCampaign ? 2500 : 1800);
-  const rowHeight = clamp((priorityCampaign ? 340 : 240) + Math.max(postCount - 5, 0) * 10, priorityCampaign ? 360 : 240, priorityCampaign ? 520 : 360);
+  const dotGap = priorityCampaign ? 126 : wideName ? 112 : tier === "large" ? 108 : tier === "medium" ? 98 : 90;
+  const rowLength = clamp((priorityCampaign ? 1040 : wideName ? 760 : 540) + ((postCount - 1) * dotGap), priorityCampaign || wideName ? 1580 : 760, priorityCampaign ? 2580 : wideName ? 2200 : 1800);
+  const rowHeight = clamp((priorityCampaign ? 360 : wideName ? 290 : 240) + Math.max(postCount - 5, 0) * 10, priorityCampaign ? 380 : 240, priorityCampaign ? 540 : 380);
   const tierConfig = {
     small: { amplitude: 0.9, spacing: 1, hoverPadding: 1, labelOffset: 1 },
     medium: { amplitude: 1.02, spacing: 1.08, hoverPadding: 1.08, labelOffset: 1.06 },
@@ -7433,11 +7535,15 @@ function renderConstellation() {
   const rows = buildConstellationRows();
   const semanticConstellation = buildSemanticConstellation();
   const bridgeConfig = getBridgeDensityConfig();
-  const hasPriorityRow = rows.some((campaign) => isConstellationPriorityCampaign(campaign));
-  const standardRows = rows.filter((campaign) => !isConstellationPriorityCampaign(campaign)).length;
-  const gridRows = Math.ceil(standardRows / 2);
-  const worldWidth = hasPriorityRow ? 5000 : 4300;
-  const minCanvasHeight = Math.max(3800, ((gridRows + (hasPriorityRow ? 1 : 0)) + 1) * 1120);
+  const worldWidth = 5600;
+  const minCanvasHeight = Math.max(
+    4000,
+    rows.reduce((maxHeight, campaign) => {
+      const anchorY = Number(campaign?._constellationAnchor?.y || 0);
+      const footprintHeight = Number(campaign?._constellationFootprint?.height || 0);
+      return Math.max(maxHeight, anchorY + footprintHeight + 320);
+    }, 0)
+  );
 
   canvas.style.height = `${minCanvasHeight}px`;
   canvas.style.width = `${worldWidth}px`;
@@ -7735,6 +7841,11 @@ function createPostForCampaign(campaignId) {
   }
   setModalSourceContext("campaign", "Create Post from Campaign", `This draft starts inside ${formatCampaignDisplayName(campaign.campaignName || "the selected campaign")}.`, campaign.campaignId || "");
 }
+
+function setConstellationDraggingState(active) {
+  viewport?.classList.toggle("is-dragging", Boolean(active));
+  document.body.classList.toggle("constellation-dragging", Boolean(active));
+}
     
 function setupConstellationInteractions() {
   if (!viewport || !canvas) return;
@@ -7744,6 +7855,7 @@ function setupConstellationInteractions() {
 
   viewport.addEventListener("pointerdown", (e) => {
     if (e.target.closest("button")) return;
+    e.preventDefault();
 
     activeConstellationPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
@@ -7771,6 +7883,7 @@ function setupConstellationInteractions() {
     startPanX = panX;
     startPanY = panY;
     viewport.style.cursor = "grabbing";
+    setConstellationDraggingState(true);
 
     if (viewport.setPointerCapture) {
       try {
@@ -7785,6 +7898,7 @@ function setupConstellationInteractions() {
     }
 
     if (activeConstellationPointers.size === 2) {
+      e.preventDefault();
       const [first, second] = Array.from(activeConstellationPointers.values());
       const rect = viewport.getBoundingClientRect();
       const centerX = ((first.x + second.x) / 2) - rect.left;
@@ -7798,6 +7912,7 @@ function setupConstellationInteractions() {
     }
 
     if (!isDragging) return;
+    e.preventDefault();
 
     const dx = e.clientX - pointerStartX;
     const dy = e.clientY - pointerStartY;
@@ -7811,6 +7926,7 @@ function setupConstellationInteractions() {
     activeConstellationPointers.delete(pointerId);
     isDragging = false;
     viewport.style.cursor = "grab";
+    if (activeConstellationPointers.size <= 1) setConstellationDraggingState(false);
 
     if (activeConstellationPointers.size === 1) {
       const remaining = Array.from(activeConstellationPointers.values())[0];
@@ -7818,6 +7934,7 @@ function setupConstellationInteractions() {
       pointerStartY = remaining.y;
       startPanX = panX;
       startPanY = panY;
+      setConstellationDraggingState(true);
     }
 
     if (viewport?.releasePointerCapture && pointerId != null) {
@@ -10850,6 +10967,41 @@ function showToast(title, message, iconClass = "ph-sparkle", colorClass = "text-
   setTimeout(() => {
     toast.classList.add("opacity-0", "pointer-events-none");
   }, 3000);
+}
+
+function resolveConfirmAction(result) {
+  const resolver = confirmActionResolver;
+  confirmActionResolver = null;
+  closeConfirmActionModal();
+  if (typeof resolver === "function") resolver(Boolean(result));
+}
+
+function openConfirmActionModal({
+  title = "Confirm action",
+  subtitle = "Review this action before continuing.",
+  message = "Are you sure you want to continue?",
+  confirmLabel = "Continue",
+  cancelLabel = "Cancel"
+} = {}) {
+  if (!confirmActionModal || !confirmActionModalCard) return Promise.resolve(false);
+  if (confirmActionTitle) confirmActionTitle.textContent = title;
+  if (confirmActionSubtitle) confirmActionSubtitle.textContent = subtitle;
+  if (confirmActionMessage) confirmActionMessage.textContent = message;
+  if (confirmActionConfirmBtn) confirmActionConfirmBtn.textContent = confirmLabel;
+  if (confirmActionCancelBtn) confirmActionCancelBtn.textContent = cancelLabel;
+  confirmActionModal.classList.remove("opacity-0", "pointer-events-none");
+  confirmActionModalCard.classList.remove("scale-95");
+  confirmActionModalCard.classList.add("scale-100");
+  return new Promise((resolve) => {
+    confirmActionResolver = resolve;
+  });
+}
+
+function closeConfirmActionModal() {
+  if (!confirmActionModal || !confirmActionModalCard) return;
+  confirmActionModal.classList.add("opacity-0", "pointer-events-none");
+  confirmActionModalCard.classList.remove("scale-100");
+  confirmActionModalCard.classList.add("scale-95");
 }
 
 async function importPostSourceIntoModal() {
