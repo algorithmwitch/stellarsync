@@ -7233,36 +7233,50 @@ function buildConstellationRows() {
     return {
       ...campaign,
       pillar: derivedPillar,
-      posts
+      posts,
+      _constellationLayout: getConstellationLayoutConfig({ ...campaign, posts }, 0)
     };
   });
-  const maxRowWidth = 6400;
-  let cursorX = 760;
-  let cursorY = 620;
-  let currentRowHeight = 0;
-  return mapped.map((campaign, index) => {
-    const layout = getConstellationLayoutConfig(campaign, index);
-    const rowWidth = layout.labelWidth + layout.rowLength + 520;
-    const rowHeight = layout.rowHeight + layout.labelHeight + 280;
-    const forceOwnRow = isConstellationPriorityCampaign(campaign) || layout.tier === "huge";
-    if ((forceOwnRow && cursorX > 760) || cursorX + rowWidth > maxRowWidth - 360) {
-      cursorX = 720 + Math.round(seededUnit(`${campaign.campaignId || campaign.campaignName || index}:row`) * 340);
-      cursorY += currentRowHeight + 400 + Math.round(seededUnit(`${campaign.campaignId || campaign.campaignName || index}:row-gap`) * 240);
-      currentRowHeight = 0;
+  const rows = [];
+  let gridIndex = 0;
+  let rowCursor = 0;
+
+  mapped.forEach((campaign) => {
+    const layout = getConstellationLayoutConfig(campaign, rows.length);
+    const priorityRow = isConstellationPriorityCampaign(campaign);
+    let anchor;
+
+    if (priorityRow) {
+      anchor = {
+        x: 2300,
+        y: 620 + (rowCursor * 1120)
+      };
+      rowCursor += 1;
+    } else {
+      const column = gridIndex % 2;
+      const row = rowCursor + Math.floor(gridIndex / 2);
+      anchor = {
+        x: 760 + (column * 1560),
+        y: 520 + (row * 1080)
+      };
+      gridIndex += 1;
     }
-    const anchor = {
-      x: cursorX + layout.labelWidth + 180 + Math.round(seededSymmetric(`${campaign.campaignId || campaign.campaignName || index}:anchor-x`) * 120),
-      y: cursorY + Math.round(rowHeight * 0.46) + Math.round(seededSymmetric(`${campaign.campaignId || campaign.campaignName || index}:anchor-y`) * 110)
-    };
-    cursorX += rowWidth + 220 + Math.round(seededUnit(`${campaign.campaignId || campaign.campaignName || index}:next-gap`) * 220);
-    currentRowHeight = Math.max(currentRowHeight, rowHeight);
-    return {
+
+    rows.push({
       ...campaign,
-      _constellationAnchor: anchor,
+      _constellationAnchor: {
+        x: clamp(anchor.x, 520, 4200),
+        y: clamp(anchor.y, 360, 5200)
+      },
       _constellationLayout: layout,
-      _constellationFootprint: { width: rowWidth, height: rowHeight }
-    };
+      _constellationFootprint: {
+        width: layout.rowLength + layout.labelWidth + 420,
+        height: layout.rowHeight + layout.labelHeight + 240
+      }
+    });
   });
+
+  return rows;
 }
 
 function isConstellationPriorityCampaign(campaign = {}) {
@@ -7290,23 +7304,23 @@ function getConstellationLayoutConfig(campaign, index = 0) {
   const postCount = Math.max((campaign.posts || []).length, 1);
   const priorityCampaign = isConstellationPriorityCampaign(campaign);
   const tier = priorityCampaign ? "huge" : getConstellationTier(postCount);
-  const labelWidth = clamp(170 + String(campaign.campaignName || "").length * 7, 190, 420);
+  const labelWidth = clamp(170 + String(campaign.campaignName || "").length * 7, 190, priorityCampaign ? 420 : 300);
   const labelHeight = 72;
-  const dotGap = tier === "huge" ? 126 : tier === "large" ? 112 : tier === "medium" ? 100 : 92;
-  const rowLength = clamp((priorityCampaign ? 840 : 520) + postCount * dotGap, priorityCampaign ? 1700 : 760, priorityCampaign ? 3400 : 2700);
-  const rowHeight = clamp((priorityCampaign ? 360 : 260) + Math.max(postCount - 4, 0) * 16, priorityCampaign ? 380 : 280, priorityCampaign ? 840 : 620);
+  const dotGap = priorityCampaign ? 122 : tier === "large" ? 108 : tier === "medium" ? 98 : 90;
+  const rowLength = clamp((priorityCampaign ? 980 : 540) + ((postCount - 1) * dotGap), priorityCampaign ? 1500 : 760, priorityCampaign ? 2500 : 1800);
+  const rowHeight = clamp((priorityCampaign ? 340 : 240) + Math.max(postCount - 5, 0) * 10, priorityCampaign ? 360 : 240, priorityCampaign ? 520 : 360);
   const tierConfig = {
-    small: { pathLength: 1, spacing: 1, radius: 1, hoverPadding: 1, labelOffset: 1, columnGap: 1520, rowGap: 1020 },
-    medium: { pathLength: 1.14, spacing: 1.12, radius: 1.1, hoverPadding: 1.14, labelOffset: 1.12, columnGap: 1660, rowGap: 1120 },
-    large: { pathLength: 1.28, spacing: 1.25, radius: 1.24, hoverPadding: 1.24, labelOffset: 1.22, columnGap: 1940, rowGap: 1300 },
-    huge: { pathLength: 1.62, spacing: 1.42, radius: 1.42, hoverPadding: 1.4, labelOffset: 1.36, columnGap: 2560, rowGap: 1560 }
+    small: { amplitude: 0.9, spacing: 1, hoverPadding: 1, labelOffset: 1 },
+    medium: { amplitude: 1.02, spacing: 1.08, hoverPadding: 1.08, labelOffset: 1.06 },
+    large: { amplitude: 1.1, spacing: 1.14, hoverPadding: 1.12, labelOffset: 1.1 },
+    huge: { amplitude: 1.18, spacing: 1.2, hoverPadding: 1.18, labelOffset: 1.14 }
   }[tier];
   return {
     tier,
-    pathStretch: tierConfig.pathLength * (priorityCampaign ? 1.16 : 1),
-    verticalStretch: tierConfig.pathLength * (priorityCampaign ? 1.08 : 1),
+    pathStretch: priorityCampaign ? 1.12 : 1,
+    verticalStretch: tierConfig.amplitude,
     internalSpacing: tierConfig.spacing,
-    campaignRadius: tierConfig.radius,
+    campaignRadius: 1,
     hoverPadding: tierConfig.hoverPadding,
     labelOffset: tierConfig.labelOffset,
     anchorX: 820,
@@ -7326,32 +7340,44 @@ function getConstellationLayoutConfig(campaign, index = 0) {
 function getIconPathPoints(shape, count, anchorX, anchorY, layout = {}, seed = "") {
   const safeCount = Math.max(count, 1);
   const points = [];
-  const pathStretch = Number(layout.pathStretch || 1);
-  const verticalStretch = Number(layout.verticalStretch || pathStretch);
+  const verticalStretch = Number(layout.verticalStretch || 1);
   const rowLength = Number(layout.rowLength || 720);
   const rowHeight = Number(layout.rowHeight || 320);
-  const laneCurve = clamp(Number(layout.internalSpacing || 1), 1, 1.5);
-  const primaryCycles = layout.priorityCampaign ? 2.28 : 2.12;
-  const secondaryCycles = primaryCycles * 2;
-  const ampA = (rowHeight * (layout.priorityCampaign ? 0.3 : 0.24)) * verticalStretch * (0.94 + ((laneCurve - 1) * 0.28));
-  const ampB = (rowHeight * 0.075) * verticalStretch * (0.9 + ((laneCurve - 1) * 0.18));
-  const editorialLift = rowHeight * (layout.priorityCampaign ? 0.065 : 0.045) * Math.min(verticalStretch, 1.35);
+  const amplitudeA = rowHeight * 0.22 * verticalStretch;
+  const amplitudeB = rowHeight * 0.06 * Math.min(verticalStretch, 1.2);
+  const laneLift = rowHeight * (layout.priorityCampaign ? 0.05 : 0.035);
   for (let index = 0; index < safeCount; index += 1) {
     const t = safeCount === 1 ? 0.5 : index / Math.max(safeCount - 1, 1);
-    const x = anchorX + (t - 0.5) * rowLength * pathStretch;
-    const baseWave = Math.sin((t * Math.PI * primaryCycles) - (Math.PI / 2));
-    const detailWave = Math.sin((t * Math.PI * secondaryCycles) - (Math.PI / 2));
-    const laneLift = Math.sin(t * Math.PI) * editorialLift;
+    const x = anchorX + (t - 0.5) * rowLength;
+    const baseWave = Math.sin(t * Math.PI * 2);
+    const detailWave = Math.sin(t * Math.PI * 4);
     const y = anchorY
-      + (baseWave * ampA)
-      + (detailWave * ampB)
-      - laneLift;
+      + (baseWave * amplitudeA)
+      + (detailWave * amplitudeB)
+      - (Math.sin(t * Math.PI) * laneLift);
     points.push({
-      x: clamp(x, 220, 5600),
-      y: clamp(y, 160, 5600)
+      x: clamp(x, 320, 4300),
+      y: clamp(y, 220, 4600)
     });
   }
   return points;
+}
+
+function buildCanonicalSquigglePath(points = []) {
+  if (!points.length) return "";
+  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
+  let path = `M ${points[0].x} ${points[0].y}`;
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const current = points[index];
+    const next = points[index + 1];
+    const midpointX = (current.x + next.x) / 2;
+    const midpointY = (current.y + next.y) / 2;
+    path += ` Q ${current.x} ${current.y} ${midpointX} ${midpointY}`;
+  }
+  const penultimate = points[points.length - 2];
+  const last = points[points.length - 1];
+  path += ` Q ${penultimate.x} ${penultimate.y} ${last.x} ${last.y}`;
+  return path;
 }
 
 function buildCampaignSummary(campaign) {
@@ -7405,16 +7431,13 @@ function renderConstellation() {
   if (!canvas) return;
 
   const rows = buildConstellationRows();
-  const totalFootprintWidth = rows.reduce((max, campaign) => Math.max(max, Number(campaign?._constellationAnchor?.x || 0) + Number(campaign?._constellationFootprint?.width || 0)), 0);
-  const totalFootprintHeight = rows.reduce((max, campaign) => Math.max(max, Number(campaign?._constellationAnchor?.y || 0) + Number(campaign?._constellationFootprint?.height || 0)), 0);
   const semanticConstellation = buildSemanticConstellation();
   const bridgeConfig = getBridgeDensityConfig();
-  const largestCount = rows.reduce((max, campaign) => Math.max(max, Math.max((campaign.posts || []).length, 1)), 1);
-  const largestTier = getConstellationTier(largestCount);
-  const columns = rows.some((campaign) => getConstellationTier((campaign.posts || []).length) === "huge") ? 1 : 2;
-  const worldWidth = Math.max(5600, columns === 1 ? 7000 : 6100, largestTier === "huge" ? 7200 : 0, totalFootprintWidth + 1100);
-  const minCanvasHeight = Math.max(4400, (Math.ceil(rows.length / Math.max(columns, 1)) + 1) * (largestTier === "huge" ? 1820 : 1420), totalFootprintHeight + 980);
-  const worldBounds = { minX: 999999, minY: 999999, maxX: 0, maxY: 0 };
+  const hasPriorityRow = rows.some((campaign) => isConstellationPriorityCampaign(campaign));
+  const standardRows = rows.filter((campaign) => !isConstellationPriorityCampaign(campaign)).length;
+  const gridRows = Math.ceil(standardRows / 2);
+  const worldWidth = hasPriorityRow ? 5000 : 4300;
+  const minCanvasHeight = Math.max(3800, ((gridRows + (hasPriorityRow ? 1 : 0)) + 1) * 1120);
 
   canvas.style.height = `${minCanvasHeight}px`;
   canvas.style.width = `${worldWidth}px`;
@@ -7477,20 +7500,14 @@ function renderConstellation() {
     rowGroup.style.height = `${minCanvasHeight}px`;
 
     const points = getIconPathPoints(String(campaign.iconShape || "").trim().toLowerCase(), Math.max((campaign.posts || []).length, 1), anchor.x, anchor.y, layout, String(campaign.campaignId || campaign.campaignName || index));
-    const pathData = points.map((point, pointIndex) => `${pointIndex === 0 ? "M" : "L"} ${point.x} ${point.y}`).join(" ");
-    points.forEach((point) => {
-      worldBounds.minX = Math.min(worldBounds.minX, point.x - 360 * layout.hoverPadding);
-      worldBounds.minY = Math.min(worldBounds.minY, point.y - 240 * layout.hoverPadding);
-      worldBounds.maxX = Math.max(worldBounds.maxX, point.x + 360 * layout.hoverPadding);
-      worldBounds.maxY = Math.max(worldBounds.maxY, point.y + 240 * layout.hoverPadding);
-    });
+    const pathData = buildCanonicalSquigglePath(points);
 
     const label = document.createElement("div");
     label.className = "constellation-campaign-label";
     label.style.cssText = `
       position:absolute;
-      left:${Math.max(48, anchor.x - layout.labelWidth - 170)}px;
-      top:${Math.max(52, anchor.y - Math.max(layout.rowHeight * 0.5, 180))}px;
+      left:${Math.max(48, points[0].x - (layout.priorityCampaign ? 180 : 130))}px;
+      top:${Math.max(52, points[0].y - (layout.priorityCampaign ? 190 : 160))}px;
       padding:10px 18px;
       background:rgba(18,12,29,0.18);
       border:1px solid rgba(255,255,255,0.12);
@@ -7499,8 +7516,8 @@ function renderConstellation() {
       backdrop-filter:none;
       box-shadow:none;
       z-index:6;
-      min-width:${layout.labelWidth}px;
-      max-width:${layout.tier === "huge" ? 480 : 340}px;
+      min-width:${Math.min(layout.labelWidth, layout.priorityCampaign ? 260 : 170)}px;
+      max-width:${layout.priorityCampaign ? 360 : 250}px;
       pointer-events:none;
     `;
     label.innerHTML = `
@@ -7593,7 +7610,7 @@ function renderConstellation() {
       dotLabel.type = "button";
       dotLabel.className = "constellation-label-btn";
       dotLabel.dataset.constellationPostId = String(post.id || "");
-      dotLabel.style.left = `${Math.min(dotX + (22 * layout.labelOffset), worldWidth - (layout.tier === "huge" ? 340 : 260))}px`;
+      dotLabel.style.left = `${Math.min(dotX + (layout.priorityCampaign ? 26 : 22), worldWidth - (layout.priorityCampaign ? 340 : 260))}px`;
       dotLabel.style.top = `${dotY}px`;
       dotLabel.style.borderColor = `${color}40`;
       if (layout.tier === "huge") dotLabel.style.maxWidth = "320px";
@@ -7609,7 +7626,7 @@ function renderConstellation() {
     });
 
     const lastPoint = points[Math.max(points.length - 1, 0)] || anchor;
-    const addX = clamp(lastPoint.x + (220 * layout.labelOffset), 220, worldWidth - 180);
+    const addX = clamp(lastPoint.x + 220, 220, worldWidth - 180);
     const addY = clamp(lastPoint.y + (48 * layout.labelOffset), 220, minCanvasHeight - 180);
 
     const addDot = document.createElement("button");
@@ -7683,10 +7700,6 @@ function renderConstellation() {
     </button>
   `;
   canvas.appendChild(addCampaignRow);
-  canvas.dataset.worldMinX = String(Math.max(0, worldBounds.minX === 999999 ? 0 : worldBounds.minX - 140));
-  canvas.dataset.worldMinY = String(Math.max(0, worldBounds.minY === 999999 ? 0 : worldBounds.minY - 140));
-  canvas.dataset.worldMaxX = String(Math.min(worldWidth, worldBounds.maxX + 220));
-  canvas.dataset.worldMaxY = String(Math.min(minCanvasHeight, worldBounds.maxY + 220));
 
   document.getElementById("constellation-create-campaign-btn")?.addEventListener("click", () => {
     campaignModalTargetSelect = null;
@@ -7899,18 +7912,12 @@ function fitConstellation({ preserveUserView = false } = {}) {
   const rect = viewport.getBoundingClientRect();
   if (!rect.width || !rect.height) return;
 
-  const worldMinX = Number(canvas.dataset.worldMinX || 0);
-  const worldMinY = Number(canvas.dataset.worldMinY || 0);
-  const worldMaxX = Number(canvas.dataset.worldMaxX || canvas.dataset.worldWidth || canvas.offsetWidth || 4300);
-  const worldMaxY = Number(canvas.dataset.worldMaxY || canvas.dataset.worldHeight || canvas.offsetHeight || 3800);
-  const worldWidth = Math.max(1, worldMaxX - worldMinX);
-  const worldHeight = Math.max(1, worldMaxY - worldMinY);
+  const worldWidth = Number(canvas.dataset.worldWidth || canvas.offsetWidth || 4300);
+  const worldHeight = Number(canvas.dataset.worldHeight || canvas.offsetHeight || 3800);
   const fitScale = Math.min(rect.width / worldWidth, rect.height / worldHeight);
-  const fitMultiplier = window.innerWidth <= 768 ? 0.92 : 1.02;
-  scale = clamp(fitScale * fitMultiplier, 0.18, 5.5);
-
-  panX = Math.round((rect.width - worldWidth * scale) / 2) - Math.round(worldMinX * scale);
-  panY = Math.round((rect.height - worldHeight * scale) / 2) - Math.round(worldMinY * scale);
+  scale = clamp(fitScale * 1.14, 0.18, 5.5);
+  panX = Math.round((rect.width - worldWidth * scale) / 2);
+  panY = Math.round((rect.height - worldHeight * scale) / 2);
 
   updateTransform();
 }
