@@ -8297,6 +8297,8 @@ function getHistoricalAccessMeaning(classification) {
   if (key === "product_approval_required") return "LinkedIn app approval required";
   if (key === "token_valid_but_no_history_access") return "Token works but history unavailable";
   if (key === "token_invalid_or_expired") return "Reconnect needed";
+  if (key === "linkedin_api_version_required") return "No tested LinkedIn API version is active for this app/endpoint";
+  if (key === "linkedin_api_version_format_invalid") return "Configured LinkedIn API version format is invalid";
   if (key === "not_connected") return "Connect LinkedIn first";
   if (key === "backend_error") return "Backend action failed or deployment is stale";
   if (key === "endpoint_deprecated") return "LinkedIn endpoint/version needs review";
@@ -8684,10 +8686,11 @@ function getConnectedAccountsMarkup(options = {}) {
             <div class="text-xs text-white wrap-safe"><span class="text-gray-500">Attempted versions:</span> ${escapeHtml(Array.isArray(historicalAccess?.attemptedApiVersions) && historicalAccess.attemptedApiVersions.length ? historicalAccess.attemptedApiVersions.join(", ") : (historicalAccess?.apiVersion || "Unknown"))}</div>
             <div class="text-xs text-white wrap-safe"><span class="text-gray-500">What it means:</span> ${escapeHtml(getHistoricalAccessMeaning(historicalAccess?.classification || ""))}</div>
             ${historicalAccess?.classification === "linkedin_api_version_required" ? `<div class="text-xs text-yellow-300 wrap-safe">LinkedIn rejected the REST API version/header setup. Check LINKEDIN_API_VERSION and redeploy.</div>` : ""}
+            ${historicalAccess?.classification === "linkedin_api_version_format_invalid" ? `<div class="text-xs text-yellow-300 wrap-safe">LINKEDIN_API_VERSION is invalid. Use YYYYMM or YYYYMM.RR, for example 202411.</div>` : ""}
             <div class="text-xs text-white wrap-safe"><span class="text-gray-500">Message:</span> ${escapeHtml(historicalAccess?.message || "Run Test Historical Access to check authored-post history.")}</div>
             <div class="text-xs text-white wrap-safe"><span class="text-gray-500">Endpoint summary:</span> ${escapeHtml(Array.isArray(historicalAccess?.attempted) && historicalAccess.attempted.length ? historicalAccess.attempted.map(formatHistoricalEndpointSummary).join(" | ") : "No endpoint diagnostics yet.")}</div>
-            <div class="text-xs text-white wrap-safe"><span class="text-gray-500">Requested version candidates:</span> ${escapeHtml(Array.isArray(historicalAccess?.attempted) && historicalAccess.attempted.length ? historicalAccess.attempted.map((item) => String(item?.requestedApiVersionCandidate || "").trim()).filter(Boolean).join(" | ") : "No request diagnostics yet.")}</div>
-            <div class="text-xs text-white wrap-safe"><span class="text-gray-500">Outbound LinkedIn-Version headers:</span> ${escapeHtml(Array.isArray(historicalAccess?.attempted) && historicalAccess.attempted.length ? historicalAccess.attempted.map((item) => String(item?.outboundLinkedInVersionHeader || "").trim()).filter(Boolean).join(" | ") : "No header diagnostics yet.")}</div>
+            <div class="text-xs text-white wrap-safe"><span class="text-gray-500">Requested version candidates:</span> ${escapeHtml(Array.isArray(historicalAccess?.attempted) && historicalAccess.attempted.length ? historicalAccess.attempted.map((item) => String(item?.requestedApiVersionCandidate || "").trim()).filter(Boolean).join(" | ") : (Array.isArray(historicalAccess?.attemptedApiVersions) && historicalAccess.attemptedApiVersions.length ? historicalAccess.attemptedApiVersions.join(" | ") : String(historicalAccess?.apiVersion || "No request diagnostics yet.")))}</div>
+            <div class="text-xs text-white wrap-safe"><span class="text-gray-500">Outbound LinkedIn-Version headers:</span> ${escapeHtml(Array.isArray(historicalAccess?.attempted) && historicalAccess.attempted.length ? historicalAccess.attempted.map((item) => String(item?.outboundLinkedInVersionHeader || "").trim()).filter(Boolean).join(" | ") : String(historicalAccess?.apiVersion || "No header diagnostics yet."))}</div>
             <div class="text-xs text-white wrap-safe"><span class="text-gray-500">Response snippet:</span> ${escapeHtml(Array.isArray(historicalAccess?.attempted) && historicalAccess.attempted.length ? historicalAccess.attempted.map((item) => String(item?.responseBodySnippet || "").trim()).filter(Boolean).join(" | ") : "No response snippet yet.")}</div>
           </div>
         </div>
