@@ -3548,6 +3548,7 @@ let diagnosticsRefreshing = false;
 let socialCardUpload = null;
 let socialImportCapabilities = null;
 let connectedAccounts = [];
+let connectedAccountsHistoricalAccess = {};
 let connectedAccountsActionState = {};
 let semanticBridgeDensity = safeStorageGet("stellarsync_bridge_density") || "low";
 let currentSocialImportResult = null;
@@ -3598,6 +3599,8 @@ const ROW_HEIGHT = 260;
 const START_Y = 260;
 const NODE_START_X = 620;
 const NODE_GAP_X = 220;
+const START_X = NODE_START_X;
+const NODE_SPACING = NODE_GAP_X;
 const LANE_LABEL_X = 74;
 let pinchStartDistance = 0;
 let pinchStartScale = 1;
@@ -7370,7 +7373,7 @@ function buildConstellationRows() {
       ...campaign,
       _constellationRowIndex: rowIndex,
       _constellationAnchor: {
-        x: clamp(anchor.x, 520, 5600),
+        x: Math.max(anchor.x, START_X),
         y: clamp(anchor.y, 180, 6000)
       },
       _constellationLayout: layout,
@@ -7405,11 +7408,11 @@ function getCampaignBaseY(rowIndex) {
 }
 
 function getConstellationLaneCenterX(layout = {}) {
-  return NODE_START_X + (Math.max(Number(layout.rowLength || 0), NODE_GAP_X) / 2);
+  return START_X + (Math.max(Number(layout.rowLength || 0), NODE_SPACING) / 2);
 }
 
 function getNodePosition(index, rowIndex) {
-  const x = NODE_START_X + (index * NODE_GAP_X);
+  const x = START_X + (index * NODE_SPACING);
   const yBase = getCampaignBaseY(rowIndex);
   const y = yBase + (Math.sin(index * 0.9) * 36) + (Math.cos(index * 0.45) * 18);
   return { x, y };
@@ -7419,7 +7422,7 @@ function getConstellationAnchor(campaign, index) {
   if (campaign?._constellationAnchor) return campaign._constellationAnchor;
   const layout = getConstellationLayoutConfig(campaign, index);
   return {
-    x: clamp(Number(campaign.x || 0) || layout.anchorX, 420, 5600),
+    x: Math.max(Number(campaign.x || 0) || layout.anchorX, START_X),
     y: clamp(Number(campaign.y || 0) || layout.anchorY, 260, 5200)
   };
 }
@@ -7437,7 +7440,7 @@ function getConstellationLayoutConfig(campaign, index = 0) {
   const tier = getConstellationTier(postCount);
   const labelWidth = clamp(180 + String(campaign.campaignName || "").length * 6, 220, 360);
   const labelHeight = 72;
-  const rowLength = Math.max((postCount - 1) * NODE_GAP_X, NODE_GAP_X);
+  const rowLength = Math.max((postCount - 1) * NODE_SPACING, NODE_SPACING);
   const tierConfig = {
     small: { amplitude: 0.92, spacing: 1, hoverPadding: 1, labelOffset: 1 },
     medium: { amplitude: 1, spacing: 1, hoverPadding: 1.04, labelOffset: 1.02 },
@@ -7452,13 +7455,13 @@ function getConstellationLayoutConfig(campaign, index = 0) {
     campaignRadius: 1,
     hoverPadding: tierConfig.hoverPadding,
     labelOffset: tierConfig.labelOffset,
-    anchorX: NODE_START_X + (rowLength / 2),
+    anchorX: START_X + (rowLength / 2),
     anchorY: START_Y + (index * ROW_HEIGHT),
     rowLength,
     rowHeight: ROW_HEIGHT,
     labelWidth,
     labelHeight,
-    dotGap: NODE_GAP_X,
+    dotGap: NODE_SPACING,
     crowded: postCount >= 10,
     overlapRisk: postCount >= 14,
     labelCollisionRisk: postCount >= 9,
@@ -7472,7 +7475,7 @@ function getIconPathPoints(shape, count, anchorX, anchorY, layout = {}, seed = "
   for (let index = 0; index < safeCount; index += 1) {
     const point = getNodePosition(index, Number(layout.rowIndex || 0));
     points.push({
-      x: clamp(point.x, 240, 5600),
+      x: Math.max(point.x, START_X),
       y: clamp(point.y, 160, 6000)
     });
   }
@@ -7539,13 +7542,10 @@ function renderConstellation() {
   if (!canvas) return;
 
   const rows = buildConstellationRows();
-  const worldWidth = Math.max(
-    3600,
-    rows.reduce((maxWidth, campaign) => {
-      const postCount = Math.max((campaign.posts || []).length, 1);
-      return Math.max(maxWidth, NODE_START_X + ((postCount - 1) * NODE_GAP_X) + 680);
-    }, 0)
-  );
+  const longestCampaignItemCount = rows.reduce((maxCount, campaign) => {
+    return Math.max(maxCount, Math.max((campaign.posts || []).length, 1));
+  }, 1);
+  const worldWidth = Math.max(3600, START_X + (longestCampaignItemCount * NODE_SPACING) + 800);
   const mapRowCount = Math.max(rows.length + 2, Object.keys(CAMPAIGN_ROWS).length + 3);
   const minCanvasHeight = Math.max(2400, mapRowCount * ROW_HEIGHT);
 
@@ -8284,6 +8284,32 @@ function filterLegacyRedirectKeys(keys = []) {
   return (Array.isArray(keys) ? keys : []).filter((key) => !["LINKEDIN_REDIRECT_URI", "INSTAGRAM_REDIRECT_URI", "THREADS_REDIRECT_URI"].includes(String(key || "").trim()));
 }
 
+function getHistoricalAccessMeaning(classification) {
+  const key = String(classification || "").trim();
+  if (key === "historical_access_available") return "Ready to preview/import old posts";
+  if (key === "scope_missing") return "Current token lacks r_member_social";
+  if (key === "product_approval_required") return "LinkedIn app approval required";
+  if (key === "token_valid_but_no_history_access") return "Token works but history unavailable";
+  if (key === "token_invalid_or_expired") return "Reconnect needed";
+  if (key === "not_connected") return "Connect LinkedIn first";
+  if (key === "backend_error") return "Backend action failed or deployment is stale";
+  if (key === "endpoint_deprecated") return "LinkedIn endpoint/version needs review";
+  return "Historical access has not been checked yet.";
+}
+
+function formatHistoricalEndpointSummary(entry) {
+  if (!entry || typeof entry !== "object") return "No endpoint diagnostics yet.";
+  const endpoint = String(entry.endpointAttempted || "unknown endpoint").trim();
+  const status = entry.responseStatus != null ? `HTTP ${entry.responseStatus}` : "No status";
+  const flags = [
+    entry.postsReturned ? "posts returned" : "",
+    entry.permissionDenied ? "permission denied" : "",
+    entry.approvalRequired ? "approval required" : "",
+    entry.endpointDeprecated ? "deprecated" : ""
+  ].filter(Boolean).join(", ");
+  return [endpoint, status, flags].filter(Boolean).join(" • ");
+}
+
 async function connectSocialAccount(platform) {
   const missingSetupKeys = getConnectedAccountMissingSetupKeys(platform);
   if (missingSetupKeys.length) {
@@ -8318,6 +8344,9 @@ async function disconnectConnectedAccount(platform) {
   setConnectedAccountActionLoading(platform, "disconnect", true);
   try {
     await apiDisconnectPlatform(platform);
+    if (platform === "linkedin") {
+      delete connectedAccountsHistoricalAccess.linkedin;
+    }
     await refreshSocialImportContext();
     showToast("Disconnected", `${toTitleCase(platform)} access tokens were removed from Apps Script properties.`, "ph-check", "text-[#00ffaa]");
   } catch (err) {
@@ -8357,6 +8386,17 @@ async function testLinkedInHistoricalAccessAction() {
     const classification = String(result?.classification || "unknown").trim();
     const message = String(result?.message || "No backend message returned.").trim();
     const postsReturned = !!result?.postsReturned;
+    connectedAccountsHistoricalAccess.linkedin = {
+      checkedAt: new Date().toISOString(),
+      classification,
+      message,
+      attempted: Array.isArray(result?.attempted) ? result.attempted : [],
+      responseStatus: Array.isArray(result?.attempted) ? result.attempted.map((item) => item?.responseStatus).filter((value) => value !== undefined && value !== null) : [],
+      postsReturned,
+      permissionDenied: !!result?.permissionDenied,
+      approvalRequired: !!result?.approvalRequired,
+      endpointDeprecated: !!result?.endpointDeprecated
+    };
     console.log("LinkedIn historical access diagnostics", {
       classification,
       message,
@@ -8372,6 +8412,7 @@ async function testLinkedInHistoricalAccessAction() {
           }))
         : []
     });
+    if (!workspaceHubModal?.classList.contains("opacity-0")) renderWorkspaceHub();
     showToast(
       postsReturned ? "Historical access available" : "Historical access test complete",
       `${classification}: ${message}`,
@@ -8380,6 +8421,18 @@ async function testLinkedInHistoricalAccessAction() {
     );
   } catch (err) {
     console.error(err);
+    connectedAccountsHistoricalAccess.linkedin = {
+      checkedAt: new Date().toISOString(),
+      classification: "backend_error",
+      message: err?.message || "Could not test LinkedIn historical-post access.",
+      attempted: [],
+      responseStatus: [],
+      postsReturned: false,
+      permissionDenied: false,
+      approvalRequired: false,
+      endpointDeprecated: false
+    };
+    if (!workspaceHubModal?.classList.contains("opacity-0")) renderWorkspaceHub();
     showToast("Historical access test failed", err.message || "Could not test LinkedIn historical-post access.", "ph-warning", "text-yellow-400");
   } finally {
     setConnectedAccountActionLoading(platform, "history", false);
@@ -8528,6 +8581,7 @@ function getConnectedAccountsMarkup(options = {}) {
       setupChecklist: [],
       missingSetupKeys: []
     };
+    const historicalAccess = platform === "linkedin" ? (connectedAccountsHistoricalAccess.linkedin || null) : null;
     const statusLabel = account.connectionStatusLabel || toTitleCase(account.accessStatus || "not connected");
     const lastSync = account.lastSyncAt || account.tokenExpiresAt || "Never";
     const lastError = account.lastError || "None";
@@ -8578,12 +8632,24 @@ function getConnectedAccountsMarkup(options = {}) {
             `).join("") || `<div class="text-sm text-gray-400">No setup keys declared.</div>`}
           </div>
         </div>
+        ${platform === "linkedin" ? `
+        <div class="mt-4">
+          <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Historical Access</div>
+          <div class="space-y-2">
+            <div class="text-xs text-white wrap-safe"><span class="text-gray-500">Status:</span> ${escapeHtml(historicalAccess?.classification || "not_checked")}</div>
+            <div class="text-xs text-white wrap-safe"><span class="text-gray-500">Checked at:</span> ${escapeHtml(historicalAccess?.checkedAt || "Never")}</div>
+            <div class="text-xs text-white wrap-safe"><span class="text-gray-500">What it means:</span> ${escapeHtml(getHistoricalAccessMeaning(historicalAccess?.classification || ""))}</div>
+            <div class="text-xs text-white wrap-safe"><span class="text-gray-500">Message:</span> ${escapeHtml(historicalAccess?.message || "Run Test Historical Access to check authored-post history.")}</div>
+            <div class="text-xs text-white wrap-safe"><span class="text-gray-500">Endpoint summary:</span> ${escapeHtml(Array.isArray(historicalAccess?.attempted) && historicalAccess.attempted.length ? historicalAccess.attempted.map(formatHistoricalEndpointSummary).join(" | ") : "No endpoint diagnostics yet.")}</div>
+          </div>
+        </div>
+        ` : ""}
         <div class="mt-4 flex flex-wrap gap-2">
-          <button type="button" onclick="connectSocialAccount('${escapeHtml(platform)}')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors ${anyLoading ? "opacity-60" : ""}" ${connectLoading ? "disabled" : ""}>${connectLoading ? "Loading..." : "Connect"}</button>
-          <button type="button" onclick="reconnectSocialAccount('${escapeHtml(platform)}')" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors ${anyLoading ? "opacity-60" : ""}" ${connectLoading ? "disabled" : ""}>Reconnect</button>
-          <button type="button" onclick="disconnectConnectedAccount('${escapeHtml(platform)}')" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 transition-colors ${anyLoading ? "opacity-60" : ""}" ${disconnectLoading ? "disabled" : ""}>${disconnectLoading ? "Working..." : "Disconnect"}</button>
-          <button type="button" onclick="testConnectedAccountStatus('${escapeHtml(platform)}')" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors ${anyLoading ? "opacity-60" : ""}" ${testLoading ? "disabled" : ""}>${testLoading ? "Testing..." : "Test Status"}</button>
-          ${platform === "linkedin" ? `<button type="button" onclick="testLinkedInHistoricalAccessAction()" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors ${anyLoading ? "opacity-60" : ""}" ${historyLoading ? "disabled" : ""}>${historyLoading ? "Testing..." : "Test Historical Access"}</button>` : ""}
+          <button type="button" onclick="connectSocialAccount('${escapeHtml(platform)}')" data-platform="${escapeHtml(platform)}" data-action="connect" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors ${anyLoading ? "opacity-60" : ""}" ${connectLoading ? "disabled" : ""}>${connectLoading ? "Loading..." : "Connect"}</button>
+          <button type="button" onclick="reconnectSocialAccount('${escapeHtml(platform)}')" data-platform="${escapeHtml(platform)}" data-action="reconnect" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors ${anyLoading ? "opacity-60" : ""}" ${connectLoading ? "disabled" : ""}>Reconnect</button>
+          <button type="button" onclick="disconnectConnectedAccount('${escapeHtml(platform)}')" data-platform="${escapeHtml(platform)}" data-action="disconnect" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 transition-colors ${anyLoading ? "opacity-60" : ""}" ${disconnectLoading ? "disabled" : ""}>${disconnectLoading ? "Working..." : "Disconnect"}</button>
+          <button type="button" onclick="testConnectedAccountStatus('${escapeHtml(platform)}')" data-platform="${escapeHtml(platform)}" data-action="test-status" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors ${anyLoading ? "opacity-60" : ""}" ${testLoading ? "disabled" : ""}>${testLoading ? "Testing..." : "Test Status"}</button>
+          ${platform === "linkedin" ? `<button type="button" onclick="testLinkedInHistoricalAccessAction()" data-platform="linkedin" data-action="test-history" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors ${anyLoading ? "opacity-60" : ""}" ${historyLoading ? "disabled" : ""}>${historyLoading ? "Testing..." : "Test Historical Access"}</button>` : ""}
         </div>
       </div>
     `;
