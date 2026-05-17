@@ -8388,6 +8388,7 @@ async function testLinkedInHistoricalAccessAction() {
     const postsReturned = !!result?.postsReturned;
     connectedAccountsHistoricalAccess.linkedin = {
       checkedAt: new Date().toISOString(),
+      apiVersion: String(result?.apiVersion || "").trim(),
       classification,
       message,
       attempted: Array.isArray(result?.attempted) ? result.attempted : [],
@@ -8423,6 +8424,7 @@ async function testLinkedInHistoricalAccessAction() {
     console.error(err);
     connectedAccountsHistoricalAccess.linkedin = {
       checkedAt: new Date().toISOString(),
+      apiVersion: "",
       classification: "backend_error",
       message: err?.message || "Could not test LinkedIn historical-post access.",
       attempted: [],
@@ -8638,9 +8640,12 @@ function getConnectedAccountsMarkup(options = {}) {
           <div class="space-y-2">
             <div class="text-xs text-white wrap-safe"><span class="text-gray-500">Status:</span> ${escapeHtml(historicalAccess?.classification || "not_checked")}</div>
             <div class="text-xs text-white wrap-safe"><span class="text-gray-500">Checked at:</span> ${escapeHtml(historicalAccess?.checkedAt || "Never")}</div>
+            <div class="text-xs text-white wrap-safe"><span class="text-gray-500">API version used:</span> ${escapeHtml(historicalAccess?.apiVersion || "Unknown")}</div>
             <div class="text-xs text-white wrap-safe"><span class="text-gray-500">What it means:</span> ${escapeHtml(getHistoricalAccessMeaning(historicalAccess?.classification || ""))}</div>
+            ${historicalAccess?.classification === "linkedin_api_version_required" ? `<div class="text-xs text-yellow-300 wrap-safe">LinkedIn rejected the REST API version/header setup. Check LINKEDIN_API_VERSION and redeploy.</div>` : ""}
             <div class="text-xs text-white wrap-safe"><span class="text-gray-500">Message:</span> ${escapeHtml(historicalAccess?.message || "Run Test Historical Access to check authored-post history.")}</div>
             <div class="text-xs text-white wrap-safe"><span class="text-gray-500">Endpoint summary:</span> ${escapeHtml(Array.isArray(historicalAccess?.attempted) && historicalAccess.attempted.length ? historicalAccess.attempted.map(formatHistoricalEndpointSummary).join(" | ") : "No endpoint diagnostics yet.")}</div>
+            <div class="text-xs text-white wrap-safe"><span class="text-gray-500">Response snippet:</span> ${escapeHtml(Array.isArray(historicalAccess?.attempted) && historicalAccess.attempted.length ? historicalAccess.attempted.map((item) => String(item?.responseBodySnippet || "").trim()).filter(Boolean).join(" | ") : "No response snippet yet.")}</div>
           </div>
         </div>
         ` : ""}
