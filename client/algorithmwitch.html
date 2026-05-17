@@ -8344,6 +8344,42 @@ async function testConnectedAccountStatus(platform) {
   }
 }
 
+async function testLinkedInHistoricalAccessAction() {
+  const platform = "linkedin";
+  setConnectedAccountActionLoading(platform, "history", true);
+  try {
+    const result = await apiTestLinkedInHistoricalAccess();
+    const classification = String(result?.classification || "unknown").trim();
+    const message = String(result?.message || "No backend message returned.").trim();
+    const postsReturned = !!result?.postsReturned;
+    console.info("LinkedIn historical access diagnostics", {
+      classification,
+      postsReturned,
+      attempted: Array.isArray(result?.attempted)
+        ? result.attempted.map((item) => ({
+            endpointAttempted: item?.endpointAttempted,
+            responseStatus: item?.responseStatus,
+            postsReturned: item?.postsReturned,
+            permissionDenied: item?.permissionDenied,
+            approvalRequired: item?.approvalRequired,
+            endpointDeprecated: item?.endpointDeprecated
+          }))
+        : []
+    });
+    showToast(
+      postsReturned ? "Historical access available" : "Historical access test complete",
+      `${classification.replace(/_/g, " ")}. ${message}`,
+      "ph-linkedin-logo",
+      postsReturned ? "text-[#00ffaa]" : "text-yellow-400"
+    );
+  } catch (err) {
+    console.error(err);
+    showToast("Historical access test failed", err.message || "Could not test LinkedIn historical-post access.", "ph-warning", "text-yellow-400");
+  } finally {
+    setConnectedAccountActionLoading(platform, "history", false);
+  }
+}
+
 async function refreshSocialImportContext() {
   if (!APP_CONFIG.ENABLE_REMOTE_SYNC || !isRemoteConfigured()) return;
   try {
@@ -8498,7 +8534,8 @@ function getConnectedAccountsMarkup(options = {}) {
     const connectLoading = isConnectedAccountActionLoading(platform, "connect");
     const disconnectLoading = isConnectedAccountActionLoading(platform, "disconnect");
     const testLoading = isConnectedAccountActionLoading(platform, "test");
-    const anyLoading = connectLoading || disconnectLoading || testLoading;
+    const historyLoading = platform === "linkedin" && isConnectedAccountActionLoading(platform, "history");
+    const anyLoading = connectLoading || disconnectLoading || testLoading || historyLoading;
     const statusTone = account.connected
       ? "text-emerald-300"
       : account.accessStatus === "error" || account.accessStatus === "expired"
@@ -8539,6 +8576,7 @@ function getConnectedAccountsMarkup(options = {}) {
           <button type="button" onclick="reconnectSocialAccount('${escapeHtml(platform)}')" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors ${anyLoading ? "opacity-60" : ""}" ${connectLoading ? "disabled" : ""}>Reconnect</button>
           <button type="button" onclick="disconnectConnectedAccount('${escapeHtml(platform)}')" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 transition-colors ${anyLoading ? "opacity-60" : ""}" ${disconnectLoading ? "disabled" : ""}>${disconnectLoading ? "Working..." : "Disconnect"}</button>
           <button type="button" onclick="testConnectedAccountStatus('${escapeHtml(platform)}')" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors ${anyLoading ? "opacity-60" : ""}" ${testLoading ? "disabled" : ""}>${testLoading ? "Testing..." : "Test Status"}</button>
+          ${platform === "linkedin" ? `<button type="button" onclick="testLinkedInHistoricalAccessAction()" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors ${anyLoading ? "opacity-60" : ""}" ${historyLoading ? "disabled" : ""}>${historyLoading ? "Testing..." : "Test Historical Access"}</button>` : ""}
         </div>
       </div>
     `;
@@ -11757,6 +11795,10 @@ async function apiDisconnectPlatform(platform) {
 
 async function apiTestPlatformConnection(platform) {
   return apiGet("testPlatformConnection", { platform });
+}
+
+async function apiTestLinkedInHistoricalAccess() {
+  return apiGet("testLinkedInHistoricalAccess");
 }
 
 async function apiImportSocialPostByUrl(payload) {
