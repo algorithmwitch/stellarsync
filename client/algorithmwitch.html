@@ -3548,6 +3548,7 @@ let diagnosticsRefreshing = false;
 let socialCardUpload = null;
 let socialImportCapabilities = null;
 let connectedAccounts = [];
+let connectedAccountsStatusLoading = true;
 let connectedAccountsHistoricalAccess = {};
 let connectedAccountsActionState = {};
 let semanticBridgeDensity = safeStorageGet("stellarsync_bridge_density") || "low";
@@ -6396,7 +6397,12 @@ function setupWorkspaceUI() {
   });
   document.querySelectorAll(".settings-tab-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
-      currentWorkspaceSettingsTab = btn.dataset.settingsTab || "settings";
+      const nextTab = btn.dataset.settingsTab || "settings";
+      if (nextTab === "accounts") {
+        openWorkspaceHub("accounts");
+        return;
+      }
+      currentWorkspaceSettingsTab = nextTab;
       renderWorkspaceHub();
     });
   });
@@ -6405,12 +6411,10 @@ function setupWorkspaceUI() {
     openBrandFrameworkModal();
   });
   settingsOpenAccountsBtn?.addEventListener("click", () => {
-    currentWorkspaceSettingsTab = "accounts";
-    renderWorkspaceHub();
+    openWorkspaceHub("accounts");
   });
   workspaceOpenAccountsFromDiagnosticsBtn?.addEventListener("click", () => {
-    currentWorkspaceSettingsTab = "accounts";
-    renderWorkspaceHub();
+    openWorkspaceHub("accounts");
   });
   workspaceRefreshDiagnosticsBtn?.addEventListener("click", () => {
     refreshBackendDiagnostics().then(() => renderWorkspaceHub()).catch(() => undefined);
@@ -8447,7 +8451,12 @@ async function testLinkedInHistoricalAccessAction() {
 window.testLinkedInHistoricalAccessAction = testLinkedInHistoricalAccessAction;
 
 async function refreshSocialImportContext() {
-  if (!APP_CONFIG.ENABLE_REMOTE_SYNC || !isRemoteConfigured()) return;
+  connectedAccountsStatusLoading = true;
+  if (!workspaceHubModal?.classList.contains("opacity-0")) renderWorkspaceHub();
+  if (!APP_CONFIG.ENABLE_REMOTE_SYNC || !isRemoteConfigured()) {
+    connectedAccountsStatusLoading = false;
+    return;
+  }
   try {
     const [capabilitiesResult, accountsResult] = await Promise.all([
       apiGetSocialImportCapabilities(),
@@ -8455,9 +8464,16 @@ async function refreshSocialImportContext() {
     ]);
     socialImportCapabilities = capabilitiesResult?.capabilities || capabilitiesResult || null;
     connectedAccounts = accountsResult?.accounts || accountsResult || [];
+    console.log("connected accounts status hydrated", {
+      linkedinConnected: !!(connectedAccounts || []).find((item) => item.platform === "linkedin" && (item.connected || item.hasAccessToken)),
+      fetchedAt: new Date().toISOString()
+    });
     if (!workspaceHubModal?.classList.contains("opacity-0")) renderWorkspaceHub();
   } catch (err) {
     console.error(err);
+  } finally {
+    connectedAccountsStatusLoading = false;
+    if (!workspaceHubModal?.classList.contains("opacity-0")) renderWorkspaceHub();
   }
 }
 
@@ -8523,16 +8539,19 @@ function toggleProfileMenu(force) {
   profileMenu.classList.toggle("active", next);
 }
 
-function openWorkspaceHub(tab = "settings") {
+async function openWorkspaceHub(tab = "settings") {
   currentWorkspaceSettingsTab = tab;
   workspaceHubModal?.classList.remove("opacity-0", "pointer-events-none");
   workspaceHubModalCard?.classList.remove("scale-95");
   workspaceHubModalCard?.classList.add("scale-100");
   toggleProfileMenu(false);
+  if (tab === "accounts") connectedAccountsStatusLoading = true;
   renderWorkspaceHub();
-  refreshSocialImportContext().catch((err) => {
+  try {
+    await refreshSocialImportContext();
+  } catch (err) {
     console.error(err);
-  });
+  }
 }
 
 function closeWorkspaceHub() {
@@ -8576,6 +8595,20 @@ function closeConnectionSetupModal() {
 }
 
 function getConnectedAccountsMarkup(options = {}) {
+  if (connectedAccountsStatusLoading) {
+    return CONNECTED_ACCOUNT_PLATFORMS.map((platform) => `
+      <div class="platform-card">
+        <div class="flex items-start justify-between gap-3 mb-4">
+          <div>
+            <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${escapeHtml(toTitleCase(platform))}</div>
+            <div class="text-lg font-bold text-sky-300 mt-1">Loading status...</div>
+          </div>
+          <span class="diagnostic-chip">Checking backend</span>
+        </div>
+        <div class="text-sm text-gray-300 wrap-safe">Connected Accounts is hydrating from Apps Script Script Properties.</div>
+      </div>
+    `).join("");
+  }
   const accounts = Array.isArray(connectedAccounts) ? connectedAccounts : [];
   const platforms = CONNECTED_ACCOUNT_PLATFORMS;
   return platforms.map((platform) => {
@@ -8653,6 +8686,8 @@ function getConnectedAccountsMarkup(options = {}) {
             ${historicalAccess?.classification === "linkedin_api_version_required" ? `<div class="text-xs text-yellow-300 wrap-safe">LinkedIn rejected the REST API version/header setup. Check LINKEDIN_API_VERSION and redeploy.</div>` : ""}
             <div class="text-xs text-white wrap-safe"><span class="text-gray-500">Message:</span> ${escapeHtml(historicalAccess?.message || "Run Test Historical Access to check authored-post history.")}</div>
             <div class="text-xs text-white wrap-safe"><span class="text-gray-500">Endpoint summary:</span> ${escapeHtml(Array.isArray(historicalAccess?.attempted) && historicalAccess.attempted.length ? historicalAccess.attempted.map(formatHistoricalEndpointSummary).join(" | ") : "No endpoint diagnostics yet.")}</div>
+            <div class="text-xs text-white wrap-safe"><span class="text-gray-500">Requested version candidates:</span> ${escapeHtml(Array.isArray(historicalAccess?.attempted) && historicalAccess.attempted.length ? historicalAccess.attempted.map((item) => String(item?.requestedApiVersionCandidate || "").trim()).filter(Boolean).join(" | ") : "No request diagnostics yet.")}</div>
+            <div class="text-xs text-white wrap-safe"><span class="text-gray-500">Outbound LinkedIn-Version headers:</span> ${escapeHtml(Array.isArray(historicalAccess?.attempted) && historicalAccess.attempted.length ? historicalAccess.attempted.map((item) => String(item?.outboundLinkedInVersionHeader || "").trim()).filter(Boolean).join(" | ") : "No header diagnostics yet.")}</div>
             <div class="text-xs text-white wrap-safe"><span class="text-gray-500">Response snippet:</span> ${escapeHtml(Array.isArray(historicalAccess?.attempted) && historicalAccess.attempted.length ? historicalAccess.attempted.map((item) => String(item?.responseBodySnippet || "").trim()).filter(Boolean).join(" | ") : "No response snippet yet.")}</div>
           </div>
         </div>
