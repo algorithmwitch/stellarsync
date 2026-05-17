@@ -2052,7 +2052,7 @@
               <button type="button" class="write-idea-output-btn" data-write-idea-output="create_campaign">Create campaign</button>
               <button type="button" class="write-idea-output-btn" data-write-idea-output="add_to_notes">Add to Notes</button>
               <button type="button" class="write-idea-output-btn" data-write-idea-output="add_to_inspo">Add to Inspo</button>
-              <button type="button" class="write-idea-output-btn" data-write-idea-output="draft_carousel_outline">Draft carousel outline</button>
+              <button type="button" class="write-idea-output-btn" data-write-idea-output="draft_carousel_outline">Carousel structure</button>
               <button type="button" class="write-idea-output-btn" data-write-idea-output="draft_short_video_script">Draft short video script</button>
               <button type="button" class="write-idea-output-btn" data-write-idea-output="populate_calendar_week">Populate calendar week</button>
               <button type="button" class="write-idea-output-btn" data-write-idea-output="populate_campaign_queue">Populate campaign queue</button>
@@ -2070,7 +2070,7 @@
                 <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Review Before Save</div>
                 <div class="text-sm text-white mt-1">Approve selected drafts before anything is written into POSTS.</div>
               </div>
-              <span id="write-idea-status-chip" class="diagnostic-chip">Scaffold only</span>
+              <span id="write-idea-status-chip" class="diagnostic-chip">Structured draft</span>
             </div>
             <div id="write-idea-review-summary" class="text-sm text-gray-300 wrap-safe mb-4">Idea captured state will appear here after you generate a scaffold.</div>
             <div id="write-idea-warning-list" class="flex flex-wrap gap-2 mb-4"></div>
@@ -2755,7 +2755,7 @@
                   <div class="flex items-center justify-between gap-3 flex-wrap">
                     <div>
                       <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Inline AI Assist</p>
-                      <p class="text-xs text-gray-400 mt-1">Use the current post fields as context. This is a safe scaffold until live AI credentials exist.</p>
+                      <p class="text-xs text-gray-400 mt-1">Use the current post fields as context. This generates finished draft language unless you turn on outline mode.</p>
                     </div>
                     <button id="open-ai-workspace-secondary-btn" type="button" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white hover:bg-[#231738] transition-colors">
                       Open AI Workspace
@@ -2773,14 +2773,18 @@
                     <select id="modal-ai-mode" class="form-input text-sm font-medium">
                       <option value="LinkedIn post">LinkedIn post</option>
                       <option value="Instagram caption">Instagram caption</option>
-                      <option value="carousel outline">carousel outline</option>
+                      <option value="Carousel draft">Carousel draft</option>
                       <option value="short video script">short video script</option>
                       <option value="campaign recap">campaign recap</option>
                     </select>
-                    <button id="modal-ai-generate-btn" type="button" class="px-4 py-2 bg-gradient-to-r from-[#9d4edd] to-[#c77dff] hover:opacity-90 text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all border border-white/10">
-                      Generate Guidance
-                    </button>
+                    <label class="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs text-gray-300">
+                      <input id="modal-ai-outline-mode" type="checkbox" class="accent-[#c77dff]">
+                      Outline mode
+                    </label>
                   </div>
+                  <button id="modal-ai-generate-btn" type="button" class="px-4 py-2 bg-gradient-to-r from-[#9d4edd] to-[#c77dff] hover:opacity-90 text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all border border-white/10">
+                    Generate Draft
+                  </button>
                   <textarea id="modal-ai-prompt" class="form-input resize-none h-24 text-sm" placeholder="Optional prompt refinement or revision instruction"></textarea>
                   <div id="modal-ai-output" class="p-3 rounded-xl bg-[#181125] border border-white/5 text-sm text-gray-300 leading-relaxed">AI assist output will appear here.</div>
                   <div class="flex justify-end gap-3">
@@ -3183,9 +3187,13 @@
           <div class="flex items-center justify-between gap-3">
             <div>
               <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Draft Preview</p>
-              <p class="text-xs text-gray-400 mt-1">Fallback guidance is structured and explicit until live AI credentials exist.</p>
+              <p class="text-xs text-gray-400 mt-1">Generates finished draft language by default. Turn on outline mode only when you want structure instead of final copy.</p>
             </div>
             <div class="flex gap-2">
+              <label class="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs text-gray-300">
+                <input id="ai-outline-mode" type="checkbox" class="accent-[#c77dff]">
+                Outline mode
+              </label>
               <button id="ai-generate-draft-btn" type="button" class="px-4 py-2 bg-gradient-to-r from-[#9d4edd] to-[#c77dff] hover:opacity-90 text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all border border-white/10">Generate</button>
               <button id="ai-regenerate-draft-btn" type="button" class="px-4 py-2 bg-[#181125] hover:bg-[#231738] text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all border border-white/10">Regenerate</button>
             </div>
@@ -3439,7 +3447,7 @@
 </div>
 <script>
 const APP_CONFIG = {
-  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbxCwrKjBHFT1F1SfOGCSSZOSTW62BaKt2XEX_hjvTTER_K4A8uBlfnGCKaHWE5OsICr/exec",
+  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbxp6HScAofGAc0XmJ7vAi6oFLQklSAgx6fAkkltO_k6E0udBSWJrQpgxkYgs-ghwGph/exec",
   ENABLE_REMOTE_SYNC: true,
   STORAGE_KEY: "stellarsync_local_state_v5",
   SHELL_LAYOUT_KEY: "stellarsync_shell_layout_v2"
@@ -3534,6 +3542,7 @@ let currentModalCarouselAssets = [];
 let pendingUploadFiles = [];
 let uploadStagingTarget = "vault";
 let currentAIDraftId = "";
+let currentAIGenerationResult = null;
 let currentBrandFrameworkSection = "";
 let diagnosticsRefreshing = false;
 let socialCardUpload = null;
@@ -3673,6 +3682,7 @@ const modalAiInlineToggle = document.getElementById("modal-ai-inline-toggle");
 const modalAiInlineHelper = document.getElementById("modal-ai-inline-helper");
 const modalAiTarget = document.getElementById("modal-ai-target");
 const modalAiMode = document.getElementById("modal-ai-mode");
+const modalAiOutlineMode = document.getElementById("modal-ai-outline-mode");
 const modalAiPrompt = document.getElementById("modal-ai-prompt");
 const modalAiOutput = document.getElementById("modal-ai-output");
 const modalAiGenerateBtn = document.getElementById("modal-ai-generate-btn");
@@ -3864,6 +3874,7 @@ const aiSourceIdInput = document.getElementById("ai-source-id");
 const aiPlatformInput = document.getElementById("ai-platform");
 const aiPostTypeInput = document.getElementById("ai-post-type");
 const aiGenerationModeInput = document.getElementById("ai-generation-mode");
+const aiOutlineModeInput = document.getElementById("ai-outline-mode");
 const aiCampaignSelect = document.getElementById("ai-campaign-select");
 const aiWorkspacePrompt = document.getElementById("ai-workspace-prompt");
 const aiBrandAlignmentList = document.getElementById("ai-brand-alignment-list");
@@ -6494,8 +6505,16 @@ function setupAIAndBrandWorkspaces() {
   modalAiInlineToggle?.addEventListener("click", () => {
     modalAiInlineHelper?.classList.toggle("hidden");
   });
-  modalAiGenerateBtn?.addEventListener("click", () => {
-    if (modalAiOutput) modalAiOutput.textContent = buildInlineAIGuidance();
+  modalAiGenerateBtn?.addEventListener("click", async () => {
+    try {
+      if (modalAiOutput) modalAiOutput.textContent = "Generating draft...";
+      await generateInlineAIGuidance();
+      showToast("Draft ready", "AI draft text is ready to insert.", "ph-check", "text-[#00ffaa]");
+    } catch (err) {
+      console.error(err);
+      if (modalAiOutput) modalAiOutput.textContent = "AI drafting failed.";
+      showToast("AI draft failed", err.message || "Could not generate AI draft text.", "ph-warning", "text-yellow-400");
+    }
   });
   modalAiApplyBtn?.addEventListener("click", applyInlineAIGuidance);
   openAiWorkspaceSecondaryBtn?.addEventListener("click", openAIWorkspaceModal);
@@ -6525,7 +6544,7 @@ function setupAIAndBrandWorkspaces() {
   aiDraftCarouselOutlineInput?.addEventListener("input", renderAISemanticMemoryCards);
   aiGenerateDraftBtn?.addEventListener("click", () => generateAIDraftPreview().catch((err) => {
     console.error(err);
-    showToast("AI scaffold only", err.message || "Could not build the draft context.", "ph-warning", "text-yellow-400");
+    showToast("AI draft failed", err.message || "Could not generate the AI draft.", "ph-warning", "text-yellow-400");
   }));
   aiRegenerateDraftBtn?.addEventListener("click", () => generateAIDraftPreview().catch((err) => console.error(err)));
   aiSaveDraftBtn?.addEventListener("click", () => saveCurrentAIDraft().catch((err) => {
@@ -8424,7 +8443,7 @@ function openConnectionSetupModal(platform, auth = null) {
   const checklist = auth?.setupChecklist || account.setupChecklist || [];
   const missingSetupKeys = auth?.missingSetupKeys || account.missingSetupKeys || [];
   if (connectionSetupTitle) connectionSetupTitle.textContent = `${toTitleCase(platform)} Connection Setup`;
-  if (connectionSetupSubtitle) connectionSetupSubtitle.textContent = account.connectionStatusLabel || auth?.status || "Scaffold only";
+  if (connectionSetupSubtitle) connectionSetupSubtitle.textContent = account.connectionStatusLabel || auth?.status || "Not live yet";
   if (connectionSetupChecklist) {
     const setupKeyRows = missingSetupKeys.length
       ? missingSetupKeys.map((item) => `<div class="text-sm text-yellow-300 wrap-safe flex gap-2"><i class="ph-bold ph-warning-circle mt-0.5"></i><span>Missing Script Property: ${escapeHtml(item)}</span></div>`)
@@ -8499,7 +8518,7 @@ function getConnectedAccountsMarkup(options = {}) {
           <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Account</div><div class="text-sm text-white wrap-safe">${escapeHtml(accountLabel)}</div></div>
           <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Permissions / Scopes</div><div class="text-sm text-white wrap-safe">${escapeHtml(permissions)}</div></div>
           <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Token Status</div><div class="text-sm text-white wrap-safe">${escapeHtml(tokenStatus)}</div></div>
-          <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Publish Support</div><div class="text-sm text-white wrap-safe">${escapeHtml(account.publishSupported ? "Live" : "Scaffold only")}</div></div>
+          <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Publish Support</div><div class="text-sm text-white wrap-safe">${escapeHtml(account.publishSupported ? "Live" : "Not live yet")}</div></div>
           <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Token Expires / Last Sync</div><div class="text-sm text-white wrap-safe">${escapeHtml(lastSync)}</div></div>
           <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Last Error</div><div class="text-sm text-white wrap-safe">${escapeHtml(lastError)}</div></div>
         </div>
@@ -9143,15 +9162,15 @@ function renderWriteIdeaScaffold() {
   if (writeIdeaTargetRangeInput) writeIdeaTargetRangeInput.value = writeIdeaState.targetDateRange || "";
   renderWriteIdeaArtifactWorkspace();
   if (!writeIdeaLastScaffold) {
-    if (writeIdeaReviewSummary) writeIdeaReviewSummary.textContent = "Idea captured state will appear here after you generate a scaffold.";
-    if (writeIdeaStatusChip) writeIdeaStatusChip.textContent = "Scaffold only";
+    if (writeIdeaReviewSummary) writeIdeaReviewSummary.textContent = "Idea state will appear here after you generate a structured draft.";
+    if (writeIdeaStatusChip) writeIdeaStatusChip.textContent = "Structured draft";
     if (writeIdeaWarningList) writeIdeaWarningList.innerHTML = "";
-    if (writeIdeaProposedPosts) writeIdeaProposedPosts.innerHTML = makeEmptyState("No scaffold yet", "Generate a scaffold to review proposed posts, dates, campaign links, and warnings.", "ph-sparkle");
+    if (writeIdeaProposedPosts) writeIdeaProposedPosts.innerHTML = makeEmptyState("No draft yet", "Generate a structured draft to review proposed posts, dates, campaign links, and warnings.", "ph-sparkle");
     return;
   }
   const scaffold = writeIdeaLastScaffold.scaffold || writeIdeaLastScaffold;
-  if (writeIdeaStatusChip) writeIdeaStatusChip.textContent = scaffold.draftStatus === "scaffold_only" ? "Scaffold only" : toTitleCase(scaffold.draftStatus || "draft");
-  if (writeIdeaReviewSummary) writeIdeaReviewSummary.textContent = scaffold.summaryText || "Idea scaffold ready for manual review.";
+  if (writeIdeaStatusChip) writeIdeaStatusChip.textContent = scaffold.draftStatus === "scaffold_only" ? "Structured draft" : toTitleCase(scaffold.draftStatus || "draft");
+  if (writeIdeaReviewSummary) writeIdeaReviewSummary.textContent = scaffold.summaryText || "Idea draft ready for manual review.";
   if (writeIdeaWarningList) {
     writeIdeaWarningList.innerHTML = (scaffold.warnings || []).map((warning) => `<span class="diagnostic-chip">${escapeHtml(warning)}</span>`).join("");
   }
@@ -9206,7 +9225,7 @@ function renderWriteIdeaArtifactWorkspace() {
           <div class="text-xs text-gray-400 wrap-safe">${escapeHtml(artifact.summary || "Awaiting manual review.")}</div>
         </div>
       `).join("")
-      : `<div class="text-xs text-gray-500">Generated outputs will appear here as reusable artifacts after scaffold generation.</div>`;
+      : `<div class="text-xs text-gray-500">Generated outputs will appear here as reusable artifacts after draft generation.</div>`;
   }
   if (writeIdeaHistoryList) {
     writeIdeaHistoryList.innerHTML = (writeIdeaState.transformationHistory || []).length
@@ -9304,7 +9323,7 @@ async function generateWriteIdeaScaffold() {
   }
   writeIdeaState.outputArtifacts = (writeIdeaLastScaffold?.scaffold?.generatedOutputs || []).map((item) => normalizeWriteIdeaArtifact(item)).filter((item) => item.artifactId);
   writeIdeaState.selectedDraftIndexes = (writeIdeaLastScaffold?.scaffold?.proposedPosts || []).map((_, index) => index);
-  recordWriteIdeaHistory("Generated scaffold", writeIdeaLastScaffold?.scaffold?.title || deriveIdeaTitle(payload.ideaPrompt));
+  recordWriteIdeaHistory("Generated draft", writeIdeaLastScaffold?.scaffold?.title || deriveIdeaTitle(payload.ideaPrompt));
   renderWriteIdeaScaffold();
 }
 
@@ -9325,12 +9344,12 @@ function buildLocalIdeaScaffold(payload) {
       : "draft",
     title: `${title} ${payload.transformationType === "analyze_performance" ? "Analysis" : "Output"}`,
     summary: payload.mediaIds?.length
-      ? "Output scaffold includes attached media context and avoids reusing slide text verbatim."
-      : "Output scaffold derived from the current artifact chain."
+      ? "Output draft includes attached media context and avoids reusing slide text verbatim."
+      : "Output draft derived from the current artifact chain."
   }];
   const proposedPosts = [{
     title,
-    description: `Scaffold only.\nPrompt: ${payload.ideaPrompt}\nTransformation: ${getWriteIdeaTransformationLabel(payload.transformationType)}\nOutput: ${payload.outputType.replace(/_/g, " ")}`,
+    description: `Structured draft direction.\nPrompt: ${payload.ideaPrompt}\nTransformation: ${getWriteIdeaTransformationLabel(payload.transformationType)}\nOutput: ${payload.outputType.replace(/_/g, " ")}`,
     platform: payload.platform || "linkedin",
     postType: payload.outputType === "draft_carousel_outline" ? "carousel" : "text",
     queueDateLabel: payload.targetDate || normalizeQueueDateLabel(new Date())
@@ -9338,10 +9357,10 @@ function buildLocalIdeaScaffold(payload) {
   return {
     title,
     draftStatus: "scaffold_only",
-    warnings: payload.ideaPrompt.length < 18 ? ["too generic", "weak classification"] : ["scaffold only"],
+    warnings: payload.ideaPrompt.length < 18 ? ["too generic", "weak classification"] : ["structured draft"],
     semanticTags: payload.ideaPrompt.toLowerCase().split(/[^a-z0-9]+/).filter((token) => token.length >= 5).slice(0, 6),
     generatedOutputs,
-    summaryText: "Idea captured. Local scaffold mode is active. Branch, reuse, or save any generated artifact.",
+    summaryText: "Idea captured. Local structured-draft mode is active. Branch, reuse, or save any generated artifact.",
     proposedPosts,
     carouselOutline: "Slide 1: Idea\nSlide 2: Observation\nSlide 3: Why it matters\nSlide 4: Application\nSlide 5: CTA"
   };
@@ -10647,6 +10666,7 @@ function closeModal() {
   currentModalInspoId = null;
   currentModalNoteId = null;
   currentModalCarouselAssets = [];
+  currentAIGenerationResult = null;
   setModalSourceContext("manual", "Create Post from Calendar", "This post starts as a manual draft.", "");
   if (modalMediaStatus) modalMediaStatus.textContent = "No media linked";
   if (campaignSelect) campaignSelect.value = "";
@@ -10789,8 +10809,23 @@ function setupSaveHandler() {
         await syncRemoteIfConfigured();
         showToast("Synced", "Post synced to Google Sheets.", "ph-cloud-check", "text-[#00ffaa]");
       } catch (err) {
-        console.error(err);
-        showToast("Local only", "Save worked locally. Remote sync failed.", "ph-warning", "text-yellow-400");
+        console.error("savePost remote sync failed", {
+          action: err?.action || "savePost",
+          message: err?.message || "Unknown error",
+          backend: err?.backend ? {
+            action: err.backend.action,
+            routeStatus: err.backend.routeStatus,
+            error: err.backend.error
+          } : null
+        });
+        const routeStatus = err?.backend?.routeStatus || {};
+        const detail = [
+          err?.message || "Remote save failed.",
+          routeStatus.postsSheetReachable === false ? "POSTS sheet is unavailable." : "",
+          routeStatus.requiredHeadersPresent === false ? "POSTS sheet headers are incomplete." : "",
+          routeStatus.spreadsheetIdConfigured === false ? "SPREADSHEET_ID is not configured." : ""
+        ].filter(Boolean).join(" ");
+        showToast("Save failed", detail || "Save worked locally, but the backend rejected the post.", "ph-warning", "text-yellow-400");
       }
     } else if (inspoIdToConvert) {
       appState.inspo = (appState.inspo || []).filter((item) => item.id !== inspoIdToConvert);
@@ -10936,17 +10971,10 @@ function switchView(viewName) {
   });
 }
 
-function aiGenerate(type) {
+async function aiGenerate(type) {
   const toast = document.getElementById("ai-toast");
   const toastText = document.getElementById("ai-toast-text");
   const captionField = descInput;
-
-  const aiText = {
-    caption: "Here’s the core idea in plain language with a sharper hook, a clearer takeaway, and a stronger call to action.",
-    keywords: "content strategy, publishing workflow, campaign planning, content calendar, platform strategy, editorial system, social media operations, content engine",
-    rewrite: "This version sharpens the point, clarifies the value, and makes the post easier to understand at a glance.",
-    emoji: "✨ 📈 🪄 📣 🧠 🔮"
-  };
 
   if (!toast || !toastText) return;
 
@@ -10956,28 +10984,50 @@ function aiGenerate(type) {
     "Generating caption...";
 
   toast.classList.remove("opacity-0", "pointer-events-none");
-
-  setTimeout(() => {
+  try {
+    if (type === "emoji") {
+      if (captionField) captionField.value = `${captionField.value || ""} ✨`.trim();
+      toastText.textContent = "Emoji added!";
+      return;
+    }
+    if (!APP_CONFIG.ENABLE_REMOTE_SYNC || !isRemoteConfigured()) {
+      throw new Error("Remote AI drafting is unavailable. Confirm the Apps Script deployment and AI provider configuration.");
+    }
+    const current = String(captionField?.value || "").trim();
+    const payload = {
+      sourceType: currentModalSourceContext.type || "manual",
+      sourceId: currentModalSourceContext.sourceId || "",
+      platform: String(platSelect?.value || "linkedin").trim().toLowerCase(),
+      pillar: getActivePillar() || "authority",
+      postType: String(postTypeSelect?.value || "text").trim().toLowerCase(),
+      generationMode: "LinkedIn draft",
+      targetField: type === "keywords" ? "keywords" : "description",
+      title: String(titleInput?.value || "").trim(),
+      existingTitle: String(titleInput?.value || "").trim(),
+      existingText: current,
+      description: current,
+      prompt: type === "keywords"
+        ? "Return strong semantic tags and sharpen the core angle without generic phrasing."
+        : "Rewrite this into a stronger finished draft while preserving the human voice and emotional truth."
+    };
+    const result = await apiGenerateAIDraft(payload);
     if (captionField) {
-      const current = captionField.value;
-      if (type === "emoji") {
-        captionField.value = `${current} ${aiText[type]}`.trim();
-      } else if (type === "keywords") {
-        captionField.value = current ? `${current}\n\nKeywords: ${aiText[type]}` : `Keywords: ${aiText[type]}`;
+      if (type === "keywords") {
+        const tags = Array.isArray(result.semanticTags) ? result.semanticTags.filter(Boolean) : [];
+        captionField.value = current ? `${current}\n\nKeywords: ${tags.join(", ")}` : `Keywords: ${tags.join(", ")}`;
       } else {
-        captionField.value = aiText[type];
+        captionField.value = result.draftText || result.captionVariant || current;
       }
     }
-
-    toastText.textContent =
-      type === "emoji" ? "Emojis added!" :
-      type === "keywords" ? "Keywords ready!" :
-      "Caption ready!";
-
+    toastText.textContent = type === "keywords" ? "Keywords ready!" : "Caption ready!";
+  } catch (err) {
+    console.error(err);
+    toastText.textContent = err.message || "AI drafting failed.";
+  } finally {
     setTimeout(() => {
       toast.classList.add("opacity-0", "pointer-events-none");
-    }, 2000);
-  }, 1200);
+    }, 2200);
+  }
 }
 
 function showToast(title, message, iconClass = "ph-sparkle", colorClass = "text-[#c77dff]") {
@@ -11618,7 +11668,12 @@ async function apiPost(action, payload = {}) {
 
   if (!response.ok) throw new Error(`Request failed: ${response.status}`);
   const result = await response.json();
-  if (!result.ok) throw new Error(result.error || "Unknown Apps Script error");
+  if (!result.ok) {
+    const err = new Error(result.error || "Unknown Apps Script error");
+    err.backend = result;
+    err.action = action;
+    throw err;
+  }
   return result;
 }
 
@@ -11708,6 +11763,11 @@ async function apiGetAICreationOptions() {
 
 async function apiPrepareAIGenerationContext(payload) {
   return apiPost("prepareAIGenerationContext", payload);
+}
+
+async function apiGenerateAIDraft(payload) {
+  const result = await apiPost("generateAIDraft", payload);
+  return result.draft || result.data || result;
 }
 
 async function apiSaveIdeaPrompt(payload) {
@@ -11804,11 +11864,14 @@ function formatDetailedDiagnostics(items, formatter) {
 function getDiagnosticsSummaryText(diagnostics = {}) {
   const semanticDiagnostics = diagnostics.semanticDiagnostics || {};
   const socialDiagnostics = diagnostics.socialImportDiagnostics || {};
+  const deploymentDiagnostics = diagnostics.deploymentDiagnostics || {};
   return [
     `Backend reachable: ${backendReachable ? "Yes" : "No"}`,
     `Backend version: ${getBackendVersion() || "Unavailable"}`,
     `Frontend version: ${APP_FRONTEND_VERSION}`,
     `Service worker version: ${serviceWorkerStatus.version}`,
+    `Deployment base URL: ${deploymentDiagnostics.publicWebappBaseUrl || "Unavailable"}`,
+    `Spreadsheet configured: ${deploymentDiagnostics.spreadsheetIdConfigured ? "Yes" : "No"}`,
     `Missing sheets: ${(diagnostics.missingSheets || []).join(", ") || "None"}`,
     `Missing headers: ${diagnostics.missingHeaders ? Object.entries(diagnostics.missingHeaders).filter(([, headers]) => Array.isArray(headers) && headers.length).map(([sheet, headers]) => `${sheet}: ${headers.join(", ")}`).join(" | ") || "None" : "None"}`,
     `Malformed scheduled_at rows: ${(diagnostics.malformedScheduledRows || []).length}`,
@@ -11832,6 +11895,7 @@ function renderDiagnosticsPanel() {
   if (!target) return;
 
   const diagnostics = backendDiagnostics || {};
+  const deploymentDiagnostics = diagnostics.deploymentDiagnostics || {};
   const repairPreview = diagnostics.dateRepairPreview || {};
   const socialDiagnostics = diagnostics.socialImportDiagnostics || {};
   const bridgeDensityWarning = 0;
@@ -12001,6 +12065,27 @@ function renderDiagnosticsPanel() {
       <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Formula / Sheet Guidance</div>
       <div class="text-sm text-gray-300 wrap-safe">${escapeHtml(diagnostics.sheetFormulaGuidance?.note || "Derived planning fields can be handled by formulas or by the backend when formulas are absent.")}</div>
     </div>
+    <div class="p-4 rounded-xl bg-[#181125] border border-white/5 space-y-3">
+      <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Deployment Diagnostics</div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div class="p-3 rounded-xl bg-[#120c1d] border border-white/5">
+          <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Public Web App Base URL</div>
+          <div class="text-sm text-white wrap-safe">${escapeHtml(deploymentDiagnostics.publicWebappBaseUrl || "Missing")}</div>
+        </div>
+        <div class="p-3 rounded-xl bg-[#120c1d] border border-white/5">
+          <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Write Post Route</div>
+          <div class="text-sm text-white wrap-safe">${escapeHtml(deploymentDiagnostics.writePostRouteStatus?.savePostActionAvailable ? "savePost available" : "savePost unavailable")}</div>
+        </div>
+        <div class="p-3 rounded-xl bg-[#120c1d] border border-white/5">
+          <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Spreadsheet Access</div>
+          <div class="text-sm text-white wrap-safe">${escapeHtml(deploymentDiagnostics.hasSpreadsheetAccess ? "Available" : deploymentDiagnostics.spreadsheetAccessError || "Unavailable")}</div>
+        </div>
+        <div class="p-3 rounded-xl bg-[#120c1d] border border-white/5">
+          <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Posts Sheet Headers</div>
+          <div class="text-sm text-white wrap-safe">${escapeHtml(deploymentDiagnostics.writePostRouteStatus?.requiredHeadersPresent ? "Ready" : "Missing required headers")}</div>
+        </div>
+      </div>
+    </div>
     <div class="p-4 rounded-xl bg-[#181125] border border-white/5">
       <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Action Coverage Notes</div>
       <div class="space-y-2">
@@ -12139,26 +12224,55 @@ async function refreshBackendDiagnostics(options = {}) {
   }
 }
 
-function buildInlineAIGuidance() {
-  const target = modalAiTarget?.value || "description";
-  const mode = modalAiMode?.value || "LinkedIn post";
+function getInlineAIPayload() {
   const prompt = String(modalAiPrompt?.value || "").trim();
-  const title = String(titleInput?.value || "").trim();
   const description = String(descInput?.value || "").trim();
-  const sourceLabel = currentModalSourceContext.label || "Manual Draft";
-  const guidance = [
-    `Mode: ${mode}`,
-    `Source: ${sourceLabel}`,
-    `Hook angle: start from orientation, classification, or a concrete systems observation.`,
-    `Anti-pattern check: avoid generic marketer language and avoid flattening structured content into one caption.`
-  ];
-  if (prompt) guidance.push(`Revision note: ${prompt}`);
-  if (target === "title") return `${title || "Draft Title"}\n\nSharper angle: name the system, place, or contradiction directly.`;
-  if (target === "hook") return `Possible hook:\n${title || "This post"} is less about promotion and more about how people orient themselves inside a system.`;
-  if (target === "cta") return `Possible CTA:\nInvite a concrete response, example, or local observation rather than a generic engagement ask.`;
-  if (target === "carousel") return `Carousel outline:\n1. Name the system\n2. Show the tension\n3. Classify what people miss\n4. Reframe the practical implication\n5. End with a participation-oriented CTA`;
-  if (target === "platformVariant") return `Platform variant:\nLinkedIn: keep the structure explicit and interpretive.\nInstagram: compress the hook, let the slides carry the sequence, and keep the caption shorter.`;
-  return `${guidance.join("\n")}\n\nSuggested revision:\n${description || "Start with the core claim, then add one sharper orienting sentence and one practical closing line."}`;
+  const title = String(titleInput?.value || "").trim();
+  const platform = String(platSelect?.value || "linkedin").trim().toLowerCase();
+  const postType = String(postTypeSelect?.value || "text").trim().toLowerCase();
+  const target = modalAiTarget?.value || "description";
+  const mode = modalAiMode?.value || (postType === "carousel" ? "Carousel draft" : "LinkedIn draft");
+  const promptParts = [];
+  if (prompt) promptParts.push(prompt);
+  if (target === "hook") promptParts.push("Generate only the strongest opening hook for this post.");
+  if (target === "cta") promptParts.push("Generate only the closing CTA for this post.");
+  if (target === "title") promptParts.push("Generate only the strongest title for this post.");
+  if (target === "platformVariant") promptParts.push("Generate a strong platform-specific variant of this draft.");
+  return {
+    sourceType: currentModalSourceContext.type || "manual",
+    sourceId: currentModalSourceContext.sourceId || "",
+    platform: platform === "both" ? "linkedin" : platform,
+    pillar: getActivePillar() || "authority",
+    postType,
+    generationMode: mode,
+    outlineMode: !!modalAiOutlineMode?.checked,
+    targetField: target,
+    title,
+    existingTitle: title,
+    existingText: description,
+    description,
+    prompt: promptParts.join("\n\n").trim() || description || title
+  };
+}
+
+function getInlineAIOutputText(result = {}) {
+  const target = modalAiTarget?.value || "description";
+  if (target === "title") return result.title || "";
+  if (target === "hook") return result.hookText || result.draftText || "";
+  if (target === "cta") return result.ctaText || result.draftText || "";
+  if (target === "carousel") return result.carouselOutline || result.draftText || "";
+  if (target === "platformVariant") return result.captionVariant || result.draftText || "";
+  return result.draftText || result.captionVariant || result.hookText || "";
+}
+
+async function generateInlineAIGuidance() {
+  if (!APP_CONFIG.ENABLE_REMOTE_SYNC || !isRemoteConfigured()) {
+    throw new Error("Remote AI drafting is unavailable. Confirm the Apps Script deployment and AI provider configuration.");
+  }
+  const result = await apiGenerateAIDraft(getInlineAIPayload());
+  currentAIGenerationResult = result;
+  if (modalAiOutput) modalAiOutput.textContent = getInlineAIOutputText(result) || "No AI text was returned.";
+  return result;
 }
 
 function applyInlineAIGuidance() {
@@ -12170,7 +12284,7 @@ function applyInlineAIGuidance() {
   else if (target === "cta" && descInput) descInput.value = `${descInput.value || ""}\n\n${output}`.trim();
   else if (target === "carousel" && descInput) descInput.value = `${descInput.value || ""}\n\n${output}`.trim();
   else if (descInput) descInput.value = output;
-  showToast("Applied", "Inline AI guidance inserted into the current post draft.", "ph-check", "text-[#00ffaa]");
+  showToast("Applied", "AI draft text inserted into the current post draft.", "ph-check", "text-[#00ffaa]");
 }
 
 function populateAISourceOptions() {
@@ -12190,9 +12304,9 @@ function populateAIGenerationModes() {
   const postType = aiPostTypeInput?.value || "text";
   const platform = aiPlatformInput?.value || "linkedin";
   const options = [
-    "LinkedIn post",
+    "LinkedIn draft",
     "Instagram caption",
-    "carousel outline",
+    "Carousel draft",
     "short video script",
     "job board promo",
     "campaign recap",
@@ -12200,9 +12314,9 @@ function populateAIGenerationModes() {
     "local infrastructure post",
     "alternate realities / solarpunk history"
   ].filter((mode) => {
-    if (postType === "carousel") return ["carousel outline", "Instagram caption", "campaign recap"].includes(mode);
+    if (postType === "carousel") return ["Carousel draft", "Instagram caption", "campaign recap"].includes(mode);
     if (postType === "video") return ["short video script", "Instagram caption", "platform analysis"].includes(mode);
-    if (platform === "instagram") return mode !== "LinkedIn post";
+    if (platform === "instagram") return mode !== "LinkedIn draft";
     return true;
   });
   aiGenerationModeInput.innerHTML = options.map((mode) => `<option value="${escapeHtml(mode)}">${escapeHtml(mode)}</option>`).join("");
@@ -12360,6 +12474,7 @@ function closeAIWorkspaceModal() {
   aiWorkspaceModal?.classList.add("opacity-0", "pointer-events-none");
   aiWorkspaceModalCard?.classList.remove("scale-100");
   aiWorkspaceModalCard?.classList.add("scale-95");
+  currentAIGenerationResult = null;
 }
 
 function openBrandFrameworkModal() {
@@ -12376,50 +12491,59 @@ function closeBrandFrameworkModal() {
 }
 
 async function generateAIDraftPreview() {
+  if (!APP_CONFIG.ENABLE_REMOTE_SYNC || !isRemoteConfigured()) {
+    throw new Error("Remote AI drafting is unavailable. Confirm the Apps Script deployment URL and AI provider configuration.");
+  }
   const sourceType = aiSourceTypeInput?.value || "manual";
   const sourceId = aiSourceIdInput?.value || "";
-  const mode = aiGenerationModeInput?.value || "LinkedIn post";
-  const contextResult = APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()
-    ? await apiPrepareAIGenerationContext({ sourceType, sourceId })
-    : { context: { sourceType, sourceId, sourceRecord: {}, guidance: "Remote AI context unavailable." } };
-  const context = contextResult.context || contextResult;
+  const mode = aiGenerationModeInput?.value || "LinkedIn draft";
   const prompt = String(aiWorkspacePrompt?.value || "").trim();
-  const title = sourceType === "manual" ? "AI Draft" : `${toTitleCase(sourceType)} Draft`;
-  const preview = [
-    `Mode: ${mode}`,
-    `Source type: ${sourceType}`,
-    context?.guidance || "No live AI backend connected.",
-    prompt ? `Prompt note: ${prompt}` : "Prompt note: none",
-    "Suggested structure:",
-    "1. Name the system or orientation problem",
-    "2. Clarify the classification or reframing",
-    "3. Show the practical implication",
-    "4. End with a participation-oriented CTA"
-  ].join("\n");
-  if (aiDraftTitleInput && !aiDraftTitleInput.value.trim()) aiDraftTitleInput.value = title;
-  if (aiDraftPreviewInput) aiDraftPreviewInput.value = preview;
-  if (aiDraftCarouselOutlineInput && aiPostTypeInput?.value === "carousel") {
-    aiDraftCarouselOutlineInput.value = "Slide 1: orient the viewer\nSlide 2: classify the problem\nSlide 3: interpret the system\nSlide 4: local implication\nSlide 5: CTA";
-  }
+  const payload = {
+    aiDraftId: currentAIDraftId || "",
+    sourceType,
+    sourceId,
+    platform: aiPlatformInput?.value || "linkedin",
+    postType: aiPostTypeInput?.value || "text",
+    generationMode: mode,
+    outlineMode: !!aiOutlineModeInput?.checked,
+    targetField: "draft",
+    title: String(aiDraftTitleInput?.value || "").trim(),
+    existingTitle: String(aiDraftTitleInput?.value || "").trim(),
+    existingText: String(aiDraftPreviewInput?.value || "").trim(),
+    prompt
+  };
+  const result = await apiGenerateAIDraft(payload);
+  currentAIGenerationResult = result;
+  if (aiDraftTitleInput) aiDraftTitleInput.value = result.title || aiDraftTitleInput.value || "";
+  if (aiDraftPreviewInput) aiDraftPreviewInput.value = result.draftText || result.captionVariant || "";
+  if (aiDraftCarouselOutlineInput) aiDraftCarouselOutlineInput.value = result.carouselOutline || "";
+  if (aiDraftStatusInput) aiDraftStatusInput.value = result.outlineMode ? "reviewed" : "needs_review";
+  if (aiReviewNotesInput && !String(aiReviewNotesInput.value || "").trim()) aiReviewNotesInput.value = result.reviewNotes || "";
   if (aiDraftMeta) {
     aiDraftMeta.innerHTML = [
-      { label: "Framework", value: context?.frameworkVersion || "Unavailable" },
-      { label: "Mode", value: mode },
+      { label: "Provider", value: result.provider || "Unavailable" },
+      { label: "Model", value: result.model || "Unavailable" },
+      { label: "Mode", value: result.outlineMode ? "Outline" : "Full draft" },
+      { label: "Platform", value: toTitleCase(result.platform || payload.platform || "linkedin") },
+      { label: "Post Type", value: toTitleCase(result.postType || payload.postType || "text") },
       { label: "Source", value: sourceType }
-    ].map((item) => `<div class="p-3 rounded-xl bg-[#181125] border border-white/5"><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">${escapeHtml(item.label)}</div><div class="text-sm text-white">${escapeHtml(item.value)}</div></div>`).join("");
+    ].map((item) => `<div class="p-3 rounded-xl bg-[#181125] border border-white/5"><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">${escapeHtml(item.label)}</div><div class="text-sm text-white wrap-safe">${escapeHtml(item.value)}</div></div>`).join("");
   }
   renderAISemanticMemoryCards();
+  showToast("Draft ready", "AI draft generated.", "ph-check", "text-[#00ffaa]");
 }
 
 function loadAIDraftIntoWorkspace(aiDraftId) {
   const draft = (appState.aiDrafts || []).find((item) => item.aiDraftId === aiDraftId);
   if (!draft) return;
   currentAIDraftId = aiDraftId;
+  currentAIGenerationResult = draft;
   if (aiDraftTitleInput) aiDraftTitleInput.value = draft.title || "";
   if (aiDraftPreviewInput) aiDraftPreviewInput.value = draft.draftText || "";
   if (aiDraftCarouselOutlineInput) aiDraftCarouselOutlineInput.value = draft.carouselOutline || "";
   if (aiPlatformInput) aiPlatformInput.value = draft.platform || "linkedin";
   if (aiPostTypeInput) aiPostTypeInput.value = draft.postType || "text";
+  if (aiOutlineModeInput) aiOutlineModeInput.checked = String(draft.draftStatus || "").trim() === "outline_ready";
   if (aiWorkspacePrompt) aiWorkspacePrompt.value = draft.prompt || "";
   if (aiDraftStatusInput) aiDraftStatusInput.value = draft.draftStatus || "needs_review";
   if (aiReviewNotesInput) aiReviewNotesInput.value = draft.reviewNotes || "";
@@ -12440,7 +12564,10 @@ async function saveCurrentAIDraft() {
     campaignName: (appState.campaigns || []).find((item) => item.campaignId === (aiCampaignSelect?.value || ""))?.campaignName || "",
     prompt: String(aiWorkspacePrompt?.value || "").trim(),
     draftText: String(aiDraftPreviewInput?.value || "").trim(),
+    hookText: String(currentAIGenerationResult?.hookText || "").trim(),
+    ctaText: String(currentAIGenerationResult?.ctaText || "").trim(),
     carouselOutline: String(aiDraftCarouselOutlineInput?.value || "").trim(),
+    generatedOutputs: Array.isArray(currentAIGenerationResult?.carouselSlides) ? currentAIGenerationResult.carouselSlides.map((slide) => slide.title || slide.copy || "").filter(Boolean) : [],
     draftStatus: aiDraftStatusInput?.value || "needs_review",
     reviewNotes: String(aiReviewNotesInput?.value || "").trim(),
     brandFrameworkVersion: "brand-os-2026.05.09",
@@ -12473,11 +12600,15 @@ async function createPostFromCurrentAIDraft() {
   }
   const aiDraftId = currentAIDraftId || (appState.aiDrafts || [])[0]?.aiDraftId;
   if (!aiDraftId) return;
+  const generatedCarouselText = String(aiDraftCarouselOutlineInput?.value || currentAIGenerationResult?.carouselOutline || "").trim();
+  const generatedDraftText = String(aiDraftPreviewInput?.value || "").trim();
   const postPayload = {
     title: String(aiDraftTitleInput?.value || "").trim(),
     platform: aiPlatformInput?.value || "linkedin",
     postType: aiPostTypeInput?.value || "text",
-    description: String(aiDraftPreviewInput?.value || "").trim(),
+    description: aiPostTypeInput?.value === "carousel" && generatedCarouselText
+      ? [generatedDraftText, generatedCarouselText].filter(Boolean).join("\n\n")
+      : generatedDraftText,
     campaignId: aiCampaignSelect?.value || "",
     aiSourceType: aiSourceTypeInput?.value || "manual",
     aiSourceId: aiSourceIdInput?.value || aiDraftId,
