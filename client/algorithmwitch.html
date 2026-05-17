@@ -2646,15 +2646,66 @@
                   <div class="flex items-center justify-between gap-3 flex-wrap">
                     <div>
                       <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Import Foundation</p>
-                      <p class="text-xs text-gray-400 mt-1">Paste a LinkedIn or Instagram URL. If the platform blocks metadata access, StellarSync falls back to your pasted caption.</p>
+                      <p class="text-xs text-gray-400 mt-1">Use Import Source for one post URL. Use Import LinkedIn Posts for bulk browser-capture import from your own visible LinkedIn activity/profile page.</p>
                     </div>
-                    <button id="modal-import-url-btn" type="button" class="px-4 py-2 rounded-xl bg-[#231738] border border-white/5 text-xs font-bold text-white hover:bg-[#2d1b4e] transition-colors">
-                      Import Source
-                    </button>
+                    <div class="flex gap-2 flex-wrap">
+                      <button id="modal-import-url-btn" type="button" class="px-4 py-2 rounded-xl bg-[#231738] border border-white/5 text-xs font-bold text-white hover:bg-[#2d1b4e] transition-colors">
+                        Import Source
+                      </button>
+                      <button id="modal-open-linkedin-capture-btn" type="button" class="px-4 py-2 rounded-xl bg-[#1a1128] border border-white/5 text-xs font-bold text-white hover:bg-[#231738] transition-colors">
+                        Import LinkedIn Posts
+                      </button>
+                    </div>
                   </div>
                   <input type="url" id="modal-source-url" class="form-input text-sm font-medium" placeholder="https://www.linkedin.com/... or https://www.instagram.com/...">
                   <textarea id="modal-import-caption-fallback" class="form-input resize-none h-20 text-sm" placeholder="Optional pasted caption fallback when platform pages block metadata access"></textarea>
                   <div id="modal-import-diagnostics" class="text-[11px] text-gray-500 leading-relaxed"></div>
+                </div>
+
+                <div id="modal-linkedin-capture-shell" class="p-4 rounded-2xl bg-[#0f0a18] border border-white/5 space-y-4">
+                  <div class="flex items-start justify-between gap-3 flex-wrap">
+                    <div>
+                      <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Import from LinkedIn browser capture</p>
+                      <p class="text-xs text-gray-400 mt-1">This imports content you provide from your own browser session. StellarSync does not log into LinkedIn or store your LinkedIn password.</p>
+                    </div>
+                    <div class="flex gap-2 flex-wrap">
+                      <button id="modal-linkedin-capture-preview-btn" type="button" class="px-4 py-2 rounded-xl bg-[#231738] border border-white/5 text-xs font-bold text-white hover:bg-[#2d1b4e] transition-colors">Preview Capture</button>
+                      <button id="modal-linkedin-capture-import-btn" type="button" class="px-4 py-2 rounded-xl bg-[#1a1128] border border-white/5 text-xs font-bold text-white hover:bg-[#231738] transition-colors">Import Selected</button>
+                    </div>
+                  </div>
+                  <div class="text-[11px] text-gray-400 border border-white/5 bg-[#120c1d] rounded-xl px-3 py-3">
+                    Open your LinkedIn activity page in another tab, run the local capture script, then paste the downloaded JSON here.
+                  </div>
+                  <textarea id="modal-linkedin-capture-input" class="form-input resize-none h-40 text-sm" placeholder="Paste copied LinkedIn activity/profile page text, exported capture JSON, or one-per-line LinkedIn post URLs."></textarea>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="space-y-2">
+                      <div class="flex items-center justify-between gap-3">
+                        <label class="block text-[10px] uppercase tracking-widest text-gray-500 font-bold">Local bookmarklet</label>
+                        <button id="modal-linkedin-copy-bookmarklet-btn" type="button" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white hover:bg-[#231738] transition-colors">Copy Bookmarklet</button>
+                      </div>
+                      <textarea id="modal-linkedin-bookmarklet-output" class="form-input resize-none h-28 text-[11px] font-mono" readonly></textarea>
+                    </div>
+                    <div class="space-y-2">
+                      <div class="flex items-center justify-between gap-3">
+                        <label class="block text-[10px] uppercase tracking-widest text-gray-500 font-bold">Local console script</label>
+                        <button id="modal-linkedin-copy-script-btn" type="button" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white hover:bg-[#231738] transition-colors">Copy Console Script</button>
+                      </div>
+                      <textarea id="modal-linkedin-userscript-output" class="form-input resize-none h-28 text-[11px] font-mono" readonly></textarea>
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_220px] gap-3 items-start">
+                    <input type="url" id="modal-linkedin-capture-url-input" class="form-input text-sm font-medium" placeholder="Optional LinkedIn post/profile/activity URL for URL-only candidate creation">
+                    <label class="inline-flex items-center gap-2 text-xs text-gray-300 md:justify-end">
+                      <input id="modal-linkedin-overwrite-duplicates" type="checkbox" class="rounded border-white/10 bg-[#181125]">
+                      Overwrite duplicates
+                    </label>
+                  </div>
+                  <div class="flex gap-2 flex-wrap">
+                    <button id="modal-linkedin-select-all-btn" type="button" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white hover:bg-[#231738] transition-colors">Select All</button>
+                    <button id="modal-linkedin-deselect-all-btn" type="button" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white hover:bg-[#231738] transition-colors">Deselect All</button>
+                  </div>
+                  <div id="modal-linkedin-capture-diagnostics" class="text-[11px] text-gray-500 leading-relaxed"></div>
+                  <div id="modal-linkedin-capture-preview" class="space-y-3"></div>
                 </div>
 
                 <div>
@@ -3319,6 +3370,16 @@
             <div class="platform-card">
               <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
                 <div>
+                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Import Tools</div>
+                  <div class="text-sm text-white mt-1">Bring in your own visible LinkedIn posts from a local browser capture without using LinkedIn credentials.</div>
+                </div>
+                <button type="button" id="workspace-open-linkedin-capture-btn" class="px-4 py-2 rounded-xl bg-[#231738] border border-white/5 text-xs font-bold text-white hover:bg-[#2d1b4e] transition-colors">Import LinkedIn Posts</button>
+              </div>
+              <div class="text-xs text-gray-400 wrap-safe">Open your LinkedIn activity page in another tab, run the local capture script, then paste the downloaded JSON into StellarSync.</div>
+            </div>
+            <div class="platform-card">
+              <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
+                <div>
                   <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Planning Behavior</div>
                   <div class="text-sm text-gray-300 mt-1">Internal scheduling uses a local-safe planning date, with 9:15 AM as the default internal time when no time is chosen.</div>
                 </div>
@@ -3551,6 +3612,7 @@ let connectedAccounts = [];
 let connectedAccountsStatusLoading = true;
 let connectedAccountsHistoricalAccess = {};
 let connectedAccountsActionState = {};
+let linkedInCapturePreviewItems = [];
 let semanticBridgeDensity = safeStorageGet("stellarsync_bridge_density") || "low";
 let currentSocialImportResult = null;
 let currentWorkspaceSettingsTab = "settings";
@@ -3675,7 +3737,21 @@ const saveButton = document.getElementById("save-post-btn");
 const sourceUrlInput = document.getElementById("modal-source-url");
 const importCaptionFallbackInput = document.getElementById("modal-import-caption-fallback");
 const importUrlBtn = document.getElementById("modal-import-url-btn");
+const modalOpenLinkedInCaptureBtn = document.getElementById("modal-open-linkedin-capture-btn");
 const importDiagnosticsEl = document.getElementById("modal-import-diagnostics");
+const linkedInCaptureInput = document.getElementById("modal-linkedin-capture-input");
+const linkedInCaptureUrlInput = document.getElementById("modal-linkedin-capture-url-input");
+const linkedInCapturePreviewBtn = document.getElementById("modal-linkedin-capture-preview-btn");
+const linkedInCaptureImportBtn = document.getElementById("modal-linkedin-capture-import-btn");
+const linkedInCaptureDiagnosticsEl = document.getElementById("modal-linkedin-capture-diagnostics");
+const linkedInCapturePreviewEl = document.getElementById("modal-linkedin-capture-preview");
+const linkedInCaptureSelectAllBtn = document.getElementById("modal-linkedin-select-all-btn");
+const linkedInCaptureDeselectAllBtn = document.getElementById("modal-linkedin-deselect-all-btn");
+const linkedInCaptureOverwriteInput = document.getElementById("modal-linkedin-overwrite-duplicates");
+const linkedInBookmarkletOutput = document.getElementById("modal-linkedin-bookmarklet-output");
+const linkedInUserscriptOutput = document.getElementById("modal-linkedin-userscript-output");
+const linkedInCopyBookmarkletBtn = document.getElementById("modal-linkedin-copy-bookmarklet-btn");
+const linkedInCopyScriptBtn = document.getElementById("modal-linkedin-copy-script-btn");
 const publishReadinessEl = document.getElementById("modal-publish-readiness");
 const modalSourceContextLabel = document.getElementById("modal-source-context-label");
 const modalSourceContextChip = document.getElementById("modal-source-context-chip");
@@ -3724,6 +3800,7 @@ const mediaLinkUploadPreview = document.getElementById("media-link-upload-previe
 const saveLinkToInspoBtn = document.getElementById("save-link-to-inspo-btn");
 const saveLinkToMediaBtn = document.getElementById("save-link-to-media-btn");
 const auditCopyDiagnosticsBtn = document.getElementById("audit-copy-diagnostics-btn");
+const workspaceOpenLinkedInCaptureBtn = document.getElementById("workspace-open-linkedin-capture-btn");
 
 const mediaAssetModal = document.getElementById("media-asset-modal");
 const mediaAssetModalCard = document.getElementById("media-asset-modal-card");
@@ -5955,6 +6032,19 @@ function initApp() {
   renderModalPillarButtons();
   setupModalControls();
   setupSaveHandler();
+  importUrlBtn?.addEventListener("click", importPostSourceIntoModal);
+  modalOpenLinkedInCaptureBtn?.addEventListener("click", openLinkedInCaptureImporter);
+  workspaceOpenLinkedInCaptureBtn?.addEventListener("click", () => {
+    closeWorkspaceHub();
+    openLinkedInCaptureImporter();
+  });
+  linkedInCapturePreviewBtn?.addEventListener("click", previewLinkedInBrowserCaptureImport);
+  linkedInCaptureImportBtn?.addEventListener("click", importSelectedLinkedInCaptureItems);
+  linkedInCaptureSelectAllBtn?.addEventListener("click", () => setLinkedInCaptureSelection(true));
+  linkedInCaptureDeselectAllBtn?.addEventListener("click", () => setLinkedInCaptureSelection(false));
+  linkedInCopyBookmarkletBtn?.addEventListener("click", () => copyLinkedInCaptureSnippet("bookmarklet"));
+  linkedInCopyScriptBtn?.addEventListener("click", () => copyLinkedInCaptureSnippet("script"));
+  ensureLinkedInCaptureSnippets();
 
   setupCalendarControls();
   setupMediaFilters();
@@ -5990,8 +6080,6 @@ function initApp() {
       showToast("Copy failed", "Could not copy diagnostics summary.", "ph-warning", "text-yellow-400");
     }
   });
-  importUrlBtn?.addEventListener("click", importPostSourceIntoModal);
-
   switchView("calendar");
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
@@ -6469,6 +6557,7 @@ function setupWorkspaceUI() {
     if (action === "settings") return openWorkspaceHub("settings");
     if (action === "accounts") return openWorkspaceHub("accounts");
     if (action === "diagnostics") return openWorkspaceHub("diagnostics");
+    if (action === "linkedin-import") return openLinkedInCaptureImporter();
     if (action === "utility") {
       renderMobileUtilitySheet();
       openMobileSheet(mobileUtilitySheet);
@@ -8797,6 +8886,7 @@ function renderMobileMoreSheet() {
     { label: isMobile ? "Stars" : "Constellation", icon: "ph-planet", action: "view", value: "constellation" },
     { label: isMobile ? "Stats" : "Performance", icon: "ph-chart-line-up", action: "view", value: "performance" },
     { label: "Audit", icon: "ph-shield-check", action: "view", value: "audit" },
+    { label: isMobile ? "Import LinkedIn" : "Import LinkedIn Posts", icon: "ph-linkedin-logo", action: "linkedin-import" },
     { label: "Brand OS", icon: "ph-book-open-text", action: "brand" },
     { label: "Settings", icon: "ph-sliders", action: "settings" },
     { label: isMobile ? "Accounts" : "Connected Accounts", icon: "ph-plugs-connected", action: "accounts" },
@@ -10671,6 +10761,11 @@ function openPostModal(
   if (descInput) descInput.value = matched?.description || description || "";
   if (sourceUrlInput) sourceUrlInput.value = matched?.sourceUrl || "";
   if (importCaptionFallbackInput) importCaptionFallbackInput.value = "";
+  if (linkedInCaptureInput) linkedInCaptureInput.value = "";
+  if (linkedInCaptureUrlInput) linkedInCaptureUrlInput.value = "";
+  if (linkedInCaptureOverwriteInput) linkedInCaptureOverwriteInput.checked = false;
+  linkedInCapturePreviewItems = [];
+  ensureLinkedInCaptureSnippets();
   if (importDiagnosticsEl) {
     const importLines = [];
     if (matched?.sourcePlatform) importLines.push(`Platform: ${toTitleCase(matched.sourcePlatform)}`);
@@ -10719,6 +10814,7 @@ function openPostModal(
   modalAiInlineHelper?.classList.add("hidden");
   renderModalCarouselPreview();
   renderPublishingReadiness(matched);
+  renderLinkedInCapturePreview();
 
   modal?.classList.add("active");
   document.body.style.overflow = "hidden";
@@ -10839,6 +10935,11 @@ function closeModal() {
   if (sourceUrlInput) sourceUrlInput.value = "";
   if (importCaptionFallbackInput) importCaptionFallbackInput.value = "";
   if (importDiagnosticsEl) importDiagnosticsEl.textContent = "";
+  if (linkedInCaptureInput) linkedInCaptureInput.value = "";
+  if (linkedInCaptureUrlInput) linkedInCaptureUrlInput.value = "";
+  if (linkedInCaptureOverwriteInput) linkedInCaptureOverwriteInput.checked = false;
+  linkedInCapturePreviewItems = [];
+  renderLinkedInCapturePreview();
   if (modalAiOutput) modalAiOutput.textContent = "AI assist output will appear here.";
   modalAiInlineHelper?.classList.add("hidden");
   renderModalCarouselPreview();
@@ -11315,6 +11416,362 @@ async function importPostSourceIntoModal() {
     if (importDiagnosticsEl) importDiagnosticsEl.textContent = "Metadata could not be pulled automatically. Paste the caption or upload the image to turn this into a post.";
     showToast("Import fallback", "Automatic metadata is unavailable for this source. Use manual caption or image fallback.", "ph-warning", "text-yellow-400");
   }
+}
+
+function getLinkedInBrowserCaptureScript() {
+  return `(function(){const t=(n)=>n&&n.innerText?n.innerText.replace(/\\s+/g," ").trim():"";const a=(n,k)=>n&&n.getAttribute?String(n.getAttribute(k)||"").trim():"";const posts=Array.from(document.querySelectorAll('main [data-urn], main .feed-shared-update-v2, main .occludable-update')).filter((n,i,l)=>l.indexOf(n)===i);const items=posts.map((card,index)=>{const links=Array.from(card.querySelectorAll('a[href*="linkedin.com/posts/"], a[href*="linkedin.com/feed/update/"], a[href*="lnkd.in"]'));const permalink=links.map((link)=>String(link.href||"").trim()).find(Boolean)||"";const textNode=card.querySelector('.update-components-text, .feed-shared-update-v2__description, span.break-words, div[dir="ltr"]');const dateNode=Array.from(card.querySelectorAll('a, span, time')).find((node)=>/ago|mo|yr|hrs|mins|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|\\d{4}/i.test(t(node)));const metricsText=t(card);const parseCount=(label)=>{const match=metricsText.match(new RegExp('(\\\\d[\\\\d,\\\\.]*)\\\\s+'+label,'i'));return match?match[1]:"";};const mediaNodes=Array.from(card.querySelectorAll('img'));return{title:t(textNode).slice(0,80),text:t(textNode),source_url:permalink,date_label:t(dateNode),reaction_count:parseCount('reactions?|likes?'),comment_count:parseCount('comments?'),repost_count:parseCount('reposts?|shares?'),media_urls:mediaNodes.map((img)=>String(img.currentSrc||img.src||"").trim()).filter(Boolean),media_alt_texts:mediaNodes.map((img)=>a(img,'alt')).filter(Boolean),source_page_url:window.location.href,generated_at:new Date().toISOString(),index:index};}).filter((item)=>item.text||item.source_url);const payload={generated_at:new Date().toISOString(),source_url:window.location.href,items:items};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const downloadUrl=URL.createObjectURL(blob);const anchor=document.createElement('a');anchor.href=downloadUrl;anchor.download='stellarsync-linkedin-capture-'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';anchor.click();setTimeout(()=>URL.revokeObjectURL(downloadUrl),1500);console.log('StellarSync LinkedIn capture created locally.',{count:items.length,source_url:payload.source_url});})();`;
+}
+
+function getLinkedInBrowserCaptureBookmarklet() {
+  return `javascript:${getLinkedInBrowserCaptureScript()}`;
+}
+
+function ensureLinkedInCaptureSnippets() {
+  if (linkedInBookmarkletOutput) linkedInBookmarkletOutput.value = getLinkedInBrowserCaptureBookmarklet();
+  if (linkedInUserscriptOutput) linkedInUserscriptOutput.value = getLinkedInBrowserCaptureScript();
+}
+
+async function copyLinkedInCaptureSnippet(kind) {
+  const text = kind === "bookmarklet"
+    ? String(linkedInBookmarkletOutput?.value || "").trim()
+    : String(linkedInUserscriptOutput?.value || "").trim();
+  if (!text) {
+    showToast("Nothing to copy", "The local LinkedIn capture script is unavailable.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast("Copied", kind === "bookmarklet" ? "Bookmarklet copied." : "Console script copied.", "ph-copy", "text-[#00ffaa]");
+  } catch (err) {
+    console.error(err);
+    showToast("Copy failed", "Could not copy the LinkedIn capture snippet.", "ph-warning", "text-yellow-400");
+  }
+}
+
+function extractUrlsFromText(value) {
+  return Array.from(String(value || "").matchAll(/https?:\/\/[^\s<>"')]+/gi)).map((match) => String(match[0] || "").trim());
+}
+
+function normalizeCaptureSourceUrl(url) {
+  return String(url || "").trim().replace(/[?#].*$/, "").replace(/\/+$/, "");
+}
+
+function parseLinkedInPostId(url) {
+  const text = String(url || "").trim();
+  const activityMatch = text.match(/activity[-:/](\d{6,})/i);
+  if (activityMatch?.[1]) return activityMatch[1];
+  const urnMatch = text.match(/urn:li:(?:ugcPost|share):([^/?#]+)/i);
+  if (urnMatch?.[1]) return urnMatch[1];
+  return "";
+}
+
+function parseMetricNumber(value) {
+  const text = String(value || "").trim().replace(/,/g, "");
+  if (!text) return 0;
+  if (/^\d+(\.\d+)?k$/i.test(text)) return Math.round(parseFloat(text) * 1000);
+  if (/^\d+(\.\d+)?m$/i.test(text)) return Math.round(parseFloat(text) * 1000000);
+  const num = Number(text);
+  return Number.isFinite(num) ? num : 0;
+}
+
+function normalizeComparableImportText(value) {
+  return String(value || "").toLowerCase().replace(/\s+/g, " ").replace(/[^a-z0-9\s]/g, "").trim();
+}
+
+function computeImportTextHash(value) {
+  const text = normalizeComparableImportText(value);
+  let hash = 2166136261;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (`00000000${(hash >>> 0).toString(16)}`).slice(-8);
+}
+
+function parseImportedDateFromText(value) {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  const direct = new Date(text);
+  if (!Number.isNaN(direct.getTime())) return direct.toISOString();
+  const monthMatch = text.match(/(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2},?\s+\d{4}/i);
+  if (monthMatch) {
+    const parsed = new Date(monthMatch[0]);
+    if (!Number.isNaN(parsed.getTime())) return parsed.toISOString();
+  }
+  const isoMatch = text.match(/\d{4}-\d{2}-\d{2}/);
+  if (isoMatch) {
+    const parsed = new Date(`${isoMatch[0]}T12:00:00`);
+    if (!Number.isNaN(parsed.getTime())) return parsed.toISOString();
+  }
+  return "";
+}
+
+function inferCapturePostType(candidate) {
+  const mediaUrls = Array.isArray(candidate.mediaUrls) ? candidate.mediaUrls.filter(Boolean) : [];
+  if (mediaUrls.length > 1) return "carousel";
+  if (mediaUrls.length === 1) return "image";
+  return "text";
+}
+
+function buildCaptureTitle(text, url) {
+  const body = String(text || "").trim();
+  if (body) return body.split(/\n+/)[0].trim().slice(0, 80);
+  const postId = parseLinkedInPostId(url);
+  return postId ? `LinkedIn Post ${postId}` : "Imported LinkedIn Post";
+}
+
+function parseLinkedInCaptureJson(raw) {
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed;
+    if (Array.isArray(parsed?.items)) return parsed.items;
+    if (Array.isArray(parsed?.posts)) return parsed.posts;
+  } catch (_) {}
+  return null;
+}
+
+function parseLinkedInCaptureTextBlocks(raw) {
+  const blocks = String(raw || "").split(/\n\s*\n+/).map((block) => block.trim()).filter(Boolean);
+  return blocks.map((block) => {
+    const urls = extractUrlsFromText(block);
+    const lines = block.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    const dateLine = lines.find((line) => /(ago|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|\d{4}-\d{2}-\d{2})/i.test(line)) || "";
+    const reactionLine = lines.find((line) => /reactions?|likes?|comments?|reposts?|shares?/i.test(line)) || block;
+    const textLines = lines.filter((line) => line !== dateLine && !/^https?:\/\//i.test(line) && !/(reactions?|likes?|comments?|reposts?|shares?)/i.test(line));
+    return {
+      text: textLines.join("\n").trim(),
+      source_url: urls.find((url) => detectSourcePlatform(url) === "linkedin") || urls[0] || "",
+      date_label: dateLine,
+      reaction_count: ((reactionLine.match(/(\d[\d,.kKmM]*)\s+(?:reactions?|likes?)/i) || [])[1] || ""),
+      comment_count: ((reactionLine.match(/(\d[\d,.kKmM]*)\s+comments?/i) || [])[1] || ""),
+      repost_count: ((reactionLine.match(/(\d[\d,.kKmM]*)\s+(?:reposts?|shares?)/i) || [])[1] || "")
+    };
+  }).filter((item) => item.text || item.source_url);
+}
+
+function parseLinkedInCaptureUrls(raw) {
+  return extractUrlsFromText(raw)
+    .filter((url) => detectSourcePlatform(url) === "linkedin")
+    .map((url) => ({ text: "", source_url: url, date_label: "", requiresContentPaste: true }));
+}
+
+function findLinkedInCaptureDuplicate(candidate) {
+  const normalizedUrl = normalizeCaptureSourceUrl(candidate.sourceUrl);
+  const normalizedTextHash = String(candidate.normalizedTextHash || "").trim();
+  const normalizedDate = String(candidate.scheduledAt || "").slice(0, 10);
+  const normalizedPrefix = normalizeComparableImportText(candidate.description || candidate.title).slice(0, 120);
+  return (appState.posts || []).find((post) => {
+    if (candidate.linkedinPostId && candidate.linkedinPostId === String(post.linkedinPostId || post.apiPostId || "").trim()) return true;
+    if (normalizedUrl && normalizedUrl === normalizeCaptureSourceUrl(post.sourceUrl || "")) return true;
+    const postHash = String(post.normalizedTextHash || computeImportTextHash(post.description || post.title || post.sourceUrl || "")).trim();
+    if (normalizedTextHash && normalizedTextHash === postHash) return true;
+    return String(post.platform || "").trim() === "linkedin"
+      && normalizedDate
+      && normalizedDate === String(post.publishedAt || post.scheduledAt || post.date || "").slice(0, 10)
+      && normalizedPrefix
+      && normalizedPrefix === normalizeComparableImportText(post.description || post.title).slice(0, 120);
+  }) || null;
+}
+
+function normalizeLinkedInCaptureCandidate(raw, index) {
+  const sourceUrl = normalizeCaptureSourceUrl(raw?.source_url || raw?.sourceUrl || raw?.url || "");
+  const text = String(raw?.text || raw?.description || raw?.caption || raw?.body || "").trim();
+  const dateLabel = String(raw?.date_label || raw?.dateLabel || raw?.timestamp || raw?.published_at || "").trim();
+  const scheduledAt = parseImportedDateFromText(dateLabel || raw?.date || raw?.publishedAt || "");
+  const mediaUrls = (Array.isArray(raw?.media_urls) ? raw.media_urls : Array.isArray(raw?.mediaUrls) ? raw.mediaUrls : []).map((item) => String(item || "").trim()).filter(Boolean);
+  const mediaAltTexts = (Array.isArray(raw?.media_alt_texts) ? raw.media_alt_texts : Array.isArray(raw?.mediaAltTexts) ? raw.mediaAltTexts : []).map((item) => String(item || "").trim()).filter(Boolean);
+  const linkedinPostId = String(raw?.linkedin_post_id || raw?.linkedinPostId || parseLinkedInPostId(sourceUrl)).trim();
+  const requiresContentPaste = !!raw?.requiresContentPaste || (!!sourceUrl && !text && detectSourcePlatform(sourceUrl) === "linkedin");
+  const candidate = {
+    id: `capture-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 7)}`,
+    title: String(raw?.title || buildCaptureTitle(text, sourceUrl)).trim(),
+    description: text,
+    excerpt: text ? text.slice(0, 180) : "URL-only LinkedIn candidate. Paste copied post text or browser-capture JSON to import full content.",
+    sourceUrl,
+    sourceType: "linkedin_browser_capture",
+    sourcePlatform: "linkedin",
+    importedAt: new Date().toISOString(),
+    linkedinPostId,
+    scheduledAt,
+    dateLabel,
+    postType: String(raw?.post_type || raw?.postType || inferCapturePostType({ mediaUrls })).trim(),
+    pillar: getActivePillar() || (appState.settings?.pillars || [])[0] || "authority",
+    status: "published",
+    metrics: {
+      likes: parseMetricNumber(raw?.reaction_count || raw?.reactionCount || raw?.likes || raw?.reactions),
+      comments: parseMetricNumber(raw?.comment_count || raw?.commentCount || raw?.comments),
+      shares: parseMetricNumber(raw?.repost_count || raw?.repostCount || raw?.shares || raw?.reposts)
+    },
+    mediaUrls,
+    mediaAltTexts,
+    generatedAt: String(raw?.generated_at || raw?.generatedAt || "").trim(),
+    sourcePageUrl: String(raw?.source_page_url || raw?.sourcePageUrl || "").trim(),
+    normalizedTextHash: computeImportTextHash(text || buildCaptureTitle(text, sourceUrl)),
+    requiresManualReview: requiresContentPaste,
+    requiresContentPaste,
+    selected: !requiresContentPaste
+  };
+  candidate.duplicate = findLinkedInCaptureDuplicate(candidate);
+  if (candidate.duplicate) candidate.selected = false;
+  return candidate;
+}
+
+function parseLinkedInCaptureInput(raw, urlInput = "") {
+  const input = [String(raw || "").trim(), String(urlInput || "").trim()].filter(Boolean).join("\n");
+  if (!input) return [];
+  const jsonItems = parseLinkedInCaptureJson(input);
+  if (jsonItems) return jsonItems.map((item, index) => normalizeLinkedInCaptureCandidate(item, index));
+  const urls = parseLinkedInCaptureUrls(input);
+  const textItems = parseLinkedInCaptureTextBlocks(input).map((item, index) => normalizeLinkedInCaptureCandidate(item, index));
+  if (textItems.length) return textItems;
+  return urls.map((item, index) => normalizeLinkedInCaptureCandidate(item, index));
+}
+
+function formatImportPreviewDate(value, fallbackLabel = "") {
+  const parsed = value ? new Date(value) : null;
+  if (parsed && !Number.isNaN(parsed.getTime())) {
+    return parsed.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  }
+  return String(fallbackLabel || "No parsed date").trim();
+}
+
+function renderLinkedInCapturePreview() {
+  if (!linkedInCapturePreviewEl || !linkedInCaptureDiagnosticsEl) return;
+  if (!linkedInCapturePreviewItems.length) {
+    linkedInCaptureDiagnosticsEl.textContent = "Open your LinkedIn activity page in another tab, run the local capture script, then paste the downloaded JSON here.";
+    linkedInCapturePreviewEl.innerHTML = "";
+    return;
+  }
+  const duplicateCount = linkedInCapturePreviewItems.filter((item) => item.duplicate).length;
+  linkedInCaptureDiagnosticsEl.textContent = `${linkedInCapturePreviewItems.length} candidate${linkedInCapturePreviewItems.length === 1 ? "" : "s"} parsed. ${duplicateCount ? `${duplicateCount} already imported.` : "No duplicates detected yet."}`;
+  linkedInCapturePreviewEl.innerHTML = linkedInCapturePreviewItems.map((item) => {
+    const duplicate = item.duplicate;
+    const metrics = [`${item.metrics.likes} reactions`, `${item.metrics.comments} comments`, `${item.metrics.shares} reposts`].join(" • ");
+    return `
+      <label class="block p-4 rounded-2xl bg-[#181125] border ${duplicate ? "border-yellow-500/30" : "border-white/5"}">
+        <div class="flex items-start gap-3">
+          <input type="checkbox" ${item.selected ? "checked" : ""} data-capture-preview-id="${escapeHtml(item.id)}" class="mt-1 rounded border-white/10 bg-[#120c1d]" ${item.requiresContentPaste ? "disabled" : ""}>
+          <div class="min-w-0 flex-1 space-y-2">
+            <div class="flex items-center justify-between gap-3 flex-wrap">
+              <div class="text-sm font-bold text-white wrap-safe">${escapeHtml(item.title || "Imported LinkedIn Post")}</div>
+              <span class="diagnostic-chip">${escapeHtml(item.postType || "text")}</span>
+            </div>
+            <div class="text-[11px] text-gray-400 wrap-safe">${escapeHtml(formatImportPreviewDate(item.scheduledAt, item.dateLabel))}</div>
+            <div class="text-sm text-gray-300 wrap-safe">${escapeHtml(item.excerpt || "No text captured yet.")}</div>
+            <div class="text-[11px] text-gray-400 wrap-safe">${escapeHtml(item.sourceUrl || "No source URL captured.")}</div>
+            <div class="text-[11px] text-gray-500 wrap-safe">${escapeHtml(metrics)}</div>
+            ${duplicate ? `<div class="text-[11px] text-yellow-300 wrap-safe">Already imported: ${escapeHtml(duplicate.title || duplicate.postId || duplicate.sourceUrl || "Matching post")}</div>` : ""}
+            ${item.requiresContentPaste ? `<div class="text-[11px] text-yellow-300 wrap-safe">URL-only LinkedIn candidate. Paste copied post text or browser-capture JSON to import full content.</div>` : ""}
+          </div>
+        </div>
+      </label>
+    `;
+  }).join("");
+  linkedInCapturePreviewEl.querySelectorAll("[data-capture-preview-id]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const id = String(input.getAttribute("data-capture-preview-id") || "").trim();
+      linkedInCapturePreviewItems = linkedInCapturePreviewItems.map((item) => item.id === id ? { ...item, selected: !!input.checked } : item);
+    });
+  });
+}
+
+function previewLinkedInBrowserCaptureImport() {
+  const raw = String(linkedInCaptureInput?.value || "").trim();
+  const urlInput = String(linkedInCaptureUrlInput?.value || "").trim();
+  if (!raw && !urlInput) {
+    showToast("Missing capture", "Paste LinkedIn text, JSON, or a LinkedIn URL first.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  linkedInCapturePreviewItems = parseLinkedInCaptureInput(raw, urlInput);
+  renderLinkedInCapturePreview();
+  showToast("Preview ready", `${linkedInCapturePreviewItems.length} LinkedIn capture candidate${linkedInCapturePreviewItems.length === 1 ? "" : "s"} parsed.`, "ph-linkedin-logo", "text-[#00ffaa]");
+}
+
+function setLinkedInCaptureSelection(nextSelected) {
+  linkedInCapturePreviewItems = linkedInCapturePreviewItems.map((item) => ({
+    ...item,
+    selected: item.requiresContentPaste || item.duplicate ? false : nextSelected
+  }));
+  renderLinkedInCapturePreview();
+}
+
+async function importSelectedLinkedInCaptureItems() {
+  const selectedItems = linkedInCapturePreviewItems.filter((item) => item.selected);
+  if (!selectedItems.length) {
+    showToast("Nothing selected", "Select one or more non-duplicate capture items first.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  if (!APP_CONFIG.ENABLE_REMOTE_SYNC || !isRemoteConfigured()) {
+    showToast("Backend required", "Configure the Apps Script backend before importing captured LinkedIn posts into POSTS.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  const payload = {
+    overwriteDuplicates: !!linkedInCaptureOverwriteInput?.checked,
+    items: selectedItems.map((item) => ({
+      title: item.title,
+      description: item.description,
+      sourceUrl: item.sourceUrl,
+      sourceType: item.sourceType,
+      platform: "linkedin",
+      postType: item.postType,
+      pillar: item.pillar,
+      status: "published",
+      importedAt: item.importedAt,
+      linkedinPostId: item.linkedinPostId,
+      scheduledAt: item.scheduledAt,
+      dateLabel: item.dateLabel,
+      likes: item.metrics.likes,
+      comments: item.metrics.comments,
+      shares: item.metrics.shares,
+      metrics: item.metrics,
+      mediaUrls: item.mediaUrls,
+      mediaAltTexts: item.mediaAltTexts,
+      generatedAt: item.generatedAt,
+      sourcePageUrl: item.sourcePageUrl,
+      normalizedTextHash: item.normalizedTextHash,
+      requiresManualReview: item.requiresManualReview
+    }))
+  };
+  try {
+    const result = await apiImportCapturedPosts(payload);
+    const importedPosts = Array.isArray(result?.posts) ? result.posts.map((post) => normalizeRemotePost(post, appState.campaigns || [], appState.media || [])) : [];
+    if (importedPosts.length) {
+      const merged = new Map((appState.posts || []).map((post) => [post.id, post]));
+      importedPosts.forEach((post) => merged.set(post.id, post));
+      appState.posts = Array.from(merged.values());
+      persistLocalState();
+    }
+    if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
+      await syncRemoteIfConfigured();
+    }
+    linkedInCapturePreviewItems = linkedInCapturePreviewItems.map((item) => item.selected ? { ...item, selected: false, duplicate: findLinkedInCaptureDuplicate(item) || item.duplicate } : item);
+    renderLinkedInCapturePreview();
+    rerenderAll();
+    showToast("Import complete", `${result?.importedCount || 0} imported, ${result?.updatedCount || 0} updated, ${result?.skippedDuplicates || 0} skipped.`, "ph-check", "text-[#00ffaa]");
+    if (Array.isArray(result?.errors) && result.errors.length) {
+      console.error("Captured import errors", result.errors);
+    }
+  } catch (err) {
+    console.error(err);
+    if (linkedInCaptureDiagnosticsEl) linkedInCaptureDiagnosticsEl.textContent = err?.message || "Captured import failed.";
+    showToast("Import failed", err?.message || "Could not import selected captured posts.", "ph-warning", "text-yellow-400");
+  }
+}
+
+function focusLinkedInCaptureSection() {
+  requestAnimationFrame(() => {
+    document.getElementById("modal-linkedin-capture-shell")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    linkedInCaptureInput?.focus();
+  });
+}
+
+function openLinkedInCaptureImporter() {
+  if (!modal?.classList.contains("active")) {
+    openPostModal("", "linkedin", "authority", "", "draft", "", "text", null);
+  }
+  ensureLinkedInCaptureSnippets();
+  renderLinkedInCapturePreview();
+  focusLinkedInCaptureSection();
 }
 
 function setupPWAInstall() {
@@ -13214,6 +13671,10 @@ async function apiImportPostFromUrl(payload) {
   return apiPost("importPostFromUrl", payload);
 }
 
+async function apiImportCapturedPosts(payload) {
+  return apiPost("importCapturedPosts", payload);
+}
+
 async function apiSavePost(post) {
   const hydratedPost = hydratePostCampaign(post);
   const planning = normalizePostPlanningFields(hydratedPost, hydratedPost);
@@ -13723,6 +14184,7 @@ window.openMediaAsset = openMediaAsset;
 window.closeModal = closeModal;
 window.switchView = switchView;
 window.openWorkspaceHub = openWorkspaceHub;
+window.openLinkedInCaptureImporter = openLinkedInCaptureImporter;
 window.aiGenerate = aiGenerate;
 window.inspoToPost = inspoToPost;
 window.noteToPost = noteToPost;
