@@ -2607,20 +2607,28 @@
     <div class="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-5">
       <div id="modal-linkedin-capture-shell" class="space-y-4">
         <div class="text-[11px] text-gray-300 border border-white/5 bg-[#0f0a18] rounded-xl px-4 py-3">
-          Open your LinkedIn activity page, scroll until the posts you want are visible, run the local capture script, then paste the downloaded JSON here.
+          1. Open your LinkedIn activity page. 2. Scroll until the posts you want are visible. 3. Copy visible page text or run the local capture script. 4. Paste the text or JSON here. 5. Parse. 6. Review detected posts. 7. Import selected.
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button id="linkedin-import-mode-text-btn" type="button" class="px-3 py-2 rounded-xl bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white">Paste copied LinkedIn page text</button>
+          <button id="linkedin-import-mode-json-btn" type="button" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 hover:text-white">Browser capture JSON</button>
+          <button id="linkedin-import-mode-urls-btn" type="button" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 hover:text-white">URLs only / source links</button>
+        </div>
+        <div id="linkedin-import-mode-helper" class="text-[11px] text-gray-400 border border-white/5 bg-[#120c1d] rounded-xl px-3 py-3">
+          Paste copied text from your LinkedIn activity page. This is the primary reliable import mode.
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2">Paste copied text, capture JSON, or LinkedIn URLs</label>
-            <textarea id="modal-linkedin-capture-input" class="form-input resize-none h-44 text-sm" placeholder="Paste exported browser-capture JSON, copied LinkedIn activity text, or one-per-line LinkedIn post URLs."></textarea>
+            <label id="linkedin-import-main-label" class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2">Paste copied LinkedIn page text</label>
+            <textarea id="modal-linkedin-capture-input" class="form-input resize-none h-44 text-sm" placeholder="Paste copied LinkedIn activity/profile text here."></textarea>
           </div>
           <div class="space-y-3">
-            <div>
+            <div id="linkedin-import-json-upload-shell" class="hidden">
               <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2">Upload capture JSON</label>
               <input id="modal-linkedin-capture-file" type="file" accept="application/json,.json" class="form-input text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-[#231738] file:px-3 file:py-2 file:text-xs file:font-bold file:text-white">
             </div>
             <div>
-              <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2">Optional LinkedIn URL</label>
+              <label id="linkedin-import-url-label" class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2">Optional LinkedIn URL</label>
               <input type="url" id="modal-linkedin-capture-url-input" class="form-input text-sm font-medium" placeholder="Optional LinkedIn post/profile/activity URL for URL-only candidate creation">
             </div>
             <label class="inline-flex items-center gap-2 text-xs text-gray-300">
@@ -2646,12 +2654,13 @@
           </div>
         </div>
         <div class="flex gap-2 flex-wrap">
-          <button id="modal-linkedin-capture-preview-btn" type="button" class="px-4 py-2 rounded-xl bg-[#231738] border border-white/5 text-xs font-bold text-white hover:bg-[#2d1b4e] transition-colors">Preview Capture</button>
+          <button id="modal-linkedin-capture-preview-btn" type="button" class="px-4 py-2 rounded-xl bg-[#231738] border border-white/5 text-xs font-bold text-white hover:bg-[#2d1b4e] transition-colors">Parse</button>
           <button id="modal-linkedin-capture-import-btn" type="button" class="px-4 py-2 rounded-xl bg-[#1a1128] border border-white/5 text-xs font-bold text-white hover:bg-[#231738] transition-colors">Import Selected</button>
           <button id="modal-linkedin-select-all-btn" type="button" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white hover:bg-[#231738] transition-colors">Select All</button>
           <button id="modal-linkedin-deselect-all-btn" type="button" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white hover:bg-[#231738] transition-colors">Deselect All</button>
         </div>
         <div id="modal-linkedin-capture-diagnostics" class="text-[11px] text-gray-500 leading-relaxed"></div>
+        <div id="modal-linkedin-capture-parse-summary" class="text-[11px] text-gray-400 leading-relaxed"></div>
         <div id="modal-linkedin-capture-preview" class="space-y-3"></div>
       </div>
     </div>
@@ -3673,6 +3682,8 @@ let connectedAccountsHistoricalAccess = {};
 let connectedAccountsActionState = {};
 let linkedInCapturePreviewItems = [];
 let existingPostImportPreviewItem = null;
+let linkedInCaptureParseDiagnostics = null;
+let linkedInImportMode = "text";
 let semanticBridgeDensity = safeStorageGet("stellarsync_bridge_density") || "low";
 let currentSocialImportResult = null;
 let currentWorkspaceSettingsTab = "settings";
@@ -3796,14 +3807,21 @@ const pillarBtns = Array.from(document.querySelectorAll(".pillar-btn"));
 const saveButton = document.getElementById("save-post-btn");
 const sourceUrlInput = document.getElementById("modal-source-url");
 const importCaptionFallbackInput = document.getElementById("modal-import-caption-fallback");
-const importUrlBtn = document.getElementById("modal-import-url-btn");
 const importDiagnosticsEl = document.getElementById("modal-import-diagnostics");
 const linkedInCaptureInput = document.getElementById("modal-linkedin-capture-input");
 const linkedInCaptureFileInput = document.getElementById("modal-linkedin-capture-file");
 const linkedInCaptureUrlInput = document.getElementById("modal-linkedin-capture-url-input");
+const linkedInImportModeTextBtn = document.getElementById("linkedin-import-mode-text-btn");
+const linkedInImportModeJsonBtn = document.getElementById("linkedin-import-mode-json-btn");
+const linkedInImportModeUrlsBtn = document.getElementById("linkedin-import-mode-urls-btn");
+const linkedInImportModeHelper = document.getElementById("linkedin-import-mode-helper");
+const linkedInImportMainLabel = document.getElementById("linkedin-import-main-label");
+const linkedInImportUrlLabel = document.getElementById("linkedin-import-url-label");
+const linkedInImportJsonUploadShell = document.getElementById("linkedin-import-json-upload-shell");
 const linkedInCapturePreviewBtn = document.getElementById("modal-linkedin-capture-preview-btn");
 const linkedInCaptureImportBtn = document.getElementById("modal-linkedin-capture-import-btn");
 const linkedInCaptureDiagnosticsEl = document.getElementById("modal-linkedin-capture-diagnostics");
+const linkedInCaptureParseSummaryEl = document.getElementById("modal-linkedin-capture-parse-summary");
 const linkedInCapturePreviewEl = document.getElementById("modal-linkedin-capture-preview");
 const linkedInCaptureSelectAllBtn = document.getElementById("modal-linkedin-select-all-btn");
 const linkedInCaptureDeselectAllBtn = document.getElementById("modal-linkedin-deselect-all-btn");
@@ -6121,6 +6139,9 @@ function initApp() {
   linkedInBulkImportModal?.addEventListener("click", (event) => {
     if (event.target === linkedInBulkImportModal) closeLinkedInBulkImportModal();
   });
+  linkedInImportModeTextBtn?.addEventListener("click", () => setLinkedInImportMode("text"));
+  linkedInImportModeJsonBtn?.addEventListener("click", () => setLinkedInImportMode("json"));
+  linkedInImportModeUrlsBtn?.addEventListener("click", () => setLinkedInImportMode("urls"));
   linkedInCapturePreviewBtn?.addEventListener("click", previewLinkedInBrowserCaptureImport);
   linkedInCaptureImportBtn?.addEventListener("click", importSelectedLinkedInCaptureItems);
   linkedInCaptureSelectAllBtn?.addEventListener("click", () => setLinkedInCaptureSelection(true));
@@ -6285,6 +6306,9 @@ function openLinkedInBulkImportModal() {
   linkedInBulkImportModal.classList.remove("opacity-0", "pointer-events-none");
   linkedInBulkImportModalCard.classList.remove("scale-95");
   linkedInBulkImportModalCard.classList.add("scale-100");
+  linkedInImportMode = "text";
+  linkedInCaptureParseDiagnostics = null;
+  setLinkedInImportMode("text");
   ensureLinkedInCaptureSnippets();
   renderLinkedInCapturePreview();
   linkedInCaptureInput?.focus();
@@ -6301,8 +6325,54 @@ function closeLinkedInBulkImportModal() {
     if (linkedInCaptureFileInput) linkedInCaptureFileInput.value = "";
     if (linkedInCaptureOverwriteInput) linkedInCaptureOverwriteInput.checked = false;
     linkedInCapturePreviewItems = [];
+    linkedInCaptureParseDiagnostics = null;
     renderLinkedInCapturePreview();
   }, 200);
+}
+
+function setLinkedInImportMode(mode = "text") {
+  linkedInImportMode = mode;
+  const config = {
+    text: {
+      helper: "Paste copied visible LinkedIn page text here. This is the default and most reliable import mode.",
+      label: "Paste copied LinkedIn page text",
+      placeholder: "Paste copied LinkedIn activity/profile text here.",
+      urlLabel: "Optional LinkedIn URL found on the page"
+    },
+    json: {
+      helper: "Paste browser-capture JSON or upload the downloaded JSON file from the local capture script.",
+      label: "Paste browser-capture JSON",
+      placeholder: "Paste the downloaded browser-capture JSON here.",
+      urlLabel: "Optional LinkedIn URL for context"
+    },
+    urls: {
+      helper: "LinkedIn URLs are saved as source links only. StellarSync will not fetch or scrape LinkedIn content server-side.",
+      label: "Paste LinkedIn URLs only",
+      placeholder: "Paste one LinkedIn post URL per line.",
+      urlLabel: "LinkedIn URL or profile/activity page URL"
+    }
+  }[mode] || {
+    helper: "",
+    label: "",
+    placeholder: "",
+    urlLabel: ""
+  };
+  [
+    [linkedInImportModeTextBtn, mode === "text"],
+    [linkedInImportModeJsonBtn, mode === "json"],
+    [linkedInImportModeUrlsBtn, mode === "urls"]
+  ].forEach(([button, active]) => {
+    if (!button) return;
+    button.classList.toggle("bg-[#231738]", active);
+    button.classList.toggle("text-white", active);
+    button.classList.toggle("bg-[#181125]", !active);
+    button.classList.toggle("text-gray-300", !active);
+  });
+  if (linkedInImportModeHelper) linkedInImportModeHelper.textContent = config.helper;
+  if (linkedInImportMainLabel) linkedInImportMainLabel.textContent = config.label;
+  if (linkedInCaptureInput) linkedInCaptureInput.placeholder = config.placeholder;
+  if (linkedInImportUrlLabel) linkedInImportUrlLabel.textContent = config.urlLabel;
+  linkedInImportJsonUploadShell?.classList.toggle("hidden", mode !== "json");
 }
 
 function openNoteModal() {
@@ -11477,73 +11547,8 @@ function closeConfirmActionModal() {
   confirmActionModalCard.classList.add("scale-95");
 }
 
-async function importPostSourceIntoModal() {
-  const sourceUrl = String(sourceUrlInput?.value || "").trim();
-  const captionFallback = String(importCaptionFallbackInput?.value || "").trim();
-  if (!sourceUrl) {
-    showToast("Missing URL", "Paste a source URL first.", "ph-warning", "text-yellow-400");
-    return;
-  }
-
-  try {
-    let imported;
-    if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
-      const result = await apiImportSocialPostByUrl({ url: sourceUrl, captionFallback });
-      imported = result.imported || result;
-    } else {
-      const platform = detectSourcePlatform(sourceUrl) || "linkedin";
-      imported = {
-        sourceUrl,
-        sourcePlatform: platform,
-        title: titleInput?.value.trim() || deriveSourceLabel(sourceUrl),
-        description: captionFallback,
-        platform: platform === "instagram" ? "instagram" : "linkedin",
-        status: "draft",
-        sourceImportStatus: captionFallback ? "manual" : "limited",
-        mode: ["linkedin", "instagram", "threads", "bluesky"].includes(platform) ? "manual_social_card" : "open_graph",
-        diagnostics: ["Remote import is unavailable, so only the local fallback fields were applied."]
-      };
-    }
-
-    if (titleInput && imported.title && !titleInput.value.trim()) titleInput.value = imported.title;
-    if (descInput && imported.description && !descInput.value.trim()) descInput.value = imported.description;
-    if (platSelect && imported.platform) platSelect.value = imported.platform;
-
-    const matched = currentEditingPostId
-      ? appState.posts.find(post => post.id === currentEditingPostId)
-      : null;
-    const diagnostics = Array.isArray(imported.diagnostics) ? imported.diagnostics : [];
-    const postState = {
-      ...(matched || {}),
-      sourceUrl,
-      sourcePlatform: imported.sourcePlatform || detectSourcePlatform(sourceUrl),
-      sourceTitle: imported.sourceTitle || imported.title || titleInput?.value.trim() || "",
-      sourceMetadata: imported.sourceMetadata || imported.metadata || "",
-      sourceImportStatus: imported.sourceImportStatus || "manual",
-      description: descInput?.value.trim() || matched?.description || "",
-      title: titleInput?.value.trim() || matched?.title || "",
-      platform: platSelect?.value || matched?.platform || "linkedin",
-      publishStatus: matched?.publishStatus || "draft",
-      platformTargets: matched?.platformTargets || []
-    };
-
-    if (importDiagnosticsEl) {
-      importDiagnosticsEl.textContent = diagnostics.length
-        ? `${formatSocialImportModeLabel(imported.mode || "manual_social_card")} • ${diagnostics.join(" ")}`
-        : `${formatSocialImportModeLabel(imported.mode || "manual_social_card")} • Imported for ${toTitleCase(postState.sourcePlatform || "source")}.`;
-    }
-    setModalSourceContext("link", "Create Post from Link", diagnostics.length ? "Link imported with fallback diagnostics. Review the source fields before saving." : "This draft was enriched from a source URL.", sourceUrl);
-    renderPublishingReadiness(postState);
-    showToast("Imported", diagnostics.length ? "Source imported with fallback diagnostics." : "Source details applied to the post.", "ph-check", "text-[#00ffaa]");
-  } catch (err) {
-    console.error(err);
-    if (importDiagnosticsEl) importDiagnosticsEl.textContent = "Metadata could not be pulled automatically. Paste the caption or upload the image to turn this into a post.";
-    showToast("Import fallback", "Automatic metadata is unavailable for this source. Use manual caption or image fallback.", "ph-warning", "text-yellow-400");
-  }
-}
-
 function getLinkedInBrowserCaptureScript() {
-  return `(function(){const textOf=(node)=>node&&node.innerText?node.innerText.replace(/\\s+/g," ").trim():"";const attrOf=(node,key)=>node&&node.getAttribute?String(node.getAttribute(key)||"").trim():"";const toCount=(source,label)=>{const match=String(source||"").match(new RegExp('(\\\\d[\\\\d,\\\\.kKmM]*)\\\\s+'+label,'i'));return match?match[1]:"";};const cards=Array.from(document.querySelectorAll('main [data-urn], main .feed-shared-update-v2, main .occludable-update')).filter((node,index,list)=>list.indexOf(node)===index);const items=cards.map((card)=>{const links=Array.from(card.querySelectorAll('a[href*="linkedin.com/posts/"], a[href*="linkedin.com/feed/update/"], a[href*="lnkd.in"]'));const url=links.map((link)=>String(link.href||"").trim()).find(Boolean)||"";const textNode=card.querySelector('.update-components-text, .feed-shared-update-v2__description, span.break-words, div[dir="ltr"]');const dateNode=Array.from(card.querySelectorAll('a, span, time')).find((node)=>/ago|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|\\d{4}|\\d{1,2}\\/\\d{1,2}/i.test(textOf(node)));const metricsText=textOf(card);const media=Array.from(card.querySelectorAll('img')).map((img)=>({url:String(img.currentSrc||img.src||"").trim(),alt:attrOf(img,'alt')})).filter((item)=>item.url);const authorNode=card.querySelector('.update-components-actor__title, .feed-shared-actor__name, .update-components-actor__meta');return{platform:'linkedin',text:textOf(textNode),url:url,date_label:textOf(dateNode),timestamp:attrOf(dateNode,'datetime')||"",metrics:{reactions:toCount(metricsText,'reactions?|likes?'),comments:toCount(metricsText,'comments?'),reposts:toCount(metricsText,'reposts?|shares?')},author:textOf(authorNode),media:media};}).filter((item)=>item.text||item.url);const payload={source:'linkedin_browser_capture',generated_at:new Date().toISOString(),source_url:window.location.href,items:items};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const downloadUrl=URL.createObjectURL(blob);const anchor=document.createElement('a');anchor.href=downloadUrl;anchor.download='stellarsync-linkedin-capture-'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';anchor.click();setTimeout(()=>URL.revokeObjectURL(downloadUrl),1500);console.log('StellarSync LinkedIn capture created locally.',{count:items.length,source_url:payload.source_url});})();`;
+  return `(function(){const textOf=(node)=>node&&node.innerText?node.innerText.replace(/\\s+/g," ").trim():"";const attrOf=(node,key)=>node&&node.getAttribute?String(node.getAttribute(key)||"").trim():"";const toCount=(source,label)=>{const match=String(source||"").match(new RegExp('(\\\\d[\\\\d,\\\\.kKmM]*)\\\\s+'+label,'i'));return match?match[1]:"";};const selectorList=['main article','main [data-urn]','main .feed-shared-update-v2','main div[data-id]','main .occludable-update'];const selectorsUsed=[];const seen=new Set();const cards=[];selectorList.forEach((selector)=>{const found=Array.from(document.querySelectorAll(selector)).filter((node)=>node&&textOf(node).match(/like|comment|repost|send/i));if(found.length) selectorsUsed.push(selector);found.forEach((node)=>{if(seen.has(node)) return;seen.add(node);cards.push(node);});});const items=cards.map((card)=>{const rawText=textOf(card);const links=Array.from(card.querySelectorAll('a[href*="/feed/update/"], a[href*="/posts/"], a[href*="/activity-"], a[href*="lnkd.in"]'));const url=links.map((link)=>String(link.href||"").trim()).find(Boolean)||"";const textNode=card.querySelector('.update-components-text, .feed-shared-update-v2__description, span.break-words, div[dir="ltr"], [data-test-id=\"main-feed-activity-card__commentary\"]');const dateNode=Array.from(card.querySelectorAll('time, a, span')).find((node)=>/ago|\\d+[dwmyh]|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|\\d{4}|\\d{1,2}\\/\\d{1,2}/i.test(textOf(node)));const metricsText=rawText;const media=Array.from(card.querySelectorAll('img')).map((img)=>({url:String(img.currentSrc||img.src||"").trim(),alt:attrOf(img,'alt')})).filter((item)=>item.url);const authorNode=card.querySelector('.update-components-actor__title, .feed-shared-actor__name, .update-components-actor__meta, [data-test-id=\"actor-name\"]');return{platform:'linkedin',text:textOf(textNode),rawText:rawText,url:url,date_label:textOf(dateNode),timestamp:attrOf(dateNode,'datetime')||"",metrics:{impressions:toCount(metricsText,'impressions?'),reactions:toCount(metricsText,'reactions?|likes?'),comments:toCount(metricsText,'comments?'),reposts:toCount(metricsText,'reposts?|shares?')},author:textOf(authorNode),media:media};}).filter((item)=>item.rawText||item.text||item.url);const payload={source:'linkedin_browser_capture',generated_at:new Date().toISOString(),source_url:window.location.href,diagnostics:{cardsDetected:cards.length,itemsWithRawText:items.filter((item)=>item.rawText).length,selectorsUsed:selectorsUsed},items:items};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const downloadUrl=URL.createObjectURL(blob);const anchor=document.createElement('a');anchor.href=downloadUrl;anchor.download='stellarsync-linkedin-capture-'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';anchor.click();setTimeout(()=>URL.revokeObjectURL(downloadUrl),1500);console.log('StellarSync LinkedIn capture created locally.',payload.diagnostics);})();`;
 }
 
 function getLinkedInBrowserCaptureBookmarklet() {
@@ -11647,10 +11652,18 @@ function buildCaptureTitle(text, url) {
 function parseLinkedInCaptureJson(raw) {
   try {
     const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) return parsed;
-    if (Array.isArray(parsed?.items)) return parsed.items;
-    if (Array.isArray(parsed?.posts)) return parsed.posts;
-    if (parsed && typeof parsed === "object") return [parsed];
+    if (Array.isArray(parsed)) return { items: parsed, sourceType: "json_array", diagnostics: parsed?.length ? parsed.diagnostics || {} : {} };
+    if (Array.isArray(parsed?.items)) return { items: parsed.items, sourceType: parsed?.source || "items_object", diagnostics: parsed?.diagnostics || {} };
+    if (Array.isArray(parsed?.posts)) return { items: parsed.posts, sourceType: "posts_object", diagnostics: parsed?.diagnostics || {} };
+    if (parsed && typeof parsed === "object" && (parsed.rawText || parsed.raw_text || parsed.pageText || parsed.page_text)) {
+      return {
+        items: [],
+        sourceType: parsed?.source || "json_page_text",
+        diagnostics: parsed?.diagnostics || {},
+        rawText: String(parsed.rawText || parsed.raw_text || parsed.pageText || parsed.page_text || "")
+      };
+    }
+    if (parsed && typeof parsed === "object") return { items: [parsed], sourceType: parsed?.source || "single_object", diagnostics: parsed?.diagnostics || {} };
   } catch (_) {}
   return null;
 }
@@ -11660,29 +11673,111 @@ function isLikelyJsonImportInput(raw) {
   return value.startsWith("{") || value.startsWith("[");
 }
 
+const LINKEDIN_UI_CHROME_PATTERNS = [
+  /^like$/i,
+  /^comment$/i,
+  /^repost$/i,
+  /^send$/i,
+  /^follow$/i,
+  /^promote this post$/i,
+  /^boost$/i,
+  /^activate to view larger image$/i,
+  /^visible to anyone on or off linkedin$/i,
+  /^view analytics$/i,
+  /^open to work.*looking$/i,
+  /^your document has finished loading$/i,
+  /^copy link$/i,
+  /^more$/i
+];
+
+function isLinkedInUiChromeLine(line) {
+  const text = String(line || "").trim();
+  if (!text) return true;
+  return LINKEDIN_UI_CHROME_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+function isLikelyLinkedInBoundaryLine(line) {
+  const text = String(line || "").trim();
+  if (!text) return false;
+  if (/^feed post number\b/i.test(text)) return true;
+  if (/^view analytics$/i.test(text)) return true;
+  if (/^(?:like|comment|repost|send)(?:\s+(?:like|comment|repost|send))*$/i.test(text)) return true;
+  if (/^\d[\d,.kKmM]*\s+impressions?$/i.test(text)) return true;
+  return false;
+}
+
+function splitLinkedInPastedTextIntoBlocks(raw) {
+  const lines = String(raw || "")
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => String(line || "").replace(/\u00a0/g, " ").trim());
+  const blocks = [];
+  let current = [];
+  const flush = () => {
+    const joined = current.join("\n").trim();
+    if (joined) blocks.push(joined);
+    current = [];
+  };
+  lines.forEach((line) => {
+    if (!line) return;
+    if (isLikelyLinkedInBoundaryLine(line)) {
+      flush();
+      return;
+    }
+    current.push(line);
+  });
+  flush();
+  return blocks;
+}
+
+function cleanLinkedInPastedTextBlock(block) {
+  const lines = String(block || "")
+    .split(/\n+/)
+    .map((line) => String(line || "").trim())
+    .filter((line) => !isLinkedInUiChromeLine(line));
+  const urls = extractUrlsFromText(lines.join("\n"));
+  const dateLine = lines.find((line) => /(ago|just now|\d+[dwmyh]|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4})/i.test(line)) || "";
+  const metricLine = lines.find((line) => /impressions?|reactions?|likes?|comments?|reposts?|shares?/i.test(line)) || lines.join(" ");
+  const bodyLines = lines.filter((line) => {
+    if (line === dateLine) return false;
+    if (/^\d[\d,.kKmM]*\s+impressions?$/i.test(line)) return false;
+    if (/^\d[\d,.kKmM]*\s+(?:reactions?|likes?|comments?|reposts?|shares?)$/i.test(line)) return false;
+    if (/^(?:like|comment|repost|send)(?:\s+(?:like|comment|repost|send))*$/i.test(line)) return false;
+    return !/^https?:\/\//i.test(line);
+  });
+  const text = bodyLines.join("\n").trim();
+  return {
+    rawText: String(block || "").trim(),
+    text,
+    source_url: urls.find((url) => detectSourcePlatform(url) === "linkedin") || "",
+    date_label: dateLine,
+    impression_count: ((metricLine.match(/(\d[\d,.kKmM]*)\s+impressions?/i) || [])[1] || ""),
+    reaction_count: ((metricLine.match(/(\d[\d,.kKmM]*)\s+(?:reactions?|likes?)/i) || [])[1] || ""),
+    comment_count: ((metricLine.match(/(\d[\d,.kKmM]*)\s+comments?/i) || [])[1] || ""),
+    repost_count: ((metricLine.match(/(\d[\d,.kKmM]*)\s+(?:reposts?|shares?)/i) || [])[1] || "")
+  };
+}
+
+function parseLinkedInCaptureTextBlocksDetailed(raw) {
+  const blocks = splitLinkedInPastedTextIntoBlocks(raw);
+  const cleaned = blocks.map((block) => cleanLinkedInPastedTextBlock(block));
+  const items = cleaned.filter((item) => item.text || item.source_url || item.rawText);
+  return {
+    items,
+    blocksDetected: blocks.length,
+    itemsSkipped: Math.max(0, blocks.length - items.length),
+    skippedReasons: blocks.length > items.length ? ["Some copied sections only contained LinkedIn UI chrome and were skipped."] : []
+  };
+}
+
 function parseLinkedInCaptureTextBlocks(raw) {
-  const blocks = String(raw || "").split(/\n\s*\n+/).map((block) => block.trim()).filter(Boolean);
-  return blocks.map((block) => {
-    const urls = extractUrlsFromText(block);
-    const lines = block.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-    const dateLine = lines.find((line) => /(ago|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|\d{4}-\d{2}-\d{2})/i.test(line)) || "";
-    const reactionLine = lines.find((line) => /reactions?|likes?|comments?|reposts?|shares?/i.test(line)) || block;
-    const textLines = lines.filter((line) => line !== dateLine && !/^https?:\/\//i.test(line) && !/(reactions?|likes?|comments?|reposts?|shares?)/i.test(line));
-    return {
-      text: textLines.join("\n").trim(),
-      source_url: urls.find((url) => detectSourcePlatform(url) === "linkedin") || urls[0] || "",
-      date_label: dateLine,
-      reaction_count: ((reactionLine.match(/(\d[\d,.kKmM]*)\s+(?:reactions?|likes?)/i) || [])[1] || ""),
-      comment_count: ((reactionLine.match(/(\d[\d,.kKmM]*)\s+comments?/i) || [])[1] || ""),
-      repost_count: ((reactionLine.match(/(\d[\d,.kKmM]*)\s+(?:reposts?|shares?)/i) || [])[1] || "")
-    };
-  }).filter((item) => item.text || item.source_url);
+  return parseLinkedInCaptureTextBlocksDetailed(raw).items;
 }
 
 function parseLinkedInCaptureUrls(raw) {
   return extractUrlsFromText(raw)
     .filter((url) => detectSourcePlatform(url) === "linkedin")
-    .map((url) => ({ text: "", source_url: url, date_label: "", requiresContentPaste: true }));
+    .map((url) => ({ text: "", source_url: url, date_label: "", requiresContentPaste: true, source_type: "linkedin_url_only" }));
 }
 
 function findLinkedInCaptureDuplicate(candidate) {
@@ -11704,9 +11799,14 @@ function findLinkedInCaptureDuplicate(candidate) {
 }
 
 function normalizeLinkedInCaptureCandidate(raw, index) {
-  const sourceUrl = normalizeCaptureSourceUrl(raw?.source_url || raw?.sourceUrl || raw?.url || "");
-  const text = String(raw?.text || raw?.description || raw?.caption || raw?.body || "").trim();
-  const dateLabel = String(raw?.date_label || raw?.dateLabel || raw?.timestamp || raw?.published_at || "").trim();
+  const initialSourceUrl = normalizeCaptureSourceUrl(raw?.source_url || raw?.sourceUrl || raw?.url || "");
+  const rawText = String(raw?.rawText || raw?.raw_text || raw?.pageText || raw?.page_text || "").trim();
+  const parsedFromRaw = !String(raw?.text || raw?.description || raw?.caption || raw?.body || "").trim() && rawText
+    ? cleanLinkedInPastedTextBlock(rawText)
+    : null;
+  const sourceUrl = initialSourceUrl || normalizeCaptureSourceUrl(parsedFromRaw?.source_url || "");
+  const text = String(raw?.text || raw?.description || raw?.caption || raw?.body || parsedFromRaw?.text || "").trim();
+  const dateLabel = String(raw?.date_label || raw?.dateLabel || raw?.timestamp || raw?.published_at || parsedFromRaw?.date_label || "").trim();
   const scheduledAt = parseImportedDateFromText(dateLabel || raw?.date || raw?.publishedAt || "");
   const mediaArray = Array.isArray(raw?.media) ? raw.media : [];
   const mediaUrls = (Array.isArray(raw?.media_urls) ? raw.media_urls : Array.isArray(raw?.mediaUrls) ? raw.mediaUrls : mediaArray.map((item) => item?.url || item?.src || item)).map((item) => String(item || "").trim()).filter(Boolean);
@@ -11714,13 +11814,14 @@ function normalizeLinkedInCaptureCandidate(raw, index) {
   const linkedinPostId = String(raw?.linkedin_post_id || raw?.linkedinPostId || parseLinkedInPostId(sourceUrl)).trim();
   const requiresContentPaste = !!raw?.requiresContentPaste || (!!sourceUrl && !text && detectSourcePlatform(sourceUrl) === "linkedin");
   const nestedMetrics = raw?.metrics || {};
+  const sourceType = String(raw?.source_type || raw?.sourceType || (requiresContentPaste ? "linkedin_url_only" : rawText ? "linkedin_pasted_text" : "linkedin_browser_capture")).trim();
   const candidate = {
     id: `capture-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 7)}`,
     title: String(raw?.title || buildCaptureTitle(text, sourceUrl)).trim(),
     description: text,
-    excerpt: text ? text.slice(0, 180) : "URL-only LinkedIn candidate. Paste copied post text or browser-capture JSON to import full content.",
+    excerpt: text ? text.slice(0, 180) : "LinkedIn URL saved as source. Paste the post text or browser capture JSON to import content.",
     sourceUrl,
-    sourceType: "linkedin_browser_capture",
+    sourceType,
     sourcePlatform: "linkedin",
     importedAt: new Date().toISOString(),
     linkedinPostId,
@@ -11730,17 +11831,20 @@ function normalizeLinkedInCaptureCandidate(raw, index) {
     pillar: getActivePillar() || (appState.settings?.pillars || [])[0] || "authority",
     status: "published",
     metrics: {
-      likes: parseMetricNumber(raw?.reaction_count || raw?.reactionCount || raw?.likes || raw?.reactions || nestedMetrics?.likes || nestedMetrics?.reactions),
-      comments: parseMetricNumber(raw?.comment_count || raw?.commentCount || raw?.comments || nestedMetrics?.comments),
-      shares: parseMetricNumber(raw?.repost_count || raw?.repostCount || raw?.shares || raw?.reposts || nestedMetrics?.shares || nestedMetrics?.reposts)
+      impressions: parseMetricNumber(raw?.impression_count || raw?.impressionCount || parsedFromRaw?.impression_count || nestedMetrics?.impressions),
+      likes: parseMetricNumber(raw?.reaction_count || raw?.reactionCount || raw?.likes || raw?.reactions || parsedFromRaw?.reaction_count || nestedMetrics?.likes || nestedMetrics?.reactions),
+      comments: parseMetricNumber(raw?.comment_count || raw?.commentCount || raw?.comments || parsedFromRaw?.comment_count || nestedMetrics?.comments),
+      shares: parseMetricNumber(raw?.repost_count || raw?.repostCount || raw?.shares || raw?.reposts || parsedFromRaw?.repost_count || nestedMetrics?.shares || nestedMetrics?.reposts)
     },
     mediaUrls,
     mediaAltTexts,
     generatedAt: String(raw?.generated_at || raw?.generatedAt || "").trim(),
     sourcePageUrl: String(raw?.source_page_url || raw?.sourcePageUrl || "").trim(),
+    rawText,
     normalizedTextHash: computeImportTextHash(text || buildCaptureTitle(text, sourceUrl)),
     requiresManualReview: requiresContentPaste,
     requiresContentPaste,
+    reviewNeeded: requiresContentPaste,
     selected: !requiresContentPaste
   };
   candidate.duplicate = findLinkedInCaptureDuplicate(candidate);
@@ -11752,7 +11856,12 @@ function parseLinkedInCaptureInput(raw, urlInput = "") {
   const input = [String(raw || "").trim(), String(urlInput || "").trim()].filter(Boolean).join("\n");
   if (!input) return [];
   const jsonItems = parseLinkedInCaptureJson(input);
-  if (jsonItems) return jsonItems.map((item, index) => normalizeLinkedInCaptureCandidate(item, index));
+  if (jsonItems) {
+    if (!jsonItems.items.length && (jsonItems?.pageText || jsonItems?.rawText)) {
+      return parseLinkedInCaptureTextBlocks(jsonItems.pageText || jsonItems.rawText).map((item, index) => normalizeLinkedInCaptureCandidate(item, index));
+    }
+    return jsonItems.items.map((item, index) => normalizeLinkedInCaptureCandidate(item, index));
+  }
   const urls = parseLinkedInCaptureUrls(input);
   const textItems = parseLinkedInCaptureTextBlocks(input).map((item, index) => normalizeLinkedInCaptureCandidate(item, index));
   if (textItems.length) return textItems;
@@ -11761,10 +11870,41 @@ function parseLinkedInCaptureInput(raw, urlInput = "") {
 
 function parseLinkedInCaptureInputDetailed(raw, urlInput = "") {
   const primary = String(raw || "").trim();
-  if (primary && isLikelyJsonImportInput(primary) && !parseLinkedInCaptureJson(primary)) {
-    return { items: [], error: "JSON parse failed. Check the browser-capture export and paste valid JSON." };
+  const jsonPayload = primary ? parseLinkedInCaptureJson(primary) : null;
+  if (primary && isLikelyJsonImportInput(primary) && !jsonPayload) {
+    return { items: [], error: "JSON parse failed. Check the browser-capture export and paste valid JSON.", diagnostics: null };
   }
-  return { items: parseLinkedInCaptureInput(raw, urlInput), error: "" };
+  let items = [];
+  let sourceType = linkedInImportMode;
+  let textDiagnostics = null;
+  if (jsonPayload) {
+    sourceType = jsonPayload.sourceType || "json";
+    const singleJsonItem = jsonPayload.items.length === 1 ? jsonPayload.items[0] : null;
+    if (jsonPayload.items.length) items = jsonPayload.items.map((item, index) => normalizeLinkedInCaptureCandidate(item, index));
+    if (!items.length && (jsonPayload.rawText || (singleJsonItem && (singleJsonItem.rawText || singleJsonItem.pageText || singleJsonItem.page_text || singleJsonItem.raw_text)))) {
+      const sourceText = jsonPayload.rawText || singleJsonItem.rawText || singleJsonItem.pageText || singleJsonItem.page_text || singleJsonItem.raw_text || "";
+      textDiagnostics = parseLinkedInCaptureTextBlocksDetailed(sourceText);
+      items = textDiagnostics.items.map((item, index) => normalizeLinkedInCaptureCandidate(item, index));
+      sourceType = "json_text_fallback";
+    }
+  } else {
+    if (primary && linkedInImportMode !== "urls") {
+      textDiagnostics = parseLinkedInCaptureTextBlocksDetailed(primary);
+    }
+    items = parseLinkedInCaptureInput(raw, urlInput);
+    sourceType = urlInput && !primary ? "urls_only" : "pasted_text";
+  }
+  const diagnostics = {
+    sourceTypeDetected: sourceType,
+    itemsDetected: items.length,
+    itemsWithText: items.filter((item) => String(item.description || "").trim()).length,
+    itemsSkipped: textDiagnostics?.itemsSkipped || 0,
+    skippedReasons: items.length ? (textDiagnostics?.skippedReasons || []) : ["No LinkedIn posts were detected from the provided input."].concat(textDiagnostics?.skippedReasons || []),
+    cardsDetected: jsonPayload?.diagnostics?.cardsDetected || 0,
+    itemsWithRawText: jsonPayload?.diagnostics?.itemsWithRawText || 0,
+    selectorsUsed: Array.isArray(jsonPayload?.diagnostics?.selectorsUsed) ? jsonPayload.diagnostics.selectorsUsed : []
+  };
+  return { items, error: "", diagnostics };
 }
 
 function formatImportPreviewDate(value, fallbackLabel = "") {
@@ -11778,30 +11918,51 @@ function formatImportPreviewDate(value, fallbackLabel = "") {
 function renderLinkedInCapturePreview() {
   if (!linkedInCapturePreviewEl || !linkedInCaptureDiagnosticsEl) return;
   if (!linkedInCapturePreviewItems.length) {
-    linkedInCaptureDiagnosticsEl.textContent = "Open your LinkedIn activity page in another tab, run the local capture script, then paste the downloaded JSON here.";
+    linkedInCaptureDiagnosticsEl.textContent = linkedInImportMode === "urls"
+      ? "LinkedIn URLs are saved as source links only. Paste the post text or browser capture JSON to import content."
+      : "Open your LinkedIn activity page in another tab, copy visible page text or run the local capture script, then paste the result here.";
+    if (linkedInCaptureParseSummaryEl) linkedInCaptureParseSummaryEl.textContent = "";
     linkedInCapturePreviewEl.innerHTML = "";
     return;
   }
   const duplicateCount = linkedInCapturePreviewItems.filter((item) => item.duplicate).length;
-  linkedInCaptureDiagnosticsEl.textContent = `${linkedInCapturePreviewItems.length} candidate${linkedInCapturePreviewItems.length === 1 ? "" : "s"} parsed. ${duplicateCount ? `${duplicateCount} already imported.` : "No duplicates detected yet."}`;
+  const reviewNeededCount = linkedInCapturePreviewItems.filter((item) => item.reviewNeeded).length;
+  linkedInCaptureDiagnosticsEl.textContent = `${linkedInCapturePreviewItems.length} candidate${linkedInCapturePreviewItems.length === 1 ? "" : "s"} parsed. ${duplicateCount ? `${duplicateCount} already imported.` : "No duplicates detected yet."} ${reviewNeededCount ? `${reviewNeededCount} need pasted content review.` : ""}`.trim();
+  if (linkedInCaptureParseSummaryEl) {
+    const summary = linkedInCaptureParseDiagnostics || {};
+    linkedInCaptureParseSummaryEl.textContent = [
+      `Source type: ${summary.sourceTypeDetected || linkedInImportMode}`,
+      `Items detected: ${summary.itemsDetected ?? linkedInCapturePreviewItems.length}`,
+      `Items with text: ${summary.itemsWithText ?? linkedInCapturePreviewItems.filter((item) => item.description).length}`,
+      summary.cardsDetected ? `Cards detected: ${summary.cardsDetected}` : "",
+      summary.itemsWithRawText ? `Items with raw text: ${summary.itemsWithRawText}` : "",
+      Array.isArray(summary.selectorsUsed) && summary.selectorsUsed.length ? `Selectors used: ${summary.selectorsUsed.join(", ")}` : "",
+      `Items skipped: ${summary.itemsSkipped ?? 0}`,
+      Array.isArray(summary.skippedReasons) && summary.skippedReasons.length ? `Skipped reasons: ${summary.skippedReasons.join(" | ")}` : ""
+    ].filter(Boolean).join(" • ");
+  }
   linkedInCapturePreviewEl.innerHTML = linkedInCapturePreviewItems.map((item) => {
     const duplicate = item.duplicate;
-    const metrics = [`${item.metrics.likes} reactions`, `${item.metrics.comments} comments`, `${item.metrics.shares} reposts`].join(" • ");
+    const metrics = [`${item.metrics.impressions || 0} impressions`, `${item.metrics.likes} reactions`, `${item.metrics.comments} comments`, `${item.metrics.shares} reposts`].join(" • ");
     return `
-      <label class="block p-4 rounded-2xl bg-[#181125] border ${duplicate ? "border-yellow-500/30" : "border-white/5"}">
+      <label class="block p-4 rounded-2xl bg-[#181125] border ${duplicate ? "border-yellow-500/30" : item.reviewNeeded ? "border-orange-500/30" : "border-white/5"}">
         <div class="flex items-start gap-3">
-          <input type="checkbox" ${item.selected ? "checked" : ""} data-capture-preview-id="${escapeHtml(item.id)}" class="mt-1 rounded border-white/10 bg-[#120c1d]" ${item.requiresContentPaste ? "disabled" : ""}>
+          <input type="checkbox" ${item.selected ? "checked" : ""} data-capture-preview-id="${escapeHtml(item.id)}" class="mt-1 rounded border-white/10 bg-[#120c1d]">
           <div class="min-w-0 flex-1 space-y-2">
             <div class="flex items-center justify-between gap-3 flex-wrap">
               <div class="text-sm font-bold text-white wrap-safe">${escapeHtml(item.title || "Imported LinkedIn Post")}</div>
-              <span class="diagnostic-chip">${escapeHtml(item.postType || "text")}</span>
+              <div class="flex flex-wrap gap-2">
+                <span class="diagnostic-chip">${escapeHtml(item.postType || "text")}</span>
+                <span class="diagnostic-chip">${escapeHtml(item.sourceType || "linkedin_pasted_text")}</span>
+                ${item.reviewNeeded ? `<span class="diagnostic-chip">review_needed</span>` : ``}
+              </div>
             </div>
             <div class="text-[11px] text-gray-400 wrap-safe">${escapeHtml(formatImportPreviewDate(item.scheduledAt, item.dateLabel))}</div>
             <div class="text-sm text-gray-300 wrap-safe">${escapeHtml(item.excerpt || "No text captured yet.")}</div>
             <div class="text-[11px] text-gray-400 wrap-safe">${escapeHtml(item.sourceUrl || "No source URL captured.")}</div>
             <div class="text-[11px] text-gray-500 wrap-safe">${escapeHtml(metrics)}</div>
             ${duplicate ? `<div class="text-[11px] text-yellow-300 wrap-safe">Already imported: ${escapeHtml(duplicate.title || duplicate.postId || duplicate.sourceUrl || "Matching post")}</div>` : ""}
-            ${item.requiresContentPaste ? `<div class="text-[11px] text-yellow-300 wrap-safe">URL-only LinkedIn candidate. Paste copied post text or browser-capture JSON to import full content.</div>` : ""}
+            ${item.requiresContentPaste ? `<div class="text-[11px] text-yellow-300 wrap-safe">LinkedIn URL saved as source. Paste the post text or browser capture JSON to import content.</div>` : ""}
           </div>
         </div>
       </label>
@@ -11823,21 +11984,25 @@ function renderExistingPostImportPreview() {
     return;
   }
   const item = existingPostImportPreviewItem;
-  const metrics = [`${item.metrics.likes} reactions`, `${item.metrics.comments} comments`, `${item.metrics.shares} reposts`].join(" • ");
+  const metrics = [`${item.metrics.impressions || 0} impressions`, `${item.metrics.likes} reactions`, `${item.metrics.comments} comments`, `${item.metrics.shares} reposts`].join(" • ");
   existingPostImportDiagnosticsEl.textContent = item.requiresContentPaste
-    ? "LinkedIn URL-only candidate detected. Paste the post text or browser-capture JSON to import content."
+    ? "LinkedIn URL-only candidate detected. LinkedIn URL saved as source. Paste the post text or browser capture JSON to import content."
     : "Preview ready. Save this into Inspo when it looks right.";
   existingPostImportPreviewEl.innerHTML = `
     <div class="p-4 rounded-2xl bg-[#181125] border ${item.requiresContentPaste ? "border-yellow-500/30" : "border-white/5"} space-y-2">
       <div class="flex items-center justify-between gap-3 flex-wrap">
         <div class="text-sm font-bold text-white wrap-safe">${escapeHtml(item.title || "Imported Post")}</div>
-        <span class="diagnostic-chip">${escapeHtml(item.postType || "text")}</span>
+        <div class="flex flex-wrap gap-2">
+          <span class="diagnostic-chip">${escapeHtml(item.postType || "text")}</span>
+          <span class="diagnostic-chip">${escapeHtml(item.sourceType || "existing_post_import")}</span>
+          ${item.reviewNeeded ? `<span class="diagnostic-chip">review_needed</span>` : ``}
+        </div>
       </div>
       <div class="text-[11px] text-gray-400 wrap-safe">${escapeHtml(formatImportPreviewDate(item.scheduledAt, item.dateLabel))}</div>
       <div class="text-sm text-gray-300 wrap-safe">${escapeHtml(item.excerpt || item.description || "No text captured yet.")}</div>
       <div class="text-[11px] text-gray-400 wrap-safe">${escapeHtml(item.sourceUrl || "No source URL captured.")}</div>
       <div class="text-[11px] text-gray-500 wrap-safe">${escapeHtml(metrics)}</div>
-      ${item.requiresContentPaste ? `<div class="text-[11px] text-yellow-300 wrap-safe">Paste the post text or browser-capture JSON to import content.</div>` : ""}
+      ${item.requiresContentPaste ? `<div class="text-[11px] text-yellow-300 wrap-safe">LinkedIn URL saved as source. Paste the post text or browser capture JSON to import content.</div>` : ""}
     </div>
   `;
 }
@@ -11868,13 +12033,13 @@ function buildExistingPostImportPayload(item) {
 
 function previewExistingPostImport() {
   const raw = String(existingPostImportInput?.value || "").trim();
-  const url = String(existingPostImportUrlInput?.value || "").trim();
-  const sourceUrl = String(existingPostImportSourceUrlInput?.value || "").trim();
-  if (!raw && !url && !sourceUrl) {
+  const postUrl = String(existingPostImportUrlInput?.value || "").trim();
+  const contextUrl = String(existingPostImportSourceUrlInput?.value || "").trim();
+  if (!raw && !postUrl && !contextUrl) {
     showToast("Missing input", "Paste post text, one-post JSON, or a LinkedIn URL first.", "ph-warning", "text-yellow-400");
     return;
   }
-  const parsed = parseLinkedInCaptureInputDetailed(raw, url || sourceUrl);
+  const parsed = parseLinkedInCaptureInputDetailed(raw, postUrl || contextUrl);
   if (parsed.error) {
     existingPostImportPreviewItem = null;
     renderExistingPostImportPreview();
@@ -11882,8 +12047,8 @@ function previewExistingPostImport() {
     showToast("Preview failed", parsed.error, "ph-warning", "text-yellow-400");
     return;
   }
-  if (!parsed.items.length && sourceUrl) {
-    existingPostImportPreviewItem = normalizeLinkedInCaptureCandidate({ source_url: sourceUrl, requiresContentPaste: true }, 0);
+  if (!parsed.items.length && (postUrl || contextUrl)) {
+    existingPostImportPreviewItem = normalizeLinkedInCaptureCandidate({ source_url: postUrl || contextUrl, requiresContentPaste: true, source_type: "linkedin_url_only" }, 0);
   } else {
     existingPostImportPreviewItem = parsed.items[0] || null;
   }
@@ -11946,20 +12111,26 @@ async function previewLinkedInBrowserCaptureImport() {
   }
   const raw = typedRaw || fileRaw;
   if (!raw && !urlInput) {
-    showToast("Missing capture", "Paste LinkedIn text, JSON, or a LinkedIn URL first.", "ph-warning", "text-yellow-400");
+    showToast("Missing capture", linkedInImportMode === "urls" ? "Paste one or more LinkedIn URLs first." : "Paste LinkedIn text, JSON, or a LinkedIn URL first.", "ph-warning", "text-yellow-400");
     return;
   }
   const parsed = parseLinkedInCaptureInputDetailed(raw, urlInput);
   if (parsed.error) {
     linkedInCapturePreviewItems = [];
+    linkedInCaptureParseDiagnostics = null;
     renderLinkedInCapturePreview();
     if (linkedInCaptureDiagnosticsEl) linkedInCaptureDiagnosticsEl.textContent = parsed.error;
     showToast("Preview failed", parsed.error, "ph-warning", "text-yellow-400");
     return;
   }
   linkedInCapturePreviewItems = parsed.items;
+  linkedInCaptureParseDiagnostics = parsed.diagnostics || null;
   renderLinkedInCapturePreview();
-  showToast("Preview ready", `${linkedInCapturePreviewItems.length} LinkedIn capture candidate${linkedInCapturePreviewItems.length === 1 ? "" : "s"} parsed.`, "ph-linkedin-logo", "text-[#00ffaa]");
+  if (!linkedInCapturePreviewItems.length) {
+    showToast("No posts detected", "No LinkedIn posts were detected from the provided input. Try pasted page text or browser-capture JSON.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  showToast("Preview ready", `${linkedInCapturePreviewItems.length} LinkedIn import candidate${linkedInCapturePreviewItems.length === 1 ? "" : "s"} parsed.`, "ph-linkedin-logo", "text-[#00ffaa]");
 }
 
 function setLinkedInCaptureSelection(nextSelected) {
@@ -11985,6 +12156,7 @@ async function importSelectedLinkedInCaptureItems() {
     items: selectedItems.map((item) => ({
       title: item.title,
       description: item.description,
+      rawText: item.rawText || "",
       sourceUrl: item.sourceUrl,
       sourceType: item.sourceType,
       platform: "linkedin",
@@ -11995,6 +12167,7 @@ async function importSelectedLinkedInCaptureItems() {
       linkedinPostId: item.linkedinPostId,
       scheduledAt: item.scheduledAt,
       dateLabel: item.dateLabel,
+      impressions: item.metrics.impressions,
       likes: item.metrics.likes,
       comments: item.metrics.comments,
       shares: item.metrics.shares,
@@ -12034,6 +12207,7 @@ async function importSelectedLinkedInCaptureItems() {
 }
 
 function openLinkedInCaptureImporter() {
+  closeWorkspaceHub();
   openLinkedInBulkImportModal();
 }
 
@@ -13933,10 +14107,6 @@ async function apiSaveNote(note) {
 
 async function apiCreatePostFromNote(noteId, post = {}) {
   return apiPost("createPostFromNote", { noteId, post });
-}
-
-async function apiImportPostFromUrl(payload) {
-  return apiPost("importPostFromUrl", payload);
 }
 
 async function apiImportCapturedPosts(payload) {
