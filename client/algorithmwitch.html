@@ -3515,6 +3515,7 @@
           <section data-settings-panel="diagnostics" class="hidden space-y-4">
             <div class="flex items-center gap-2 flex-wrap">
               <button id="workspace-refresh-diagnostics-btn" type="button" class="px-4 py-2 rounded-xl bg-[#1a1128] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Refresh Diagnostics</button>
+              <button id="check-constellation-lanes-btn" type="button" class="px-4 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Check Constellation Lanes</button>
               <button id="repair-date-fields-btn" type="button" class="px-4 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Repair Date Fields</button>
               <button id="workspace-open-accounts-from-diagnostics-btn" type="button" class="px-4 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Connected Accounts</button>
             </div>
@@ -3977,6 +3978,7 @@ const workspaceSettingsSidebar = document.getElementById("workspace-settings-sid
 const workspaceOpenBrandOsBtn = document.getElementById("workspace-open-brand-os-btn");
 const settingsOpenAccountsBtn = document.getElementById("settings-open-accounts-btn");
 const workspaceRefreshDiagnosticsBtn = document.getElementById("workspace-refresh-diagnostics-btn");
+const checkConstellationLanesBtn = document.getElementById("check-constellation-lanes-btn");
 const workspaceOpenAccountsFromDiagnosticsBtn = document.getElementById("workspace-open-accounts-from-diagnostics-btn");
 const repairDateFieldsBtn = document.getElementById("repair-date-fields-btn");
 const repairDateFieldsStatus = document.getElementById("repair-date-fields-status");
@@ -6820,6 +6822,7 @@ function setupWorkspaceUI() {
   workspaceRefreshDiagnosticsBtn?.addEventListener("click", () => {
     refreshBackendDiagnostics().then(() => renderWorkspaceHub()).catch(() => undefined);
   });
+  checkConstellationLanesBtn?.addEventListener("click", runConstellationLaneDiagnostics);
   repairDateFieldsBtn?.addEventListener("click", async () => {
     const preview = backendDiagnostics?.dateRepairPreview || {};
     if (!preview.safeToRepair) {
@@ -7139,6 +7142,8 @@ function openCampaignModal(options = "authority") {
     : null;
   const isEditing = !!existingCampaign;
   const selectedPillar = existingCampaign?.pillar || config.defaultPillar || "authority";
+  const laneDiagnostics = isEditing ? buildConstellationLaneDiagnostics() : null;
+  const laneRow = laneDiagnostics?.rows?.find((row) => String(row.campaignKey || "") === String(existingCampaign?._constellationLaneKey || "") || String(row.campaignName || "") === String(existingCampaign?.campaignName || ""));
 
   editingCampaignId = existingCampaign?.campaignId || "";
 
@@ -7154,7 +7159,7 @@ function openCampaignModal(options = "authority") {
   if (campaignModalTitle) campaignModalTitle.textContent = isEditing ? "Edit Campaign" : "Create Campaign";
   if (campaignModalSubtitle) {
     campaignModalSubtitle.textContent = isEditing
-      ? "Update campaign naming, default pillar, constellation shape, and archive state."
+      ? `Update campaign naming, default pillar, constellation shape, and archive state. Lane ${Number.isFinite(Number(laneRow?.laneIndex)) ? laneRow.laneIndex + 1 : "?"} • ${laneRow?.itemCount || 0} posts • ${existingCampaign?.campaignId || "missing id"}`
       : "Add a campaign row with a pillar, star-map shape, and archive status.";
   }
   if (saveCampaignBtnLabel) saveCampaignBtnLabel.textContent = isEditing ? "Save Campaign" : "Create Campaign";
@@ -7814,15 +7819,31 @@ function buildConstellationRows() {
       const bSort = Number(b.sortOrder || 0);
       return aSort - bSort;
     });
+  const uncategorizedPosts = [...(appState.posts || [])]
+    .map((post) => hydratePostCampaign(post, campaigns))
+    .filter((post) => !String(post.campaignId || "").trim() && !normalizeLookupValue(post.campaignName || ""));
+  if (uncategorizedPosts.length) {
+    campaigns.push({
+      campaignId: "",
+      campaignName: "Uncategorized",
+      pillar: "",
+      color: "#6b7280",
+      sortOrder: Number.MAX_SAFE_INTEGER,
+      isArchived: false,
+      _uncategorizedIndex: 0
+    });
+  }
   const laneMap = new Map();
   const laneOccupancy = new Map();
   const mapped = campaigns.map((campaign) => {
-    const posts = [...(appState.posts || [])]
-      .map((post) => hydratePostCampaign(post, campaigns))
-      .filter((post) => {
-        if (String(post.campaignId || "") === String(campaign.campaignId || "")) return true;
-        return normalizeLookupValue(post.campaignName || "") === normalizeLookupValue(campaign.campaignName || "");
-      })
+    const posts = ((String(campaign.campaignName || "").trim() === "Uncategorized")
+      ? uncategorizedPosts.slice()
+      : [...(appState.posts || [])]
+        .map((post) => hydratePostCampaign(post, campaigns))
+        .filter((post) => {
+          if (String(post.campaignId || "") === String(campaign.campaignId || "")) return true;
+          return normalizeLookupValue(post.campaignName || "") === normalizeLookupValue(campaign.campaignName || "");
+        }))
       .sort((a, b) => {
         const aTime = parsePostDate(normalizePostCalendarDateKey(a) || a.date)?.getTime() || 0;
         const bTime = parsePostDate(normalizePostCalendarDateKey(b) || b.date)?.getTime() || 0;
@@ -7830,7 +7851,7 @@ function buildConstellationRows() {
       });
 
     const derivedPillar = normalizePillar(campaign.pillar || posts[0]?.pillar || (appState.settings?.pillars || [])[0] || "authority");
-    const laneKey = getConstellationCampaignLaneKey(campaign) || `fallback:${normalizeLookupValue(campaign.campaignName || campaign.campaignId || "")}:${laneMap.size}`;
+    const laneKey = getConstellationCampaignLaneKey(campaign) || `__uncategorized__${Number(campaign._uncategorizedIndex || 0)}`;
     if (laneMap.has(laneKey)) {
       console.warn("Constellation duplicate lane assignment key detected.", {
         laneKey,
@@ -7902,6 +7923,63 @@ function getCampaignLaneRowIndex(campaign = {}) {
 
 function getCampaignBaseY(rowIndex) {
   return START_Y + (Number(rowIndex || 0) * ROW_HEIGHT);
+}
+
+function buildConstellationLaneDiagnostics() {
+  const rows = buildConstellationRows();
+  const laneIndexes = new Map();
+  const duplicateLanes = [];
+  rows.forEach((campaign) => {
+    const laneIndex = Number(campaign._constellationRowIndex || 0);
+    const laneKey = String(campaign._constellationLaneKey || "").trim();
+    const detail = {
+      campaignName: campaign.campaignName || "Uncategorized",
+      campaignKey: laneKey,
+      laneIndex,
+      itemCount: Array.isArray(campaign.posts) ? campaign.posts.length : 0
+    };
+    if (laneIndexes.has(laneIndex)) {
+      duplicateLanes.push({
+        laneIndex,
+        first: laneIndexes.get(laneIndex),
+        duplicate: detail
+      });
+    } else {
+      laneIndexes.set(laneIndex, detail);
+    }
+  });
+  const missingCampaignIdButName = (appState.posts || []).filter((post) => !String(post.campaignId || "").trim() && normalizeLookupValue(post.campaignName || "")).map((post) => ({
+    postId: post.id || post.postId || "",
+    campaignName: post.campaignName || ""
+  }));
+  const normalizedNameGroups = {};
+  (appState.campaigns || []).forEach((campaign) => {
+    const key = normalizeLookupValue(campaign.campaignName || "");
+    if (!key) return;
+    if (!normalizedNameGroups[key]) normalizedNameGroups[key] = [];
+    normalizedNameGroups[key].push({
+      campaignId: campaign.campaignId || "",
+      campaignName: campaign.campaignName || ""
+    });
+  });
+  const sameNormalizedNameDifferentIds = Object.entries(normalizedNameGroups).filter(([, items]) => {
+    const ids = items.map((item) => String(item.campaignId || "").trim()).filter(Boolean);
+    return items.length > 1 && new Set(ids).size > 1;
+  }).map(([normalizedName, items]) => ({ normalizedName, campaigns: items }));
+  return {
+    campaignCount: rows.length,
+    campaignKeys: rows.map((campaign) => String(campaign._constellationLaneKey || "")),
+    laneIndexes: rows.map((campaign) => Number(campaign._constellationRowIndex || 0)),
+    duplicateLanes,
+    missingCampaignIdButName,
+    sameNormalizedNameDifferentIds,
+    rows: rows.map((campaign) => ({
+      campaignName: campaign.campaignName || "Uncategorized",
+      campaignKey: String(campaign._constellationLaneKey || ""),
+      laneIndex: Number(campaign._constellationRowIndex || 0),
+      itemCount: Array.isArray(campaign.posts) ? campaign.posts.length : 0
+    }))
+  };
 }
 
 function getConstellationLaneCenterX(layout = {}) {
@@ -8044,9 +8122,8 @@ function renderConstellation() {
   const longestCampaignItemCount = rows.reduce((maxCount, campaign) => {
     return Math.max(maxCount, Math.max((campaign.posts || []).length, 1));
   }, 1);
-  const worldWidth = Math.max(3600, START_X + (longestCampaignItemCount * NODE_SPACING) + 800);
-  const mapRowCount = Math.max(rows.length + 2, Object.keys(CAMPAIGN_ROWS).length + 3);
-  const minCanvasHeight = Math.max(2400, mapRowCount * ROW_HEIGHT);
+  const worldWidth = START_X + (longestCampaignItemCount * NODE_SPACING) + 800;
+  const minCanvasHeight = START_Y + (rows.length * ROW_HEIGHT) + 800;
 
   canvas.style.height = `${minCanvasHeight}px`;
   canvas.style.width = `${worldWidth}px`;
@@ -8062,6 +8139,12 @@ function renderConstellation() {
   });
 
   rows.forEach((campaign, index) => {
+    console.debug("Constellation lane", {
+      campaignName: campaign.campaignName || "Uncategorized",
+      campaignKey: String(campaign._constellationLaneKey || ""),
+      laneIndex: Number(campaign._constellationRowIndex || index),
+      itemCount: Array.isArray(campaign.posts) ? campaign.posts.length : 0
+    });
     const anchor = getConstellationAnchor(campaign, index);
     const rowIndex = Number(campaign?._constellationRowIndex || index);
     const layout = {
@@ -9232,6 +9315,7 @@ function renderWorkspaceHub() {
 
 function buildLocalConstellationDiagnostics() {
   const rows = buildConstellationRows();
+  const laneDiagnostics = buildConstellationLaneDiagnostics();
   const diagnostics = [];
   rows.forEach((campaign, index) => {
     const layout = getConstellationLayoutConfig(campaign, index);
@@ -9240,6 +9324,27 @@ function buildLocalConstellationDiagnostics() {
     if (layout.overlapRisk) diagnostics.push({ severity: "warning", label: "Overlapping nodes", detail: formatCampaignDisplayName(campaign.campaignName || campaign.campaignId || "Unknown") });
     if (layout.labelCollisionRisk) diagnostics.push({ severity: "warning", label: "Label collision risk", detail: formatCampaignDisplayName(campaign.campaignName || campaign.campaignId || "Unknown") });
   });
+  if (laneDiagnostics.duplicateLanes.length) {
+    diagnostics.push({
+      severity: "error",
+      label: "Duplicate campaign lanes",
+      detail: laneDiagnostics.duplicateLanes.map((item) => `${item.first.campaignName} / ${item.duplicate.campaignName} on lane ${item.laneIndex}`).join(" | ")
+    });
+  }
+  if (laneDiagnostics.missingCampaignIdButName.length) {
+    diagnostics.push({
+      severity: "warning",
+      label: "Posts missing campaign_id but keeping campaign_name",
+      detail: laneDiagnostics.missingCampaignIdButName.map((item) => `${item.postId}: ${item.campaignName}`).join(" | ")
+    });
+  }
+  if (laneDiagnostics.sameNormalizedNameDifferentIds.length) {
+    diagnostics.push({
+      severity: "warning",
+      label: "Campaigns share normalized names with different IDs",
+      detail: laneDiagnostics.sameNormalizedNameDifferentIds.map((item) => `${item.normalizedName}: ${item.campaigns.map((campaign) => campaign.campaignId || campaign.campaignName).join(", ")}`).join(" | ")
+    });
+  }
   const mobileRouteIssues = ["calendar", "ledger", "media", "inspo", "notes", "write-idea", "constellation", "performance", "audit"].filter((view) => !document.getElementById(`view-${view}`)).map((view) => ({
     severity: "warning",
     label: "Mobile nav target has no visible route",
@@ -9248,22 +9353,211 @@ function buildLocalConstellationDiagnostics() {
   return diagnostics.concat(mobileRouteIssues);
 }
 
+function getCampaignCleanupDiagnosticsData() {
+  const cleanup = backendDiagnostics?.campaignCleanupDiagnostics || {};
+  const nearDuplicates = Array.isArray(cleanup.nearDuplicateCampaigns) ? cleanup.nearDuplicateCampaigns : [];
+  const invalidComboCampaigns = Array.isArray(cleanup.invalidComboCampaigns) ? cleanup.invalidComboCampaigns : [];
+  return {
+    nearDuplicates,
+    invalidComboCampaigns
+  };
+}
+
+function getCampaignByNameOrId(value = "") {
+  const target = String(value || "").trim();
+  if (!target) return null;
+  const normalized = normalizeLookupValue(target);
+  return (appState.campaigns || []).find((campaign) => {
+    return String(campaign.campaignId || "").trim() === target
+      || normalizeLookupValue(campaign.campaignName || "") === normalized;
+  }) || null;
+}
+
+function renderCampaignCleanupDiagnosticsCard() {
+  const cleanup = getCampaignCleanupDiagnosticsData();
+  if (!cleanup.nearDuplicates.length && !cleanup.invalidComboCampaigns.length) return "";
+  const invalidComboPostIds = cleanup.invalidComboCampaigns.map((item) => String(item.postId || "").trim()).filter(Boolean);
+  const allowedTargets = cleanup.invalidComboCampaigns[0]?.allowedTargets || ["Algorithm Best Practices", "Messaging", "Offerings"];
+  return `
+    <div class="p-4 rounded-xl bg-[#181125] border border-white/5 space-y-4">
+      <div class="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Campaign Cleanup Review</div>
+          <div class="text-sm text-gray-300 mt-1">Near-duplicate and comma-combined campaign names need review before Constellation stays clean.</div>
+        </div>
+      </div>
+      ${cleanup.nearDuplicates.map((item, index) => `
+        <div class="p-3 rounded-xl bg-[#120c1d] border border-yellow-400/15">
+          <div class="flex items-center justify-between gap-3 mb-2 flex-wrap">
+            <div class="text-sm font-bold text-white">Near duplicate ${index + 1}</div>
+            <span class="diagnostic-chip">REVIEW</span>
+          </div>
+          <div class="text-sm text-gray-300 wrap-safe mb-2">${escapeHtml(item.suggestedAction || "Review this campaign pair.")}</div>
+          <div class="text-[11px] text-gray-400 wrap-safe mb-3">${escapeHtml(`Source: ${item.sourceCampaignName || "Missing"} • Target: ${item.targetCampaignName || "Missing"}`)}</div>
+          <button
+            type="button"
+            class="campaign-cleanup-merge-btn px-3 py-2 rounded-xl bg-[#2d1b4e] hover:bg-[#3a2360] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors"
+            data-source-campaign-id="${escapeHtml(item.sourceCampaignId || "")}"
+            data-source-campaign-name="${escapeHtml(item.sourceCampaignName || "")}"
+            data-target-campaign-id="${escapeHtml(item.targetCampaignId || "")}"
+            data-target-campaign-name="${escapeHtml(item.targetCampaignName || "")}"
+          >
+            Merge Into ${escapeHtml(item.targetCampaignName || "Target")}
+          </button>
+        </div>
+      `).join("")}
+      ${cleanup.invalidComboCampaigns.length ? `
+        <div class="p-3 rounded-xl bg-[#120c1d] border border-red-400/15 space-y-3">
+          <div class="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <div class="text-sm font-bold text-white">Invalid combo campaign</div>
+              <div class="text-[11px] text-gray-400 wrap-safe">Flagged value: ${escapeHtml(cleanup.invalidComboCampaigns[0].campaignName || "Algorithm Best Practices, Messaging,Offerings")}</div>
+            </div>
+            <span class="diagnostic-chip">INVALID</span>
+          </div>
+          <div class="text-sm text-gray-300 wrap-safe">Do not auto-split these posts. Review the affected posts, then reassign them to one clean campaign.</div>
+          <div class="space-y-2 max-h-56 overflow-y-auto pr-1">
+            ${cleanup.invalidComboCampaigns.map((item) => `
+              <div class="p-2 rounded-lg bg-[#181125] border border-white/5">
+                <div class="text-sm text-white wrap-safe">${escapeHtml(item.title || "Untitled post")}</div>
+                <div class="text-[11px] text-gray-400 wrap-safe">${escapeHtml(item.postId || "missing post id")} • ${escapeHtml(item.campaignName || "")}</div>
+              </div>
+            `).join("")}
+          </div>
+          <div class="flex flex-wrap gap-2">
+            ${allowedTargets.map((targetName) => `
+              <button
+                type="button"
+                class="campaign-cleanup-reassign-btn px-3 py-2 rounded-xl bg-[#251218] hover:bg-[#331821] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors"
+                data-target-campaign-name="${escapeHtml(targetName)}"
+                data-post-ids="${escapeHtml(invalidComboPostIds.join("|"))}"
+              >
+                Reassign To ${escapeHtml(targetName)}
+              </button>
+            `).join("")}
+          </div>
+        </div>
+      ` : ""}
+    </div>
+  `;
+}
+
+async function mergeCampaignCleanupPair(button) {
+  const sourceCampaignId = String(button?.dataset?.sourceCampaignId || "").trim();
+  const sourceCampaignName = String(button?.dataset?.sourceCampaignName || "").trim();
+  const targetCampaignId = String(button?.dataset?.targetCampaignId || "").trim();
+  const targetCampaignName = String(button?.dataset?.targetCampaignName || "").trim();
+  const sourceCampaign = getCampaignByNameOrId(sourceCampaignId || sourceCampaignName);
+  const targetCampaign = getCampaignByNameOrId(targetCampaignId || targetCampaignName);
+  if (!sourceCampaign || !targetCampaign) {
+    showToast("Campaign missing", "Source or target campaign could not be resolved.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  if (String(sourceCampaign.campaignId || "") === String(targetCampaign.campaignId || "")) {
+    showToast("Invalid merge", "A campaign cannot be merged into itself.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  const confirmed = await openConfirmActionModal({
+    title: "Merge Campaign",
+    subtitle: "Posts will move into the clean target campaign.",
+    message: `Merge ${formatCampaignDisplayName(sourceCampaign.campaignName)} into ${formatCampaignDisplayName(targetCampaign.campaignName)}?`,
+    confirmLabel: "Merge",
+    cancelLabel: "Cancel"
+  });
+  if (!confirmed) return;
+  try {
+    const result = await apiMergeCampaignIntoCampaign({
+      sourceCampaignId: sourceCampaign.campaignId,
+      targetCampaignId: targetCampaign.campaignId
+    });
+    await syncRemoteIfConfigured();
+    await refreshBackendDiagnostics({ silent: true });
+    rerenderAll();
+    if (!workspaceHubModal?.classList.contains("opacity-0")) renderWorkspaceHub();
+    showToast("Campaign merged", `${result?.changedPostCount || 0} posts moved into ${formatCampaignDisplayName(targetCampaign.campaignName)}.`, "ph-check", "text-[#00ffaa]");
+  } catch (err) {
+    console.error(err);
+    showToast("Merge failed", err?.message || "Could not merge the campaign.", "ph-warning", "text-yellow-400");
+  }
+}
+
+async function reassignInvalidComboCampaignPosts(button) {
+  const targetCampaignName = String(button?.dataset?.targetCampaignName || "").trim();
+  const postIds = String(button?.dataset?.postIds || "").split("|").map((item) => String(item || "").trim()).filter(Boolean);
+  if (!targetCampaignName || !postIds.length) {
+    showToast("Nothing selected", "No affected posts were available for reassignment.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  const targetCampaign = getCampaignByNameOrId(targetCampaignName);
+  if (!targetCampaign) {
+    showToast("Campaign missing", `Could not find ${targetCampaignName}.`, "ph-warning", "text-yellow-400");
+    return;
+  }
+  const confirmed = await openConfirmActionModal({
+    title: "Reassign Posts",
+    subtitle: "This keeps the posts and moves them into one clean campaign.",
+    message: `Reassign ${postIds.length} post${postIds.length === 1 ? "" : "s"} to ${formatCampaignDisplayName(targetCampaign.campaignName)}?`,
+    confirmLabel: "Reassign",
+    cancelLabel: "Cancel"
+  });
+  if (!confirmed) return;
+  try {
+    const result = await apiReassignCampaignCleanupPosts({
+      postIds,
+      targetCampaignId: targetCampaign.campaignId
+    });
+    await syncRemoteIfConfigured();
+    await refreshBackendDiagnostics({ silent: true });
+    rerenderAll();
+    if (!workspaceHubModal?.classList.contains("opacity-0")) renderWorkspaceHub();
+    showToast("Posts reassigned", `${result?.changedPostCount || 0} posts moved into ${formatCampaignDisplayName(targetCampaign.campaignName)}.`, "ph-check", "text-[#00ffaa]");
+  } catch (err) {
+    console.error(err);
+    showToast("Reassign failed", err?.message || "Could not reassign the affected posts.", "ph-warning", "text-yellow-400");
+  }
+}
+
+function runConstellationLaneDiagnostics() {
+  const diagnostics = buildConstellationLaneDiagnostics();
+  console.groupCollapsed("Constellation lane diagnostics");
+  console.table(diagnostics.rows);
+  if (diagnostics.duplicateLanes.length) console.warn("Duplicate constellation lanes detected", diagnostics.duplicateLanes);
+  if (diagnostics.missingCampaignIdButName.length) console.warn("Posts missing campaign_id but keeping campaign_name", diagnostics.missingCampaignIdButName);
+  if (diagnostics.sameNormalizedNameDifferentIds.length) console.warn("Campaigns share normalized names with different IDs", diagnostics.sameNormalizedNameDifferentIds);
+  console.groupEnd();
+  const issueCount = diagnostics.duplicateLanes.length + diagnostics.missingCampaignIdButName.length + diagnostics.sameNormalizedNameDifferentIds.length;
+  showToast("Constellation lanes checked", issueCount ? `${issueCount} diagnostics warning${issueCount === 1 ? "" : "s"} logged to console.` : "No duplicate lane issues detected.", issueCount ? "ph-warning" : "ph-check", issueCount ? "text-yellow-400" : "text-[#00ffaa]");
+}
+
 function renderWorkspaceDiagnosticsPanel() {
   if (!workspaceDiagnosticsPanel) return;
   const localDiagnostics = buildLocalConstellationDiagnostics();
   const backend = backendDiagnostics || {};
+  const cleanup = backend.campaignCleanupDiagnostics || {};
   const dateIssues = [
     ...(backend.invalidQueueDateLabelRows || []).map((item) => ({ label: "Invalid queue_date_label", detail: `${item.postId}: ${item.queueDateLabel || "missing"}`, severity: "error" })),
     ...(backend.malformedScheduledRows || []).map((item) => ({ label: "Invalid scheduled_at", detail: `${item.postId}: ${item.scheduledAt || "missing"}`, severity: "error" })),
     ...(backend.dateMismatchRows || []).map((item) => ({ label: "Date mismatch", detail: `${item.postId}: ${(item.diagnostics || []).join(", ")}`, severity: item.severity || "warning" })),
     ...(backend.defaultInternalTimeRows || []).map((item) => ({ label: "Default internal time", detail: `${item.postId}: ${item.scheduledAt}`, severity: "warning" }))
   ];
+  const cleanupDiagnostics = [
+    ...(cleanup.nearDuplicateCampaigns || []).map((item) => ({
+      label: "Near-duplicate campaign names",
+      detail: item.suggestedAction || `${item.sourceCampaignName} → ${item.targetCampaignName}`,
+      severity: "warning"
+    })),
+    ...(cleanup.invalidComboCampaigns || []).length ? [{
+      label: "Invalid combo campaign names",
+      detail: `${(cleanup.invalidComboCampaigns || []).length} posts need manual reassignment from comma-combined campaign names.`,
+      severity: "error"
+    }] : []
+  ];
   const accountDiagnostics = (connectedAccounts || []).map((account) => ({
     label: `${toTitleCase(account.platform)} account`,
     detail: `${account.connectionStatusLabel || account.accessStatus || "not connected"} • import ${account.importSupported ? "live" : "requires connection"} • publish ${account.publishSupportLabel || (account.publishSupported ? "live" : "requires connection")}`,
     severity: account.accessStatus === "expired" || account.accessStatus === "missing_permissions" ? "warning" : "info"
   }));
-  const cards = dateIssues.concat(accountDiagnostics).concat(localDiagnostics);
+  const cards = dateIssues.concat(cleanupDiagnostics).concat(accountDiagnostics).concat(localDiagnostics);
   workspaceDiagnosticsPanel.innerHTML = cards.length
     ? cards.map((item) => `
       <div class="platform-card">
@@ -13717,6 +14011,7 @@ function renderDiagnosticsPanel() {
     ...(Array.isArray(diagnostics.frontendBackendMismatchNotes) ? diagnostics.frontendBackendMismatchNotes : [])
   ];
   const semanticDiagnostics = diagnostics.semanticDiagnostics || {};
+  const campaignCleanupDiagnostics = diagnostics.campaignCleanupDiagnostics || {};
   const metrics = [
     { label: "Backend reachable", value: backendReachable ? "Yes" : "No", color: backendReachable ? "#00ffaa" : "#fbbf24" },
     { label: "Backend version", value: getBackendVersion() || "Unavailable", color: "#c77dff" },
@@ -13734,6 +14029,8 @@ function renderDiagnosticsPanel() {
     { label: "scheduled_at exists but queue_date_label missing", severity: "warning", value: (diagnostics.scheduledWithoutQueueDateRows || []).length, detail: formatDiagnosticIds(diagnostics.scheduledWithoutQueueDateRows, "postId"), guidance: "Warnings are okay temporarily, but date labels should be restored." },
     { label: "Default internal time rows", severity: "warning", value: (diagnostics.defaultInternalTimeRows || []).length, detail: formatDiagnosticIds(diagnostics.defaultInternalTimeRows, "postId"), guidance: "Warnings are okay when time was intentionally left blank by the user." },
     { label: "Missing campaign IDs/names", severity: "error", value: (diagnostics.missingCampaignRows || []).length, detail: formatDetailedDiagnostics(diagnostics.missingCampaignRows, (item) => `${item.postId || "unknown"}: ${item.issue || "missing campaign_id or campaign_name"}`), guidance: "Assign campaign or mark uncategorized." },
+    { label: "Near-duplicate campaign names", severity: "warning", value: (campaignCleanupDiagnostics.nearDuplicateCampaigns || []).length, detail: formatDetailedDiagnostics(campaignCleanupDiagnostics.nearDuplicateCampaigns, (item) => `${item.sourceCampaignName || "source"} → ${item.targetCampaignName || "target"}`), guidance: "Merge near-duplicate campaigns into one clean campaign." },
+    { label: "Invalid combo campaign names", severity: "error", value: (campaignCleanupDiagnostics.invalidComboCampaigns || []).length, detail: formatDetailedDiagnostics(campaignCleanupDiagnostics.invalidComboCampaigns, (item) => `${item.postId || "unknown"}: ${item.campaignName || "invalid_combo_campaign"}`), guidance: "Review affected posts and reassign them manually. Do not auto-split." },
     { label: "Campaign layout issues", severity: "warning", value: (diagnostics.campaignLayoutIssues || []).length, detail: formatDetailedDiagnostics(diagnostics.campaignLayoutIssues, (item) => `${item.campaignId || "unknown"}: ${item.issue || "layout issue"}`), guidance: "Warnings are okay unless the map is visibly cramped." },
     { label: "Carousel posts missing assets", severity: "error", value: (diagnostics.carouselMissingAssets || []).length, detail: formatDiagnosticIds(diagnostics.carouselMissingAssets, "postId"), guidance: "Errors need action." },
     { label: "Notes missing required fields", severity: "error", value: (diagnostics.noteFieldIssues || []).length, detail: formatDiagnosticIds(diagnostics.noteFieldIssues, "noteId"), guidance: "Errors need action." },
@@ -13845,6 +14142,7 @@ function renderDiagnosticsPanel() {
       <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Scheduling Note</div>
       <div class="text-sm text-gray-300 wrap-safe">Scheduling organizes posts inside StellarSync. Live platform posting is not connected yet.</div>
     </div>
+    ${renderCampaignCleanupDiagnosticsCard()}
     <div class="p-4 rounded-xl bg-[#181125] border border-white/5 space-y-3">
       <div class="flex items-center justify-between gap-3 flex-wrap">
         <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Connected Accounts</div>
@@ -13935,6 +14233,12 @@ function renderDiagnosticsPanel() {
   `;
 
   renderDeployChecklist();
+  target.querySelectorAll(".campaign-cleanup-merge-btn").forEach((button) => {
+    button.addEventListener("click", () => mergeCampaignCleanupPair(button));
+  });
+  target.querySelectorAll(".campaign-cleanup-reassign-btn").forEach((button) => {
+    button.addEventListener("click", () => reassignInvalidComboCampaignPosts(button));
+  });
 }
 
 function getContextualGuidanceItems() {
@@ -14874,6 +15178,10 @@ async function apiMergeCampaignIntoCampaign(payload) {
 
 async function apiDeleteCampaignAndUnassignPosts(payload) {
   return apiPost("deleteCampaignAndUnassignPosts", payload);
+}
+
+async function apiReassignCampaignCleanupPosts(payload) {
+  return apiPost("reassignCampaignCleanupPosts", payload);
 }
 
 async function apiImportExistingPostAsIdea(payload) {
