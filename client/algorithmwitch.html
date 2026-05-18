@@ -2619,14 +2619,35 @@
             </div>
           </div>
           <div class="p-4 rounded-2xl bg-[#0f0a18] border border-white/5 space-y-3">
-            <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Path B · Desktop / Browser Plugin Capture</div>
-            <div class="text-xs text-gray-300">StellarSync cannot directly read your LinkedIn tab from this page. Use the local capture helper, browser extension, or pasted JSON.</div>
-            <div class="flex flex-wrap gap-2">
-              <button type="button" disabled class="px-4 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-500 cursor-not-allowed opacity-60">Start Capture Session</button>
-              <button type="button" disabled class="px-4 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-500 cursor-not-allowed opacity-60">Stop Capture Session</button>
-              <button id="modal-linkedin-download-helper-btn" type="button" class="px-4 py-2 rounded-xl bg-[#231738] border border-white/5 text-xs font-bold text-white hover:bg-[#2d1b4e] transition-colors">Download Capture Helper</button>
+            <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Run Capture Helper in LinkedIn Tab</div>
+            <div class="text-xs text-gray-300">StellarSync does not automate your LinkedIn tab. The reliable path is: open the LinkedIn tab, paste the helper into that tab’s browser console, run it, then upload the downloaded JSON here.</div>
+            <div class="rounded-2xl border border-cyan-400/20 bg-cyan-400/5 px-4 py-3 text-xs text-cyan-100">
+              This script runs only in your current LinkedIn browser tab. Do not run it in Terminal.
             </div>
-            <div class="text-[11px] text-gray-500">Desktop/Extension capture: planned</div>
+            <div class="space-y-2 text-xs text-gray-300 leading-relaxed">
+              <div><span class="font-bold text-white">Step 1:</span> Open your LinkedIn activity page in another browser tab.</div>
+              <div><span class="font-bold text-white">Step 2:</span> Scroll until the posts you want are visible.</div>
+              <div><span class="font-bold text-white">Step 3:</span> Open the browser console:</div>
+              <div class="pl-4 text-[11px] text-gray-400">Chrome/Edge: Cmd+Option+J (Mac) or Ctrl+Shift+J (Windows)</div>
+              <div class="pl-4 text-[11px] text-gray-400">Safari: Enable Develop menu first, then Develop → Show JavaScript Console</div>
+              <div><span class="font-bold text-white">Step 4:</span> Copy the helper code below and paste it into the LinkedIn tab console.</div>
+              <div><span class="font-bold text-white">Step 5:</span> Press Enter. A JSON file downloads locally.</div>
+              <div><span class="font-bold text-white">Step 6:</span> Return here and upload/paste the JSON.</div>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button id="modal-linkedin-copy-script-btn" type="button" class="px-4 py-2 rounded-xl bg-[#231738] border border-white/5 text-xs font-bold text-white hover:bg-[#2d1b4e] transition-colors">Copy Helper Code</button>
+              <button id="modal-linkedin-select-script-btn" type="button" class="px-4 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-white hover:bg-[#231738] transition-colors">Select All Code</button>
+              <button id="modal-linkedin-download-helper-btn" type="button" class="px-4 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-white hover:bg-[#231738] transition-colors">Download .js Helper</button>
+              <button id="modal-linkedin-validate-helper-btn" type="button" class="px-4 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-white hover:bg-[#231738] transition-colors">Validate Helper</button>
+            </div>
+            <div id="modal-linkedin-helper-validation" class="text-[11px] text-gray-400 leading-relaxed">Run this in the LinkedIn browser tab Console, not Terminal.</div>
+            <details class="rounded-2xl border border-white/5 bg-[#120c1d]">
+              <summary class="cursor-pointer list-none px-4 py-3 text-xs font-bold tracking-wide text-white">Show full helper script</summary>
+              <div class="px-4 pb-4">
+                <label class="block text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Capture Helper Script</label>
+                <textarea id="modal-linkedin-userscript-output" class="form-input resize-none h-72 text-[11px] font-mono leading-relaxed" readonly spellcheck="false"></textarea>
+              </div>
+            </details>
           </div>
         </div>
         <div class="flex flex-wrap gap-2">
@@ -2651,26 +2672,14 @@
               <label id="linkedin-import-url-label" class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2">Optional LinkedIn URL</label>
               <input type="url" id="modal-linkedin-capture-url-input" class="form-input text-sm font-medium" placeholder="Optional LinkedIn post/profile/activity URL for URL-only candidate creation">
             </div>
+            <div class="space-y-2">
+              <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500">Test Helper Output</label>
+              <div class="text-[11px] text-gray-400">Paste the JSON that the LinkedIn console helper downloaded, then click Parse JSON.</div>
+            </div>
             <label class="inline-flex items-center gap-2 text-xs text-gray-300">
               <input id="modal-linkedin-overwrite-duplicates" type="checkbox" class="rounded border-white/10 bg-[#181125]">
               Overwrite / update duplicates
             </label>
-          </div>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div class="space-y-2">
-            <div class="flex items-center justify-between gap-3">
-              <label class="block text-[10px] uppercase tracking-widest text-gray-500 font-bold">Local bookmarklet</label>
-              <button id="modal-linkedin-copy-bookmarklet-btn" type="button" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white hover:bg-[#231738] transition-colors">Copy Bookmarklet</button>
-            </div>
-            <textarea id="modal-linkedin-bookmarklet-output" class="form-input resize-none h-28 text-[11px] font-mono" readonly></textarea>
-          </div>
-          <div class="space-y-2">
-            <div class="flex items-center justify-between gap-3">
-              <label class="block text-[10px] uppercase tracking-widest text-gray-500 font-bold">Local console script</label>
-              <button id="modal-linkedin-copy-script-btn" type="button" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white hover:bg-[#231738] transition-colors">Copy Console Script</button>
-            </div>
-            <textarea id="modal-linkedin-userscript-output" class="form-input resize-none h-28 text-[11px] font-mono" readonly></textarea>
           </div>
         </div>
         <div class="flex gap-2 flex-wrap">
@@ -2678,9 +2687,19 @@
           <button id="modal-linkedin-capture-import-btn" type="button" class="px-4 py-2 rounded-xl bg-[#1a1128] border border-white/5 text-xs font-bold text-white hover:bg-[#231738] transition-colors">Import Selected</button>
           <button id="modal-linkedin-select-all-btn" type="button" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white hover:bg-[#231738] transition-colors">Select All</button>
           <button id="modal-linkedin-deselect-all-btn" type="button" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white hover:bg-[#231738] transition-colors">Deselect All</button>
+          <button id="modal-linkedin-download-report-btn" type="button" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white hover:bg-[#231738] transition-colors">Download Import Report</button>
         </div>
         <div id="modal-linkedin-capture-diagnostics" class="text-[11px] text-gray-500 leading-relaxed"></div>
         <div id="modal-linkedin-capture-parse-summary" class="text-[11px] text-gray-400 leading-relaxed"></div>
+        <div id="modal-linkedin-import-result" class="hidden rounded-2xl border border-white/10 bg-[#0f0a18] p-4 space-y-2">
+          <div class="flex items-center justify-between gap-3 flex-wrap">
+            <div class="text-sm font-bold text-white">Import Result</div>
+            <div id="modal-linkedin-import-progress" class="text-[11px] text-gray-400">Idle</div>
+          </div>
+          <div id="modal-linkedin-import-result-summary" class="text-xs text-gray-300 leading-relaxed"></div>
+          <div id="modal-linkedin-import-result-errors" class="text-[11px] text-yellow-300 leading-relaxed"></div>
+          <div id="modal-linkedin-import-result-verify" class="text-[11px] text-cyan-200 leading-relaxed"></div>
+        </div>
         <div id="modal-linkedin-capture-preview" class="space-y-3"></div>
       </div>
     </div>
@@ -3704,6 +3723,7 @@ let linkedInCapturePreviewItems = [];
 let existingPostImportPreviewItem = null;
 let linkedInCaptureParseDiagnostics = null;
 let linkedInImportMode = "text";
+let linkedInCaptureImportReport = null;
 let semanticBridgeDensity = safeStorageGet("stellarsync_bridge_density") || "low";
 let currentSocialImportResult = null;
 let currentWorkspaceSettingsTab = "settings";
@@ -3841,6 +3861,8 @@ const linkedInImportJsonUploadShell = document.getElementById("linkedin-import-j
 const linkedInParseJsonBtn = document.getElementById("modal-linkedin-parse-json-btn");
 const linkedInImportCapturedJsonBtn = document.getElementById("modal-linkedin-import-captured-json-btn");
 const linkedInDownloadHelperBtn = document.getElementById("modal-linkedin-download-helper-btn");
+const linkedInValidateHelperBtn = document.getElementById("modal-linkedin-validate-helper-btn");
+const linkedInSelectScriptBtn = document.getElementById("modal-linkedin-select-script-btn");
 const linkedInCapturePreviewBtn = document.getElementById("modal-linkedin-capture-preview-btn");
 const linkedInCaptureImportBtn = document.getElementById("modal-linkedin-capture-import-btn");
 const linkedInCaptureDiagnosticsEl = document.getElementById("modal-linkedin-capture-diagnostics");
@@ -3849,10 +3871,15 @@ const linkedInCapturePreviewEl = document.getElementById("modal-linkedin-capture
 const linkedInCaptureSelectAllBtn = document.getElementById("modal-linkedin-select-all-btn");
 const linkedInCaptureDeselectAllBtn = document.getElementById("modal-linkedin-deselect-all-btn");
 const linkedInCaptureOverwriteInput = document.getElementById("modal-linkedin-overwrite-duplicates");
-const linkedInBookmarkletOutput = document.getElementById("modal-linkedin-bookmarklet-output");
 const linkedInUserscriptOutput = document.getElementById("modal-linkedin-userscript-output");
-const linkedInCopyBookmarkletBtn = document.getElementById("modal-linkedin-copy-bookmarklet-btn");
 const linkedInCopyScriptBtn = document.getElementById("modal-linkedin-copy-script-btn");
+const linkedInHelperValidationEl = document.getElementById("modal-linkedin-helper-validation");
+const linkedInImportResultEl = document.getElementById("modal-linkedin-import-result");
+const linkedInImportProgressEl = document.getElementById("modal-linkedin-import-progress");
+const linkedInImportResultSummaryEl = document.getElementById("modal-linkedin-import-result-summary");
+const linkedInImportResultErrorsEl = document.getElementById("modal-linkedin-import-result-errors");
+const linkedInImportResultVerifyEl = document.getElementById("modal-linkedin-import-result-verify");
+const linkedInDownloadReportBtn = document.getElementById("modal-linkedin-download-report-btn");
 const publishReadinessEl = document.getElementById("modal-publish-readiness");
 const modalSourceContextLabel = document.getElementById("modal-source-context-label");
 const modalSourceContextChip = document.getElementById("modal-source-context-chip");
@@ -6175,12 +6202,16 @@ function initApp() {
     showToast("JSON mode", "Upload or paste capture JSON, then click Parse.", "ph-file-json", "text-[#00ffaa]");
   });
   linkedInDownloadHelperBtn?.addEventListener("click", downloadLinkedInCaptureHelper);
+  linkedInValidateHelperBtn?.addEventListener("click", () => {
+    renderLinkedInHelperValidation(validateLinkedInCaptureHelperScript(String(linkedInUserscriptOutput?.value || "")));
+  });
+  linkedInSelectScriptBtn?.addEventListener("click", selectLinkedInCaptureScript);
   linkedInCapturePreviewBtn?.addEventListener("click", previewLinkedInBrowserCaptureImport);
   linkedInCaptureImportBtn?.addEventListener("click", importSelectedLinkedInCaptureItems);
   linkedInCaptureSelectAllBtn?.addEventListener("click", () => setLinkedInCaptureSelection(true));
   linkedInCaptureDeselectAllBtn?.addEventListener("click", () => setLinkedInCaptureSelection(false));
-  linkedInCopyBookmarkletBtn?.addEventListener("click", () => copyLinkedInCaptureSnippet("bookmarklet"));
-  linkedInCopyScriptBtn?.addEventListener("click", () => copyLinkedInCaptureSnippet("script"));
+  linkedInCopyScriptBtn?.addEventListener("click", copyLinkedInCaptureSnippet);
+  linkedInDownloadReportBtn?.addEventListener("click", downloadLinkedInImportReport);
   ensureLinkedInCaptureSnippets();
 
   setupCalendarControls();
@@ -6341,8 +6372,10 @@ function openLinkedInBulkImportModal() {
   linkedInBulkImportModalCard.classList.add("scale-100");
   linkedInImportMode = "text";
   linkedInCaptureParseDiagnostics = null;
+  linkedInCaptureImportReport = null;
   setLinkedInImportMode("text");
   ensureLinkedInCaptureSnippets();
+  updateLinkedInImportResultPanel({ visible: false });
   renderLinkedInCapturePreview();
   linkedInCaptureInput?.focus();
 }
@@ -6359,6 +6392,8 @@ function closeLinkedInBulkImportModal() {
     if (linkedInCaptureOverwriteInput) linkedInCaptureOverwriteInput.checked = false;
     linkedInCapturePreviewItems = [];
     linkedInCaptureParseDiagnostics = null;
+    linkedInCaptureImportReport = null;
+    updateLinkedInImportResultPanel({ visible: false });
     renderLinkedInCapturePreview();
   }, 200);
 }
@@ -11584,37 +11619,171 @@ function closeConfirmActionModal() {
 }
 
 function getLinkedInBrowserCaptureScript() {
-  return `(function(){const textOf=(node)=>node&&node.innerText?node.innerText.replace(/\\s+/g," ").trim():"";const attrOf=(node,key)=>node&&node.getAttribute?String(node.getAttribute(key)||"").trim():"";const toCount=(source,label)=>{const match=String(source||"").match(new RegExp('(\\\\d[\\\\d,\\\\.kKmM]*)\\\\s+'+label,'i'));return match?match[1]:"";};const selectorList=['main article','main [data-urn]','main .feed-shared-update-v2','main div[data-id]','main .occludable-update'];const selectorsUsed=[];const seen=new Set();const cards=[];selectorList.forEach((selector)=>{const found=Array.from(document.querySelectorAll(selector)).filter((node)=>node&&textOf(node).match(/like|comment|repost|send/i));if(found.length) selectorsUsed.push(selector);found.forEach((node)=>{if(seen.has(node)) return;seen.add(node);cards.push(node);});});const items=cards.map((card)=>{const rawText=textOf(card);const links=Array.from(card.querySelectorAll('a[href*="/feed/update/"], a[href*="/posts/"], a[href*="/activity-"], a[href*="lnkd.in"]'));const url=links.map((link)=>String(link.href||"").trim()).find(Boolean)||"";const textNode=card.querySelector('.update-components-text, .feed-shared-update-v2__description, span.break-words, div[dir="ltr"], [data-test-id=\"main-feed-activity-card__commentary\"]');const dateNode=Array.from(card.querySelectorAll('time, a, span')).find((node)=>/ago|\\d+[dwmyh]|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|\\d{4}|\\d{1,2}\\/\\d{1,2}/i.test(textOf(node)));const metricsText=rawText;const media=Array.from(card.querySelectorAll('img')).map((img)=>({url:String(img.currentSrc||img.src||"").trim(),alt:attrOf(img,'alt')})).filter((item)=>item.url);const authorNode=card.querySelector('.update-components-actor__title, .feed-shared-actor__name, .update-components-actor__meta, [data-test-id=\"actor-name\"]');return{platform:'linkedin',text:textOf(textNode),rawText:rawText,url:url,date_label:textOf(dateNode),timestamp:attrOf(dateNode,'datetime')||"",metrics:{impressions:toCount(metricsText,'impressions?'),reactions:toCount(metricsText,'reactions?|likes?'),comments:toCount(metricsText,'comments?'),reposts:toCount(metricsText,'reposts?|shares?')},author:textOf(authorNode),media:media};}).filter((item)=>item.rawText||item.text||item.url);const payload={source:'linkedin_browser_capture',generated_at:new Date().toISOString(),source_url:window.location.href,diagnostics:{cardsDetected:cards.length,itemsWithRawText:items.filter((item)=>item.rawText).length,selectorsUsed:selectorsUsed},items:items};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const downloadUrl=URL.createObjectURL(blob);const anchor=document.createElement('a');anchor.href=downloadUrl;anchor.download='stellarsync-linkedin-capture-'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';anchor.click();setTimeout(()=>URL.revokeObjectURL(downloadUrl),1500);console.log('StellarSync LinkedIn capture created locally.',payload.diagnostics);})();`;
+  return [
+    "(() => {",
+    "  const textOf = (node) => node && node.innerText ? node.innerText.replace(/\\u00a0/g, ' ').replace(/\\s+/g, ' ').trim() : '';",
+    "  const attrOf = (node, key) => node && node.getAttribute ? String(node.getAttribute(key) || '').trim() : '';",
+    "  const normalizeUrl = (value) => String(value || '').trim().replace(/[?#].*$/, '').replace(/\\/+$/, '');",
+    "  const toCount = (source, label) => {",
+    "    const match = String(source || '').match(new RegExp('(\\\\d[\\\\d,\\\\.kKmM]*)\\\\s+' + label, 'i'));",
+    "    return match ? match[1] : '';",
+    "  };",
+    "  const isChromeLine = (value) => [/^like$/i,/^comment$/i,/^repost$/i,/^send$/i,/^view analytics$/i,/^promote this post$/i,/^activate to view larger image$/i,/^visible to anyone on or off linkedin$/i,/^feed post number\\b/i,/^follow$/i,/follower/i,/impressions?$/i].some((pattern) => pattern.test(String(value || '').trim()));",
+    "  const selectorList = ['main article', 'main [data-urn]', 'main .feed-shared-update-v2', 'main div[data-id]', 'main .occludable-update'];",
+    "  const selectorsUsed = [];",
+    "  const seen = new Set();",
+    "  const cards = [];",
+    "  selectorList.forEach((selector) => {",
+    "    const found = Array.from(document.querySelectorAll(selector)).filter((node) => node && textOf(node).match(/like|comment|repost|send/i));",
+    "    if (found.length) selectorsUsed.push(selector);",
+    "    found.forEach((node) => {",
+    "      const key = attrOf(node, 'data-urn') || attrOf(node, 'data-id') || textOf(node).slice(0, 180);",
+    "      if (!key || seen.has(key)) return;",
+    "      seen.add(key);",
+    "      cards.push(node);",
+    "    });",
+    "  });",
+    "  const items = cards.map((card, index) => {",
+    "    const rawText = textOf(card);",
+    "    const rawLines = rawText.split(/\\n+/).map((line) => String(line || '').trim()).filter(Boolean);",
+    "    const cleanedLines = rawLines.filter((line) => !isChromeLine(line));",
+    "    const links = Array.from(card.querySelectorAll('a[href*=\"/feed/update/\"], a[href*=\"/posts/\"], a[href*=\"/activity-\"], a[href*=\"lnkd.in\"]'));",
+    "    const url = normalizeUrl(links.map((link) => String(link.href || '').trim()).find(Boolean) || '');",
+    "    const textNode = card.querySelector('.update-components-text, .feed-shared-update-v2__description, span.break-words, div[dir=\"ltr\"], [data-test-id=\"main-feed-activity-card__commentary\"]');",
+    "    const dateNode = Array.from(card.querySelectorAll('time, a, span')).find((node) => /ago|just now|\\d+[dwmyh]|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|\\d{4}|\\d{1,2}\\/\\d{1,2}/i.test(textOf(node)));",
+    "    const authorNode = card.querySelector('.update-components-actor__title, .feed-shared-actor__name, .update-components-actor__meta, [data-test-id=\"actor-name\"]');",
+    "    const media = Array.from(card.querySelectorAll('img')).map((img) => ({ url: String(img.currentSrc || img.src || '').trim(), alt: attrOf(img, 'alt') })).filter((item) => item.url);",
+    "    const metricsText = rawText;",
+    "    const commentary = textOf(textNode) || cleanedLines.join('\\n');",
+    "    const actionText = cleanedLines.slice(0, 6).join(' | ');",
+    "    return {",
+    "      capture_index: index,",
+    "      platform: 'linkedin',",
+    "      text: commentary,",
+    "      rawText,",
+    "      cleaned_lines: cleanedLines,",
+    "      url,",
+    "      date_label: textOf(dateNode),",
+    "      timestamp: attrOf(dateNode, 'datetime') || '',",
+    "      author: textOf(authorNode),",
+    "      action_text: actionText,",
+    "      metrics: {",
+    "        impressions: toCount(metricsText, 'impressions?'),",
+    "        reactions: toCount(metricsText, 'reactions?|likes?'),",
+    "        comments: toCount(metricsText, 'comments?'),",
+    "        reposts: toCount(metricsText, 'reposts?|shares?')",
+    "      },",
+    "      media",
+    "    };",
+    "  }).filter((item) => item.rawText || item.text || item.url);",
+    "  const payload = {",
+    "    source: 'linkedin_browser_capture',",
+    "    generated_at: new Date().toISOString(),",
+    "    source_url: window.location.href,",
+    "    diagnostics: {",
+    "      cardsDetected: cards.length,",
+    "      itemsDetected: items.length,",
+    "      itemsWithRawText: items.filter((item) => item.rawText).length,",
+    "      selectorsUsed,",
+    "      export_payload: true",
+    "    },",
+    "    items",
+    "  };",
+    "  const json = JSON.stringify(payload, null, 2);",
+    "  const blob = new Blob([json], { type: 'application/json' });",
+    "  const downloadUrl = URL.createObjectURL(blob);",
+    "  const anchor = document.createElement('a');",
+    "  anchor.href = downloadUrl;",
+    "  anchor.download = 'stellarsync-linkedin-capture-' + new Date().toISOString().replace(/[:.]/g, '-') + '.json';",
+    "  document.body.appendChild(anchor);",
+    "  anchor.click();",
+    "  anchor.remove();",
+    "  setTimeout(() => URL.revokeObjectURL(downloadUrl), 1500);",
+    "  console.log('StellarSync LinkedIn capture complete.', payload.diagnostics);",
+    "  alert('StellarSync LinkedIn capture complete. Return to StellarSync and upload/paste the JSON file.');",
+    "})();"
+  ].join("\n");
 }
 
-function getLinkedInBrowserCaptureBookmarklet() {
-  return `javascript:${getLinkedInBrowserCaptureScript()}`;
+function validateLinkedInCaptureHelperScript(script = "") {
+  const value = String(script || "").trim();
+  const checks = {
+    startsCorrectly: value.startsWith("(() => {"),
+    endsCorrectly: value.endsWith("})();"),
+    lengthOk: value.length > 1000,
+    hasJsonExportPayload: /JSON\\.stringify\\(payload,\\s*null,\\s*2\\)/.test(value) && /export_payload/.test(value),
+    hasDiagnostics: /diagnostics/.test(value) && /console\\.log/.test(value)
+  };
+  const ok = Object.values(checks).every(Boolean);
+  return {
+    ok,
+    value,
+    checks,
+    length: value.length,
+    message: ok
+      ? `Helper valid. ${value.length} chars. Starts with (() => { and ends with })();`
+      : [
+          !checks.startsCorrectly ? "Script must start with (() => {" : "",
+          !checks.endsCorrectly ? "Script must end with })();" : "",
+          !checks.lengthOk ? "Script is too short." : "",
+          !checks.hasJsonExportPayload ? "JSON export payload missing." : "",
+          !checks.hasDiagnostics ? "Diagnostics or console summary missing." : ""
+        ].filter(Boolean).join(" ")
+  };
+}
+
+function renderLinkedInHelperValidation(result) {
+  if (!linkedInHelperValidationEl) return;
+  linkedInHelperValidationEl.textContent = result?.message || "Run this in the LinkedIn browser tab Console, not Terminal.";
+  linkedInHelperValidationEl.className = `text-[11px] leading-relaxed ${result?.ok ? "text-[#00ffaa]" : "text-yellow-300"}`;
 }
 
 function ensureLinkedInCaptureSnippets() {
-  if (linkedInBookmarkletOutput) linkedInBookmarkletOutput.value = getLinkedInBrowserCaptureBookmarklet();
-  if (linkedInUserscriptOutput) linkedInUserscriptOutput.value = getLinkedInBrowserCaptureScript();
+  const script = getLinkedInBrowserCaptureScript();
+  if (linkedInUserscriptOutput) linkedInUserscriptOutput.value = script;
+  renderLinkedInHelperValidation(validateLinkedInCaptureHelperScript(script));
 }
 
-async function copyLinkedInCaptureSnippet(kind) {
-  const text = kind === "bookmarklet"
-    ? String(linkedInBookmarkletOutput?.value || "").trim()
-    : String(linkedInUserscriptOutput?.value || "").trim();
-  if (!text) {
-    showToast("Nothing to copy", "The local LinkedIn capture script is unavailable.", "ph-warning", "text-yellow-400");
+function getValidatedLinkedInCaptureScript() {
+  const script = String(linkedInUserscriptOutput?.value || getLinkedInBrowserCaptureScript()).trim();
+  const validation = validateLinkedInCaptureHelperScript(script);
+  renderLinkedInHelperValidation(validation);
+  if (!validation.ok) throw new Error(validation.message || "LinkedIn helper validation failed.");
+  return validation.value;
+}
+
+async function copyLinkedInCaptureSnippet() {
+  let text = "";
+  try {
+    text = getValidatedLinkedInCaptureScript();
+  } catch (err) {
+    showToast("Helper invalid", err?.message || "Could not validate the helper script.", "ph-warning", "text-yellow-400");
     return;
   }
   try {
     await navigator.clipboard.writeText(text);
-    showToast("Copied", kind === "bookmarklet" ? "Bookmarklet copied." : "Console script copied.", "ph-copy", "text-[#00ffaa]");
+    showToast("Copied", "Helper code copied. Run it in the LinkedIn browser tab Console, not Terminal.", "ph-copy", "text-[#00ffaa]");
   } catch (err) {
     console.error(err);
-    showToast("Copy failed", "Could not copy the LinkedIn capture snippet.", "ph-warning", "text-yellow-400");
+    showToast("Copy failed", "Could not copy the LinkedIn capture helper.", "ph-warning", "text-yellow-400");
   }
 }
 
+function selectLinkedInCaptureScript() {
+  if (!linkedInUserscriptOutput) return;
+  linkedInUserscriptOutput.focus();
+  linkedInUserscriptOutput.select();
+  linkedInUserscriptOutput.setSelectionRange(0, linkedInUserscriptOutput.value.length);
+}
+
 function downloadLinkedInCaptureHelper() {
-  const script = getLinkedInBrowserCaptureScript();
+  let script = "";
+  try {
+    script = getValidatedLinkedInCaptureScript();
+  } catch (err) {
+    showToast("Helper invalid", err?.message || "Could not validate the helper script.", "ph-warning", "text-yellow-400");
+    return;
+  }
   const blob = new Blob([script], { type: "text/javascript;charset=utf-8" });
   const downloadUrl = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
@@ -11622,7 +11791,7 @@ function downloadLinkedInCaptureHelper() {
   anchor.download = "stellarsync-linkedin-capture-helper.js";
   anchor.click();
   setTimeout(() => URL.revokeObjectURL(downloadUrl), 1500);
-  showToast("Downloaded", "Capture helper downloaded. Run it from the LinkedIn tab to create local JSON.", "ph-download-simple", "text-[#00ffaa]");
+  showToast("Downloaded", "Helper downloaded. Run it in the LinkedIn browser tab Console, not Terminal.", "ph-download-simple", "text-[#00ffaa]");
 }
 
 function extractUrlsFromText(value) {
@@ -11665,29 +11834,141 @@ function computeImportTextHash(value) {
   return (`00000000${(hash >>> 0).toString(16)}`).slice(-8);
 }
 
-function parseImportedDateFromText(value) {
+const LINKEDIN_REPOST_PATTERNS = {
+  repost: [/reposted this/i, /\breposted\b/i, /\bview repost\b/i],
+  reshare: [/shared this/i, /\bshared\b/i]
+};
+
+function cleanLinkedInCapturedText(value) {
+  return String(value || "")
+    .replace(/\r\n/g, "\n")
+    .split(/\n+/)
+    .map((line) => String(line || "").replace(/\u00a0/g, " ").trim())
+    .filter((line) => line && !isLinkedInUiChromeLine(line))
+    .filter((line) => !/^(?:\d[\d,.kKmM]*\s+)?(?:followers?|connections?)$/i.test(line))
+    .filter((line) => !/^\d[\d,.kKmM]*\s+impressions?$/i.test(line))
+    .filter((line) => !/^\d[\d,.kKmM]*\s+(?:reactions?|likes?|comments?|reposts?|shares?)$/i.test(line))
+    .join("\n")
+    .trim();
+}
+
+function parseImportedDateDetails(value, generatedAt = "") {
   const text = String(value || "").trim();
-  if (!text) return "";
+  const generated = generatedAt ? new Date(generatedAt) : null;
+  const generatedValid = generated && !Number.isNaN(generated.getTime());
+  const result = {
+    originalPostDate: "",
+    originalPostDateLabel: text,
+    scheduledAt: "",
+    queueDateLabel: "",
+    confidence: text ? "label_only" : "missing"
+  };
+  if (!text) return result;
   const direct = new Date(text);
-  if (!Number.isNaN(direct.getTime())) return direct.toISOString();
-  const monthMatch = text.match(/(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2},?\s+\d{4}/i);
-  if (monthMatch) {
-    const parsed = new Date(monthMatch[0]);
-    if (!Number.isNaN(parsed.getTime())) return parsed.toISOString();
+  if (!Number.isNaN(direct.getTime())) {
+    const iso = direct.toISOString();
+    result.originalPostDate = iso;
+    result.scheduledAt = iso;
+    result.queueDateLabel = `${direct.getMonth() + 1}/${direct.getDate()}/${direct.getFullYear()}`;
+    result.confidence = "exact";
+    return result;
   }
-  const isoMatch = text.match(/\d{4}-\d{2}-\d{2}/);
+  const isoMatch = text.match(/\b\d{4}-\d{2}-\d{2}(?:[tT ][\d:.+-Zz]+)?\b/);
   if (isoMatch) {
-    const parsed = new Date(`${isoMatch[0]}T12:00:00`);
-    if (!Number.isNaN(parsed.getTime())) return parsed.toISOString();
+    const parsed = new Date(isoMatch[0].includes("T") ? isoMatch[0] : `${isoMatch[0]}T12:00:00`);
+    if (!Number.isNaN(parsed.getTime())) {
+      const iso = parsed.toISOString();
+      result.originalPostDate = iso;
+      result.scheduledAt = iso;
+      result.queueDateLabel = `${parsed.getMonth() + 1}/${parsed.getDate()}/${parsed.getFullYear()}`;
+      result.confidence = "exact";
+      return result;
+    }
   }
-  return "";
+  const slashMatch = text.match(/\b(\d{1,2})\/(\d{1,2})\/(\d{2,4})\b/);
+  if (slashMatch) {
+    const year = slashMatch[3].length === 2 ? `20${slashMatch[3]}` : slashMatch[3];
+    const parsed = new Date(`${year}-${slashMatch[1].padStart(2, "0")}-${slashMatch[2].padStart(2, "0")}T12:00:00`);
+    if (!Number.isNaN(parsed.getTime())) {
+      const iso = parsed.toISOString();
+      result.originalPostDate = iso;
+      result.scheduledAt = iso;
+      result.queueDateLabel = `${parsed.getMonth() + 1}/${parsed.getDate()}/${parsed.getFullYear()}`;
+      result.confidence = "exact";
+      return result;
+    }
+  }
+  const monthDayYearMatch = text.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+\d{1,2},?\s+\d{4}\b/i);
+  if (monthDayYearMatch) {
+    const parsed = new Date(monthDayYearMatch[0].replace(/,/g, ""));
+    if (!Number.isNaN(parsed.getTime())) {
+      const iso = parsed.toISOString();
+      result.originalPostDate = iso;
+      result.scheduledAt = iso;
+      result.queueDateLabel = `${parsed.getMonth() + 1}/${parsed.getDate()}/${parsed.getFullYear()}`;
+      result.confidence = "exact";
+      return result;
+    }
+  }
+  const monthYearMatch = text.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec|march)\b.*\b(20\d{2})\b/i);
+  if (monthYearMatch) {
+    result.confidence = "label_only";
+    return result;
+  }
+  const relativeMatch = text.match(/\b(\d+)\s*(h|hr|hrs|hour|hours|d|day|days|w|wk|wks|week|weeks|mo|mos|month|months|yr|yrs|year|years)\b/i);
+  if (relativeMatch) {
+    result.confidence = generatedValid ? "relative" : "label_only";
+    if (generatedValid) {
+      const amount = Number(relativeMatch[1]);
+      const unit = relativeMatch[2].toLowerCase();
+      const parsed = new Date(generated.getTime());
+      if (/^h/.test(unit)) parsed.setHours(parsed.getHours() - amount);
+      else if (/^d/.test(unit)) parsed.setDate(parsed.getDate() - amount);
+      else if (/^w/.test(unit)) parsed.setDate(parsed.getDate() - (amount * 7));
+      else if (/^mo/.test(unit) || /^month/.test(unit)) parsed.setMonth(parsed.getMonth() - amount);
+      else parsed.setFullYear(parsed.getFullYear() - amount);
+      result.originalPostDate = parsed.toISOString();
+    }
+    return result;
+  }
+  return result;
+}
+
+function parseImportedDateFromText(value, generatedAt = "") {
+  return parseImportedDateDetails(value, generatedAt).scheduledAt;
+}
+
+function detectLinkedInRepostMetadata(candidate = {}) {
+  const rawText = String(candidate.rawText || "").trim();
+  const text = String(candidate.text || candidate.description || "").trim();
+  const combined = `${String(candidate.actionText || "")}\n${rawText}\n${text}`;
+  const isRepost = LINKEDIN_REPOST_PATTERNS.repost.some((pattern) => pattern.test(combined));
+  const isReshare = !isRepost && LINKEDIN_REPOST_PATTERNS.reshare.some((pattern) => pattern.test(combined));
+  const postType = isRepost ? "repost" : isReshare ? "reshare" : "";
+  const originalAuthorMatch = combined.match(/(?:reposted this|shared this|original post|view repost)\s+([A-Z][^\n|]{2,80})/i);
+  const commentary = rawText && text && rawText !== text && rawText.includes(text) ? rawText.replace(text, "").trim() : "";
+  const excerpt = cleanLinkedInCapturedText(text).slice(0, 240);
+  return {
+    postType,
+    isRepost: !!postType,
+    repostAuthor: originalAuthorMatch?.[1] ? String(originalAuthorMatch[1]).trim() : "",
+    repostCommentary: commentary.slice(0, 500),
+    originalAuthor: originalAuthorMatch?.[1] ? String(originalAuthorMatch[1]).trim() : "",
+    originalPostExcerpt: excerpt
+  };
 }
 
 function inferCapturePostType(candidate) {
   const mediaUrls = Array.isArray(candidate.mediaUrls) ? candidate.mediaUrls.filter(Boolean) : [];
+  const description = String(candidate.description || candidate.text || "").trim();
   if (mediaUrls.length > 1) return "carousel";
-  if (mediaUrls.length === 1) return "image";
-  return "text";
+  if (mediaUrls.length === 1) {
+    if (mediaUrls.some((url) => /\.(mp4|mov|m4v|webm)(?:$|\?)/i.test(url))) return "video";
+    return "image";
+  }
+  if (/youtube|vimeo|video/i.test(description)) return "video";
+  if (/article|newsletter|read more/i.test(description)) return "article";
+  return description ? "text" : "unknown";
 }
 
 function buildCaptureTitle(text, url) {
@@ -11793,7 +12074,7 @@ function cleanLinkedInPastedTextBlock(block) {
     if (/^(?:like|comment|repost|send)(?:\s+(?:like|comment|repost|send))*$/i.test(line)) return false;
     return !/^https?:\/\//i.test(line);
   });
-  const text = bodyLines.join("\n").trim();
+  const text = cleanLinkedInCapturedText(bodyLines.join("\n"));
   return {
     rawText: String(block || "").trim(),
     text,
@@ -11853,9 +12134,10 @@ function normalizeLinkedInCaptureCandidate(raw, index) {
     ? cleanLinkedInPastedTextBlock(rawText)
     : null;
   const sourceUrl = initialSourceUrl || normalizeCaptureSourceUrl(parsedFromRaw?.source_url || "");
-  const text = String(raw?.text || raw?.description || raw?.caption || raw?.body || parsedFromRaw?.text || "").trim();
+  const text = cleanLinkedInCapturedText(String(raw?.text || raw?.description || raw?.caption || raw?.body || parsedFromRaw?.text || ""));
   const dateLabel = String(raw?.date_label || raw?.dateLabel || raw?.timestamp || raw?.published_at || parsedFromRaw?.date_label || "").trim();
-  const scheduledAt = parseImportedDateFromText(dateLabel || raw?.date || raw?.publishedAt || "");
+  const generatedAt = String(raw?.generated_at || raw?.generatedAt || "").trim();
+  const dateDetails = parseImportedDateDetails(dateLabel || raw?.date || raw?.publishedAt || "", generatedAt);
   const mediaArray = Array.isArray(raw?.media) ? raw.media : [];
   const mediaUrls = (Array.isArray(raw?.media_urls) ? raw.media_urls : Array.isArray(raw?.mediaUrls) ? raw.mediaUrls : mediaArray.map((item) => item?.url || item?.src || item)).map((item) => String(item || "").trim()).filter(Boolean);
   const mediaAltTexts = (Array.isArray(raw?.media_alt_texts) ? raw.media_alt_texts : Array.isArray(raw?.mediaAltTexts) ? raw.mediaAltTexts : mediaArray.map((item) => item?.alt || item?.label || "")).map((item) => String(item || "").trim()).filter(Boolean);
@@ -11863,6 +12145,13 @@ function normalizeLinkedInCaptureCandidate(raw, index) {
   const requiresContentPaste = !!raw?.requiresContentPaste || (!!sourceUrl && !text && detectSourcePlatform(sourceUrl) === "linkedin");
   const nestedMetrics = raw?.metrics || {};
   const sourceType = String(raw?.source_type || raw?.sourceType || (requiresContentPaste ? "linkedin_url_only" : rawText ? "linkedin_pasted_text" : "linkedin_browser_capture")).trim();
+  const repostMeta = detectLinkedInRepostMetadata({
+    rawText,
+    text,
+    description: text,
+    actionText: raw?.action_text || raw?.actionText || ""
+  });
+  const inferredPostType = repostMeta.postType || String(raw?.post_type || raw?.postType || inferCapturePostType({ mediaUrls, description: text })).trim();
   const candidate = {
     id: `capture-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 7)}`,
     title: String(raw?.title || buildCaptureTitle(text, sourceUrl)).trim(),
@@ -11873,9 +12162,14 @@ function normalizeLinkedInCaptureCandidate(raw, index) {
     sourcePlatform: "linkedin",
     importedAt: new Date().toISOString(),
     linkedinPostId,
-    scheduledAt,
+    scheduledAt: dateDetails.scheduledAt,
+    originalPostDate: dateDetails.originalPostDate,
+    originalPostDateLabel: dateDetails.originalPostDateLabel,
+    queueDateLabel: dateDetails.queueDateLabel,
     dateLabel,
-    postType: String(raw?.post_type || raw?.postType || inferCapturePostType({ mediaUrls })).trim(),
+    dateConfidence: dateDetails.confidence,
+    postType: inferredPostType,
+    importBadge: requiresContentPaste ? "URL-only" : repostMeta.postType === "reshare" ? "Reshare" : repostMeta.postType === "repost" ? "Repost" : "Original",
     pillar: getActivePillar() || (appState.settings?.pillars || [])[0] || "authority",
     status: "published",
     metrics: {
@@ -11886,14 +12180,19 @@ function normalizeLinkedInCaptureCandidate(raw, index) {
     },
     mediaUrls,
     mediaAltTexts,
-    generatedAt: String(raw?.generated_at || raw?.generatedAt || "").trim(),
+    generatedAt,
     sourcePageUrl: String(raw?.source_page_url || raw?.sourcePageUrl || "").trim(),
     rawText,
     normalizedTextHash: computeImportTextHash(text || buildCaptureTitle(text, sourceUrl)),
     requiresManualReview: requiresContentPaste,
     requiresContentPaste,
     reviewNeeded: requiresContentPaste,
-    selected: !requiresContentPaste
+    selected: !requiresContentPaste,
+    isRepost: repostMeta.isRepost,
+    repostAuthor: repostMeta.repostAuthor,
+    repostCommentary: repostMeta.repostCommentary,
+    originalAuthor: repostMeta.originalAuthor,
+    originalPostExcerpt: repostMeta.originalPostExcerpt
   };
   candidate.duplicate = findLinkedInCaptureDuplicate(candidate);
   if (candidate.duplicate) candidate.selected = false;
@@ -11963,6 +12262,13 @@ function formatImportPreviewDate(value, fallbackLabel = "") {
   return String(fallbackLabel || "No parsed date").trim();
 }
 
+function formatLinkedInImportBadge(item) {
+  if (item.requiresContentPaste) return "URL-only";
+  if (item.postType === "repost") return "Repost";
+  if (item.postType === "reshare") return "Reshare";
+  return "Original";
+}
+
 function renderLinkedInCapturePreview() {
   if (!linkedInCapturePreviewEl || !linkedInCaptureDiagnosticsEl) return;
   if (!linkedInCapturePreviewItems.length) {
@@ -11975,6 +12281,12 @@ function renderLinkedInCapturePreview() {
   }
   const duplicateCount = linkedInCapturePreviewItems.filter((item) => item.duplicate).length;
   const reviewNeededCount = linkedInCapturePreviewItems.filter((item) => item.reviewNeeded).length;
+  const repostCount = linkedInCapturePreviewItems.filter((item) => item.postType === "repost").length;
+  const reshareCount = linkedInCapturePreviewItems.filter((item) => item.postType === "reshare").length;
+  const originalCount = Math.max(0, linkedInCapturePreviewItems.length - repostCount - reshareCount - reviewNeededCount);
+  const exactDateCount = linkedInCapturePreviewItems.filter((item) => item.dateConfidence === "exact").length;
+  const relativeDateCount = linkedInCapturePreviewItems.filter((item) => item.dateConfidence === "relative").length;
+  const labelOnlyDateCount = linkedInCapturePreviewItems.filter((item) => item.dateConfidence === "label_only").length;
   linkedInCaptureDiagnosticsEl.textContent = `${linkedInCapturePreviewItems.length} candidate${linkedInCapturePreviewItems.length === 1 ? "" : "s"} parsed. ${duplicateCount ? `${duplicateCount} already imported.` : "No duplicates detected yet."} ${reviewNeededCount ? `${reviewNeededCount} need pasted content review.` : ""}`.trim();
   if (linkedInCaptureParseSummaryEl) {
     const summary = linkedInCaptureParseDiagnostics || {};
@@ -11982,6 +12294,12 @@ function renderLinkedInCapturePreview() {
       `Source type: ${summary.sourceTypeDetected || linkedInImportMode}`,
       `Items detected: ${summary.itemsDetected ?? linkedInCapturePreviewItems.length}`,
       `Items with text: ${summary.itemsWithText ?? linkedInCapturePreviewItems.filter((item) => item.description).length}`,
+      `Originals: ${originalCount}`,
+      `Reposts: ${repostCount}`,
+      `Reshares: ${reshareCount}`,
+      `Exact dates: ${exactDateCount}`,
+      `Relative dates: ${relativeDateCount}`,
+      `Label only: ${labelOnlyDateCount}`,
       summary.cardsDetected ? `Cards detected: ${summary.cardsDetected}` : "",
       summary.itemsWithRawText ? `Items with raw text: ${summary.itemsWithRawText}` : "",
       Array.isArray(summary.selectorsUsed) && summary.selectorsUsed.length ? `Selectors used: ${summary.selectorsUsed.join(", ")}` : "",
@@ -12000,15 +12318,19 @@ function renderLinkedInCapturePreview() {
             <div class="flex items-center justify-between gap-3 flex-wrap">
               <div class="text-sm font-bold text-white wrap-safe">${escapeHtml(item.title || "Imported LinkedIn Post")}</div>
               <div class="flex flex-wrap gap-2">
+                <span class="diagnostic-chip">${escapeHtml(formatLinkedInImportBadge(item))}</span>
                 <span class="diagnostic-chip">${escapeHtml(item.postType || "text")}</span>
                 <span class="diagnostic-chip">${escapeHtml(item.sourceType || "linkedin_pasted_text")}</span>
+                <span class="diagnostic-chip">${escapeHtml(item.dateConfidence || "missing")}</span>
                 ${item.reviewNeeded ? `<span class="diagnostic-chip">review_needed</span>` : ``}
               </div>
             </div>
-            <div class="text-[11px] text-gray-400 wrap-safe">${escapeHtml(formatImportPreviewDate(item.scheduledAt, item.dateLabel))}</div>
+            <div class="text-[11px] text-gray-400 wrap-safe">Detected date: ${escapeHtml(formatImportPreviewDate(item.scheduledAt, item.originalPostDateLabel || item.dateLabel))}</div>
+            <div class="text-[11px] text-gray-500 wrap-safe">Date confidence: ${escapeHtml(item.dateConfidence || "missing")}</div>
             <div class="text-sm text-gray-300 wrap-safe">${escapeHtml(item.excerpt || "No text captured yet.")}</div>
             <div class="text-[11px] text-gray-400 wrap-safe">${escapeHtml(item.sourceUrl || "No source URL captured.")}</div>
             <div class="text-[11px] text-gray-500 wrap-safe">${escapeHtml(metrics)}</div>
+            ${item.isRepost ? `<div class="text-[11px] text-cyan-200 wrap-safe">Original author: ${escapeHtml(item.originalAuthor || item.repostAuthor || "Unknown")} ${item.repostCommentary ? `• Commentary: ${escapeHtml(item.repostCommentary.slice(0, 160))}` : ""}</div>` : ""}
             ${duplicate ? `<div class="text-[11px] text-yellow-300 wrap-safe">Already imported: ${escapeHtml(duplicate.title || duplicate.postId || duplicate.sourceUrl || "Matching post")}</div>` : ""}
             ${item.requiresContentPaste ? `<div class="text-[11px] text-yellow-300 wrap-safe">LinkedIn URL saved as source. Paste the post text or browser capture JSON to import content.</div>` : ""}
           </div>
@@ -12196,6 +12518,66 @@ function setLinkedInCaptureSelection(nextSelected) {
   renderLinkedInCapturePreview();
 }
 
+function updateLinkedInImportResultPanel({
+  visible = true,
+  progress = "",
+  summary = "",
+  errors = "",
+  verification = ""
+} = {}) {
+  if (linkedInImportResultEl) linkedInImportResultEl.classList.toggle("hidden", !visible);
+  if (linkedInImportProgressEl) linkedInImportProgressEl.textContent = progress || "Idle";
+  if (linkedInImportResultSummaryEl) linkedInImportResultSummaryEl.textContent = summary || "";
+  if (linkedInImportResultErrorsEl) linkedInImportResultErrorsEl.textContent = errors || "";
+  if (linkedInImportResultVerifyEl) linkedInImportResultVerifyEl.textContent = verification || "";
+}
+
+function mergeLinkedInImportReports(target = {}, source = {}) {
+  const next = {
+    detectedCount: Number(target.detectedCount || 0),
+    selectedCount: Number(target.selectedCount || 0),
+    importedCount: Number(target.importedCount || 0),
+    skippedDuplicates: Number(target.skippedDuplicates || 0),
+    updatedCount: Number(target.updatedCount || 0),
+    failedCount: Number(target.failedCount || 0),
+    errors: Array.isArray(target.errors) ? target.errors.slice() : [],
+    firstImportedPostIds: Array.isArray(target.firstImportedPostIds) ? target.firstImportedPostIds.slice() : [],
+    importedPostIds: Array.isArray(target.importedPostIds) ? target.importedPostIds.slice() : [],
+    dateParseStats: Object.assign({ exact: 0, relative: 0, label_only: 0, missing: 0 }, target.dateParseStats || {}),
+    repostStats: Object.assign({ original: 0, repost: 0, reshare: 0, url_only: 0 }, target.repostStats || {})
+  };
+  next.detectedCount += Number(source.detectedCount || 0);
+  next.selectedCount += Number(source.selectedCount || 0);
+  next.importedCount += Number(source.importedCount || 0);
+  next.skippedDuplicates += Number(source.skippedDuplicates || 0);
+  next.updatedCount += Number(source.updatedCount || 0);
+  next.failedCount += Number(source.failedCount || 0);
+  next.errors = next.errors.concat(Array.isArray(source.errors) ? source.errors : []);
+  next.firstImportedPostIds = next.firstImportedPostIds.concat(Array.isArray(source.firstImportedPostIds) ? source.firstImportedPostIds : []);
+  next.importedPostIds = next.importedPostIds.concat(Array.isArray(source.importedPostIds) ? source.importedPostIds : []);
+  Object.entries(source.dateParseStats || {}).forEach(([key, value]) => {
+    next.dateParseStats[key] = Number(next.dateParseStats[key] || 0) + Number(value || 0);
+  });
+  Object.entries(source.repostStats || {}).forEach(([key, value]) => {
+    next.repostStats[key] = Number(next.repostStats[key] || 0) + Number(value || 0);
+  });
+  return next;
+}
+
+function downloadLinkedInImportReport() {
+  if (!linkedInCaptureImportReport) {
+    showToast("No report", "Run an import first to download the JSON report.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  const blob = new Blob([JSON.stringify(linkedInCaptureImportReport, null, 2)], { type: "application/json" });
+  const downloadUrl = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = downloadUrl;
+  anchor.download = `stellarsync-linkedin-import-report-${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
+  anchor.click();
+  setTimeout(() => URL.revokeObjectURL(downloadUrl), 1500);
+}
+
 async function importSelectedLinkedInCaptureItems() {
   const selectedItems = linkedInCapturePreviewItems.filter((item) => item.selected);
   if (!selectedItems.length) {
@@ -12206,57 +12588,152 @@ async function importSelectedLinkedInCaptureItems() {
     showToast("Backend required", "Configure the Apps Script backend before importing captured LinkedIn posts into POSTS.", "ph-warning", "text-yellow-400");
     return;
   }
-  const payload = {
-    overwriteDuplicates: !!linkedInCaptureOverwriteInput?.checked,
-    items: selectedItems.map((item) => ({
-      title: item.title,
-      description: item.description,
-      rawText: item.rawText || "",
-      sourceUrl: item.sourceUrl,
-      sourceType: item.sourceType,
-      platform: "linkedin",
-      postType: item.postType,
-      pillar: item.pillar,
-      status: "published",
-      importedAt: item.importedAt,
-      linkedinPostId: item.linkedinPostId,
-      scheduledAt: item.scheduledAt,
-      dateLabel: item.dateLabel,
-      impressions: item.metrics.impressions,
-      likes: item.metrics.likes,
-      comments: item.metrics.comments,
-      shares: item.metrics.shares,
-      metrics: item.metrics,
-      mediaUrls: item.mediaUrls,
-      mediaAltTexts: item.mediaAltTexts,
-      generatedAt: item.generatedAt,
-      sourcePageUrl: item.sourcePageUrl,
-      normalizedTextHash: item.normalizedTextHash,
-      requiresManualReview: item.requiresManualReview
-    }))
+  const batchSize = selectedItems.length > 150 ? 50 : 25;
+  const batches = [];
+  for (let index = 0; index < selectedItems.length; index += batchSize) {
+    batches.push(selectedItems.slice(index, index + batchSize));
+  }
+  const baseReport = {
+    detectedCount: 0,
+    selectedCount: 0,
+    importedCount: 0,
+    skippedDuplicates: 0,
+    updatedCount: 0,
+    failedCount: 0,
+    errors: [],
+    firstImportedPostIds: [],
+    importedPostIds: [],
+    dateParseStats: selectedItems.reduce((stats, item) => {
+      const key = item.dateConfidence || "missing";
+      stats[key] = Number(stats[key] || 0) + 1;
+      return stats;
+    }, { exact: 0, relative: 0, label_only: 0, missing: 0 }),
+    repostStats: selectedItems.reduce((stats, item) => {
+      const key = item.requiresContentPaste ? "url_only" : item.postType === "repost" ? "repost" : item.postType === "reshare" ? "reshare" : "original";
+      stats[key] = Number(stats[key] || 0) + 1;
+      return stats;
+    }, { original: 0, repost: 0, reshare: 0, url_only: 0 })
   };
+  linkedInCaptureImportReport = baseReport;
+  updateLinkedInImportResultPanel({
+    visible: true,
+    progress: `Importing 0 / ${selectedItems.length}...`,
+    summary: `Preparing ${selectedItems.length} selected capture item${selectedItems.length === 1 ? "" : "s"} for batched import.`,
+    errors: "",
+    verification: ""
+  });
   try {
-    const result = await apiImportCapturedPosts(payload);
-    const importedPosts = Array.isArray(result?.posts) ? result.posts.map((post) => normalizeRemotePost(post, appState.campaigns || [], appState.media || [])) : [];
-    if (importedPosts.length) {
-      const merged = new Map((appState.posts || []).map((post) => [post.id, post]));
-      importedPosts.forEach((post) => merged.set(post.id, post));
-      appState.posts = Array.from(merged.values());
+    const mergedPosts = new Map((appState.posts || []).map((post) => [post.id, post]));
+    let importedSoFar = 0;
+    for (let batchIndex = 0; batchIndex < batches.length; batchIndex += 1) {
+      const batch = batches[batchIndex];
+      updateLinkedInImportResultPanel({
+        visible: true,
+        progress: `Importing ${Math.min(importedSoFar + batch.length, selectedItems.length)} / ${selectedItems.length}...`,
+        summary: `Sending batch ${batchIndex + 1} of ${batches.length}.`,
+        errors: linkedInCaptureImportReport?.errors?.length ? `${linkedInCaptureImportReport.errors.length} partial failure${linkedInCaptureImportReport.errors.length === 1 ? "" : "s"} recorded so far.` : "",
+        verification: ""
+      });
+      const payload = {
+        overwriteDuplicates: !!linkedInCaptureOverwriteInput?.checked,
+        items: batch.map((item) => ({
+          title: item.title,
+          description: item.description,
+          rawText: item.rawText || "",
+          sourceUrl: item.sourceUrl,
+          sourceType: item.sourceType,
+          sourcePlatform: "linkedin",
+          platform: "linkedin",
+          postType: item.postType,
+          pillar: item.pillar,
+          status: "published",
+          importedAt: item.importedAt,
+          linkedinPostId: item.linkedinPostId,
+          scheduledAt: item.scheduledAt,
+          dateLabel: item.dateLabel,
+          originalPostDate: item.originalPostDate,
+          originalPostDateLabel: item.originalPostDateLabel,
+          queueDateLabel: item.queueDateLabel,
+          dateConfidence: item.dateConfidence,
+          impressions: item.metrics.impressions,
+          likes: item.metrics.likes,
+          comments: item.metrics.comments,
+          shares: item.metrics.shares,
+          metrics: item.metrics,
+          mediaUrls: item.mediaUrls,
+          mediaAltTexts: item.mediaAltTexts,
+          generatedAt: item.generatedAt,
+          sourcePageUrl: item.sourcePageUrl,
+          normalizedTextHash: item.normalizedTextHash,
+          requiresManualReview: item.requiresManualReview,
+          isRepost: item.isRepost,
+          repostAuthor: item.repostAuthor,
+          repostCommentary: item.repostCommentary,
+          originalAuthor: item.originalAuthor,
+          originalPostExcerpt: item.originalPostExcerpt
+        }))
+      };
+      const result = await apiImportCapturedPosts(payload);
+      linkedInCaptureImportReport = mergeLinkedInImportReports(linkedInCaptureImportReport, result?.report || {
+        selectedCount: batch.length,
+        importedCount: result?.importedCount || 0,
+        skippedDuplicates: result?.skippedDuplicates || 0,
+        updatedCount: result?.updatedCount || 0,
+        failedCount: result?.failedCount || 0,
+        errors: result?.errors || [],
+        firstImportedPostIds: result?.firstImportedPostIds || [],
+        importedPostIds: result?.importedPostIds || []
+      });
+      const importedPosts = Array.isArray(result?.posts) ? result.posts.map((post) => normalizeRemotePost(post, appState.campaigns || [], appState.media || [])) : [];
+      importedPosts.forEach((post) => mergedPosts.set(post.id, post));
+      importedSoFar += batch.length;
+      updateLinkedInImportResultPanel({
+        visible: true,
+        progress: `Importing ${importedSoFar} / ${selectedItems.length}...`,
+        summary: `${linkedInCaptureImportReport.importedCount} imported, ${linkedInCaptureImportReport.updatedCount} updated, ${linkedInCaptureImportReport.skippedDuplicates} skipped duplicates, ${linkedInCaptureImportReport.failedCount} failed.`,
+        errors: linkedInCaptureImportReport.errors.slice(0, 8).map((item) => `#${Number(item?.index ?? 0) + 1} ${item?.title || "Untitled"}: ${item?.message || "Import failed"}`).join(" | "),
+        verification: ""
+      });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+    appState.posts = Array.from(mergedPosts.values());
+    persistLocalState();
+    const verifyResult = await apiGet("getPosts");
+    const verifiedPosts = Array.isArray(verifyResult?.items) ? verifyResult.items.map((post) => normalizeRemotePost(post, appState.campaigns || [], appState.media || [])) : [];
+    if (verifiedPosts.length) {
+      appState.posts = verifiedPosts;
       persistLocalState();
     }
-    if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
-      await syncRemoteIfConfigured();
-    }
+    const importedIds = Array.from(new Set((linkedInCaptureImportReport.importedPostIds || []).concat(linkedInCaptureImportReport.firstImportedPostIds || []))).filter(Boolean);
+    const verifiedCount = importedIds.filter((postId) => verifiedPosts.some((post) => String(post.id || post.postId || "").trim() === String(postId).trim())).length;
+    const verificationMessage = importedIds.length
+      ? `Verified in Ledger: ${verifiedCount}. ${verifiedCount !== importedIds.length ? "Some imported rows could not be re-verified immediately." : ""}`
+      : "Verified in Ledger: 0.";
+    linkedInCaptureImportReport.detectedCount = linkedInCapturePreviewItems.length;
+    linkedInCaptureImportReport.selectedCount = selectedItems.length;
     linkedInCapturePreviewItems = linkedInCapturePreviewItems.map((item) => item.selected ? { ...item, selected: false, duplicate: findLinkedInCaptureDuplicate(item) || item.duplicate } : item);
     renderLinkedInCapturePreview();
     rerenderAll();
-    showToast("Import complete", `${result?.importedCount || 0} imported, ${result?.updatedCount || 0} updated, ${result?.skippedDuplicates || 0} skipped.`, "ph-check", "text-[#00ffaa]");
-    if (Array.isArray(result?.errors) && result.errors.length) {
-      console.error("Captured import errors", result.errors);
-    }
+    updateLinkedInImportResultPanel({
+      visible: true,
+      progress: `Completed ${selectedItems.length} / ${selectedItems.length}`,
+      summary: `${linkedInCaptureImportReport.importedCount} imported, ${linkedInCaptureImportReport.updatedCount} updated, ${linkedInCaptureImportReport.skippedDuplicates} skipped duplicates, ${linkedInCaptureImportReport.failedCount} failed.`,
+      errors: linkedInCaptureImportReport.errors.length
+        ? linkedInCaptureImportReport.errors.slice(0, 12).map((item) => `#${Number(item?.index ?? 0) + 1} ${item?.title || "Untitled"}: ${item?.message || "Import failed"}`).join(" | ")
+        : "No import errors reported.",
+      verification: verificationMessage
+    });
+    showToast("Import complete", `${linkedInCaptureImportReport.importedCount || 0} imported, ${linkedInCaptureImportReport.updatedCount || 0} updated, ${linkedInCaptureImportReport.skippedDuplicates || 0} skipped.`, "ph-check", "text-[#00ffaa]");
   } catch (err) {
     console.error(err);
     if (linkedInCaptureDiagnosticsEl) linkedInCaptureDiagnosticsEl.textContent = err?.message || "Captured import failed.";
+    updateLinkedInImportResultPanel({
+      visible: true,
+      progress: "Import failed",
+      summary: "The import did not finish.",
+      errors: err?.message || "Could not import selected captured posts.",
+      verification: ""
+    });
     showToast("Import failed", err?.message || "Could not import selected captured posts.", "ph-warning", "text-yellow-400");
   }
 }
@@ -13925,6 +14402,14 @@ function normalizeRemotePost(post, campaigns = [], mediaItems = []) {
     sourceTitle: String(pickRemoteValue(post?.sourceTitle, post?.source_title, "")).trim(),
     sourceMetadata: pickRemoteValue(post?.sourceMetadata, post?.source_metadata, ""),
     sourceImportStatus: String(pickRemoteValue(post?.sourceImportStatus, post?.source_import_status, "")).trim(),
+    originalPostDate: String(pickRemoteValue(post?.originalPostDate, post?.original_post_date, "")).trim(),
+    originalPostDateLabel: String(pickRemoteValue(post?.originalPostDateLabel, post?.original_post_date_label, "")).trim(),
+    dateConfidence: String(pickRemoteValue(post?.dateConfidence, post?.date_confidence, "")).trim(),
+    isRepost: normalizeRemoteBoolean(pickRemoteValue(post?.isRepost, post?.is_repost, false)),
+    repostAuthor: String(pickRemoteValue(post?.repostAuthor, post?.repost_author, "")).trim(),
+    repostCommentary: String(pickRemoteValue(post?.repostCommentary, post?.repost_commentary, "")).trim(),
+    originalAuthor: String(pickRemoteValue(post?.originalAuthor, post?.original_author, "")).trim(),
+    originalPostExcerpt: String(pickRemoteValue(post?.originalPostExcerpt, post?.original_post_excerpt, "")).trim(),
     platformTargets: (Array.isArray(post?.platformTargets)
       ? post.platformTargets
       : String(pickRemoteValue(post?.platform_targets, post?.platformTargets, post?.platform, "")).split(/[|,\n]/))
