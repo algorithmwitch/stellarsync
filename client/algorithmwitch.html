@@ -2622,13 +2622,51 @@
         <div class="text-[11px] text-gray-300 border border-white/5 bg-[#0f0a18] rounded-xl px-4 py-3">
           1. Open your LinkedIn activity page. 2. Scroll until the posts you want are visible. 3. Export your visible LinkedIn posts locally, then import the JSON or paste TSV into StellarSync. 4. Paste the text or JSON here if you are using manual capture. 5. Parse. 6. Review detected posts. 7. Import selected.
         </div>
+        <div class="rounded-2xl border border-cyan-400/15 bg-cyan-400/5 p-4 space-y-4">
+          <div class="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+              <div class="text-[10px] uppercase tracking-widest text-cyan-200 font-bold">Use the StellarSync LinkedIn Export Helper</div>
+              <div class="text-xs text-cyan-50/90 mt-1">Use the packaged Chrome extension if you want a clearer export workflow than pasting console code manually.</div>
+            </div>
+            <div class="text-[11px] text-cyan-100/80">Local helper path: <code>stellarsync/linkedin-export-helper/</code></div>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <a id="modal-linkedin-download-helper-zip-btn" href="./linkedin-export-helper/stellarsync-linkedin-export-helper.zip" download="stellarsync-linkedin-export-helper.zip" class="px-4 py-2 rounded-xl bg-[#231738] border border-white/5 text-xs font-bold text-white hover:bg-[#2d1b4e] transition-colors">Download LinkedIn Export Helper ZIP</a>
+            <a id="modal-linkedin-open-helper-readme-btn" href="./linkedin-export-helper/README.md" target="_blank" rel="noopener noreferrer" class="px-4 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-white hover:bg-[#231738] transition-colors">Open README</a>
+            <button id="modal-linkedin-copy-helper-install-btn" type="button" class="px-4 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-white hover:bg-[#231738] transition-colors">Copy Install Steps</button>
+            <button id="modal-linkedin-copy-helper-json-format-btn" type="button" class="px-4 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-white hover:bg-[#231738] transition-colors">Copy Supported JSON Format</button>
+          </div>
+          <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 text-xs text-cyan-50/90">
+            <div class="rounded-2xl border border-white/5 bg-[#120c1d] px-4 py-3 space-y-2">
+              <div class="text-[10px] uppercase tracking-widest text-cyan-200 font-bold">Install Steps</div>
+              <div>1. Open <code>chrome://extensions</code></div>
+              <div>2. Turn on Developer Mode</div>
+              <div>3. Click Load unpacked</div>
+              <div>4. Select <code>stellarsync/linkedin-export-helper</code></div>
+              <div>5. Open LinkedIn activity page</div>
+              <div>6. Click extension</div>
+              <div>7. Download JSON</div>
+              <div>8. Return to StellarSync and upload JSON</div>
+            </div>
+            <div class="rounded-2xl border border-white/5 bg-[#120c1d] px-4 py-3 space-y-2">
+              <div class="text-[10px] uppercase tracking-widest text-cyan-200 font-bold">Supported Export Envelope</div>
+              <div><code>source</code></div>
+              <div><code>generated_at</code></div>
+              <div><code>source_url</code></div>
+              <div><code>diagnostics.cardsDetected</code></div>
+              <div><code>diagnostics.itemsWithRawText</code></div>
+              <div><code>items[]</code> with post text, URL, date, metrics, and raw text</div>
+            </div>
+          </div>
+        </div>
         <div class="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-4">
           <div class="p-4 rounded-2xl bg-[#0f0a18] border border-white/5 space-y-3">
             <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Path A · Paste / Upload JSON</div>
             <div class="text-xs text-gray-300">Use this when you already have a capture JSON file or want to paste raw capture JSON directly.</div>
             <div class="flex flex-wrap gap-2">
               <button id="modal-linkedin-parse-json-btn" type="button" class="px-4 py-2 rounded-xl bg-[#231738] border border-white/5 text-xs font-bold text-white hover:bg-[#2d1b4e] transition-colors">Parse JSON</button>
-              <button id="modal-linkedin-import-captured-json-btn" type="button" class="px-4 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-white hover:bg-[#231738] transition-colors">Import Captured JSON</button>
+              <button id="modal-linkedin-import-captured-json-btn" type="button" class="px-4 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-white hover:bg-[#231738] transition-colors">Upload JSON from Export Helper</button>
+              <button id="modal-linkedin-import-export-btn" type="button" class="px-4 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-white hover:bg-[#231738] transition-colors" disabled>Import this export</button>
               <button id="modal-linkedin-test-backend-route-btn" type="button" class="px-4 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-white hover:bg-[#231738] transition-colors">Test Backend Import Route</button>
             </div>
           </div>
@@ -2679,8 +2717,9 @@
           </div>
           <div class="space-y-3">
             <div id="linkedin-import-json-upload-shell">
-              <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2">Upload capture JSON</label>
+              <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2">Upload JSON exported from StellarSync LinkedIn Export Helper</label>
               <input id="modal-linkedin-capture-file" type="file" accept="application/json,.json" class="form-input text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-[#231738] file:px-3 file:py-2 file:text-xs file:font-bold file:text-white">
+              <div class="text-[11px] text-gray-400 mt-2">Paste JSON from Export Helper here or upload the downloaded file, then click Parse JSON.</div>
             </div>
             <div>
               <label id="linkedin-import-url-label" class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2">Optional LinkedIn URL</label>
@@ -2695,6 +2734,13 @@
               Overwrite / update duplicates
             </label>
           </div>
+        </div>
+        <div id="modal-linkedin-export-detected" class="hidden rounded-2xl border border-white/10 bg-[#0f0a18] p-4 space-y-3">
+          <div class="flex items-center justify-between gap-3 flex-wrap">
+            <div class="text-sm font-bold text-white">Export Helper Detection</div>
+            <span class="diagnostic-chip">Preview Before Import</span>
+          </div>
+          <div id="modal-linkedin-export-detected-grid" class="grid grid-cols-1 md:grid-cols-5 gap-3"></div>
         </div>
         <div class="flex gap-2 flex-wrap">
           <button id="modal-linkedin-capture-preview-btn" type="button" class="px-4 py-2 rounded-xl bg-[#231738] border border-white/5 text-xs font-bold text-white hover:bg-[#2d1b4e] transition-colors">Parse</button>
@@ -3753,7 +3799,7 @@
 </div>
 <script>
 const APP_CONFIG = {
-  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbyFoguUInvkHsRjqGuHTX05i6sID75Taov_NO-0oEtdFSDiFw8uzFybzLGUGatJ8SbN/exec",
+  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbwTmOozLo9pbl-93m5tbIiAzZaeyXBGdP3GV3PVkzCDMKvpX5LZuwYOsyOC8OKfYDVf/exec",
   ENABLE_REMOTE_SYNC: true,
   STORAGE_KEY: "stellarsync_local_state_v5",
   SHELL_LAYOUT_KEY: "stellarsync_shell_layout_v2"
@@ -3865,6 +3911,7 @@ let existingPostImportPreviewItem = null;
 let linkedInCaptureParseDiagnostics = null;
 let linkedInImportMode = "text";
 let linkedInCaptureImportReport = null;
+let lastLinkedInRewriteDryRunReport = null;
 let semanticBridgeDensity = safeStorageGet("stellarsync_bridge_density") || "low";
 let currentSocialImportResult = null;
 let currentWorkspaceSettingsTab = "settings";
@@ -4003,14 +4050,21 @@ const linkedInImportUrlLabel = document.getElementById("linkedin-import-url-labe
 const linkedInImportJsonUploadShell = document.getElementById("linkedin-import-json-upload-shell");
 const linkedInParseJsonBtn = document.getElementById("modal-linkedin-parse-json-btn");
 const linkedInImportCapturedJsonBtn = document.getElementById("modal-linkedin-import-captured-json-btn");
+const linkedInImportExportBtn = document.getElementById("modal-linkedin-import-export-btn");
 const linkedInTestBackendRouteBtn = document.getElementById("modal-linkedin-test-backend-route-btn");
 const linkedInDownloadHelperBtn = document.getElementById("modal-linkedin-download-helper-btn");
+const linkedInDownloadHelperZipBtn = document.getElementById("modal-linkedin-download-helper-zip-btn");
+const linkedInOpenHelperReadmeBtn = document.getElementById("modal-linkedin-open-helper-readme-btn");
+const linkedInCopyHelperInstallBtn = document.getElementById("modal-linkedin-copy-helper-install-btn");
+const linkedInCopyHelperJsonFormatBtn = document.getElementById("modal-linkedin-copy-helper-json-format-btn");
 const linkedInValidateHelperBtn = document.getElementById("modal-linkedin-validate-helper-btn");
 const linkedInSelectScriptBtn = document.getElementById("modal-linkedin-select-script-btn");
 const linkedInCapturePreviewBtn = document.getElementById("modal-linkedin-capture-preview-btn");
 const linkedInCaptureImportBtn = document.getElementById("modal-linkedin-capture-import-btn");
 const linkedInCaptureDiagnosticsEl = document.getElementById("modal-linkedin-capture-diagnostics");
 const linkedInCaptureParseSummaryEl = document.getElementById("modal-linkedin-capture-parse-summary");
+const linkedInExportDetectedEl = document.getElementById("modal-linkedin-export-detected");
+const linkedInExportDetectedGridEl = document.getElementById("modal-linkedin-export-detected-grid");
 const linkedInCapturePreviewEl = document.getElementById("modal-linkedin-capture-preview");
 const linkedInCaptureSelectAllBtn = document.getElementById("modal-linkedin-select-all-btn");
 const linkedInCaptureDeselectAllBtn = document.getElementById("modal-linkedin-deselect-all-btn");
@@ -6425,17 +6479,50 @@ function initApp() {
   });
   linkedInImportCapturedJsonBtn?.addEventListener("click", () => {
     setLinkedInImportMode("json");
-    linkedInCaptureInput?.focus();
-    showToast("JSON mode", "Upload or paste capture JSON, then click Parse.", "ph-file-json", "text-[#00ffaa]");
+    if (linkedInCaptureFileInput) linkedInCaptureFileInput.click();
+    else linkedInCaptureInput?.focus();
+    showToast("JSON mode", "Upload JSON from Export Helper or paste JSON from Export Helper, then click Parse JSON.", "ph-file-json", "text-[#00ffaa]");
+  });
+  linkedInImportExportBtn?.addEventListener("click", () => {
+    setLinkedInImportMode("json");
+    importSelectedLinkedInCaptureItems();
   });
   linkedInTestBackendRouteBtn?.addEventListener("click", testLinkedInBackendImportRoute);
   linkedInDownloadHelperBtn?.addEventListener("click", downloadLinkedInCaptureHelper);
+  linkedInDownloadHelperZipBtn?.addEventListener("click", () => {
+    showToast("ZIP ready", "Download the packaged helper ZIP, then load it unpacked in Chrome extensions.", "ph-download-simple", "text-[#00ffaa]");
+  });
+  linkedInOpenHelperReadmeBtn?.addEventListener("click", () => {
+    showToast("README opened", "The helper README opens in a new tab.", "ph-book-open", "text-[#00ffaa]");
+  });
+  linkedInCopyHelperInstallBtn?.addEventListener("click", () => {
+    copyTextToClipboardWithToast(
+      LINKEDIN_EXPORT_HELPER_INSTALL_STEPS,
+      "Install steps copied",
+      "Chrome extension install steps copied to clipboard.",
+      "Copy failed",
+      "Could not copy the install steps."
+    );
+  });
+  linkedInCopyHelperJsonFormatBtn?.addEventListener("click", () => {
+    copyTextToClipboardWithToast(
+      LINKEDIN_EXPORT_HELPER_JSON_FORMAT,
+      "JSON format copied",
+      "Supported Export Helper JSON envelope copied to clipboard.",
+      "Copy failed",
+      "Could not copy the JSON format."
+    );
+  });
   linkedInValidateHelperBtn?.addEventListener("click", () => {
     renderLinkedInHelperValidation(validateLinkedInCaptureHelperScript(String(linkedInUserscriptOutput?.value || "")));
   });
   linkedInSelectScriptBtn?.addEventListener("click", selectLinkedInCaptureScript);
   linkedInCapturePreviewBtn?.addEventListener("click", previewLinkedInBrowserCaptureImport);
   linkedInCaptureImportBtn?.addEventListener("click", importSelectedLinkedInCaptureItems);
+  linkedInCaptureFileInput?.addEventListener("change", () => {
+    setLinkedInImportMode("json");
+    previewLinkedInBrowserCaptureImport();
+  });
   linkedInCaptureSelectAllBtn?.addEventListener("click", () => setLinkedInCaptureSelection(true));
   linkedInCaptureDeselectAllBtn?.addEventListener("click", () => setLinkedInCaptureSelection(false));
   linkedInCopyScriptBtn?.addEventListener("click", copyLinkedInCaptureSnippet);
@@ -6449,6 +6536,8 @@ function initApp() {
     });
   });
   ensureLinkedInCaptureSnippets();
+  setLinkedInRewriteApplyEnabled(false);
+  updateLinkedInImportActionState();
 
   setupCalendarControls();
   setupMediaFilters();
@@ -6616,6 +6705,7 @@ function openLinkedInBulkImportModal() {
   setLinkedInImportMode("text");
   ensureLinkedInCaptureSnippets();
   updateLinkedInImportResultPanel({ visible: false });
+  renderLinkedInExportDetectedSummary(null);
   renderLinkedInCapturePreview();
   linkedInCaptureInput?.focus();
 }
@@ -6634,6 +6724,7 @@ function closeLinkedInBulkImportModal() {
     linkedInCaptureParseDiagnostics = null;
     linkedInCaptureImportReport = null;
     updateLinkedInImportResultPanel({ visible: false });
+    renderLinkedInExportDetectedSummary(null);
     renderLinkedInCapturePreview();
   }, 200);
 }
@@ -6648,8 +6739,8 @@ function setLinkedInImportMode(mode = "text") {
       urlLabel: "Optional LinkedIn URL found on the page"
     },
     json: {
-      helper: "Upload capture JSON or paste browser-capture JSON from the local helper. StellarSync cannot inspect another browser tab directly from this page.",
-      label: "Paste browser-capture JSON",
+      helper: "Upload JSON exported from the StellarSync LinkedIn Export Helper or paste JSON from Export Helper directly. StellarSync cannot inspect another browser tab directly from this page.",
+      label: "Paste JSON from Export Helper",
       placeholder: "Paste the downloaded browser-capture JSON here.",
       urlLabel: "Optional LinkedIn URL for context"
     },
@@ -7085,34 +7176,54 @@ function setupWorkspaceUI() {
       showToast("Repair failed", err.message || "Could not repair date fields.", "ph-warning", "text-yellow-400");
     }
   });
+  linkedInRewriteStartRowInput?.addEventListener("input", invalidateLinkedInRewriteDryRun);
+  linkedInRewriteEndRowInput?.addEventListener("input", invalidateLinkedInRewriteDryRun);
   linkedInRewriteDryRunBtn?.addEventListener("click", async () => {
+    invalidateLinkedInRewriteDryRun();
+    if (cleanupImportedLinkedInStatus) cleanupImportedLinkedInStatus.textContent = "Running dry run rewrite…";
     try {
       const payload = getLinkedInRewritePayload(true);
       const dryRun = await apiRewriteImportedLinkedInRows(payload);
       renderImportedLinkedInCleanupReport(dryRun, "dryRun");
+      if (isLinkedInRewriteReport(dryRun)) {
+        lastLinkedInRewriteDryRunReport = dryRun;
+        setLinkedInRewriteApplyEnabled(true);
+      }
       showToast("Rewrite preview ready", `${dryRun?.affectedRows || 0} row${dryRun?.affectedRows === 1 ? "" : "s"} would be updated.`, "ph-check", "text-[#00ffaa]");
     } catch (err) {
       console.error(err);
-      renderImportedLinkedInCleanupReport(null);
-      if (cleanupImportedLinkedInStatus) cleanupImportedLinkedInStatus.textContent = err.message || "Could not preview imported LinkedIn rewrite.";
+      renderImportedLinkedInCleanupReport(err?.backend || { error: err.message || "Could not preview imported LinkedIn rewrite." }, "dryRun");
+      const invalidAction = /invalid action/i.test(err?.backend?.error || err?.message || "");
+      if (cleanupImportedLinkedInStatus) cleanupImportedLinkedInStatus.textContent = invalidAction
+        ? "Backend rewrite route is not deployed or APP_SCRIPT_URL points to the wrong Apps Script deployment."
+        : (err.message || "Could not preview imported LinkedIn rewrite.");
       showToast("Rewrite preview failed", err.message || "Could not preview imported LinkedIn rewrite.", "ph-warning", "text-yellow-400");
     }
   });
   linkedInRewriteRouteTestBtn?.addEventListener("click", async () => {
+    if (cleanupImportedLinkedInStatus) cleanupImportedLinkedInStatus.textContent = "Testing rewrite route with backend-only dry run…";
     try {
       const report = await apiTestRewriteImportedLinkedInRowsRoute();
-      renderLinkedInRewriteRouteDiagnostics(report);
-      showToast("Rewrite route ready", "Backend rewrite route diagnostics loaded.", "ph-check", "text-[#00ffaa]");
+      renderImportedLinkedInCleanupReport(report, "routeTest");
+      showToast("Rewrite route ready", "Test rewrite route rendered the backend response.", "ph-check", "text-[#00ffaa]");
     } catch (err) {
       console.error(err);
-      if (linkedInRewriteRouteStatus) linkedInRewriteRouteStatus.textContent = err.message || "Could not test rewrite route.";
+      const invalidAction = /invalid action/i.test(err?.backend?.error || err?.message || "");
+      if (linkedInRewriteRouteStatus) linkedInRewriteRouteStatus.textContent = invalidAction
+        ? "Backend rewrite route is not deployed or APP_SCRIPT_URL points to the wrong Apps Script deployment."
+        : (err.message || "Could not test rewrite route.");
+      renderImportedLinkedInCleanupReport(err?.backend || { error: err.message || "Could not test rewrite route." }, "routeTest");
       showToast("Rewrite route failed", err.message || "Could not test rewrite route.", "ph-warning", "text-yellow-400");
     }
   });
   linkedInRewriteApplyBtn?.addEventListener("click", async () => {
+    if (!isLinkedInRewriteReport(lastLinkedInRewriteDryRunReport)) {
+      if (cleanupImportedLinkedInStatus) cleanupImportedLinkedInStatus.textContent = "Run a valid dry run rewrite before applying changes.";
+      showToast("Dry run required", "Run a valid dry run rewrite before applying changes.", "ph-warning", "text-yellow-400");
+      return;
+    }
     try {
-      const previewPayload = getLinkedInRewritePayload(true);
-      const dryRun = await apiRewriteImportedLinkedInRows(previewPayload);
+      const dryRun = lastLinkedInRewriteDryRunReport;
       renderImportedLinkedInCleanupReport(dryRun, "dryRun");
       if (!(dryRun?.affectedRows || 0)) {
         showToast("No rewrite needed", "Dry run found no imported LinkedIn rows that need rewriting.", "ph-check", "text-[#00ffaa]");
@@ -7127,6 +7238,7 @@ function setupWorkspaceUI() {
       if (!confirmed) return;
       const liveResult = await apiRewriteImportedLinkedInRows(getLinkedInRewritePayload(false));
       renderImportedLinkedInCleanupReport(liveResult, "live");
+      invalidateLinkedInRewriteDryRun();
       await syncRemoteIfConfigured();
       await refreshBackendDiagnostics({ silent: true });
       renderWorkspaceHub();
@@ -7134,8 +7246,11 @@ function setupWorkspaceUI() {
       showToast("Rewrite complete", `${liveResult?.affectedRows || 0} rows updated.${liveResult?.backupSheetName ? ` Backup: ${liveResult.backupSheetName}` : ""}`, "ph-check", "text-[#00ffaa]");
     } catch (err) {
       console.error(err);
-      renderImportedLinkedInCleanupReport(null);
-      if (cleanupImportedLinkedInStatus) cleanupImportedLinkedInStatus.textContent = err.message || "Could not rewrite imported LinkedIn rows.";
+      renderImportedLinkedInCleanupReport(err?.backend || { error: err.message || "Could not rewrite imported LinkedIn rows." }, "live");
+      const invalidAction = /invalid action/i.test(err?.backend?.error || err?.message || "");
+      if (cleanupImportedLinkedInStatus) cleanupImportedLinkedInStatus.textContent = invalidAction
+        ? "Backend rewrite route is not deployed or APP_SCRIPT_URL points to the wrong Apps Script deployment."
+        : (err.message || "Could not rewrite imported LinkedIn rows.");
       showToast("Rewrite failed", err.message || "Could not rewrite imported LinkedIn rows.", "ph-warning", "text-yellow-400");
     }
   });
@@ -9651,6 +9766,15 @@ function renderLinkedInRewriteRouteDiagnostics(report) {
   if (!linkedInRewriteRouteStatus) return;
   if (!report) {
     linkedInRewriteRouteStatus.textContent = "Rewrite route diagnostics unavailable.";
+    return;
+  }
+  if (isLinkedInRewriteReport(report)) {
+    linkedInRewriteRouteStatus.textContent = [
+      `rewriteImportedLinkedInRows responded: Yes`,
+      `backendVersion: ${report.backendVersion || "Unavailable"}`,
+      `action: ${report.action || "Unavailable"}`,
+      `dryRun: ${String(report.dryRun !== false)}`
+    ].join(" • ");
     return;
   }
   linkedInRewriteRouteStatus.textContent = [
@@ -12709,6 +12833,31 @@ function renderLinkedInHelperValidation(result) {
   linkedInHelperValidationEl.className = `text-[11px] leading-relaxed ${result?.ok ? "text-[#00ffaa]" : "text-yellow-300"}`;
 }
 
+const LINKEDIN_EXPORT_HELPER_INSTALL_STEPS = [
+  "1. Open chrome://extensions",
+  "2. Turn on Developer Mode",
+  "3. Click Load unpacked",
+  "4. Select stellarsync/linkedin-export-helper",
+  "5. Open LinkedIn activity page",
+  "6. Click extension",
+  "7. Download JSON",
+  "8. Return to StellarSync and upload JSON"
+].join("\n");
+
+const LINKEDIN_EXPORT_HELPER_JSON_FORMAT = JSON.stringify({
+  source: "linkedin_browser_capture",
+  generated_at: "2026-05-18T00:00:00.000Z",
+  source_url: "https://www.linkedin.com/...",
+  diagnostics: {
+    cardsDetected: 0,
+    itemsDetected: 0,
+    itemsWithRawText: 0,
+    selectorsUsed: [],
+    skippedCount: 0
+  },
+  items: []
+}, null, 2);
+
 function ensureLinkedInCaptureSnippets() {
   const script = getLinkedInBrowserCaptureScript();
   if (linkedInUserscriptOutput) linkedInUserscriptOutput.value = script;
@@ -12763,6 +12912,80 @@ function downloadLinkedInCaptureHelper() {
   anchor.click();
   setTimeout(() => URL.revokeObjectURL(downloadUrl), 1500);
   showToast("Downloaded", "Helper downloaded. Run it in the LinkedIn browser tab Console, not Terminal.", "ph-download-simple", "text-[#00ffaa]");
+}
+
+async function copyTextToClipboardWithToast(text, successTitle, successMessage, failureTitle, failureMessage) {
+  try {
+    await navigator.clipboard.writeText(String(text || ""));
+    showToast(successTitle, successMessage, "ph-copy", "text-[#00ffaa]");
+  } catch (err) {
+    console.error(err);
+    showToast(failureTitle, failureMessage, "ph-warning", "text-yellow-400");
+  }
+}
+
+function setLinkedInRewriteApplyEnabled(enabled) {
+  if (!linkedInRewriteApplyBtn) return;
+  linkedInRewriteApplyBtn.disabled = !enabled;
+  linkedInRewriteApplyBtn.classList.toggle("opacity-50", !enabled);
+  linkedInRewriteApplyBtn.classList.toggle("cursor-not-allowed", !enabled);
+}
+
+function invalidateLinkedInRewriteDryRun() {
+  lastLinkedInRewriteDryRunReport = null;
+  setLinkedInRewriteApplyEnabled(false);
+}
+
+function safePrettyJson(value) {
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch (_) {
+    return String(value || "");
+  }
+}
+
+function isLinkedInRewriteReport(report) {
+  return !!report && typeof report === "object" && (
+    report.action === "rewriteImportedLinkedInRows"
+    || Object.prototype.hasOwnProperty.call(report, "affectedRows")
+    || Object.prototype.hasOwnProperty.call(report, "sampleBeforeAfter")
+  );
+}
+
+function renderLinkedInExportDetectedSummary(diagnostics = null) {
+  if (!linkedInExportDetectedEl || !linkedInExportDetectedGridEl) return;
+  const source = String(diagnostics?.source || diagnostics?.sourceTypeDetected || "").trim();
+  const generatedAt = String(diagnostics?.generatedAt || "").trim();
+  const cardsDetected = Number(diagnostics?.cardsDetected || 0);
+  const itemsWithRawText = Number(diagnostics?.itemsWithRawText || 0);
+  const itemCount = Number(diagnostics?.itemCount ?? diagnostics?.itemsDetected ?? 0);
+  const hasSummary = Boolean(source || generatedAt || itemCount || cardsDetected || itemsWithRawText);
+  linkedInExportDetectedEl.classList.toggle("hidden", !hasSummary);
+  if (!hasSummary) {
+    linkedInExportDetectedGridEl.innerHTML = "";
+    return;
+  }
+  linkedInExportDetectedGridEl.innerHTML = [
+    ["Source", source || "Unavailable"],
+    ["Generated At", generatedAt || "Unavailable"],
+    ["Cards Detected", String(cardsDetected)],
+    ["Items With Raw Text", String(itemsWithRawText)],
+    ["Item Count", String(itemCount)]
+  ].map(([label, value]) => `
+    <div class="p-3 rounded-xl bg-[#181125] border border-white/5">
+      <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">${escapeHtml(label)}</div>
+      <div class="text-sm text-white wrap-safe">${escapeHtml(value)}</div>
+    </div>
+  `).join("");
+}
+
+function updateLinkedInImportActionState() {
+  const hasPreviewItems = Array.isArray(linkedInCapturePreviewItems) && linkedInCapturePreviewItems.length > 0;
+  if (linkedInImportExportBtn) {
+    linkedInImportExportBtn.disabled = !hasPreviewItems;
+    linkedInImportExportBtn.classList.toggle("opacity-50", !hasPreviewItems);
+    linkedInImportExportBtn.classList.toggle("cursor-not-allowed", !hasPreviewItems);
+  }
 }
 
 function extractUrlsFromText(value) {
@@ -12952,18 +13175,50 @@ function buildCaptureTitle(text, url) {
 function parseLinkedInCaptureJson(raw) {
   try {
     const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) return { items: parsed, sourceType: "json_array", diagnostics: parsed?.length ? parsed.diagnostics || {} : {} };
-    if (Array.isArray(parsed?.items)) return { items: parsed.items, sourceType: parsed?.source || "items_object", diagnostics: parsed?.diagnostics || {} };
-    if (Array.isArray(parsed?.posts)) return { items: parsed.posts, sourceType: "posts_object", diagnostics: parsed?.diagnostics || {} };
+    if (Array.isArray(parsed)) return { items: parsed, sourceType: "json_array", diagnostics: parsed?.length ? parsed.diagnostics || {} : {}, envelope: {} };
+    if (Array.isArray(parsed?.items)) return {
+      items: parsed.items,
+      sourceType: parsed?.source || "items_object",
+      diagnostics: parsed?.diagnostics || {},
+      envelope: {
+        source: String(parsed?.source || "").trim(),
+        generatedAt: String(parsed?.generated_at || parsed?.generatedAt || "").trim(),
+        sourceUrl: String(parsed?.source_url || parsed?.sourceUrl || "").trim()
+      }
+    };
+    if (Array.isArray(parsed?.posts)) return {
+      items: parsed.posts,
+      sourceType: "posts_object",
+      diagnostics: parsed?.diagnostics || {},
+      envelope: {
+        source: String(parsed?.source || "").trim(),
+        generatedAt: String(parsed?.generated_at || parsed?.generatedAt || "").trim(),
+        sourceUrl: String(parsed?.source_url || parsed?.sourceUrl || "").trim()
+      }
+    };
     if (parsed && typeof parsed === "object" && (parsed.rawText || parsed.raw_text || parsed.pageText || parsed.page_text)) {
       return {
         items: [],
         sourceType: parsed?.source || "json_page_text",
         diagnostics: parsed?.diagnostics || {},
-        rawText: String(parsed.rawText || parsed.raw_text || parsed.pageText || parsed.page_text || "")
+        rawText: String(parsed.rawText || parsed.raw_text || parsed.pageText || parsed.page_text || ""),
+        envelope: {
+          source: String(parsed?.source || "").trim(),
+          generatedAt: String(parsed?.generated_at || parsed?.generatedAt || "").trim(),
+          sourceUrl: String(parsed?.source_url || parsed?.sourceUrl || "").trim()
+        }
       };
     }
-    if (parsed && typeof parsed === "object") return { items: [parsed], sourceType: parsed?.source || "single_object", diagnostics: parsed?.diagnostics || {} };
+    if (parsed && typeof parsed === "object") return {
+      items: [parsed],
+      sourceType: parsed?.source || "single_object",
+      diagnostics: parsed?.diagnostics || {},
+      envelope: {
+        source: String(parsed?.source || "").trim(),
+        generatedAt: String(parsed?.generated_at || parsed?.generatedAt || "").trim(),
+        sourceUrl: String(parsed?.source_url || parsed?.sourceUrl || "").trim()
+      }
+    };
   } catch (_) {}
   return null;
 }
@@ -13213,8 +13468,12 @@ function parseLinkedInCaptureInputDetailed(raw, urlInput = "") {
     sourceType = urlInput && !primary ? "urls_only" : "pasted_text";
   }
   const diagnostics = {
+    source: String(jsonPayload?.envelope?.source || "").trim(),
+    generatedAt: String(jsonPayload?.envelope?.generatedAt || "").trim(),
+    sourceUrl: String(jsonPayload?.envelope?.sourceUrl || "").trim(),
     sourceTypeDetected: sourceType,
     itemsDetected: items.length,
+    itemCount: items.length,
     itemsWithText: items.filter((item) => String(item.description || "").trim()).length,
     itemsSkipped: textDiagnostics?.itemsSkipped || 0,
     skippedReasons: items.length ? (textDiagnostics?.skippedReasons || []) : ["No LinkedIn posts were detected from the provided input."].concat(textDiagnostics?.skippedReasons || []),
@@ -13247,6 +13506,8 @@ function renderLinkedInCapturePreview() {
       ? "LinkedIn URLs are saved as source links only. Paste the post text or browser capture JSON to import content."
       : "Open your LinkedIn activity page in another tab, copy visible page text or run the local capture script, then paste the result here.";
     if (linkedInCaptureParseSummaryEl) linkedInCaptureParseSummaryEl.textContent = "";
+    renderLinkedInExportDetectedSummary(linkedInCaptureParseDiagnostics);
+    updateLinkedInImportActionState();
     linkedInCapturePreviewEl.innerHTML = "";
     return;
   }
@@ -13262,6 +13523,8 @@ function renderLinkedInCapturePreview() {
   if (linkedInCaptureParseSummaryEl) {
     const summary = linkedInCaptureParseDiagnostics || {};
     linkedInCaptureParseSummaryEl.textContent = [
+      summary.source ? `Source: ${summary.source}` : "",
+      summary.generatedAt ? `Generated at: ${summary.generatedAt}` : "",
       `Source type: ${summary.sourceTypeDetected || linkedInImportMode}`,
       `Items detected: ${summary.itemsDetected ?? linkedInCapturePreviewItems.length}`,
       `Items with text: ${summary.itemsWithText ?? linkedInCapturePreviewItems.filter((item) => item.description).length}`,
@@ -13278,6 +13541,8 @@ function renderLinkedInCapturePreview() {
       Array.isArray(summary.skippedReasons) && summary.skippedReasons.length ? `Skipped reasons: ${summary.skippedReasons.join(" | ")}` : ""
     ].filter(Boolean).join(" • ");
   }
+  renderLinkedInExportDetectedSummary(linkedInCaptureParseDiagnostics);
+  updateLinkedInImportActionState();
   linkedInCapturePreviewEl.innerHTML = linkedInCapturePreviewItems.map((item) => {
     const duplicate = item.duplicate;
     const metrics = [`${item.metrics.impressions || 0} impressions`, `${item.metrics.likes} reactions`, `${item.metrics.comments} comments`, `${item.metrics.shares} reposts`].join(" • ");
@@ -14904,12 +15169,22 @@ function renderImportedLinkedInCleanupReport(report, mode = "dryRun") {
   renderLinkedInRewriteRouteDiagnostics(report?.routeDiagnostics || backendDiagnostics?.linkedInRewriteRouteDiagnostics || null);
   if (cleanupImportedLinkedInStatus) {
     cleanupImportedLinkedInStatus.textContent = report
-      ? `${mode === "live" ? "Live rewrite" : "Dry run"} scanned ${report.scannedRows || 0} rows, found ${report.candidateRows || 0} import candidates, and ${mode === "live" ? "updated" : "would update"} ${report.affectedRows || 0} rows across ${report.changedCells || 0} cells.${report.backupSheetName ? ` Backup tab: ${report.backupSheetName}.` : report.backupWouldBeCreated ? " Backup tab will be created before live rewrite." : ""}`
+      ? `${mode === "live" ? "Live rewrite" : mode === "routeTest" ? "Route test" : "Dry run"} uses the backend-only parser. Scanned ${report.scannedRows || 0} rows, found ${report.candidateRows || 0} import candidates, and ${mode === "live" ? "updated" : "would update"} ${report.affectedRows || 0} rows across ${report.changedCells || 0} cells.${report.backupSheetName ? ` Backup tab: ${report.backupSheetName}.` : report.backupWouldBeCreated ? " Backup tab will be created before live rewrite." : ""}`
       : "Run a dry run to preview LinkedIn rewrite changes.";
   }
   if (!cleanupImportedLinkedInPreview) return;
   if (!report) {
     cleanupImportedLinkedInPreview.innerHTML = "";
+    return;
+  }
+  if (!isLinkedInRewriteReport(report)) {
+    cleanupImportedLinkedInPreview.innerHTML = `
+      <div class="platform-card overflow-hidden">
+        <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3">Raw Rewrite Response</div>
+        <div class="text-xs text-gray-300 mb-3 wrap-safe">The backend returned a response, but it did not match the expected rewrite report shape.</div>
+        <pre class="p-3 rounded-xl bg-[#181125] border border-white/5 text-[11px] text-gray-300 overflow-x-auto whitespace-pre-wrap">${escapeHtml(safePrettyJson(report))}</pre>
+      </div>
+    `;
     return;
   }
   const samples = Array.isArray(report.sampleBeforeAfter) ? report.sampleBeforeAfter : [];
@@ -14920,6 +15195,24 @@ function renderImportedLinkedInCleanupReport(report, mode = "dryRun") {
       <div class="flex items-center justify-between gap-3 mb-3">
         <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${escapeHtml(mode === "live" ? "Imported LinkedIn Rewrite Applied" : "Imported LinkedIn Rewrite Dry Run")}</div>
         <span class="diagnostic-chip">${escapeHtml(`Rows ${report.startRow || 1006}${report.endRow ? `-${report.endRow}` : "+"}`)}</span>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+        ${[
+          ["backendVersion", report.backendVersion || "Unavailable"],
+          ["action", report.action || "Unavailable"],
+          ["dryRun", String(report.dryRun !== false)],
+          ["startRow", String(report.startRow || 1006)],
+          ["endRow", report.endRow === "" || report.endRow == null ? "All remaining rows" : String(report.endRow)],
+          ["affectedRows", String(report.affectedRows || 0)],
+          ["changedCells", String(report.changedCells || 0)],
+          ["backupSheetName", report.backupSheetName || "None"],
+          ["sampleBeforeAfter", String(samples.length)]
+        ].map(([label, value]) => `
+          <div class="p-3 rounded-xl bg-[#181125] border border-white/5">
+            <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">${escapeHtml(label)}</div>
+            <div class="text-sm text-white wrap-safe">${escapeHtml(value)}</div>
+          </div>
+        `).join("")}
       </div>
       <div class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-4">
         ${[
@@ -14944,11 +15237,10 @@ function renderImportedLinkedInCleanupReport(report, mode = "dryRun") {
           ${escapeHtml(report.backupSheetName ? `Backup tab created: ${report.backupSheetName}` : "Backup tab will be created before live rewrite.")}
         </div>
       ` : ""}
-      ${noRowsReasons.length ? `
-        <div class="mb-4 p-3 rounded-xl bg-[#181125] border border-white/5 text-xs text-gray-300 wrap-safe">
-          ${noRowsReasons.map((reason) => escapeHtml(reason)).join(" • ")}
-        </div>
-      ` : ""}
+      <div class="mb-4 p-3 rounded-xl bg-[#181125] border border-white/5 text-xs text-gray-300 wrap-safe">
+        <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">noRowsReasons</div>
+        ${noRowsReasons.length ? noRowsReasons.map((reason) => escapeHtml(reason)).join(" • ") : "None"}
+      </div>
       <div class="space-y-3">
         ${samples.length ? samples.map((sample) => `
           <div class="p-3 rounded-xl bg-[#181125] border border-white/5">
@@ -14968,16 +15260,20 @@ function renderImportedLinkedInCleanupReport(report, mode = "dryRun") {
               </div>
             </div>
           </div>
-        `).join("") : `<div class="text-xs text-gray-500">No sample rows to preview.</div>`}
+        `).join("") : `<div class="p-3 rounded-xl bg-[#181125] border border-white/5 text-xs text-gray-500">sampleBeforeAfter: None</div>`}
       </div>
-      ${errors.length ? `
-        <div class="mt-4 p-3 rounded-xl bg-[#251218] border border-red-400/15">
-          <div class="text-[10px] uppercase tracking-widest text-red-200 font-bold mb-2">Errors</div>
+      <div class="mt-4 p-3 rounded-xl ${errors.length ? "bg-[#251218] border border-red-400/15" : "bg-[#181125] border border-white/5"}">
+        <div class="text-[10px] uppercase tracking-widest ${errors.length ? "text-red-200" : "text-gray-500"} font-bold mb-2">errors</div>
+        ${errors.length ? `
           <div class="space-y-2">
             ${errors.slice(0, 8).map((item) => `<div class="text-xs text-red-100 wrap-safe">Row ${escapeHtml(String(item.row || ""))}: ${escapeHtml(item.error || "Unknown error")}</div>`).join("")}
           </div>
-        </div>
-      ` : ""}
+        ` : `<div class="text-xs text-gray-300 wrap-safe">None</div>`}
+      </div>
+      <div class="mt-4 p-3 rounded-xl bg-[#181125] border border-white/5">
+        <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Raw Safe Response</div>
+        <pre class="text-[11px] text-gray-300 overflow-x-auto whitespace-pre-wrap">${escapeHtml(safePrettyJson(report))}</pre>
+      </div>
     </div>
   `;
 }
@@ -16163,7 +16459,7 @@ async function apiRewriteImportedLinkedInRows(payload = {}) {
 }
 
 async function apiTestRewriteImportedLinkedInRowsRoute() {
-  return apiPost("testRewriteImportedLinkedInRowsRoute", {});
+  return apiRewriteImportedLinkedInRows({ dryRun: true, startRow: 1006, endRow: 1010, createBackup: true });
 }
 
 async function apiCleanupImportedLinkedInPosts(payload = {}) {
