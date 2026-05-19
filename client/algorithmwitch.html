@@ -3641,7 +3641,8 @@
           <section data-settings-panel="diagnostics" class="hidden space-y-4">
             <div class="flex items-center gap-2 flex-wrap">
               <button id="workspace-refresh-diagnostics-btn" type="button" class="px-4 py-2 rounded-xl bg-[#1a1128] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Refresh Diagnostics</button>
-              <button id="check-constellation-lanes-btn" type="button" class="px-4 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Check Constellation Lanes</button>
+              <button id="check-constellation-lanes-btn" type="button" class="px-4 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Check Constellation Overlaps</button>
+              <button id="audit-flow-integrity-btn" type="button" class="px-4 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Audit Flow Integrity</button>
               <button id="repair-date-fields-btn" type="button" class="px-4 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Repair Date Fields</button>
               <button id="workspace-open-accounts-from-diagnostics-btn" type="button" class="px-4 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Connected Accounts</button>
             </div>
@@ -3964,6 +3965,8 @@ const NODE_GAP_X = 220;
 const START_X = NODE_START_X;
 const NODE_SPACING = NODE_GAP_X;
 const LANE_LABEL_X = 74;
+const CONSTELLATION_OVERLAP_THRESHOLD = 90;
+const MAX_CONSTELLATION_COLLISION_PASSES = 20;
 let pinchStartDistance = 0;
 let pinchStartScale = 1;
 let pinchStartPanX = 0;
@@ -3973,6 +3976,7 @@ let selectedConstellationPostId = "";
 let activeConstellationPointers = new Map();
 let isResizingShell = false;
 let isSignalOverviewCollapsed = safeStorageGet(RIGHT_PANEL_COLLAPSED_KEY) === "true";
+let campaignLaneMap = new Map();
 
 let ledgerFilters = {
   pillar: "all",
@@ -4166,6 +4170,7 @@ const workspaceOpenBrandOsBtn = document.getElementById("workspace-open-brand-os
 const settingsOpenAccountsBtn = document.getElementById("settings-open-accounts-btn");
 const workspaceRefreshDiagnosticsBtn = document.getElementById("workspace-refresh-diagnostics-btn");
 const checkConstellationLanesBtn = document.getElementById("check-constellation-lanes-btn");
+const auditFlowIntegrityBtn = document.getElementById("audit-flow-integrity-btn");
 const workspaceOpenAccountsFromDiagnosticsBtn = document.getElementById("workspace-open-accounts-from-diagnostics-btn");
 const repairDateFieldsBtn = document.getElementById("repair-date-fields-btn");
 const repairDateFieldsStatus = document.getElementById("repair-date-fields-status");
@@ -6822,7 +6827,12 @@ async function saveNoteFromModal() {
     suggestedPlatform,
     suggestedPillar,
     status: "active",
+    flowState: "active",
     convertedPostId: "",
+    sourceNoteId: noteId,
+    createdFromFlow: "manual",
+    movedToPostAt: "",
+    archivedAt: "",
     sourceUrl,
     sourcePlatform: detectSourcePlatform(sourceUrl),
     sourceLabel: deriveSourceLabel(sourceUrl)
@@ -6922,7 +6932,13 @@ async function saveInspoFromModal() {
     sourceLabel: deriveSourceLabel(url),
     domainOrMeta: deriveDomainLabel(url),
     url,
-    notes
+    notes,
+    status: "active",
+    flowState: "active",
+    convertedPostId: "",
+    createdFromFlow: "manual",
+    movedToPostAt: "",
+    archivedAt: ""
   };
 
   appState.inspo.unshift(localItem);
@@ -7152,6 +7168,37 @@ function setupWorkspaceUI() {
     refreshBackendDiagnostics().then(() => renderWorkspaceHub()).catch(() => undefined);
   });
   checkConstellationLanesBtn?.addEventListener("click", runConstellationLaneDiagnostics);
+  auditFlowIntegrityBtn?.addEventListener("click", () => {
+    refreshBackendDiagnostics().then(() => {
+      renderWorkspaceHub();
+      const flow = backendDiagnostics?.flowIntegrityDiagnostics || {};
+      const warningCount = [
+        flow.postsMissingSourceReferences,
+        flow.inspoConvertedWithoutPosts,
+        flow.notesDuplicatedIntoPosts,
+        flow.orphanConstellationCampaignRefs,
+        flow.postsNotAppearingInLedger,
+        flow.scheduledPostsMissingCalendarEntries,
+        flow.campaignRowsWithZeroPosts,
+        flow.postsMissingQueuePlacement,
+        flow.duplicateImportedPosts
+      ].reduce((sum, items) => sum + ((Array.isArray(items) ? items.length : 0)), 0);
+      console.groupCollapsed("Flow integrity diagnostics");
+      console.log("Flow state counts", flow.stateCounts || {});
+      console.log("Posts missing source references", flow.postsMissingSourceReferences || []);
+      console.log("Inspo converted without posts", flow.inspoConvertedWithoutPosts || []);
+      console.log("Notes duplicated into posts", flow.notesDuplicatedIntoPosts || []);
+      console.log("Orphan constellation campaign refs", flow.orphanConstellationCampaignRefs || []);
+      console.log("Posts not appearing in Ledger", flow.postsNotAppearingInLedger || []);
+      console.log("Scheduled posts missing Calendar entries", flow.scheduledPostsMissingCalendarEntries || []);
+      console.log("Campaign rows with zero posts", flow.campaignRowsWithZeroPosts || []);
+      console.log("Posts missing Queue placement", flow.postsMissingQueuePlacement || []);
+      console.log("Duplicate imported posts", flow.duplicateImportedPosts || []);
+      console.log("Flow event log", flow.flowEventLog || []);
+      console.groupEnd();
+      showToast("Flow audit complete", warningCount ? `${warningCount} flow warnings logged to console.` : "No flow integrity warnings detected.", warningCount ? "ph-warning" : "ph-check", warningCount ? "text-yellow-400" : "text-[#00ffaa]");
+    }).catch(() => undefined);
+  });
   repairDateFieldsBtn?.addEventListener("click", async () => {
     const preview = backendDiagnostics?.dateRepairPreview || {};
     if (!preview.safeToRepair) {
@@ -7178,6 +7225,26 @@ function setupWorkspaceUI() {
   });
   linkedInRewriteStartRowInput?.addEventListener("input", invalidateLinkedInRewriteDryRun);
   linkedInRewriteEndRowInput?.addEventListener("input", invalidateLinkedInRewriteDryRun);
+  workspaceDiagnosticsPanel?.addEventListener("click", async (event) => {
+    const repairButton = event.target.closest("[data-flow-repair]");
+    if (!repairButton) return;
+    const repairAction = repairButton.dataset.flowRepair || "";
+    if (!repairAction) return;
+    repairButton.setAttribute("disabled", "disabled");
+    try {
+      await apiRepairFlowIntegrity({ repairAction });
+      await syncRemoteIfConfigured();
+      await refreshBackendDiagnostics({ silent: true });
+      renderWorkspaceHub();
+      rerenderAll();
+      showToast("Flow repair complete", repairAction.replace(/_/g, " "), "ph-check", "text-[#00ffaa]");
+    } catch (err) {
+      console.error(err);
+      showToast("Flow repair failed", err?.message || "Could not repair flow integrity.", "ph-warning", "text-yellow-400");
+    } finally {
+      repairButton.removeAttribute("disabled");
+    }
+  });
   linkedInRewriteDryRunBtn?.addEventListener("click", async () => {
     invalidateLinkedInRewriteDryRun();
     if (cleanupImportedLinkedInStatus) cleanupImportedLinkedInStatus.textContent = "Running dry run rewrite…";
@@ -8273,7 +8340,7 @@ function buildConstellationRows() {
       _uncategorizedIndex: 0
     });
   }
-  const laneMap = new Map();
+  campaignLaneMap = new Map();
   const laneOccupancy = new Map();
   let appendedLaneIndex = Math.max(...Object.values(CAMPAIGN_ROWS)) + 1;
   const getNextAvailableLaneIndex = (preferredLaneIndex = null) => {
@@ -8315,7 +8382,7 @@ function buildConstellationRows() {
     const laneKey = getConstellationCampaignLaneKey(campaign) || `__uncategorized__${Number(campaign._uncategorizedIndex || 0)}`;
     const preferredLaneIndex = getPreferredLaneIndex(campaign);
     const rowIndex = getNextAvailableLaneIndex(preferredLaneIndex);
-    if (laneMap.has(laneKey)) {
+    if (campaignLaneMap.has(laneKey)) {
       console.warn("Constellation duplicate lane assignment key detected.", {
         laneKey,
         campaignId: campaign.campaignId || "",
@@ -8323,7 +8390,7 @@ function buildConstellationRows() {
         rowIndex
       });
     }
-    laneMap.set(laneKey, rowIndex);
+    campaignLaneMap.set(laneKey, rowIndex);
     laneOccupancy.set(rowIndex, laneKey);
 
     return {
@@ -8335,26 +8402,7 @@ function buildConstellationRows() {
       _constellationLayout: getConstellationLayoutConfig({ ...campaign, posts, _constellationRowIndex: rowIndex }, rowIndex)
     };
   });
-  return mapped.map((campaign, index) => {
-    const rowIndex = Number(campaign._constellationRowIndex || index);
-    const layout = getConstellationLayoutConfig({ ...campaign, _constellationRowIndex: rowIndex }, rowIndex);
-    const anchor = {
-      x: getConstellationLaneCenterX(layout),
-      y: getCampaignBaseY(rowIndex)
-    };
-    return {
-      ...campaign,
-      _constellationAnchor: {
-        x: Math.max(anchor.x, START_X),
-        y: clamp(anchor.y, 180, 6000)
-      },
-      _constellationLayout: layout,
-      _constellationFootprint: {
-        width: layout.rowLength + layout.labelWidth + 420,
-        height: ROW_HEIGHT
-      }
-    };
-  });
+  return resolveConstellationCampaignLaneCollisions(mapped);
 }
 
 function normalizeCampaignLaneKey(value = "") {
@@ -8456,16 +8504,16 @@ function buildConstellationNodeLayoutSnapshot(rows = buildConstellationRows()) {
   };
 }
 
-function detectConstellationNodeOverlaps(snapshot = buildConstellationNodeLayoutSnapshot()) {
+function detectConstellationOverlaps(nodes = []) {
   const overlaps = [];
-  const entries = Array.isArray(snapshot?.entries) ? snapshot.entries : [];
+  const entries = Array.isArray(nodes?.entries) ? nodes.entries : Array.isArray(nodes) ? nodes : [];
   for (let index = 0; index < entries.length; index += 1) {
     for (let compareIndex = index + 1; compareIndex < entries.length; compareIndex += 1) {
       const first = entries[index];
       const second = entries[compareIndex];
       const deltaX = Math.abs(Number(first.x || 0) - Number(second.x || 0));
       const deltaY = Math.abs(Number(first.y || 0) - Number(second.y || 0));
-      if (deltaX < 40 && deltaY < 40) {
+      if (deltaX < CONSTELLATION_OVERLAP_THRESHOLD && deltaY < CONSTELLATION_OVERLAP_THRESHOLD) {
         overlaps.push({
           deltaX,
           deltaY,
@@ -8478,10 +8526,108 @@ function detectConstellationNodeOverlaps(snapshot = buildConstellationNodeLayout
   return overlaps;
 }
 
+function detectConstellationNodeOverlaps(snapshot = buildConstellationNodeLayoutSnapshot()) {
+  return detectConstellationOverlaps(snapshot);
+}
+
+function rebuildConstellationCampaignGeometry(campaign, index = 0) {
+  const rowIndex = Number(campaign?._constellationRowIndex ?? index) || 0;
+  const layout = getConstellationLayoutConfig({
+    ...campaign,
+    _constellationRowIndex: rowIndex,
+    _constellationLayout: null,
+    _constellationAnchor: null
+  }, rowIndex);
+  const anchor = {
+    x: getConstellationLaneCenterX(layout),
+    y: getCampaignBaseY(rowIndex)
+  };
+  return {
+    ...campaign,
+    _constellationRowIndex: rowIndex,
+    _constellationAnchor: {
+      x: Math.max(anchor.x, START_X),
+      y: clamp(anchor.y, 180, 6000)
+    },
+    _constellationLayout: layout,
+    _constellationFootprint: {
+      width: layout.rowLength + layout.labelWidth + 420,
+      height: ROW_HEIGHT
+    }
+  };
+}
+
+function resolveConstellationCampaignLaneCollisions(rows = []) {
+  const resolvedRows = (rows || []).map((campaign, index) => rebuildConstellationCampaignGeometry(campaign, index));
+  const movedCampaigns = [];
+  let passCount = 0;
+  let appendedLaneIndex = resolvedRows.reduce((maxLane, campaign, index) => {
+    return Math.max(maxLane, Number(campaign?._constellationRowIndex ?? index) || 0);
+  }, -1) + 1;
+
+  while (passCount < MAX_CONSTELLATION_COLLISION_PASSES) {
+    const snapshot = buildConstellationNodeLayoutSnapshot(resolvedRows);
+    const overlaps = detectConstellationOverlaps(snapshot.entries);
+    console.log("Constellation overlaps detected", {
+      pass: passCount + 1,
+      overlapCount: overlaps.length
+    });
+    const movedThisPass = new Set();
+
+    overlaps.forEach((overlap) => {
+      const firstKey = String(overlap?.first?.campaign_lane_key || "").trim();
+      const secondKey = String(overlap?.second?.campaign_lane_key || "").trim();
+      if (!firstKey || !secondKey || firstKey === secondKey || movedThisPass.has(secondKey)) return;
+
+      const targetIndex = resolvedRows.findIndex((campaign) => String(campaign?._constellationLaneKey || "").trim() === secondKey);
+      if (targetIndex === -1) return;
+
+      const previousLane = Number(resolvedRows[targetIndex]?._constellationRowIndex ?? overlap?.second?.lane_index ?? 0) || 0;
+      const nextLane = appendedLaneIndex;
+      appendedLaneIndex += 1;
+      resolvedRows[targetIndex] = rebuildConstellationCampaignGeometry({
+        ...resolvedRows[targetIndex],
+        _constellationRowIndex: nextLane,
+        y: getCampaignBaseY(nextLane)
+      }, targetIndex);
+      campaignLaneMap.set(secondKey, nextLane);
+      movedThisPass.add(secondKey);
+      movedCampaigns.push({
+        pass: passCount + 1,
+        campaignKey: secondKey,
+        campaignName: resolvedRows[targetIndex].campaignName || "Uncategorized",
+        movedFromLane: previousLane,
+        movedToLane: nextLane,
+        collidedWith: overlap?.first?.campaign_name || "Unknown"
+      });
+    });
+
+    console.log("Constellation campaigns moved", {
+      pass: passCount + 1,
+      movedCount: movedThisPass.size,
+      campaigns: movedCampaigns.filter((item) => item.pass === passCount + 1)
+    });
+
+    if (!overlaps.length || !movedThisPass.size) break;
+    passCount += 1;
+  }
+
+  resolvedRows.forEach((campaign, index) => {
+    const laneKey = String(campaign?._constellationLaneKey || "").trim();
+    if (laneKey) campaignLaneMap.set(laneKey, Number(campaign?._constellationRowIndex ?? index) || 0);
+  });
+  console.log("Constellation final lane count", {
+    laneCount: new Set(resolvedRows.map((campaign, index) => Number(campaign?._constellationRowIndex ?? index) || 0)).size,
+    passes: passCount + 1,
+    movedCampaigns
+  });
+  return resolvedRows;
+}
+
 function buildConstellationLaneDiagnostics() {
   const rows = buildConstellationRows();
   const overlapSnapshot = buildConstellationNodeLayoutSnapshot(rows);
-  const nodeOverlaps = detectConstellationNodeOverlaps(overlapSnapshot);
+  const nodeOverlaps = detectConstellationOverlaps(overlapSnapshot);
   const laneIndexes = new Map();
   const duplicateLanes = [];
   rows.forEach((campaign) => {
@@ -8538,15 +8684,30 @@ function buildConstellationLaneDiagnostics() {
   };
 }
 
+function formatConstellationOverlapPair(overlap = {}) {
+  const first = overlap.first || {};
+  const second = overlap.second || {};
+  return {
+    firstCampaign: first.campaign_name || "Uncategorized",
+    firstPost: first.title || first.post_id || "Untitled",
+    secondCampaign: second.campaign_name || "Uncategorized",
+    secondPost: second.title || second.post_id || "Untitled",
+    firstCoords: `(${Number(first.x || 0)}, ${Number(first.y || 0)})`,
+    secondCoords: `(${Number(second.x || 0)}, ${Number(second.y || 0)})`,
+    deltaX: Number(overlap.deltaX || 0),
+    deltaY: Number(overlap.deltaY || 0)
+  };
+}
+
 function getConstellationLaneCenterX(layout = {}) {
   return START_X + (Math.max(Number(layout.rowLength || 0), NODE_SPACING) / 2);
 }
 
 function getNodePosition(index, rowIndex) {
-  const x = START_X + (index * NODE_SPACING);
-  const yBase = getCampaignBaseY(rowIndex);
-  const y = yBase + (Math.sin(index * 0.9) * 36) + (Math.cos(index * 0.45) * 18);
-  return { x, y };
+  return {
+    x: START_X + (index * NODE_SPACING),
+    y: getCampaignBaseY(rowIndex)
+  };
 }
 
 function getConstellationAnchor(campaign, index) {
@@ -8879,7 +9040,7 @@ function renderConstellation() {
     canvas.appendChild(rowGroup);
   });
 
-  const overlapDiagnostics = detectConstellationNodeOverlaps(buildConstellationNodeLayoutSnapshot(rows));
+  const overlapDiagnostics = detectConstellationOverlaps(buildConstellationNodeLayoutSnapshot(rows));
   if (overlapDiagnostics.length) {
     console.warn("Constellation node overlaps detected after layout.", overlapDiagnostics);
   } else {
@@ -10125,15 +10286,18 @@ async function reassignInvalidComboCampaignPosts(button) {
 
 function runConstellationLaneDiagnostics() {
   const diagnostics = buildConstellationLaneDiagnostics();
-  console.groupCollapsed("Constellation lane diagnostics");
+  console.groupCollapsed("Constellation overlap diagnostics");
   console.table(diagnostics.rows);
   if (diagnostics.duplicateLanes.length) console.warn("Duplicate constellation lanes detected", diagnostics.duplicateLanes);
   if (diagnostics.missingCampaignIdButName.length) console.warn("Posts missing campaign_id but keeping campaign_name", diagnostics.missingCampaignIdButName);
   if (diagnostics.sameNormalizedNameDifferentIds.length) console.warn("Campaigns share normalized names with different IDs", diagnostics.sameNormalizedNameDifferentIds);
-  if (diagnostics.nodeOverlaps.length) console.warn("Constellation node overlaps detected", diagnostics.nodeOverlaps);
+  if (diagnostics.nodeOverlaps.length) {
+    console.warn("Constellation node overlaps detected", diagnostics.nodeOverlaps);
+    console.table(diagnostics.nodeOverlaps.map(formatConstellationOverlapPair));
+  }
   console.groupEnd();
   const issueCount = diagnostics.duplicateLanes.length + diagnostics.missingCampaignIdButName.length + diagnostics.sameNormalizedNameDifferentIds.length + diagnostics.nodeOverlaps.length;
-  showToast("Constellation lanes checked", issueCount ? `${issueCount} diagnostics warning${issueCount === 1 ? "" : "s"} logged to console.` : "No duplicate lane or overlap issues detected.", issueCount ? "ph-warning" : "ph-check", issueCount ? "text-yellow-400" : "text-[#00ffaa]");
+  showToast("Constellation overlaps checked", issueCount ? `${issueCount} diagnostics warning${issueCount === 1 ? "" : "s"} logged to console.` : "No duplicate lane or overlap issues detected.", issueCount ? "ph-warning" : "ph-check", issueCount ? "text-yellow-400" : "text-[#00ffaa]");
 }
 
 function renderWorkspaceDiagnosticsPanel() {
@@ -10141,6 +10305,7 @@ function renderWorkspaceDiagnosticsPanel() {
   const localDiagnostics = buildLocalConstellationDiagnostics();
   const backend = backendDiagnostics || {};
   const cleanup = backend.campaignCleanupDiagnostics || {};
+  const flow = backend.flowIntegrityDiagnostics || {};
   const dateIssues = [
     ...(backend.invalidQueueDateLabelRows || []).map((item) => ({ label: "Invalid queue_date_label", detail: `${item.postId}: ${item.queueDateLabel || "missing"}`, severity: "error" })),
     ...(backend.malformedScheduledRows || []).map((item) => ({ label: "Invalid scheduled_at", detail: `${item.postId}: ${item.scheduledAt || "missing"}`, severity: "error" })),
@@ -10165,8 +10330,80 @@ function renderWorkspaceDiagnosticsPanel() {
     severity: account.accessStatus === "expired" || account.accessStatus === "missing_permissions" ? "warning" : "info"
   }));
   const cards = dateIssues.concat(cleanupDiagnostics).concat(accountDiagnostics).concat(localDiagnostics);
+  const flowCounts = flow.stateCounts || {};
+  const flowWarnings = [
+    { label: "Posts missing source references", items: flow.postsMissingSourceReferences || [] },
+    { label: "Inspo converted without posts", items: flow.inspoConvertedWithoutPosts || [] },
+    { label: "Notes duplicated into posts", items: flow.notesDuplicatedIntoPosts || [] },
+    { label: "Orphan constellation campaign refs", items: flow.orphanConstellationCampaignRefs || [] },
+    { label: "Posts not appearing in Ledger", items: flow.postsNotAppearingInLedger || [] },
+    { label: "Scheduled posts missing Calendar entries", items: flow.scheduledPostsMissingCalendarEntries || [] },
+    { label: "Campaign rows with zero posts", items: flow.campaignRowsWithZeroPosts || [] },
+    { label: "Posts missing Queue placement", items: flow.postsMissingQueuePlacement || [] },
+    { label: "Duplicate imported posts", items: flow.duplicateImportedPosts || [] }
+  ];
   workspaceDiagnosticsPanel.innerHTML = cards.length
-    ? cards.map((item) => `
+    ? `
+      <div class="platform-card space-y-4">
+        <div class="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <div class="text-sm font-bold text-white">Flow Integrity</div>
+            <div class="text-sm text-gray-300 wrap-safe">Counts by flow state, orphan warnings, repair actions, and last rebuild timestamps.</div>
+          </div>
+          <span class="diagnostic-chip">Flow Integrity</span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+          <div class="p-3 rounded-xl bg-[#181125] border border-white/5">
+            <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Notes</div>
+            <div class="text-gray-300 wrap-safe">${escapeHtml(JSON.stringify(flowCounts.notes || {}))}</div>
+          </div>
+          <div class="p-3 rounded-xl bg-[#181125] border border-white/5">
+            <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Inspo</div>
+            <div class="text-gray-300 wrap-safe">${escapeHtml(JSON.stringify(flowCounts.inspo || {}))}</div>
+          </div>
+          <div class="p-3 rounded-xl bg-[#181125] border border-white/5">
+            <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Posts</div>
+            <div class="text-gray-300 wrap-safe">${escapeHtml(JSON.stringify(flowCounts.posts || {}))}</div>
+          </div>
+        </div>
+        <div class="space-y-2">
+          ${flowWarnings.map((warning) => `
+            <div class="p-3 rounded-xl bg-[#181125] border border-white/5 flex items-center justify-between gap-3">
+              <div class="text-sm text-gray-300 wrap-safe">${escapeHtml(warning.label)}</div>
+              <span class="diagnostic-chip">${escapeHtml(String((warning.items || []).length))}</span>
+            </div>
+          `).join("")}
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" data-flow-repair="relink_source_post" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Relink Source → Post</button>
+          <button type="button" data-flow-repair="archive_duplicate_source_rows" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Archive Duplicate Source Rows</button>
+          <button type="button" data-flow-repair="rebuild_ledger_index" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Rebuild Ledger Index</button>
+          <button type="button" data-flow-repair="rebuild_calendar_index" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Rebuild Calendar Index</button>
+          <button type="button" data-flow-repair="rebuild_constellation_graph" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Rebuild Constellation Graph</button>
+          <button type="button" data-flow-repair="rebuild_queue_cache" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Rebuild Queue Cache</button>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
+          ${Object.entries(flow.lastRebuildTimestamps || {}).map(([key, value]) => `
+            <div class="p-3 rounded-xl bg-[#181125] border border-white/5">
+              <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">${escapeHtml(key)}</div>
+              <div class="text-gray-300 wrap-safe">${escapeHtml(value || "Never")}</div>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+      ${(flow.flowEventLog || []).length ? `
+        <div class="platform-card space-y-3">
+          <div class="text-sm font-bold text-white">Flow Event Log</div>
+          ${(flow.flowEventLog || []).slice(0, 8).map((event) => `
+            <div class="p-3 rounded-xl bg-[#181125] border border-white/5">
+              <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">${escapeHtml(event.timestamp || "")}</div>
+              <div class="text-sm text-white wrap-safe">${escapeHtml(`${event.action || "event"} • ${event.entityType || "entity"} • ${event.sourceId || "none"} → ${event.targetId || "none"} • ${event.result || "ok"}`)}</div>
+              ${event.errors ? `<div class="text-sm text-yellow-300 wrap-safe mt-1">${escapeHtml(event.errors)}</div>` : ""}
+            </div>
+          `).join("")}
+        </div>
+      ` : ""}
+      ${cards.map((item) => `
       <div class="platform-card">
         <div class="flex items-center justify-between gap-3 mb-2">
           <div class="text-sm font-bold text-white">${escapeHtml(item.label)}</div>
@@ -10174,7 +10411,8 @@ function renderWorkspaceDiagnosticsPanel() {
         </div>
         <div class="text-sm text-gray-300 wrap-safe">${escapeHtml(item.detail)}</div>
       </div>
-    `).join("")
+    `).join("")}
+    `
     : `<div class="platform-card text-sm text-gray-300">No workspace diagnostics available yet.</div>`;
 }
 
@@ -12484,6 +12722,14 @@ function setupSaveHandler() {
       mediaLabel: currentModalAsset?.title || existing?.mediaLabel || "",
       createdFromInspoId: inspoIdToConvert,
       createdFromNoteId: noteIdToConvert,
+      sourceNoteId: noteIdToConvert || existing?.sourceNoteId || "",
+      sourceInspoId: inspoIdToConvert || existing?.sourceInspoId || "",
+      sourceAiDraftId: existing?.sourceAiDraftId || (currentModalSourceContext.type === "ai_draft" ? currentModalSourceContext.sourceId || "" : ""),
+      sourceImportJobId: existing?.sourceImportJobId || "",
+      createdFromFlow: existing?.createdFromFlow || (noteIdToConvert ? "note_to_post" : inspoIdToConvert ? "inspo_to_post" : currentModalSourceContext.type === "ai_draft" ? "ai_draft_to_post" : "manual"),
+      movedToPostAt: (noteIdToConvert || inspoIdToConvert || currentModalSourceContext.type === "ai_draft") ? new Date().toISOString() : existing?.movedToPostAt || "",
+      archivedAt: existing?.archivedAt || "",
+      flowState: resolvedStatus === "published" ? "published" : resolvedStatus === "scheduled" && hasValidSchedule ? "scheduled" : "draft",
       campaignId: selectedCampaign?.campaignId || existing?.campaignId || "",
       campaignName: selectedCampaignName || existing?.campaignName || "",
       sourceUrl: sourceUrlInput?.value.trim() || existing?.sourceUrl || "",
@@ -12536,7 +12782,23 @@ function setupSaveHandler() {
         if ((note.noteId || note.id) !== noteIdToConvert) return note;
         return {
           ...note,
-          convertedPostId: payload.id
+          convertedPostId: payload.id,
+          status: "converted_to_post",
+          flowState: "converted_to_post",
+          movedToPostAt: payload.movedToPostAt
+        };
+      });
+    }
+    if (inspoIdToConvert) {
+      appState.inspo = (appState.inspo || []).map((item) => {
+        if ((item.inspoId || item.id) !== inspoIdToConvert) return item;
+        return {
+          ...item,
+          convertedPostId: payload.id,
+          status: "archived",
+          flowState: "converted_to_post",
+          movedToPostAt: payload.movedToPostAt,
+          archivedAt: new Date().toISOString()
         };
       });
     }
@@ -12583,10 +12845,6 @@ function setupSaveHandler() {
         ].filter(Boolean).join(" ");
         showToast("Save failed", detail || "Save worked locally, but the backend rejected the post.", "ph-warning", "text-yellow-400");
       }
-    } else if (inspoIdToConvert) {
-      appState.inspo = (appState.inspo || []).filter((item) => item.id !== inspoIdToConvert);
-      persistLocalState();
-      rerenderAll();
     }
   });
 }
@@ -14520,7 +14778,10 @@ function renderInspo() {
   if (!grid) return;
 
   const filters = mobileFilterState.inspo || {};
-  let items = [...(appState.inspo || [])];
+  let items = [...(appState.inspo || [])].filter((item) => {
+    const flowState = String(item.flowState || item.status || "active").trim().toLowerCase();
+    return flowState !== "converted_to_post" && flowState !== "archived" && String(item.status || "").trim().toLowerCase() !== "archived";
+  });
   if ((filters.type || "all") !== "all") {
     items = items.filter((item) => String(item.type || "").toLowerCase() === String(filters.type || "").toLowerCase());
   }
@@ -14617,7 +14878,7 @@ function renderNotes() {
   if (!grid) return;
 
   const filters = mobileFilterState.notes || {};
-  let items = [...(appState.notes || [])];
+  let items = [...(appState.notes || [])].filter((item) => String(item.flowState || item.status || "active").trim().toLowerCase() !== "archived");
   if ((filters.platform || "all") !== "all") {
     items = items.filter((item) => String(item.suggestedPlatform || "").toLowerCase() === String(filters.platform || "").toLowerCase());
   }
@@ -16086,6 +16347,14 @@ function normalizeRemotePost(post, campaigns = [], mediaItems = []) {
     mediaLabel: String(pickRemoteValue(post?.mediaLabel, post?.media_label, linkedAsset?.title, linkedAsset?.assetName, "")).trim(),
     createdFromInspoId: String(pickRemoteValue(post?.createdFromInspoId, post?.created_from_inspo_id, "")).trim(),
     createdFromNoteId: String(pickRemoteValue(post?.createdFromNoteId, post?.created_from_note_id, "")).trim(),
+    sourceNoteId: String(pickRemoteValue(post?.sourceNoteId, post?.source_note_id, post?.createdFromNoteId, post?.created_from_note_id, "")).trim(),
+    sourceInspoId: String(pickRemoteValue(post?.sourceInspoId, post?.source_inspo_id, post?.createdFromInspoId, post?.created_from_inspo_id, "")).trim(),
+    sourceAiDraftId: String(pickRemoteValue(post?.sourceAiDraftId, post?.source_ai_draft_id, post?.aiSourceId, post?.ai_source_id, "")).trim(),
+    sourceImportJobId: String(pickRemoteValue(post?.sourceImportJobId, post?.source_import_job_id, post?.importJobId, post?.import_job_id, "")).trim(),
+    createdFromFlow: String(pickRemoteValue(post?.createdFromFlow, post?.created_from_flow, "")).trim(),
+    movedToPostAt: String(pickRemoteValue(post?.movedToPostAt, post?.moved_to_post_at, "")).trim(),
+    archivedAt: String(pickRemoteValue(post?.archivedAt, post?.archived_at, "")).trim(),
+    flowState: String(pickRemoteValue(post?.flowState, post?.flow_state, post?.status, "draft")).trim(),
     campaignId: String(campaignId || matchedCampaign?.campaignId || "").trim(),
     campaignName: normalizeCampaignName(pickRemoteValue(post?.campaignName, post?.campaign_name, matchedCampaign?.campaignName, "")),
     impressions: normalizeMetricNumber(pickRemoteValue(post?.impressions, 0)),
@@ -16179,6 +16448,14 @@ function normalizeRemoteInspo(item) {
     url: String(pickRemoteValue(item?.sourceUrl, item?.source_url, item?.url, item?.domainOrMeta, item?.domain_or_meta, item?.notes, "")).trim(),
     status: String(pickRemoteValue(item?.status, "active")).trim() || "active",
     convertedPostId: String(pickRemoteValue(item?.convertedPostId, item?.converted_post_id, "")).trim(),
+    sourceNoteId: String(pickRemoteValue(item?.sourceNoteId, item?.source_note_id, "")).trim(),
+    sourceInspoId: String(pickRemoteValue(item?.sourceInspoId, item?.source_inspo_id, "")).trim(),
+    sourceAiDraftId: String(pickRemoteValue(item?.sourceAiDraftId, item?.source_ai_draft_id, "")).trim(),
+    sourceImportJobId: String(pickRemoteValue(item?.sourceImportJobId, item?.source_import_job_id, "")).trim(),
+    createdFromFlow: String(pickRemoteValue(item?.createdFromFlow, item?.created_from_flow, "")).trim(),
+    movedToPostAt: String(pickRemoteValue(item?.movedToPostAt, item?.moved_to_post_at, "")).trim(),
+    archivedAt: String(pickRemoteValue(item?.archivedAt, item?.archived_at, "")).trim(),
+    flowState: String(pickRemoteValue(item?.flowState, item?.flow_state, item?.status, "active")).trim(),
     ...normalizeRemoteSemanticFields(item)
   };
 }
@@ -16197,6 +16474,14 @@ function normalizeRemoteNote(item) {
     suggestedPillar: getCanonicalPillarValue(pickRemoteValue(item?.suggestedPillar, item?.suggested_pillar, ""), (appState.settings?.pillars || [])[0] || "authority") || ((appState.settings?.pillars || [])[0] || "authority"),
     status: String(pickRemoteValue(item?.status, "active")).trim() || "active",
     convertedPostId: String(pickRemoteValue(item?.convertedPostId, item?.converted_post_id, "")).trim(),
+    sourceNoteId: String(pickRemoteValue(item?.sourceNoteId, item?.source_note_id, item?.noteId, item?.note_id, "")).trim(),
+    sourceInspoId: String(pickRemoteValue(item?.sourceInspoId, item?.source_inspo_id, "")).trim(),
+    sourceAiDraftId: String(pickRemoteValue(item?.sourceAiDraftId, item?.source_ai_draft_id, "")).trim(),
+    sourceImportJobId: String(pickRemoteValue(item?.sourceImportJobId, item?.source_import_job_id, "")).trim(),
+    createdFromFlow: String(pickRemoteValue(item?.createdFromFlow, item?.created_from_flow, "")).trim(),
+    movedToPostAt: String(pickRemoteValue(item?.movedToPostAt, item?.moved_to_post_at, "")).trim(),
+    archivedAt: String(pickRemoteValue(item?.archivedAt, item?.archived_at, "")).trim(),
+    flowState: String(pickRemoteValue(item?.flowState, item?.flow_state, item?.status, "active")).trim(),
     sourceUrl: String(pickRemoteValue(item?.sourceUrl, item?.source_url, "")).trim(),
     sourcePlatform: String(pickRemoteValue(item?.sourcePlatform, item?.source_platform, "")).trim(),
     sourceLabel: String(pickRemoteValue(item?.sourceLabel, item?.source_label, "")).trim(),
@@ -16476,6 +16761,14 @@ async function apiSavePost(post) {
     mediaLabel: hydratedPost.mediaLabel || "",
     createdFromInspoId: hydratedPost.createdFromInspoId || "",
     createdFromNoteId: hydratedPost.createdFromNoteId || "",
+    sourceNoteId: hydratedPost.sourceNoteId || hydratedPost.createdFromNoteId || "",
+    sourceInspoId: hydratedPost.sourceInspoId || hydratedPost.createdFromInspoId || "",
+    sourceAiDraftId: hydratedPost.sourceAiDraftId || hydratedPost.aiSourceId || "",
+    sourceImportJobId: hydratedPost.sourceImportJobId || hydratedPost.importJobId || "",
+    createdFromFlow: hydratedPost.createdFromFlow || "",
+    movedToPostAt: hydratedPost.movedToPostAt || "",
+    archivedAt: hydratedPost.archivedAt || "",
+    flowState: hydratedPost.flowState || hydratedPost.status || "draft",
     campaignId: hydratedPost.campaignId || "",
     campaignName: hydratedPost.campaignName || "",
     sourceUrl: hydratedPost.sourceUrl || "",
@@ -16564,6 +16857,11 @@ async function apiArchiveInspo(inspoId, convertedPostId = "") {
 
 async function apiRepairDateFields(payload = {}) {
   const result = await apiPost("repairDateFields", payload);
+  return result?.results || result;
+}
+
+async function apiRepairFlowIntegrity(payload = {}) {
+  const result = await apiPost("repairFlowIntegrity", payload);
   return result?.results || result;
 }
 
