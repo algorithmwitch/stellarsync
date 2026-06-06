@@ -3708,6 +3708,13 @@
           <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">App Review Notes</div>
           <div id="connection-setup-notes" class="text-sm text-gray-300 wrap-safe"></div>
         </div>
+        <div class="platform-card" id="connection-setup-auth-diagnostics-section" style="display:none">
+          <div class="flex items-center justify-between gap-3 mb-2">
+            <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Auth URL Diagnostics</div>
+            <button type="button" id="copy-auth-diagnostics-btn" class="text-[10px] px-2 py-1 rounded-lg bg-[#181125] hover:bg-[#231738] border border-white/5 text-gray-400 hover:text-white transition-colors font-bold uppercase tracking-wider">Copy</button>
+          </div>
+          <pre id="connection-setup-auth-diagnostics" class="text-xs text-gray-400 wrap-safe font-mono whitespace-pre-wrap" style="max-height:160px;overflow-y:auto"></pre>
+        </div>
         <div class="text-xs text-yellow-200 border border-yellow-500/15 bg-yellow-500/10 rounded-xl px-3 py-3">
           Do not enter client secrets or tokens here. Secrets must stay in Apps Script `PropertiesService` or another secure backend store.
         </div>
@@ -7325,6 +7332,16 @@ function setupWorkspaceUI() {
   connectionSetupModal?.addEventListener("click", (event) => {
     if (event.target === connectionSetupModal) closeConnectionSetupModal();
   });
+  document.getElementById("copy-auth-diagnostics-btn")?.addEventListener("click", () => {
+    var pre = document.getElementById("connection-setup-auth-diagnostics");
+    if (pre && pre.textContent) {
+      navigator.clipboard.writeText(pre.textContent).then(() => {
+        showToast("Copied", "Auth diagnostics copied to clipboard.", "ph-check", "text-[#00ffaa]");
+      }).catch(() => {
+        showToast("Copy failed", "Could not copy diagnostics.", "ph-warning", "text-yellow-400");
+      });
+    }
+  });
   closeConfirmActionModalBtn?.addEventListener("click", () => resolveConfirmAction(false));
   confirmActionCancelBtn?.addEventListener("click", () => resolveConfirmAction(false));
   confirmActionConfirmBtn?.addEventListener("click", () => resolveConfirmAction(true));
@@ -9637,6 +9654,17 @@ async function connectSocialAccount(platform) {
   try {
     const result = await apiStartPlatformAuth(platform);
     const auth = result?.authUrl ? result : (result?.auth || result);
+    if (auth) {
+      var safeDiag = {
+        platform: auth.platform || platform,
+        hasAuthUrl: !!auth.authUrl,
+        authUrlPreview: auth.authUrlPreview || "",
+        derivedRedirectUri: auth.derivedRedirectUri || "",
+        statePlatform: auth.statePlatform || "",
+        hasState: auth.hasState
+      };
+      console.log("[Auth Diagnostics] " + platform + ":", JSON.stringify(safeDiag));
+    }
     openConnectionSetupModal(platform, auth);
     if (auth?.authUrl) {
       window.location.assign(auth.authUrl);
@@ -9891,6 +9919,19 @@ function openConnectionSetupModal(platform, auth = null) {
   }
   if (connectionSetupNotes) {
     connectionSetupNotes.textContent = auth?.appReviewNotes || account.appReviewNotes || "OAuth starts from the backend. Tokens and secrets remain server-side.";
+  }
+  var authDiagnosticsSection = document.getElementById("connection-setup-auth-diagnostics-section");
+  var authDiagnosticsPre = document.getElementById("connection-setup-auth-diagnostics");
+  if (authDiagnosticsSection && authDiagnosticsPre) {
+    var diag = {};
+    if (auth?.authUrlPreview) diag.authUrlPreview = auth.authUrlPreview;
+    if (auth?.derivedRedirectUri) diag.derivedRedirectUri = auth.derivedRedirectUri;
+    if (auth?.statePlatform) diag.statePlatform = auth.statePlatform;
+    if (auth?.hasState !== undefined) diag.hasState = auth.hasState;
+    if (auth?.platform) diag.platform = auth.platform;
+    var hasAuthDiagnostics = Object.keys(diag).length > 0;
+    authDiagnosticsSection.style.display = hasAuthDiagnostics ? "" : "none";
+    authDiagnosticsPre.textContent = hasAuthDiagnostics ? JSON.stringify(diag, null, 2) : "";
   }
   connectionSetupModal?.classList.remove("opacity-0", "pointer-events-none");
   connectionSetupModalCard?.classList.remove("scale-95");
