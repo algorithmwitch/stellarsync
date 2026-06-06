@@ -229,6 +229,33 @@
     color: #fff;
   }
 
+  .write-idea-mode-btn {
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(24,17,37,0.92);
+    color: #d1d5db;
+    border-radius: 999px;
+    padding: 0.5rem 0.85rem;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+  }
+  .write-idea-mode-btn:hover {
+    background: rgba(45,27,78,0.95);
+    color: #fff;
+  }
+  .write-idea-mode-btn.active {
+    background: linear-gradient(135deg, rgba(157,78,221,0.9), rgba(0,240,255,0.22));
+    border-color: rgba(199,125,255,0.55);
+    color: #fff;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+  .animate-spin { animation: spin 1s linear infinite; }
+  .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+
   .write-idea-review-card {
     border: 1px solid rgba(255,255,255,0.08);
     background: rgba(18,12,29,0.85);
@@ -2074,10 +2101,45 @@
               <button type="button" class="write-idea-output-btn" data-write-idea-output="populate_calendar_week">Generate campaign with posts</button>
               <button type="button" class="write-idea-output-btn" data-write-idea-output="populate_campaign_queue">Generate campaign posts</button>
             </div>
-            <div class="flex flex-wrap gap-3 mt-5">
-              <button id="write-idea-generate-btn" type="button" class="px-5 py-3 rounded-2xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs uppercase tracking-[0.2em] font-bold border border-white/10">Generate Scaffold</button>
+            <div id="write-idea-generation-modes" class="flex flex-wrap gap-2 mt-3 mb-4">
+              <button type="button" class="write-idea-mode-btn active" data-write-idea-mode="generate_post">Generate Post</button>
+              <button type="button" class="write-idea-mode-btn" data-write-idea-mode="generate_structure">Generate Structure</button>
+              <button type="button" class="write-idea-mode-btn" data-write-idea-mode="generate_carousel">Generate Carousel</button>
+              <button type="button" class="write-idea-mode-btn" data-write-idea-mode="generate_newsletter">Generate Newsletter Draft</button>
+              <button type="button" class="write-idea-mode-btn" data-write-idea-mode="generate_linkedin_reflection">Generate LinkedIn Reflection</button>
+            </div>
+            <div class="flex flex-wrap gap-3 mt-2">
+              <button id="write-idea-generate-post-btn" type="button" class="px-5 py-3 rounded-2xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs uppercase tracking-[0.2em] font-bold border border-white/10">Generate Post</button>
+              <button id="write-idea-generate-btn" type="button" class="px-5 py-3 rounded-2xl bg-[#231738] border border-white/5 text-white text-xs uppercase tracking-[0.2em] font-bold">Generate Structure</button>
               <button id="write-idea-save-draft-btn" type="button" class="px-5 py-3 rounded-2xl bg-[#181125] border border-white/5 text-white text-xs uppercase tracking-[0.2em] font-bold">Save Draft</button>
               <button id="write-idea-save-manual-btn" type="button" class="px-5 py-3 rounded-2xl bg-[#181125] border border-white/5 text-white text-xs uppercase tracking-[0.2em] font-bold">Create Manually</button>
+            </div>
+          </div>
+
+          <div class="write-idea-review-card">
+            <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
+              <div>
+                <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Review Before Save</div>
+                <div class="text-sm text-white mt-1">Approve selected drafts before anything is written into POSTS.</div>
+              </div>
+              <span id="write-idea-status-chip" class="diagnostic-chip">Structured draft</span>
+            </div>
+            <div id="write-idea-review-summary" class="text-sm text-gray-300 wrap-safe mb-4">Idea captured state will appear here after you generate a scaffold.</div>
+            <div id="write-idea-warning-list" class="flex flex-wrap gap-2 mb-4"></div>
+            <div id="write-idea-proposed-posts" class="space-y-3"></div>
+            <div id="write-idea-loading" class="hidden write-idea-review-card space-y-3">
+              <div class="flex items-center gap-3">
+                <div class="w-5 h-5 rounded-full border-2 border-[#c77dff] border-t-transparent animate-spin"></div>
+                <div class="text-xs text-gray-300 font-medium">
+                  <span id="write-idea-loading-phase">Searching historical posts...</span>
+                  <span class="text-gray-500 ml-2" id="write-idea-loading-sub"></span>
+                </div>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div class="h-24 rounded-xl bg-[#181125] border border-white/5 animate-pulse"></div>
+                <div class="h-24 rounded-xl bg-[#181125] border border-white/5 animate-pulse"></div>
+                <div class="h-24 rounded-xl bg-[#181125] border border-white/5 animate-pulse"></div>
+              </div>
             </div>
           </div>
 
@@ -2095,6 +2157,14 @@
             <div class="flex flex-wrap gap-3 mt-5">
               <button id="write-idea-approve-btn" type="button" class="px-4 py-3 rounded-2xl bg-[#231738] border border-white/5 text-white text-xs uppercase tracking-[0.2em] font-bold">Approve Selected</button>
               <button id="write-idea-save-drafts-btn" type="button" class="px-4 py-3 rounded-2xl bg-[#181125] border border-white/5 text-white text-xs uppercase tracking-[0.2em] font-bold">Save as Drafts</button>
+            </div>
+            <div id="write-idea-creator-memory" class="hidden mt-4 p-3 rounded-xl bg-[#0f0a18] border border-white/5">
+              <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Frameworks Used</div>
+              <div id="write-idea-creator-memory-body" class="text-xs text-gray-300 leading-relaxed"></div>
+            </div>
+            <div id="write-idea-historical-references" class="hidden mt-4">
+              <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Related Content</div>
+              <div id="write-idea-historical-references-body" class="grid grid-cols-1 md:grid-cols-3 gap-3"></div>
             </div>
           </div>
         </div>
@@ -3029,6 +3099,12 @@
                   <div class="flex flex-wrap gap-2">
                     <button id="modal-validate-linkedin-btn" type="button" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Validate For LinkedIn</button>
                     <button id="modal-prepare-linkedin-payload-btn" type="button" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Prepare LinkedIn Payload</button>
+                    <button id="modal-test-linkedin-author-btn" type="button" class="px-3 py-2 rounded-xl bg-[#0f0a18] hover:bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Test LinkedIn Author Context</button>
+                  </div>
+                  <div id="modal-linkedin-author-context" class="hidden p-3 rounded-xl bg-[#181125] border border-white/5 space-y-2">
+                    <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">LinkedIn Author Context</div>
+                    <div id="linkedin-author-context-body" class="text-[11px] text-gray-300 leading-relaxed"></div>
+                    <div id="linkedin-author-selector" class="hidden space-y-2"></div>
                   </div>
                   <div id="modal-linkedin-publish-output" class="p-3 rounded-xl bg-[#181125] border border-white/5 text-[11px] text-gray-300 leading-relaxed">LinkedIn validation and payload preparation results will appear here.</div>
                 </div>
@@ -4050,6 +4126,7 @@ let performanceFilters = {
 let writeIdeaState = {
   prompt: "",
   outputType: "create_one_post",
+  generationMode: "generate_post",
   sourceTypes: ["brand_os", "semantic_memory"],
   targetPlatforms: ["linkedin"],
   targetDate: normalizeQueueDateLabel(new Date()),
@@ -4131,6 +4208,10 @@ const publishReadinessEl = document.getElementById("modal-publish-readiness");
 const validateLinkedInBtn = document.getElementById("modal-validate-linkedin-btn");
 const prepareLinkedInPayloadBtn = document.getElementById("modal-prepare-linkedin-payload-btn");
 const linkedInPublishOutputEl = document.getElementById("modal-linkedin-publish-output");
+const linkedInAuthorContextPanel = document.getElementById("modal-linkedin-author-context");
+const linkedInAuthorContextBody = document.getElementById("linkedin-author-context-body");
+const linkedInAuthorSelector = document.getElementById("linkedin-author-selector");
+const testLinkedInAuthorBtn = document.getElementById("modal-test-linkedin-author-btn");
 const importTaskTray = document.getElementById("import-task-tray");
 const importTaskTraySummary = document.getElementById("import-task-tray-summary");
 const importTaskTrayList = document.getElementById("import-task-tray-list");
@@ -4283,6 +4364,15 @@ const writeIdeaReviewSummary = document.getElementById("write-idea-review-summar
 const writeIdeaWarningList = document.getElementById("write-idea-warning-list");
 const writeIdeaProposedPosts = document.getElementById("write-idea-proposed-posts");
 const writeIdeaGuidanceList = document.getElementById("write-idea-guidance-list");
+const writeIdeaGeneratePostBtn = document.getElementById("write-idea-generate-post-btn");
+const writeIdeaLoadingEl = document.getElementById("write-idea-loading");
+const writeIdeaLoadingPhase = document.getElementById("write-idea-loading-phase");
+const writeIdeaLoadingSub = document.getElementById("write-idea-loading-sub");
+const writeIdeaCreatorMemoryEl = document.getElementById("write-idea-creator-memory");
+const writeIdeaCreatorMemoryBody = document.getElementById("write-idea-creator-memory-body");
+const writeIdeaHistoricalReferencesEl = document.getElementById("write-idea-historical-references");
+const writeIdeaHistoricalReferencesBody = document.getElementById("write-idea-historical-references-body");
+const writeIdeaGenerationModesEl = document.getElementById("write-idea-generation-modes");
 const writeIdeaRelatedCampaigns = document.getElementById("write-idea-related-campaigns");
 const writeIdeaDraftList = document.getElementById("write-idea-draft-list");
 
@@ -5926,6 +6016,7 @@ function getPublishingBadge(post) {
   if (status === "published") return { label: "Published", color: "#00ffaa", icon: "ph-check-circle" };
   if (status === "failed" || status === "failed_validation") return { label: "Failed", color: "#fb7185", icon: "ph-warning-circle" };
   if (post.requiresManualReview) return { label: "Manual Review", color: "#ffd700", icon: "ph-warning-diamond" };
+  if (!appState._linkedinSelectedAuthorUrn && post.platformTargets?.includes("linkedin")) return { label: "Choose Author", color: "#fb7185", icon: "ph-user-circle" };
   if (post.platformTargets?.length && getPostMediaKind(post) !== "missing" && String(post.description || "").trim()) return { label: "Ready", color: "#38bdf8", icon: "ph-rocket-launch" };
   return { label: "Draft", color: "#94a3b8", icon: "ph-clock" };
 }
@@ -5952,10 +6043,13 @@ function renderPublishingReadiness(post = {}) {
     : String(post.platform || "").trim() === "both"
     ? ["linkedin", "instagram"]
     : [post.platform || "linkedin"];
+  const linkedinAuthorLabel = appState._linkedinAuthorDisplayName || appState._linkedinSelectedAuthorType || "not set";
+  const authorColor = appState._linkedinSelectedAuthorUrn ? "#00f0ff" : "#fb7185";
   const cards = [
     { label: "Media", value: mediaKind === "missing" ? "Missing media" : mediaKind === "carousel" ? `${assets.length || (post.carouselAssetIds || []).length} linked assets` : toTitleCase(mediaKind), color: mediaKind === "missing" ? "#fb7185" : "#00f0ff" },
     { label: "Targets", value: targets.map(target => toTitleCase(target)).join(", "), color: "#c77dff" },
     { label: "Caption", value: `${String(post.platformCaptionOverride || post.description || "").trim().length} chars`, color: "#ffd700" },
+    { label: "Author", value: linkedinAuthorLabel, color: authorColor },
     { label: "Status", value: publishBadge.label, color: publishBadge.color }
   ];
   publishReadinessEl.innerHTML = cards.map(card => `
@@ -5978,12 +6072,24 @@ async function validateCurrentPostForLinkedIn() {
   try {
     const result = await apiPost("validatePostForPublishing", { postId: currentEditingPostId, platform: "linkedin" });
     const validation = result?.validation || result;
+    const ctxResult = await apiPost("getLinkedInAuthorContext", {});
+    const ctx = ctxResult || {};
     if (linkedInPublishOutputEl) {
-      linkedInPublishOutputEl.textContent = [
-        `Valid: ${validation?.valid ? "yes" : "no"}`,
-        validation?.issues?.length ? `Issues: ${validation.issues.join(" | ")}` : "Issues: none",
-        validation?.warnings?.length ? `Warnings: ${validation.warnings.join(" | ")}` : "Warnings: none"
-      ].join("\n");
+      var lines = [];
+      lines.push(`Valid: ${validation?.valid ? "yes" : "no"}`);
+      lines.push(`Author: ${ctx.selectedAuthorUrn || "none (publish blocked)"}`);
+      lines.push(`Publish-ready: ${ctx.publishReady ? "yes" : "no"}`);
+      if (!ctx.publishReady) {
+        if (!ctx.hasToken) lines.push(`-> Reconnect LinkedIn: token missing`);
+        else if (!ctx.hasPersonUrn) lines.push(`-> Reconnect LinkedIn: person URN missing`);
+        else if (!ctx.hasWMemberSocial) lines.push(`-> Reconnect LinkedIn: missing w_member_social scope`);
+        else if (!ctx.selectedAuthorUrn) lines.push(`-> Choose author: Publish as me or as organization`);
+      }
+      if (validation?.issues?.length) lines.push(`Issues: ${validation.issues.join(" | ")}`);
+      else lines.push("Issues: none");
+      if (validation?.warnings?.length) lines.push(`Warnings: ${validation.warnings.join(" | ")}`);
+      else lines.push("Warnings: none");
+      linkedInPublishOutputEl.textContent = lines.join("\n");
     }
   } catch (err) {
     console.error(err);
@@ -5996,17 +6102,123 @@ async function prepareCurrentLinkedInPayload() {
   try {
     const result = await apiPost("preparePublishPayload", { postId: currentEditingPostId, platform: "linkedin" });
     const payload = result?.payload || result;
+    const ctxResult = await apiPost("getLinkedInAuthorContext", {});
+    const ctx = ctxResult || {};
     if (linkedInPublishOutputEl) {
       linkedInPublishOutputEl.textContent = JSON.stringify({
         valid: payload?.valid,
         issues: payload?.issues || [],
         warnings: payload?.warnings || [],
+        authorUrn: ctx.selectedAuthorUrn || "none",
+        publishReady: ctx.publishReady || false,
+        noAuthorBlock: !ctx.selectedAuthorUrn ? "Reconnect LinkedIn or choose author" : undefined,
         adapterPayload: payload?.adapterPayload || payload?.payload?.adapterPayload || {}
       }, null, 2);
     }
   } catch (err) {
     console.error(err);
     if (linkedInPublishOutputEl) linkedInPublishOutputEl.textContent = err?.message || "Could not prepare the LinkedIn payload.";
+  }
+}
+
+async function loadLinkedInAuthorContext() {
+  try {
+    const result = await apiPost("getLinkedInAuthorContext", {});
+    const ctx = result || {};
+    appState._linkedinSelectedAuthorUrn = ctx.selectedAuthorUrn || "";
+    appState._linkedinAuthorDisplayName = ctx.displayName || "Me";
+    appState._linkedinSelectedAuthorType = ctx.selectedAuthorUrn && ctx.selectedAuthorUrn.indexOf("urn:li:organization:") === 0 ? "Organization" : ctx.selectedAuthorUrn ? "Person" : "not set";
+    if (ctx.orgUrns && ctx.orgUrns.length) {
+      appState._linkedinOrgUrns = ctx.orgUrns;
+    }
+  } catch (e) {
+    appState._linkedinSelectedAuthorUrn = "";
+    appState._linkedinAuthorDisplayName = "not set";
+    appState._linkedinSelectedAuthorType = "not set";
+  }
+}
+
+async function testLinkedInAuthorContext() {
+  if (!linkedInAuthorContextPanel) return;
+  try {
+    linkedInAuthorContextPanel.classList.remove("hidden");
+    if (linkedInAuthorContextBody) linkedInAuthorContextBody.textContent = "Loading LinkedIn author context...";
+    if (linkedInAuthorSelector) linkedInAuthorSelector.classList.add("hidden");
+    const result = await apiPost("getLinkedInAuthorContext", {});
+    const ctx = result || {};
+    const lines = [];
+    lines.push(`Token present: ${ctx.hasToken ? "yes" : "no"}`);
+    lines.push(`Person ID present: ${ctx.hasPersonUrn ? "yes" : "no"}`);
+    lines.push(`Person URN: ${ctx.personUrn || "none"}`);
+    lines.push(`Display name: ${ctx.displayName || "none"}`);
+    lines.push(`Organization IDs: ${ctx.orgCount || 0}`);
+    lines.push(`w_member_social scope: ${ctx.hasWMemberSocial ? "yes" : "no"}`);
+    lines.push(`Selected author URN: ${ctx.selectedAuthorUrn || "none"}`);
+    lines.push(`Publish-ready: ${ctx.publishReady ? "yes" : "no"}`);
+    if (!ctx.publishReady) lines.push(`  reason: ${ctx.publishReadyReason || "unknown"}`);
+    if (Array.isArray(ctx.orgUrns) && ctx.orgUrns.length) {
+      lines.push(`Org URNs:`);
+      ctx.orgUrns.forEach(function(urn) {
+        lines.push(`  ${urn}`);
+      });
+    }
+    if (linkedInAuthorContextBody) linkedInAuthorContextBody.textContent = lines.join("\n");
+    renderLinkedInAuthorSelector(ctx);
+  } catch (err) {
+    console.error(err);
+    if (linkedInAuthorContextBody) linkedInAuthorContextBody.textContent = "Error: " + (err?.message || "Could not load LinkedIn author context.");
+  }
+}
+
+function renderLinkedInAuthorSelector(ctx) {
+  if (!linkedInAuthorSelector) return;
+  ctx = ctx || {};
+  var personUrn = ctx.personUrn || "";
+  var orgUrns = Array.isArray(ctx.orgUrns) ? ctx.orgUrns : [];
+  var displayName = ctx.displayName || "Me";
+  var selectedUrn = ctx.selectedAuthorUrn || "";
+  var hasToken = !!ctx.hasToken;
+  var hasPerson = !!ctx.hasPersonUrn;
+
+  if (!hasToken || !hasPerson) {
+    linkedInAuthorSelector.classList.add("hidden");
+    return;
+  }
+
+  var html = '<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mt-2">Publish as:</div>';
+  html += '<div class="space-y-1 mt-1">';
+
+  var personChecked = selectedUrn === personUrn || !selectedUrn ? "checked" : "";
+  html += '<label class="flex items-center gap-2 text-xs text-gray-300 cursor-pointer hover:text-white">';
+  html += '<input type="radio" name="linkedin-author" value="' + escapeHtml(personUrn) + '" ' + personChecked + ' onchange="setLinkedInAuthorUrn(\'' + escapeHtml(personUrn) + '\')">';
+  html += 'Publish as me <span class="text-gray-500">(' + escapeHtml(displayName) + ')</span>';
+  html += '</label>';
+
+  orgUrns.forEach(function(urn) {
+    var orgChecked = selectedUrn === urn ? "checked" : "";
+    var orgLabel = urn.replace("urn:li:organization:", "Org ");
+    html += '<label class="flex items-center gap-2 text-xs text-gray-300 cursor-pointer hover:text-white">';
+    html += '<input type="radio" name="linkedin-author" value="' + escapeHtml(urn) + '" ' + orgChecked + ' onchange="setLinkedInAuthorUrn(\'' + escapeHtml(urn) + '\')">';
+    html += 'Publish as organization <span class="text-gray-500">(' + escapeHtml(orgLabel) + ')</span>';
+    html += '</label>';
+  });
+
+  html += '</div>';
+  linkedInAuthorSelector.innerHTML = html;
+  linkedInAuthorSelector.classList.remove("hidden");
+}
+
+async function setLinkedInAuthorUrn(urn) {
+  if (!urn) return;
+  try {
+    const result = await apiPost("setLinkedInAuthorUrn", { authorUrn: urn });
+    if (result && result.ok) {
+      showToast("Author set", "LinkedIn author URN saved: " + urn, "ph-check", "text-emerald-300");
+      testLinkedInAuthorContext();
+    }
+  } catch (err) {
+    console.error(err);
+    showToast("Author failed", err?.message || "Could not set LinkedIn author URN.", "ph-warning", "text-yellow-400");
   }
 }
 
@@ -7044,6 +7256,7 @@ function initApp() {
   renderModalPillarButtons();
   setupModalControls();
   setupSaveHandler();
+  loadLinkedInAuthorContext();
   workspaceOpenLinkedInCaptureBtn?.addEventListener("click", () => {
     closeWorkspaceHub();
     openLinkedInCaptureImporter();
@@ -7118,6 +7331,7 @@ function initApp() {
   linkedInDownloadReportBtn?.addEventListener("click", downloadLinkedInImportReport);
   validateLinkedInBtn?.addEventListener("click", validateCurrentPostForLinkedIn);
   prepareLinkedInPayloadBtn?.addEventListener("click", prepareCurrentLinkedInPayload);
+  testLinkedInAuthorBtn?.addEventListener("click", testLinkedInAuthorContext);
   importTaskTrayRefreshBtn?.addEventListener("click", () => {
     refreshImportJobsFromBackend().catch((err) => {
       console.error(err);
@@ -8228,6 +8442,25 @@ function setupWriteIdeaWorkspace() {
     console.error(err);
     showToast("Scaffold failed", err.message || "Could not generate the idea scaffold.", "ph-warning", "text-yellow-400");
   }));
+  writeIdeaGeneratePostBtn?.addEventListener("click", () => generateWriteIdeaPost().catch((err) => {
+    console.error(err);
+    showToast("Generation failed", err.message || "Could not generate the post.", "ph-warning", "text-yellow-400");
+  }));
+  writeIdeaGenerationModesEl?.addEventListener("click", (e) => {
+    var btn = e.target.closest("[data-write-idea-mode]");
+    if (!btn) return;
+    var mode = btn.dataset.writeIdeaMode;
+    writeIdeaState.generationMode = mode;
+    document.querySelectorAll("[data-write-idea-mode]").forEach(function(b) {
+      b.classList.toggle("active", b.dataset.writeIdeaMode === mode);
+    });
+    var label = mode === "generate_post" ? "Generate Post"
+      : mode === "generate_structure" ? "Generate Structure"
+      : mode === "generate_carousel" ? "Generate Carousel"
+      : mode === "generate_newsletter" ? "Generate Newsletter Draft"
+      : "Generate LinkedIn Reflection";
+    if (writeIdeaGeneratePostBtn) writeIdeaGeneratePostBtn.textContent = label;
+  });
   writeIdeaSaveDraftBtn?.addEventListener("click", () => saveWriteIdeaDraft().catch((err) => {
     console.error(err);
     showToast("Save failed", err.message || "Could not save the idea draft.", "ph-warning", "text-yellow-400");
@@ -11905,14 +12138,21 @@ function renderWriteIdeaScaffold() {
   renderWriteIdeaHistoryFilterStatus();
   renderWriteIdeaArtifactWorkspace();
   if (!writeIdeaLastScaffold) {
-    if (writeIdeaReviewSummary) writeIdeaReviewSummary.textContent = "Idea state will appear here after you generate a structured draft.";
-    if (writeIdeaStatusChip) writeIdeaStatusChip.textContent = "Structured draft";
+    var mode = writeIdeaState.generationMode || "generate_post";
+    var emptyHint = mode === "generate_post" ? "Generate a post to review finished prose."
+      : mode === "generate_structure" ? "Generate a structure to review proposed posts and dates."
+      : mode === "generate_carousel" ? "Generate a carousel to review slide content."
+      : mode === "generate_newsletter" ? "Generate a newsletter draft to review long-form content."
+      : "Generate a LinkedIn reflection to review conversational prose.";
+    if (writeIdeaReviewSummary) writeIdeaReviewSummary.textContent = emptyHint;
+    if (writeIdeaStatusChip) writeIdeaStatusChip.textContent = mode === "generate_post" ? "Post draft" : mode === "generate_structure" ? "Structured draft" : mode === "generate_carousel" ? "Carousel" : mode === "generate_newsletter" ? "Newsletter" : "Reflection";
     if (writeIdeaWarningList) writeIdeaWarningList.innerHTML = "";
-    if (writeIdeaProposedPosts) writeIdeaProposedPosts.innerHTML = makeEmptyState("No draft yet", "Generate a structured draft to review proposed posts, dates, campaign links, and warnings.", "ph-sparkle");
+    if (writeIdeaProposedPosts) writeIdeaProposedPosts.innerHTML = makeEmptyState("No draft yet", emptyHint, "ph-sparkle");
     return;
   }
   const scaffold = writeIdeaLastScaffold.scaffold || writeIdeaLastScaffold;
-  if (writeIdeaStatusChip) writeIdeaStatusChip.textContent = scaffold.draftStatus === "scaffold_only" ? "Structured draft" : toTitleCase(scaffold.draftStatus || "draft");
+  var modeLabel = writeIdeaState.generationMode || "";
+  if (writeIdeaStatusChip) writeIdeaStatusChip.textContent = scaffold.draftStatus === "scaffold_only" ? "Structured draft" : modeLabel === "generate_post" ? "Post draft" : modeLabel === "generate_carousel" ? "Carousel" : modeLabel === "generate_newsletter" ? "Newsletter" : modeLabel === "generate_linkedin_reflection" ? "Reflection" : toTitleCase(scaffold.draftStatus || "draft");
   if (writeIdeaReviewSummary) writeIdeaReviewSummary.textContent = scaffold.summaryText || "Idea draft ready for manual review.";
   if (writeIdeaWarningList) {
     writeIdeaWarningList.innerHTML = (scaffold.warnings || []).map((warning) => `<span class="diagnostic-chip">${escapeHtml(warning)}</span>`).join("");
@@ -12070,6 +12310,182 @@ async function generateWriteIdeaScaffold() {
   writeIdeaState.selectedDraftIndexes = (writeIdeaLastScaffold?.scaffold?.proposedPosts || []).map((_, index) => index);
   recordWriteIdeaHistory("Generated draft", writeIdeaLastScaffold?.scaffold?.title || deriveIdeaTitle(payload.ideaPrompt));
   renderWriteIdeaScaffold();
+}
+
+async function generateWriteIdeaPost() {
+  var payload = getWriteIdeaPayload();
+  if (!payload.ideaPrompt) {
+    showToast("Missing idea", "Add an idea prompt first.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  var mode = writeIdeaState.generationMode || "generate_post";
+  var styleMap = {
+    generate_post: "match_my_style",
+    generate_structure: "match_my_style",
+    generate_carousel: "carousel",
+    generate_newsletter: "newsletter",
+    generate_linkedin_reflection: "linkedin_reflection"
+  };
+  var generationStyle = styleMap[mode] || "match_my_style";
+  setWriteIdeaLoading(true, "Searching historical posts...", "");
+
+  try {
+    setWriteIdeaLoading(true, "Analyzing frameworks...", "");
+    var styleProfile = appState._creatorStyleProfile || buildCreatorStyleProfile();
+    appState._creatorStyleProfile = styleProfile;
+    var styleContext = getStyleAwareContext("", "", styleProfile);
+
+    setWriteIdeaLoading(true, "Building draft...", "");
+    var apiPayload = {
+      prompt: payload.ideaPrompt,
+      platform: payload.platform || "linkedin",
+      postType: mode === "generate_carousel" ? "carousel" : "text",
+      generationMode: mode === "generate_post" ? "generate_post" : mode === "generate_structure" ? "write_an_idea" : mode === "generate_carousel" ? "carousel" : mode === "generate_newsletter" ? "newsletter" : "linkedin_reflection",
+      generationStyle: generationStyle,
+      outlineMode: mode === "generate_structure",
+      historyStartDate: payload.historyStartDate || "",
+      historyEndDate: payload.historyEndDate || ""
+    };
+
+    var result = APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()
+      ? await apiGenerateAIDraft(apiPayload)
+      : buildLocalAIPost(payload);
+
+    var draftText = result.draftText || result.captionVariant || "";
+    var title = result.title || deriveIdeaTitle(payload.ideaPrompt);
+
+    var generatedOutputs = [{
+      artifactId: "artifact-" + Date.now() + "-1",
+      artifactType: mode === "generate_carousel" ? "carousel_outline" : "draft",
+      title: title + " Output",
+      summary: draftText ? "Generated " + (draftText.length) + " chars" : "Draft generated"
+    }];
+
+    var proposedPosts = [{
+      title: title,
+      description: draftText || "Generated draft pending review.",
+      platform: payload.platform || "linkedin",
+      postType: mode === "generate_carousel" ? "carousel" : "text",
+      queueDateLabel: payload.targetDate || normalizeQueueDateLabel(new Date())
+    }];
+
+    if (mode === "generate_carousel" && result.carouselSlides) {
+      proposedPosts[0].carouselSlides = result.carouselSlides;
+      proposedPosts[0].description = (result.carouselSlides || []).map(function(s) { return "**" + s.title + "**\n" + s.copy; }).join("\n\n");
+    }
+
+    var summaryText = mode === "generate_post" ? "Post draft generated. Review the prose below before approving."
+      : mode === "generate_carousel" ? "Carousel draft generated. Each slide has complete copy."
+      : mode === "generate_newsletter" ? "Newsletter draft generated. Long-form essay style."
+      : mode === "generate_linkedin_reflection" ? "LinkedIn reflection generated. Personal, conversational tone."
+      : "Structured draft direction generated.";
+
+    writeIdeaLastScaffold = {
+      idea: {
+        aiDraftId: "local-" + Date.now(),
+        title: title,
+        ideaPrompt: payload.ideaPrompt,
+        outputType: payload.outputType
+      },
+      scaffold: {
+        title: title,
+        draftStatus: mode === "generate_structure" ? "scaffold_only" : "draft",
+        warnings: [],
+        summaryText: summaryText,
+        generatedOutputs: generatedOutputs,
+        proposedPosts: proposedPosts
+      }
+    };
+
+    currentWriteIdeaDraftId = writeIdeaLastScaffold.idea.aiDraftId;
+    setWriteIdeaLoading(false);
+
+    recordWriteIdeaHistory("Generated " + mode, title);
+    renderWriteIdeaScaffold();
+    renderWriteIdeaCreatorMemory(styleContext);
+    renderWriteIdeaHistoricalReferences(title);
+  } catch (err) {
+    setWriteIdeaLoading(false);
+    throw err;
+  }
+}
+
+function buildLocalAIPost(payload) {
+  var prompt = payload.prompt || payload.ideaPrompt || "";
+  var paragraphs = prompt.split(/[.!?]+\s*/).filter(Boolean);
+  var draftText = paragraphs.map(function(p, i) {
+    return p.trim() + (i < paragraphs.length - 1 ? "." : ".");
+  }).join(" ") + "\n\nThis is a locally-generated draft. Connect a remote AI provider for full prose generation.";
+
+  var title = deriveIdeaTitle(prompt);
+  return {
+    title: title,
+    draftText: draftText,
+    captionVariant: draftText,
+    hookText: paragraphs[0] || "",
+    ctaText: "What does this make possible?",
+    reviewNotes: "Local fallback draft. Connect a remote AI provider for higher quality.",
+    semanticTags: prompt.toLowerCase().split(/[^a-z0-9]+/).filter(function(t) { return t.length >= 5; }).slice(0, 6)
+  };
+}
+
+function setWriteIdeaLoading(visible, phase, sub) {
+  if (!writeIdeaLoadingEl) return;
+  writeIdeaLoadingEl.classList.toggle("hidden", !visible);
+  if (visible) {
+    if (writeIdeaLoadingPhase) writeIdeaLoadingPhase.textContent = phase || "Working...";
+    if (writeIdeaLoadingSub) writeIdeaLoadingSub.textContent = sub || "";
+  }
+}
+
+function renderWriteIdeaCreatorMemory(styleContext) {
+  if (!writeIdeaCreatorMemoryEl || !writeIdeaCreatorMemoryBody) return;
+  if (!styleContext || !styleContext.styleProfile) {
+    writeIdeaCreatorMemoryEl.classList.add("hidden");
+    return;
+  }
+  var ctx = styleContext;
+  var lines = [];
+  lines.push("Frameworks: " + (ctx.nearestFrameworks || []).join(", ") || "none detected");
+  lines.push("Historical posts referenced: " + (ctx.nearestContent || []).length + " neighbors");
+  lines.push("Recurring themes: " + (ctx.recurringMetaphors || []).join(", ") || "none detected");
+  lines.push("Preferred structure: " + (ctx.preferredStructures || []).join(", ") || "none");
+  lines.push("Voice traits: " + (ctx.styleProfile.voiceTraits || []).join(", "));
+  writeIdeaCreatorMemoryBody.textContent = lines.join("\n");
+  writeIdeaCreatorMemoryEl.classList.remove("hidden");
+}
+
+function renderWriteIdeaHistoricalReferences(titleHint) {
+  if (!writeIdeaHistoricalReferencesEl || !writeIdeaHistoricalReferencesBody) return;
+  var posts = (appState.posts || []).slice().sort(function(a, b) {
+    return new Date(b.date || b.scheduledAt || b.importedAt || 0) - new Date(a.date || a.scheduledAt || a.importedAt || 0);
+  }).slice(0, 6);
+  if (!posts.length) {
+    writeIdeaHistoricalReferencesEl.classList.add("hidden");
+    return;
+  }
+  writeIdeaHistoricalReferencesBody.innerHTML = posts.map(function(post) {
+    var excerpt = (post.description || "").slice(0, 140);
+    var campaign = post.campaignName || post.hubTitle || "";
+    var date = post.originalPostDateLabel || post.date || post.scheduledAt || "";
+    var score = titleHint && post.description ? computeSimilarityScore(titleHint, post.description) : "";
+    return '<div class="p-3 rounded-xl bg-[#181125] border border-white/5 cursor-pointer hover:bg-[#231738] transition-colors" onclick="openModalById(\'' + escapeHtml(post.id || "") + '\')">' +
+      '<div class="text-xs text-white font-bold wrap-safe mb-1">' + escapeHtml(excerpt) + '</div>' +
+      (campaign ? '<div class="text-[10px] text-gray-500">' + escapeHtml(campaign) + '</div>' : "") +
+      (date ? '<div class="text-[10px] text-gray-500">' + escapeHtml(date) + '</div>' : "") +
+      (score ? '<div class="text-[10px] text-emerald-400 mt-1">Similarity: ' + score + '%</div>' : "") +
+      '</div>';
+  }).join("");
+  writeIdeaHistoricalReferencesEl.classList.remove("hidden");
+}
+
+function computeSimilarityScore(a, b) {
+  var aWords = a.toLowerCase().split(/\s+/).filter(function(w) { return w.length > 3; });
+  var bWords = b.toLowerCase().split(/\s+/).filter(function(w) { return w.length > 3; });
+  if (!aWords.length || !bWords.length) return 0;
+  var aSet = new Set(aWords);
+  var common = bWords.filter(function(w) { return aSet.has(w); });
+  return Math.round((common.length / Math.max(aWords.length, bWords.length)) * 100);
 }
 
 function buildLocalIdeaScaffold(payload) {
