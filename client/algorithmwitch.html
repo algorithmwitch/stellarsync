@@ -2101,14 +2101,22 @@
               <button type="button" class="write-idea-output-btn" data-write-idea-output="populate_calendar_week">Generate campaign with posts</button>
               <button type="button" class="write-idea-output-btn" data-write-idea-output="populate_campaign_queue">Generate campaign posts</button>
             </div>
-            <div id="write-idea-generation-modes" class="flex flex-wrap gap-2 mt-3 mb-4">
-              <button type="button" class="write-idea-mode-btn active" data-write-idea-mode="generate_post">Generate Post</button>
-              <button type="button" class="write-idea-mode-btn" data-write-idea-mode="generate_structure">Generate Structure</button>
-              <button type="button" class="write-idea-mode-btn" data-write-idea-mode="generate_carousel">Generate Carousel</button>
-              <button type="button" class="write-idea-mode-btn" data-write-idea-mode="generate_newsletter">Generate Newsletter Draft</button>
-              <button type="button" class="write-idea-mode-btn" data-write-idea-mode="generate_linkedin_reflection">Generate LinkedIn Reflection</button>
-            </div>
-            <div class="flex flex-wrap gap-3 mt-2">
+	            <div id="write-idea-generation-modes" class="flex flex-wrap gap-2 mt-3 mb-4">
+	              <button type="button" class="write-idea-mode-btn active" data-write-idea-mode="generate_post">Generate Post</button>
+	              <button type="button" class="write-idea-mode-btn" data-write-idea-mode="generate_structure">Generate Structure</button>
+	              <button type="button" class="write-idea-mode-btn" data-write-idea-mode="generate_carousel">Generate Carousel</button>
+	              <button type="button" class="write-idea-mode-btn" data-write-idea-mode="generate_newsletter">Generate Newsletter Draft</button>
+	              <button type="button" class="write-idea-mode-btn" data-write-idea-mode="generate_linkedin_reflection">Generate LinkedIn Reflection</button>
+	            </div>
+	            <div class="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-3 mb-4 items-center">
+	              <label class="block text-[10px] uppercase tracking-widest text-gray-500 font-bold">Generation Engine</label>
+	              <select id="write-idea-generation-engine" class="form-input text-sm font-medium">
+	                <option value="auto">Auto</option>
+	                <option value="local">Local Creator Engine</option>
+	                <option value="provider">Provider AI</option>
+	              </select>
+	            </div>
+	            <div class="flex flex-wrap gap-3 mt-2">
               <button id="write-idea-generate-post-btn" type="button" class="px-5 py-3 rounded-2xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs uppercase tracking-[0.2em] font-bold border border-white/10">Generate Post</button>
               <button id="write-idea-generate-btn" type="button" class="px-5 py-3 rounded-2xl bg-[#231738] border border-white/5 text-white text-xs uppercase tracking-[0.2em] font-bold">Generate Structure</button>
               <button id="write-idea-save-draft-btn" type="button" class="px-5 py-3 rounded-2xl bg-[#181125] border border-white/5 text-white text-xs uppercase tracking-[0.2em] font-bold">Save Draft</button>
@@ -2761,6 +2769,17 @@
           <button id="linkedin-import-mode-text-btn" type="button" class="px-3 py-2 rounded-xl bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white">Paste copied LinkedIn page text</button>
           <button id="linkedin-import-mode-json-btn" type="button" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 hover:text-white">Browser capture JSON</button>
           <button id="linkedin-import-mode-urls-btn" type="button" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 hover:text-white">URLs only / source links</button>
+          <button id="linkedin-import-mode-media-btn" type="button" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 hover:text-white">Import Media Manifest</button>
+        </div>
+        <div id="linkedin-import-mode-media-panel" class="hidden p-4 rounded-2xl bg-[#0f0a18] border border-white/5 space-y-3">
+          <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Path C · Import Media Manifest</div>
+          <div class="text-xs text-gray-300">Paste a media manifest JSON from the LinkedIn Export Helper to upload historic media assets to Google Drive and link them to imported posts.</div>
+          <div class="flex flex-wrap gap-2">
+            <button id="modal-linkedin-import-media-manifest-btn" type="button" class="px-4 py-2 rounded-xl bg-[#231738] border border-white/5 text-xs font-bold text-white hover:bg-[#2d1b4e] transition-colors">Parse &amp; Import Media Manifest</button>
+            <button id="modal-linkedin-paste-media-manifest-btn" type="button" class="px-4 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-white hover:bg-[#231738] transition-colors">Paste Media Manifest</button>
+          </div>
+          <textarea id="modal-linkedin-media-manifest-input" class="form-input resize-none h-32 text-sm font-mono" placeholder="Paste media manifest JSON here. Download it from the LinkedIn Export Helper popup (Download Media Manifest button)."></textarea>
+          <div id="modal-linkedin-media-manifest-status" class="text-xs text-gray-400">No media manifest loaded yet.</div>
         </div>
         <div id="linkedin-import-mode-helper" class="text-[11px] text-gray-400 border border-white/5 bg-[#120c1d] rounded-xl px-3 py-3">
           Paste copied text from your LinkedIn activity page. This is the primary reliable import mode.
@@ -3485,9 +3504,14 @@
               <option value="video">Video</option>
               <option value="article">Article</option>
             </select>
-          </div>
-          <select id="ai-generation-mode" class="form-input text-sm font-medium"></select>
-          <select id="ai-campaign-select" class="form-input text-sm font-medium">
+	          </div>
+	          <select id="ai-generation-mode" class="form-input text-sm font-medium"></select>
+	          <select id="ai-generation-engine" class="form-input text-sm font-medium">
+	            <option value="auto">Generation Engine: Auto</option>
+	            <option value="local">Generation Engine: Local Creator Engine</option>
+	            <option value="provider">Generation Engine: Provider AI</option>
+	          </select>
+	          <select id="ai-campaign-select" class="form-input text-sm font-medium">
             <option value="">Attach to campaign</option>
           </select>
           <textarea id="ai-workspace-prompt" class="form-input min-h-[120px] text-sm" placeholder="Add a drafting brief, revision request, or semantic territory prompt"></textarea>
@@ -3908,8 +3932,8 @@ const APP_CONFIG = {
   SHELL_LAYOUT_KEY: "stellarsync_shell_layout_v2"
 };
 
-const APP_FRONTEND_VERSION = "2026.06.06.01";
-const APP_SERVICE_WORKER_VERSION = "2026.06.06.01";
+const APP_FRONTEND_VERSION = "2026.06.06.02";
+const APP_SERVICE_WORKER_VERSION = "2026.06.06.02";
 const RIGHT_PANEL_COLLAPSED_KEY = "stellarsync_right_panel_collapsed_v1";
 const MAX_UPLOAD_IMAGE_BYTES = 10 * 1024 * 1024;
 const MAX_UPLOAD_VIDEO_BYTES = 50 * 1024 * 1024;
@@ -4109,6 +4133,7 @@ let writeIdeaState = {
   prompt: "",
   outputType: "create_one_post",
   generationMode: "generate_post",
+  generationEngine: "auto",
   sourceTypes: ["brand_os", "semantic_memory"],
   targetPlatforms: ["linkedin"],
   targetDate: normalizeQueueDateLabel(new Date()),
@@ -4152,6 +4177,12 @@ const linkedInCaptureUrlInput = document.getElementById("modal-linkedin-capture-
 const linkedInImportModeTextBtn = document.getElementById("linkedin-import-mode-text-btn");
 const linkedInImportModeJsonBtn = document.getElementById("linkedin-import-mode-json-btn");
 const linkedInImportModeUrlsBtn = document.getElementById("linkedin-import-mode-urls-btn");
+const linkedInImportModeMediaBtn = document.getElementById("linkedin-import-mode-media-btn");
+const linkedInImportModeMediaPanel = document.getElementById("linkedin-import-mode-media-panel");
+const linkedInMediaManifestInput = document.getElementById("modal-linkedin-media-manifest-input");
+const linkedInImportMediaManifestBtn = document.getElementById("modal-linkedin-import-media-manifest-btn");
+const linkedInPasteMediaManifestBtn = document.getElementById("modal-linkedin-paste-media-manifest-btn");
+const linkedInMediaManifestStatus = document.getElementById("modal-linkedin-media-manifest-status");
 const linkedInImportModeHelper = document.getElementById("linkedin-import-mode-helper");
 const linkedInImportMainLabel = document.getElementById("linkedin-import-main-label");
 const linkedInImportUrlLabel = document.getElementById("linkedin-import-url-label");
@@ -4356,6 +4387,7 @@ const writeIdeaCreatorMemoryBody = document.getElementById("write-idea-creator-m
 const writeIdeaHistoricalReferencesEl = document.getElementById("write-idea-historical-references");
 const writeIdeaHistoricalReferencesBody = document.getElementById("write-idea-historical-references-body");
 const writeIdeaGenerationModesEl = document.getElementById("write-idea-generation-modes");
+const writeIdeaGenerationEngineInput = document.getElementById("write-idea-generation-engine");
 const writeIdeaRelatedCampaigns = document.getElementById("write-idea-related-campaigns");
 const writeIdeaDraftList = document.getElementById("write-idea-draft-list");
 
@@ -4440,6 +4472,7 @@ const aiSourceIdInput = document.getElementById("ai-source-id");
 const aiPlatformInput = document.getElementById("ai-platform");
 const aiPostTypeInput = document.getElementById("ai-post-type");
 const aiGenerationModeInput = document.getElementById("ai-generation-mode");
+const aiGenerationEngineInput = document.getElementById("ai-generation-engine");
 const aiOutlineModeInput = document.getElementById("ai-outline-mode");
 const aiCampaignSelect = document.getElementById("ai-campaign-select");
 const aiWorkspacePrompt = document.getElementById("ai-workspace-prompt");
@@ -7258,6 +7291,25 @@ function initApp() {
   linkedInImportModeTextBtn?.addEventListener("click", () => setLinkedInImportMode("text"));
   linkedInImportModeJsonBtn?.addEventListener("click", () => setLinkedInImportMode("json"));
   linkedInImportModeUrlsBtn?.addEventListener("click", () => setLinkedInImportMode("urls"));
+  linkedInImportModeMediaBtn?.addEventListener("click", () => setLinkedInImportMode("media"));
+  linkedInImportMediaManifestBtn?.addEventListener("click", () => importLinkedInMediaManifest().catch((err) => {
+    console.error(err);
+    showToast("Media import failed", err.message || "Could not import media manifest.", "ph-warning", "text-yellow-400");
+  }));
+  linkedInPasteMediaManifestBtn?.addEventListener("click", () => {
+    if (linkedInMediaManifestInput) {
+      linkedInMediaManifestInput.value = "";
+      linkedInMediaManifestInput.focus();
+    }
+    navigator.clipboard.readText().then((text) => {
+      if (text && linkedInMediaManifestInput) {
+        linkedInMediaManifestInput.value = text;
+        if (linkedInMediaManifestStatus) linkedInMediaManifestStatus.textContent = "Media manifest pasted. Click Parse & Import to process.";
+      }
+    }).catch(() => {
+      if (linkedInMediaManifestStatus) linkedInMediaManifestStatus.textContent = "Could not read clipboard. Paste the manifest manually into the textarea.";
+    });
+  });
   linkedInParseJsonBtn?.addEventListener("click", () => {
     setLinkedInImportMode("json");
     previewLinkedInBrowserCaptureImport();
@@ -7535,6 +7587,12 @@ function setLinkedInImportMode(mode = "text") {
       label: "Paste LinkedIn URLs only",
       placeholder: "Paste one LinkedIn post URL per line.",
       urlLabel: "LinkedIn URL or profile/activity page URL"
+    },
+    media: {
+      helper: "Paste a media manifest JSON from the LinkedIn Export Helper to upload historic media assets to Google Drive.",
+      label: "Paste Media Manifest JSON",
+      placeholder: "Paste media manifest JSON here.",
+      urlLabel: "Optional LinkedIn URL"
     }
   }[mode] || {
     helper: "",
@@ -7545,7 +7603,8 @@ function setLinkedInImportMode(mode = "text") {
   [
     [linkedInImportModeTextBtn, mode === "text"],
     [linkedInImportModeJsonBtn, mode === "json"],
-    [linkedInImportModeUrlsBtn, mode === "urls"]
+    [linkedInImportModeUrlsBtn, mode === "urls"],
+    [linkedInImportModeMediaBtn, mode === "media"]
   ].forEach(([button, active]) => {
     if (!button) return;
     button.classList.toggle("bg-[#231738]", active);
@@ -7558,8 +7617,9 @@ function setLinkedInImportMode(mode = "text") {
   if (linkedInCaptureInput) linkedInCaptureInput.placeholder = config.placeholder;
   if (linkedInImportUrlLabel) linkedInImportUrlLabel.textContent = config.urlLabel;
   linkedInImportJsonUploadShell?.classList.toggle("hidden", mode === "urls");
+  linkedInImportModeMediaPanel?.classList.toggle("hidden", mode !== "media");
   if (linkedInCapturePreviewBtn) {
-    linkedInCapturePreviewBtn.textContent = mode === "json" ? "Parse JSON" : mode === "urls" ? "Parse URLs" : "Parse Text";
+    linkedInCapturePreviewBtn.textContent = mode === "json" ? "Parse JSON" : mode === "urls" ? "Parse URLs" : mode === "media" ? "Import Media" : "Parse Text";
   }
 }
 
@@ -8345,10 +8405,13 @@ function setupWriteIdeaWorkspace() {
     writeIdeaState.historyStartDate = String(writeIdeaHistoryStartDateInput.value || "").trim();
     renderWriteIdeaHistoryFilterStatus();
   });
-  writeIdeaHistoryEndDateInput?.addEventListener("change", () => {
-    writeIdeaState.historyEndDate = String(writeIdeaHistoryEndDateInput.value || "").trim();
-    renderWriteIdeaHistoryFilterStatus();
-  });
+	  writeIdeaHistoryEndDateInput?.addEventListener("change", () => {
+	    writeIdeaState.historyEndDate = String(writeIdeaHistoryEndDateInput.value || "").trim();
+	    renderWriteIdeaHistoryFilterStatus();
+	  });
+	  writeIdeaGenerationEngineInput?.addEventListener("change", () => {
+	    writeIdeaState.generationEngine = String(writeIdeaGenerationEngineInput.value || "auto").trim() || "auto";
+	  });
   const updateAIHistoryDiagnostics = () => {
     try {
       const filters = buildAIHistoryFilterPayload();
@@ -10570,17 +10633,26 @@ async function connectSocialAccount(platform) {
   try {
     const result = await apiStartPlatformAuth(platform);
     const auth = result?.authUrl ? result : (result?.auth || result);
-    if (auth) {
-      var safeDiag = {
-        platform: auth.platform || platform,
-        hasAuthUrl: !!auth.authUrl,
-        authUrlPreview: auth.authUrlPreview || "",
-        derivedRedirectUri: auth.derivedRedirectUri || "",
-        statePlatform: auth.statePlatform || "",
-        hasState: auth.hasState
-      };
-      console.log("[Auth Diagnostics] " + platform + ":", JSON.stringify(safeDiag));
-    }
+	    if (auth) {
+	      var containsMetaCallback = String(auth.authUrl || "").includes("metaCallback")
+	        || String(auth.authUrlPreview || "").includes("metaCallback")
+	        || String(auth.derivedRedirectUri || "").includes("metaCallback");
+	      var safeDiag = {
+	        platform: auth.platform || platform,
+	        actionCalled: platform === "instagram" ? "startInstagramAuth" : platform === "threads" ? "startThreadsAuth" : "startLinkedInAuth",
+	        hasAuthUrl: !!auth.authUrl,
+	        authUrlPreview: auth.authUrlPreview || "",
+	        derivedRedirectUri: auth.derivedRedirectUri || "",
+	        containsMetaCallback: !!containsMetaCallback,
+	        statePlatform: auth.statePlatform || "",
+	        hasState: auth.hasState
+	      };
+	      console.log("[Auth Diagnostics] " + platform + ":", JSON.stringify(safeDiag));
+	      if ((platform === "instagram" || platform === "threads") && containsMetaCallback) {
+	        showToast("Stale OAuth URL blocked", "This app copy tried to use deprecated metaCallback. Reset cache and reload, then try again.", "ph-warning", "text-yellow-400");
+	        return;
+	      }
+	    }
     openConnectionSetupModal(platform, auth);
     if (auth?.authUrl) {
       window.location.assign(auth.authUrl);
@@ -11834,6 +11906,7 @@ function openArtifactInWriteIdea(type, id, mode = "use", transformationType = ""
 
 function syncWriteIdeaStateFromInputs() {
   writeIdeaState.prompt = String(writeIdeaPromptInput?.value || "").trim();
+  writeIdeaState.generationEngine = String(writeIdeaGenerationEngineInput?.value || writeIdeaState.generationEngine || "auto").trim() || "auto";
   writeIdeaState.targetDate = normalizeQueueDateLabel(writeIdeaTargetDateInput?.value || writeIdeaState.targetDate || "") || normalizeQueueDateLabel(new Date());
   writeIdeaState.historyStartDate = String(writeIdeaHistoryStartDateInput?.value || "").trim();
   writeIdeaState.historyEndDate = String(writeIdeaHistoryEndDateInput?.value || "").trim();
@@ -11851,6 +11924,7 @@ function getWriteIdeaPayload() {
     ideaPrompt: writeIdeaState.prompt,
     prompt: writeIdeaState.prompt,
     outputType: writeIdeaState.outputType,
+    generationEngine: writeIdeaState.generationEngine || "auto",
     sourceType: writeIdeaState.sourceTypes[0] || "manual",
     sourceIds: writeIdeaState.sourceTypes,
     sourceTypes: writeIdeaState.sourceTypes,
@@ -12034,8 +12108,10 @@ function renderAIContextDiagnostics(context, filters = {}, errorMessage = "") {
   const rangeText = filters.historyStartDate || filters.historyEndDate
     ? `${filters.historyStartDate || "the beginning"} to ${filters.historyEndDate || "today"}`
     : "Using full history";
-  const rows = [
-    { label: "Total historical posts available", value: String(summary.totalHistoricalPostsAvailable ?? 0) },
+	  const rows = [
+	    { label: "Generation source", value: context?.providerStatus?.provider || "Local Creator Engine" },
+	    { label: "Provider note", value: context?.providerStatus?.notice || "Provider AI is optional; local generation remains available." },
+	    { label: "Total historical posts available", value: String(summary.totalHistoricalPostsAvailable ?? 0) },
     { label: "Posts included after filters", value: String(summary.postsIncluded ?? 0) },
     { label: "Posts used in AI context", value: String(summary.postsUsed ?? summary.postsIncluded ?? 0) },
     { label: "Date range used", value: rangeText },
@@ -12134,6 +12210,7 @@ function renderWriteIdeaScaffold() {
   if (writeIdeaTargetDateInput) writeIdeaTargetDateInput.value = toInputDateValue(writeIdeaState.targetDate);
   if (writeIdeaHistoryStartDateInput) writeIdeaHistoryStartDateInput.value = writeIdeaState.historyStartDate || "";
   if (writeIdeaHistoryEndDateInput) writeIdeaHistoryEndDateInput.value = writeIdeaState.historyEndDate || "";
+  if (writeIdeaGenerationEngineInput) writeIdeaGenerationEngineInput.value = writeIdeaState.generationEngine || "auto";
   renderWriteIdeaHistoryFilterStatus();
   renderWriteIdeaArtifactWorkspace();
   var mode = writeIdeaState.generationMode || "generate_post";
@@ -12357,19 +12434,21 @@ async function generateWriteIdeaPost() {
     var apiPayload = {
       prompt: payload.ideaPrompt,
       platform: payload.platform || "linkedin",
-      postType: mode === "generate_carousel" ? "carousel" : "text",
-      generationMode: mode === "generate_post" ? "generate_post" : mode === "generate_structure" ? "write_an_idea" : mode === "generate_carousel" ? "carousel" : mode === "generate_newsletter" ? "newsletter" : "linkedin_reflection",
-      generationStyle: generationStyle,
-      outlineMode: mode === "generate_structure",
-      historyStartDate: payload.historyStartDate || "",
-      historyEndDate: payload.historyEndDate || ""
-    };
+	      postType: mode === "generate_carousel" ? "carousel" : "text",
+	      generationMode: mode === "generate_post" ? "generate_post" : mode === "generate_structure" ? "write_an_idea" : mode === "generate_carousel" ? "carousel" : mode === "generate_newsletter" ? "newsletter" : "linkedin_reflection",
+	      generationStyle: generationStyle,
+	      generationEngine: payload.generationEngine || "auto",
+	      outlineMode: mode === "generate_structure",
+	      historyStartDate: payload.historyStartDate || "",
+	      historyEndDate: payload.historyEndDate || "",
+	      campaignName: payload.campaignName || ""
+	    };
 
-    var result = APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()
-      ? await apiGenerateAIDraft(apiPayload)
-      : buildLocalAIPost(payload);
+	    var result = APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()
+	      ? await apiGenerateAIDraft(apiPayload)
+	      : (mode === "generate_structure" ? buildLocalAIStructure(payload) : buildLocalAIPost(payload));
 
-    var draftText = result.draftText || result.captionVariant || "";
+	    var draftText = result.draftText || result.captionVariant || "";
     if (mode === "generate_post" && (!draftText.trim() || isScaffoldText(draftText))) {
       draftText = buildLocalAIPost(payload).draftText;
     }
@@ -12402,30 +12481,34 @@ async function generateWriteIdeaPost() {
       : mode === "generate_linkedin_reflection" ? "LinkedIn reflection generated. Personal, conversational tone."
       : "Draft generated. Review before saving.";
 
-    writeIdeaLastScaffold = {
+	    writeIdeaLastScaffold = {
       idea: {
         aiDraftId: "local-" + Date.now(),
         title: title,
         ideaPrompt: payload.ideaPrompt,
-        outputType: payload.outputType
-      },
-      scaffold: {
-        title: title,
-        draftStatus: mode === "generate_structure" ? "scaffold_only" : "draft",
-        warnings: [],
-        summaryText: summaryText,
-        generatedOutputs: generatedOutputs,
-        proposedPosts: proposedPosts
-      }
-    };
+	        outputType: payload.outputType
+	      },
+	      scaffold: {
+	        title: title,
+	        draftStatus: mode === "generate_structure" ? "scaffold_only" : "draft",
+	        warnings: [],
+	        summaryText: summaryText,
+	        generatedOutputs: generatedOutputs,
+	        proposedPosts: proposedPosts,
+	        generationSource: result.provider || (result.generationMode === "local_creator_engine" ? "Local Creator Engine" : "Provider AI"),
+	        creatorMemoryUsed: result.creatorMemoryUsed || {},
+	        historicalReferences: result.historicalReferences || []
+	      }
+	    };
 
     currentWriteIdeaDraftId = writeIdeaLastScaffold.idea.aiDraftId;
     setWriteIdeaLoading(false);
 
     recordWriteIdeaHistory("Generated " + mode, title);
-    renderWriteIdeaScaffold();
-    renderWriteIdeaCreatorMemory(styleContext);
-    renderWriteIdeaHistoricalReferences(title);
+	    renderWriteIdeaScaffold();
+	    renderWriteIdeaCreatorMemory(styleContext);
+	    renderWriteIdeaGenerationSource(result);
+	    renderWriteIdeaHistoricalReferences(title, result.historicalReferences);
   } catch (err) {
     setWriteIdeaLoading(false);
     throw err;
@@ -12444,29 +12527,80 @@ function buildLocalAIPost(payload) {
       "The better question is not whether someone wants it badly enough. It is what conditions make follow-through possible, repeatable, and supported.",
       "That is where real encouragement gets more honest. It does not flatten the barriers. It helps people name the structure, find the next available step, and build enough support around it to keep going."
     ].join("\n\n");
-  } else if (/clean energy without distribution/.test(lower) || /new segregation/.test(lower)) {
-    draftText = [
-      "Clean energy without distribution is just the new segregation.",
-      "If the benefits stop at the people who can already afford the upgrade, the system has not transformed. It has rebranded exclusion with better technology.",
-      "The work is not only generation. It is access, siting, financing, maintenance, ownership, and the everyday interfaces that decide who actually receives the value.",
-      "A clean-energy transition has to be judged by where the power goes, who controls it, and whether communities that carried the burden of the old system get to shape the next one."
-    ].join("\n\n");
-  } else {
-    draftText = [
-      core,
-      "The useful part of this idea is not the slogan. It is the structure underneath it: who gets access, what conditions shape the outcome, and what changes when the system is made visible.",
-      "That is the post. Start with the tension, name the pattern, then give people a clearer way to see what is actually happening.",
-      "When the framing gets more precise, the next step gets easier to act on."
-    ].filter(Boolean).join("\n\n");
-  }
+	  } else if (/clean energy without distribution/.test(lower) || /new segregation/.test(lower)) {
+	    draftText = [
+	      "Clean energy without distribution is just the new segregation.",
+	      "If the benefits stop at the people who can already afford the upgrade, the system has not transformed. It has rebranded exclusion with better technology.",
+	      "The work is not only generation. It is access, siting, financing, maintenance, ownership, and the everyday interfaces that decide who actually receives the value.",
+	      "A clean-energy transition has to be judged by where the power goes, who controls it, and whether communities that carried the burden of the old system get to shape the next one."
+	    ].join("\n\n");
+	  } else if (/community-led climate communication/.test(lower)) {
+	    draftText = [
+	      "Community-led climate communication is not a messaging tactic. It is an infrastructure question.",
+	      "A lot of climate work focuses on better language, stronger campaigns, and clearer facts. Those matter, but they are not enough if information only moves one way.",
+	      "The deeper work is building channels communities can recognize, use, question, and shape: local messengers, feedback loops, translation, decision points, and attention systems that are maintained after the campaign ends.",
+	      "When communication becomes participatory infrastructure, climate information stops being something delivered to a community and starts becoming something a community can use."
+	    ].join("\n\n");
+	  } else {
+	    draftText = [
+	      core,
+	      "The useful part of this idea is not the slogan. It is the structure underneath it: who gets access, what conditions shape the outcome, and what changes when the system is made visible.",
+	      "That is the post. Start with the tension, name the pattern, then give people a clearer way to see what is actually happening.",
+	      "When the framing gets more precise, the next step gets easier to act on."
+	    ].filter(Boolean).join("\n\n");
+	  }
+	  var paragraphs = draftText.split(/\n+/).map(function(item) { return item.trim(); }).filter(Boolean);
+	  var title = deriveIdeaTitle(prompt);
+	  return {
+	    title: title,
+	    draftText: draftText,
+	    captionVariant: draftText,
+	    hookText: paragraphs[0] || "",
+	    ctaText: "What does this make possible?",
+	    reviewNotes: "Generated with Local Creator Engine.",
+	    semanticTags: prompt.toLowerCase().split(/[^a-z0-9]+/).filter(function(t) { return t.length >= 5; }).slice(0, 6),
+	    provider: "Local Creator Engine",
+	    model: "LOCAL_CREATOR_ENGINE",
+	    generationMode: "local_creator_engine",
+	    summary: "Generated locally from prompt, creator-memory signals, and reusable writing formulas.",
+	    creatorMemoryUsed: {
+	      recurringThemes: ["systems", "distribution", "participation", "infrastructure"],
+	      matchingFrameworks: ["community-led systems", "attention systems", "participation infrastructure"]
+	    },
+	    historicalReferences: (appState.posts || []).slice(0, 3).map(function(post) {
+	      return {
+	        postId: post.postId || "",
+	        title: post.title || "",
+	        campaignName: post.campaignName || "",
+	        platform: post.platform || "",
+	        excerpt: String(post.description || post.body || "").slice(0, 180)
+	      };
+	    })
+	  };
+	}
+
+function buildLocalAIStructure(payload) {
+  var prompt = String(payload.prompt || payload.ideaPrompt || "").trim();
   var title = deriveIdeaTitle(prompt);
+  var body = [
+    "Structure: systems take",
+    "1. Sharp claim: " + (prompt || "Name the core tension."),
+    "2. Common focus: what people usually optimize for, such as messaging, motivation, technology, or individual behavior.",
+    "3. Overlooked system issue: distribution, access, participation, maintenance, and who gets to shape the conditions.",
+    "4. Examples: channels, infrastructure, ownership, support systems, feedback loops, and public interfaces.",
+    "5. Implication: explain what changes when the system becomes visible."
+  ].join("\n");
   return {
     title: title,
-    draftText: draftText,
-    captionVariant: draftText,
-    hookText: paragraphs[0] || "",
-    ctaText: "What does this make possible?",
-    reviewNotes: "Generated in local prose fallback.",
+    draftText: body,
+    captionVariant: body,
+    hookText: prompt,
+    carouselOutline: body,
+    reviewNotes: "Generated structure with Local Creator Engine.",
+    provider: "Local Creator Engine",
+    model: "LOCAL_CREATOR_ENGINE",
+    generationMode: "local_creator_engine",
+    outlineMode: true,
     semanticTags: prompt.toLowerCase().split(/[^a-z0-9]+/).filter(function(t) { return t.length >= 5; }).slice(0, 6)
   };
 }
@@ -12501,9 +12635,28 @@ function renderWriteIdeaCreatorMemory(styleContext) {
   writeIdeaCreatorMemoryEl.classList.remove("hidden");
 }
 
-function renderWriteIdeaHistoricalReferences(titleHint) {
+function renderWriteIdeaGenerationSource(result) {
+  var provider = String(result?.provider || "").trim();
+  var source = provider || (result?.generationMode === "local_creator_engine" ? "Local Creator Engine" : "Provider AI");
+  if (writeIdeaStatusChip) writeIdeaStatusChip.textContent = source === "Local Creator Engine" ? "Generated locally" : "Generated with " + source;
+  if (writeIdeaReviewSubtitle) {
+    writeIdeaReviewSubtitle.textContent = source === "Local Creator Engine"
+      ? "Generated with Local Creator Engine. Review generated prose before saving to POSTS."
+      : "Generated with " + source + ". Review generated prose before saving to POSTS.";
+  }
+}
+
+function renderWriteIdeaHistoricalReferences(titleHint, references = null) {
   if (!writeIdeaHistoricalReferencesEl || !writeIdeaHistoricalReferencesBody) return;
-  var posts = (appState.posts || []).slice().sort(function(a, b) {
+  var posts = Array.isArray(references) && references.length ? references.map(function(ref) {
+    return {
+      id: ref.postId || "",
+      title: ref.title || "",
+      description: ref.excerpt || "",
+      campaignName: ref.campaignName || "",
+      platform: ref.platform || ""
+    };
+  }) : (appState.posts || []).slice().sort(function(a, b) {
     return new Date(b.date || b.scheduledAt || b.importedAt || 0) - new Date(a.date || a.scheduledAt || a.importedAt || 0);
   }).slice(0, 6);
   if (!posts.length) {
@@ -12511,7 +12664,7 @@ function renderWriteIdeaHistoricalReferences(titleHint) {
     return;
   }
   writeIdeaHistoricalReferencesBody.innerHTML = posts.map(function(post) {
-    var excerpt = (post.description || "").slice(0, 140);
+    var excerpt = (post.description || post.title || "").slice(0, 140);
     var campaign = post.campaignName || post.hubTitle || "";
     var date = post.originalPostDateLabel || post.date || post.scheduledAt || "";
     var score = titleHint && post.description ? computeSimilarityScore(titleHint, post.description) : "";
@@ -14270,11 +14423,8 @@ async function aiGenerate(type) {
       toastText.textContent = "Emoji added!";
       return;
     }
-    if (!APP_CONFIG.ENABLE_REMOTE_SYNC || !isRemoteConfigured()) {
-      throw new Error("Remote AI drafting is unavailable. Confirm the Apps Script deployment and AI provider configuration.");
-    }
-    const current = String(captionField?.value || "").trim();
-    const payload = {
+	    const current = String(captionField?.value || "").trim();
+	    const payload = {
       sourceType: currentModalSourceContext.type || "manual",
       sourceId: currentModalSourceContext.sourceId || "",
       platform: String(platSelect?.value || "linkedin").trim().toLowerCase(),
@@ -14290,7 +14440,9 @@ async function aiGenerate(type) {
         ? "Return strong semantic tags and sharpen the core angle without generic phrasing."
         : "Rewrite this into a stronger finished draft while preserving the human voice and emotional truth."
     };
-    const result = await apiGenerateAIDraft(payload);
+	    const result = APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()
+	      ? await apiGenerateAIDraft(payload)
+	      : buildLocalAIPost({ prompt: payload.prompt, ideaPrompt: current || payload.prompt, platform: payload.platform, postType: payload.postType });
     if (captionField) {
       if (type === "keywords") {
         const tags = Array.isArray(result.semanticTags) ? result.semanticTags.filter(Boolean) : [];
@@ -15044,9 +15196,27 @@ function normalizeLinkedInCaptureCandidate(raw, index) {
   const dateLabel = String(raw?.date_label || raw?.dateLabel || raw?.timestamp || raw?.published_at || parsedFromRaw?.date_label || "").trim();
   const generatedAt = String(raw?.generated_at || raw?.generatedAt || "").trim();
   const dateDetails = parseImportedDateDetails(dateLabel || raw?.date || raw?.publishedAt || "", generatedAt);
-  const mediaArray = Array.isArray(raw?.media) ? raw.media : [];
-  const mediaUrls = (Array.isArray(raw?.media_urls) ? raw.media_urls : Array.isArray(raw?.mediaUrls) ? raw.mediaUrls : mediaArray.map((item) => item?.url || item?.src || item)).map((item) => String(item || "").trim()).filter(Boolean);
-  const mediaAltTexts = (Array.isArray(raw?.media_alt_texts) ? raw.media_alt_texts : Array.isArray(raw?.mediaAltTexts) ? raw.mediaAltTexts : mediaArray.map((item) => item?.alt || item?.label || "")).map((item) => String(item || "").trim()).filter(Boolean);
+  var mediaArray = (Array.isArray(raw?.media) ? raw.media : []).filter(Boolean);
+  if (!mediaArray.length && Array.isArray(raw?.media_urls)) {
+    mediaArray = raw.media_urls.map(function(url) { return { url: url }; });
+  }
+  var mediaUrls = mediaArray.map(function(item) {
+    return String(item?.url || item?.src || item || "").trim();
+  }).filter(Boolean);
+  var mediaAltTexts = mediaArray.map(function(item) {
+    return String(item?.alt || item?.label || "").trim();
+  }).filter(Boolean);
+  var mediaRich = mediaArray.map(function(item) {
+    if (typeof item === "string") return { url: item, type: "image", source: "linkedin_dom" };
+    return {
+      url: String(item?.url || item?.src || "").trim(),
+      alt: String(item?.alt || "").trim(),
+      type: String(item?.type || "image").trim(),
+      width: Math.max(0, parseInt(item?.width, 10) || 0),
+      height: Math.max(0, parseInt(item?.height, 10) || 0),
+      source: String(item?.source || "linkedin_dom").trim()
+    };
+  }).filter(function(m) { return m.url; });
   const linkedinPostId = String(raw?.linkedin_post_id || raw?.linkedinPostId || parseLinkedInPostId(sourceUrl)).trim();
   const requiresContentPaste = !!raw?.requiresContentPaste || (!!sourceUrl && !text && detectSourcePlatform(sourceUrl) === "linkedin");
   const nestedMetrics = raw?.metrics || {};
@@ -15097,6 +15267,7 @@ function normalizeLinkedInCaptureCandidate(raw, index) {
     },
     mediaUrls,
     mediaAltTexts,
+    mediaRich,
     generatedAt,
     sourcePageUrl: String(raw?.source_page_url || raw?.sourcePageUrl || "").trim(),
     rawText,
@@ -15257,6 +15428,7 @@ function renderLinkedInCapturePreview() {
             <div class="text-sm text-gray-300 wrap-safe">${escapeHtml(item.excerpt || "No text captured yet.")}</div>
             <div class="text-[11px] text-gray-400 wrap-safe">${escapeHtml(item.sourceUrl || "No source URL captured.")}</div>
             <div class="text-[11px] text-gray-500 wrap-safe">${escapeHtml(metrics)}</div>
+            ${item.mediaRich && item.mediaRich.length ? `<div class="flex flex-wrap gap-2 mt-1">${item.mediaRich.slice(0, 4).map(function(m) { var iconClass = m.type === "video" ? "ph-video" : m.type === "document_thumbnail" ? "ph-file-text" : "ph-image"; return '<span class="diagnostic-chip" title="' + escapeHtml(m.url) + '"><i class="' + iconClass + '"></i> ' + escapeHtml(m.type) + (m.width && m.height ? ' ' + m.width + '\u00d7' + m.height : '') + '</span>'; }).join("")}${item.mediaRich.length > 4 ? '<span class="diagnostic-chip">+' + (item.mediaRich.length - 4) + ' more</span>' : ''}</div>` : ``}
             ${item.isRepost ? `<div class="text-[11px] text-cyan-200 wrap-safe">Original author: ${escapeHtml(item.originalAuthor || item.repostAuthor || "Unknown")} ${item.repostCommentary ? `• Commentary: ${escapeHtml(item.repostCommentary.slice(0, 160))}` : ""}</div>` : ""}
             ${duplicate ? `<div class="text-[11px] text-yellow-300 wrap-safe">Already imported: ${escapeHtml(duplicate.title || duplicate.postId || duplicate.sourceUrl || "Matching post")}</div>` : ""}
             ${item.requiresContentPaste ? `<div class="text-[11px] text-yellow-300 wrap-safe">LinkedIn URL saved as source. Paste the post text or browser capture JSON to import content.</div>` : ""}
@@ -15809,6 +15981,7 @@ async function importSelectedLinkedInCaptureItems() {
         comments: item.metrics.comments,
         shares: item.metrics.shares,
         metrics: item.metrics,
+        media: item.mediaRich || item.mediaUrls ? item.mediaUrls.map(function(url) { return { url: url, type: "image", source: "linkedin_dom" }; }) : [],
         mediaUrls: item.mediaUrls,
         mediaAltTexts: item.mediaAltTexts,
         generatedAt: item.generatedAt,
@@ -15851,6 +16024,56 @@ async function importSelectedLinkedInCaptureItems() {
       debug: backendDebug
     });
     showToast("Import failed", err?.message || "Could not import selected captured posts.", "ph-warning", "text-yellow-400");
+  }
+}
+
+async function importLinkedInMediaManifest() {
+  if (!linkedInMediaManifestInput) return;
+  var raw = linkedInMediaManifestInput.value.trim();
+  if (!raw) {
+    showToast("Empty manifest", "Paste a media manifest JSON first.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  var parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (e) {
+    showToast("Invalid JSON", "Could not parse the media manifest. Check the JSON syntax.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  var manifestItems = Array.isArray(parsed.items) ? parsed.items : (parsed.media_manifest && parsed.media_manifest.items) ? parsed.media_manifest.items : [];
+  if (!manifestItems.length) {
+    showToast("No media items", "The manifest contains no media items. Download a new media manifest from the LinkedIn Export Helper.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  var totalMediaCount = manifestItems.reduce(function(sum, item) {
+    return sum + (Array.isArray(item.media) ? item.media.length : 0);
+  }, 0);
+  if (linkedInMediaManifestStatus) linkedInMediaManifestStatus.textContent = "Importing " + totalMediaCount + " media items to Google Drive...";
+  try {
+    var result;
+    if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
+      result = await apiCall({
+        action: "importMediaManifest",
+        items: manifestItems,
+        source_url: parsed.source_url || "",
+        page_type: parsed.page_type || "",
+        generated_at: parsed.generated_at || new Date().toISOString()
+      });
+    } else {
+      result = { ok: true, local: true, total: totalMediaCount, importedCount: 0, failedCount: 0, skippedCount: 0, needsManualDownload: totalMediaCount, assets: [] };
+    }
+    if (result && result.ok) {
+      var msg = result.importedCount + " uploaded, " + result.needsManualDownload + " need manual download, " + result.skippedCount + " skipped.";
+      if (linkedInMediaManifestStatus) linkedInMediaManifestStatus.textContent = "Done. " + msg;
+      showToast("Media imported", msg, result.needsManualDownload > 0 ? "ph-warning" : "ph-check", result.needsManualDownload > 0 ? "text-yellow-400" : "text-[#00ffaa]");
+    } else {
+      if (linkedInMediaManifestStatus) linkedInMediaManifestStatus.textContent = "Import returned: " + JSON.stringify(result);
+      showToast("Import issue", result && result.error || "Backend returned an unexpected result.", "ph-warning", "text-yellow-400");
+    }
+  } catch (err) {
+    if (linkedInMediaManifestStatus) linkedInMediaManifestStatus.textContent = "Error: " + (err.message || "Unknown error");
+    showToast("Import failed", err.message || "Could not import media manifest.", "ph-warning", "text-yellow-400");
   }
 }
 
@@ -16044,7 +16267,8 @@ async function resetAppShellCacheOnly() {
   await Promise.all(shellKeys.map((key) => caches.delete(key)));
   serviceWorkerStatus.updateAvailable = false;
   updateAppStatusBanner();
-  showToast("Cache reset", "App shell cache cleared. Local post data was not deleted.", "ph-check", "text-[#00ffaa]");
+  showToast("Cache reset", "App shell cache cleared. Local post data was not deleted. Reloading app.", "ph-check", "text-[#00ffaa]");
+  setTimeout(() => window.location.reload(), 900);
 }
 
 function inspoToPost(inspoIdOrTitle, type, description) {
@@ -16652,9 +16876,13 @@ function renderOAuthRouteHealthCards(routeHealth = []) {
         <div class="text-sm font-bold text-white">${escapeHtml(item.label || toTitleCase(item.platform || "platform"))}</div>
         <span class="diagnostic-chip">${escapeHtml(item.dashboardUpdateRequired === "yes" ? "Dashboard update required" : "Dashboard aligned")}</span>
       </div>
-      <div class="text-[11px] text-gray-400 wrap-safe break-all">${escapeHtml(`Derived redirect URI: ${item.derivedRedirectUri || "Missing"}`)}</div>
-      <div class="text-[11px] text-gray-400 wrap-safe break-all">${escapeHtml(`Auth URL preview: ${item.authUrlPreview || "Unavailable"}`)}</div>
-      ${item.authMode ? `<div class="text-[11px] text-gray-400 wrap-safe">${escapeHtml(`Auth mode: ${item.authMode} • Token host: ${item.tokenHost || "Unavailable"}`)}</div>` : ""}
+	      <div class="text-[11px] text-gray-400 wrap-safe break-all">${escapeHtml(`Derived redirect URI: ${item.derivedRedirectUri || "Missing"}`)}</div>
+	      <div class="text-[11px] text-gray-400 wrap-safe break-all">${escapeHtml(`Auth URL preview: ${item.authUrlPreview || "Unavailable"}`)}</div>
+	      <div class="text-[11px] ${item.redirectUriContainsMetaCallback ? "text-red-200" : "text-emerald-300"} wrap-safe">${escapeHtml(`redirectUriContainsMetaCallback: ${item.redirectUriContainsMetaCallback ? "true" : "false"}`)}</div>
+	      <div class="text-[11px] text-gray-400 wrap-safe">${escapeHtml(`connectActionUsed: ${item.connectActionUsed || "Unavailable"} • callbackActionExpected: ${item.callbackActionExpected || item.callbackAction || "Unavailable"}`)}</div>
+	      <div class="text-[11px] text-gray-500 wrap-safe break-all">${escapeHtml(`frontendAppScriptUrl: ${item.frontendAppScriptUrl || "Unavailable"}`)}</div>
+	      <div class="text-[11px] text-gray-500 wrap-safe break-all">${escapeHtml(`backendPublicWebAppBaseUrl: ${item.backendPublicWebAppBaseUrl || "Unavailable"}`)}</div>
+	      ${item.authMode ? `<div class="text-[11px] text-gray-400 wrap-safe">${escapeHtml(`Auth mode: ${item.authMode} • Token host: ${item.tokenHost || "Unavailable"}`)}</div>` : ""}
       ${Array.isArray(item.requiredScopes) && item.requiredScopes.length ? `<div class="text-[11px] text-gray-400 wrap-safe">${escapeHtml(`Scopes: ${item.requiredScopes.join(", ")}`)}</div>` : ""}
       <div class="grid grid-cols-2 gap-2 text-[11px] text-gray-300">
         <div>${escapeHtml(`Callback action: ${item.callbackAction || "Missing"}`)}</div>
@@ -16786,8 +17014,8 @@ function renderDiagnosticsPanel() {
     if (hasDeploymentUrlMismatch()) {
       warning.textContent = "Deployment URL mismatch. Update APP_SCRIPT_URL or PUBLIC_WEBAPP_BASE_URL.";
       warning.classList.remove("hidden");
-    } else if (hasVersionMismatch()) {
-      warning.textContent = "Frontend and backend may be out of sync. Redeploy Apps Script or refresh app shell.";
+	    } else if (hasVersionMismatch()) {
+	      warning.textContent = "Frontend/backend version mismatch. A stale service worker cache may be serving old connect logic; use Reset Cache / Reload App after redeploy.";
       warning.classList.remove("hidden");
     } else {
       warning.classList.add("hidden");
@@ -16831,7 +17059,7 @@ function renderDiagnosticsPanel() {
         <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Cache Health</div>
         <div class="text-sm text-gray-300 wrap-safe">Reset the app shell cache without deleting local workspace data.</div>
       </div>
-      <button type="button" class="reset-app-shell-cache-btn px-3 py-2 rounded-xl bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white hover:bg-[#2d1b4e] transition-colors">Reset Cache</button>
+	      <button type="button" class="reset-app-shell-cache-btn px-3 py-2 rounded-xl bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white hover:bg-[#2d1b4e] transition-colors">Reset Cache / Reload App</button>
     </div>
     ${renderCampaignCleanupDiagnosticsCard()}
     <div class="p-4 rounded-xl bg-[#181125] border border-white/5 space-y-3">
@@ -17243,10 +17471,10 @@ function getInlineAIOutputText(result = {}) {
 }
 
 async function generateInlineAIGuidance() {
-  if (!APP_CONFIG.ENABLE_REMOTE_SYNC || !isRemoteConfigured()) {
-    throw new Error("Remote AI drafting is unavailable. Confirm the Apps Script deployment and AI provider configuration.");
-  }
-  const result = await apiGenerateAIDraft(getInlineAIPayload());
+  const payload = getInlineAIPayload();
+  const result = APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()
+    ? await apiGenerateAIDraft(payload)
+    : buildLocalAIPost({ prompt: payload.prompt, ideaPrompt: payload.description || payload.prompt, platform: payload.platform, postType: payload.postType });
   currentAIGenerationResult = result;
   if (modalAiOutput) modalAiOutput.textContent = getInlineAIOutputText(result) || "No AI text was returned.";
   return result;
@@ -17483,9 +17711,6 @@ function closeBrandFrameworkModal() {
 }
 
 async function generateAIDraftPreview() {
-  if (!APP_CONFIG.ENABLE_REMOTE_SYNC || !isRemoteConfigured()) {
-    throw new Error("Remote AI drafting is unavailable. Confirm the Apps Script deployment URL and AI provider configuration.");
-  }
   const sourceType = aiSourceTypeInput?.value || "manual";
   const sourceId = aiSourceIdInput?.value || "";
   const mode = aiGenerationModeInput?.value || "LinkedIn draft";
@@ -17505,6 +17730,7 @@ async function generateAIDraftPreview() {
     postType: aiPostTypeInput?.value || "text",
     generationMode: mode,
     generationStyle: generationStyle,
+    generationEngine: aiGenerationEngineInput?.value || "auto",
     outlineMode: !!aiOutlineModeInput?.checked,
     targetField: "draft",
     title: String(aiDraftTitleInput?.value || "").trim(),
@@ -17514,19 +17740,34 @@ async function generateAIDraftPreview() {
     ...historyFilters
   };
   let context = null;
-  try {
-    context = await apiPrepareAIGenerationContext(payload);
+  if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
+    try {
+      context = await apiPrepareAIGenerationContext(payload);
+      renderAIContextDiagnostics(context, historyFilters);
+    } catch (err) {
+      renderAIContextDiagnostics(null, historyFilters, err.message || "Could not prepare historical AI context.");
+      throw err;
+    }
+  } else {
+    context = { historicalSummary: buildLocalAIHistorySummary(historyFilters), providerStatus: { provider: "Local Creator Engine", notice: "Using Local Creator Engine. Add an AI provider key for more advanced generation." } };
     renderAIContextDiagnostics(context, historyFilters);
-  } catch (err) {
-    renderAIContextDiagnostics(null, historyFilters, err.message || "Could not prepare historical AI context.");
-    throw err;
   }
   let result = null;
-  try {
-    result = await apiGenerateAIDraft(payload);
-  } catch (err) {
-    renderAIContextDiagnostics(context, historyFilters, err.message || "AI provider request failed.");
-    throw err;
+  if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
+    try {
+      result = await apiGenerateAIDraft(payload);
+    } catch (err) {
+      renderAIContextDiagnostics(context, historyFilters, err.message || "AI provider request failed.");
+      throw err;
+    }
+  } else {
+    result = buildLocalAIPost({
+      prompt: prompt,
+      ideaPrompt: prompt,
+      platform: payload.platform,
+      postType: payload.postType,
+      generationStyle: payload.generationStyle
+    });
   }
   currentAIGenerationResult = result;
   if (aiDraftTitleInput) aiDraftTitleInput.value = result.title || aiDraftTitleInput.value || "";
@@ -17534,11 +17775,17 @@ async function generateAIDraftPreview() {
   if (aiDraftCarouselOutlineInput) aiDraftCarouselOutlineInput.value = result.carouselOutline || "";
   if (aiDraftStatusInput) aiDraftStatusInput.value = result.outlineMode ? "reviewed" : "needs_review";
   if (aiReviewNotesInput && !String(aiReviewNotesInput.value || "").trim()) aiReviewNotesInput.value = result.reviewNotes || "";
-  renderAIContextDiagnostics({ historicalSummary: result.historicalSummary || context?.historicalSummary || {} }, historyFilters);
+  renderAIContextDiagnostics({
+    historicalSummary: result.historicalSummary || context?.historicalSummary || {},
+    providerStatus: {
+      provider: result.provider || context?.providerStatus?.provider || "Local Creator Engine",
+      notice: result.notice || context?.providerStatus?.notice || ""
+    }
+  }, historyFilters);
   if (aiDraftMeta) {
     var styleLabel = generationStyle === "match_my_style" ? "Match My Style" : generationStyle === "match_framework" ? "Match Framework" : generationStyle === "experimental" ? "Experimental" : generationStyle === "newsletter" ? "Newsletter" : generationStyle === "carousel" ? "Carousel" : generationStyle === "linkedin_reflection" ? "LinkedIn Reflection" : "Default";
     aiDraftMeta.innerHTML = [
-      { label: "Provider", value: result.provider || "Unavailable" },
+      { label: "Generation Source", value: result.provider || "Local Creator Engine" },
       { label: "Model", value: result.model || "Unavailable" },
       { label: "Mode", value: result.outlineMode ? "Outline" : "Full draft" },
       { label: "Platform", value: toTitleCase(result.platform || payload.platform || "linkedin") },
@@ -17548,9 +17795,9 @@ async function generateAIDraftPreview() {
     ].map((item) => `<div class="p-3 rounded-xl bg-[#181125] border border-white/5"><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">${escapeHtml(item.label)}</div><div class="text-sm text-white wrap-safe">${escapeHtml(item.value)}</div></div>`).join("");
   }
   renderAISemanticMemoryCards();
-  renderCreatorMemoryDiagnostics(styleContext, creatorMemoryDiagnostics);
-  showToast("Draft ready", "AI draft generated.", "ph-check", "text-[#00ffaa]");
-}
+	  renderCreatorMemoryDiagnostics(styleContext, creatorMemoryDiagnostics);
+	  showToast("Draft ready", (result.provider || "") === "Local Creator Engine" ? "Generated with Local Creator Engine." : "AI draft generated.", "ph-check", "text-[#00ffaa]");
+	}
 
 function loadAIDraftIntoWorkspace(aiDraftId) {
   const draft = (appState.aiDrafts || []).find((item) => item.aiDraftId === aiDraftId);
