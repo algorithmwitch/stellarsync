@@ -2068,8 +2068,8 @@
               <button type="button" class="write-idea-output-btn" data-write-idea-output="add_to_inspo">Add to Inspo</button>
               <button type="button" class="write-idea-output-btn" data-write-idea-output="draft_carousel_outline">Carousel structure</button>
               <button type="button" class="write-idea-output-btn" data-write-idea-output="draft_short_video_script">Draft short video script</button>
-              <button type="button" class="write-idea-output-btn" data-write-idea-output="populate_calendar_week">Populate calendar week</button>
-              <button type="button" class="write-idea-output-btn" data-write-idea-output="populate_campaign_queue">Populate campaign queue</button>
+              <button type="button" class="write-idea-output-btn" data-write-idea-output="populate_calendar_week">Generate campaign with posts</button>
+              <button type="button" class="write-idea-output-btn" data-write-idea-output="populate_campaign_queue">Generate campaign posts</button>
             </div>
             <div class="flex flex-wrap gap-3 mt-5">
               <button id="write-idea-generate-btn" type="button" class="px-5 py-3 rounded-2xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs uppercase tracking-[0.2em] font-bold border border-white/10">Generate Scaffold</button>
@@ -3088,15 +3088,10 @@
         <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2">Constellation Shape</label>
         <select id="campaign-shape-input" class="form-input text-sm font-medium">
           <option value="">Default Path</option>
-          <option value="leaf">Leaf</option>
-          <option value="spark">Spark</option>
-          <option value="sun">Sun</option>
-          <option value="moon">Moon</option>
-          <option value="bolt">Bolt</option>
-          <option value="map">Map</option>
-          <option value="book">Book</option>
-          <option value="star">Star</option>
-          <option value="spiral">Spiral</option>
+          <option value="straight">Straight</option>
+          <option value="squiggle">Squiggle</option>
+          <option value="zigzag">Zigzag</option>
+          <option value="arc">Arc</option>
         </select>
       </div>
 
@@ -8530,10 +8525,14 @@ function detectConstellationOverlaps(nodes = []) {
       const second = entries[compareIndex];
       const deltaX = Math.abs(Number(first.x || 0) - Number(second.x || 0));
       const deltaY = Math.abs(Number(first.y || 0) - Number(second.y || 0));
-      if (deltaX < CONSTELLATION_OVERLAP_THRESHOLD && deltaY < CONSTELLATION_OVERLAP_THRESHOLD) {
+      const laneDiff = Math.abs(Number(first.lane_index || 0) - Number(second.lane_index || 0));
+      const adjacentLane = laneDiff === 1;
+      const yOverlaps = deltaY < CONSTELLATION_OVERLAP_THRESHOLD || (adjacentLane && deltaX < CONSTELLATION_OVERLAP_THRESHOLD);
+      if (deltaX < CONSTELLATION_OVERLAP_THRESHOLD && yOverlaps) {
         overlaps.push({
           deltaX,
           deltaY,
+          laneDiff,
           first,
           second
         });
@@ -8783,17 +8782,52 @@ function getConstellationLayoutConfig(campaign, index = 0) {
 function getIconPathPoints(shape, count, anchorX, anchorY, layout = {}, seed = "") {
   const safeCount = Math.max(count, 1);
   const points = [];
+  const rowIndex = Number(layout.rowIndex || 0);
+  const baseY = getCampaignBaseY(rowIndex);
+  const shapeStyle = shape === "zigzag" || shape === "arc" || shape === "straight" ? shape : "squiggle";
   for (let index = 0; index < safeCount; index += 1) {
-    const point = getNodePosition(index, Number(layout.rowIndex || 0));
+    const point = getNodePosition(index, rowIndex);
+    let yOffset = 0;
+    if (shapeStyle === "zigzag") {
+      yOffset = (index % 2 === 0 ? -1 : 1) * 32;
+    } else if (shapeStyle === "arc") {
+      const progress = safeCount > 1 ? (index / (safeCount - 1)) * 2 - 1 : 0;
+      yOffset = (1 - progress * progress) * -48;
+    } else if (shapeStyle === "squiggle") {
+      const phase = index * 0.8;
+      yOffset = Math.sin(phase) * 18;
+    }
     points.push({
       x: Math.max(point.x, START_X),
-      y: clamp(point.y, 160, 6000)
+      y: clamp(baseY + yOffset, 160, 6000)
     });
   }
   return points;
 }
 
-function buildCanonicalSquigglePath(points = []) {
+function buildConstellationPath(points = [], shape = "") {
+  const shapeStyle = shape === "zigzag" || shape === "arc" || shape === "straight" ? shape : "squiggle";
+  if (shapeStyle === "straight") {
+    if (!points.length) return "";
+    return "M " + points.map(p => `${p.x} ${p.y}`).join(" L ");
+  }
+  if (shapeStyle === "zigzag") {
+    if (!points.length) return "";
+    let path = `M ${points[0].x} ${points[0].y}`;
+    for (let i = 1; i < points.length; i += 1) {
+      const prev = points[i - 1];
+      const curr = points[i];
+      const midX = (prev.x + curr.x) / 2;
+      path += ` L ${midX} ${prev.y} L ${curr.x} ${curr.y}`;
+    }
+    return path;
+  }
+  if (shapeStyle === "arc") {
+    if (points.length < 2) return points.length === 1 ? `M ${points[0].x} ${points[0].y}` : "";
+    const first = points[0];
+    const last = points[points.length - 1];
+    return `M ${first.x} ${first.y} Q ${(first.x + last.x) / 2} ${Math.min(first.y, last.y) - 60} ${last.x} ${last.y}`;
+  }
   if (!points.length) return "";
   if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
   let path = `M ${points[0].x} ${points[0].y}`;
@@ -8890,7 +8924,7 @@ function renderConstellation() {
     rowGroup.style.height = `${minCanvasHeight}px`;
 
     const points = getIconPathPoints(String(campaign.iconShape || "").trim().toLowerCase(), Math.max((campaign.posts || []).length, 1), anchor.x, anchor.y, layout, String(campaign.campaignId || campaign.campaignName || index));
-    const pathData = buildCanonicalSquigglePath(points);
+    const pathData = buildConstellationPath(points, String(campaign.iconShape || "").trim().toLowerCase());
     const labelTop = clamp(getCampaignBaseY(rowIndex) - 94, 40, minCanvasHeight - 160);
 
     const label = document.createElement("button");
@@ -11446,8 +11480,15 @@ async function approveWriteIdeaSelection() {
       suggestedPlatform: getWriteIdeaTargetPlatforms()[0] || "linkedin",
       suggestedPillar: "authority"
     };
-    if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) await apiSaveNote(note);
-    else appState.notes.unshift({ id: generateId("note"), ...note });
+    if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
+      await apiSaveNote(note);
+      await syncRemoteIfConfigured();
+      rerenderAll();
+    } else {
+      appState.notes.unshift({ id: generateId("note"), ...note });
+      persistLocalState();
+      rerenderAll();
+    }
     showToast("Saved to Notes", "Idea saved to Notes for manual development.", "ph-check", "text-[#00ffaa]");
     return;
   }
@@ -11460,14 +11501,28 @@ async function approveWriteIdeaSelection() {
       suggestedPlatform: getWriteIdeaTargetPlatforms()[0] || "linkedin",
       suggestedPillar: "authority"
     };
-    if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) await apiSaveInspo(inspo);
-    else appState.inspo.unshift({ id: generateId("inspo"), ...inspo });
+    if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
+      await apiSaveInspo(inspo);
+      await syncRemoteIfConfigured();
+      rerenderAll();
+    } else {
+      appState.inspo.unshift({ id: generateId("inspo"), ...inspo });
+      persistLocalState();
+      rerenderAll();
+    }
     showToast("Saved to Inspo", "Idea saved to Inspo.", "ph-check", "text-[#00ffaa]");
     return;
   }
   if (writeIdeaState.outputType === "draft_carousel_outline") {
-    await (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured() ? apiCreateCarouselOutlineFromIdea(payload) : saveWriteIdeaDraft());
-    showToast("Outline saved", "Carousel outline saved as a scaffold draft.", "ph-check", "text-[#00ffaa]");
+    if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
+      const carouselResult = await apiCreateCarouselOutlineFromIdea(payload);
+      await syncRemoteIfConfigured();
+      rerenderAll();
+      const draftId = carouselResult?.idea?.aiDraftId || carouselResult?.result?.idea?.aiDraftId || "";
+      showToast("Outline saved", draftId ? `Carousel outline saved (${draftId}).` : "Carousel outline saved as a scaffold draft.", "ph-check", "text-[#00ffaa]");
+    } else {
+      await saveWriteIdeaDraft();
+    }
     return;
   }
   if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
@@ -11475,6 +11530,7 @@ async function approveWriteIdeaSelection() {
       ? await apiCreateCampaignFromIdea(payload)
       : await apiCreatePostFromIdea(payload);
     await syncRemoteIfConfigured();
+    rerenderAll();
     showToast("Drafts created", `${(result?.result?.createdPosts || result?.createdPosts || []).length || 1} drafts created from the approved scaffold.`, "ph-check", "text-[#00ffaa]");
   } else {
     selectedPosts.forEach((post) => {
