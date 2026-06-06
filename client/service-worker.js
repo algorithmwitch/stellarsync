@@ -1,4 +1,4 @@
-const CACHE_VERSION = "2026.05.09.10";
+const CACHE_VERSION = "2026.06.06.01";
 const STELLARSYNC_CACHE = `stellarsync-shell-${CACHE_VERSION}`;
 const STELLARSYNC_ASSETS = [
   "./",

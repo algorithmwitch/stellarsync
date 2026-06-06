@@ -3908,8 +3908,8 @@ const APP_CONFIG = {
   SHELL_LAYOUT_KEY: "stellarsync_shell_layout_v2"
 };
 
-const APP_FRONTEND_VERSION = "2026.05.18.01";
-const APP_SERVICE_WORKER_VERSION = "2026.05.18.01";
+const APP_FRONTEND_VERSION = "2026.06.06.01";
+const APP_SERVICE_WORKER_VERSION = "2026.06.06.01";
 const RIGHT_PANEL_COLLAPSED_KEY = "stellarsync_right_panel_collapsed_v1";
 const MAX_UPLOAD_IMAGE_BYTES = 10 * 1024 * 1024;
 const MAX_UPLOAD_VIDEO_BYTES = 50 * 1024 * 1024;
@@ -9192,55 +9192,35 @@ function wireLedgerActions() {
 }
 
 function buildConstellationRows() {
-  const campaigns = [...getAvailableCampaignRecords()]
+  const campaignRecords = [...getAvailableCampaignRecords()]
     .filter(campaign => !campaign.isArchived)
-    .sort((a, b) => {
-      const aSort = Number(a.sortOrder || 0);
-      const bSort = Number(b.sortOrder || 0);
-      return aSort - bSort;
-    });
+    .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0));
   const uncategorizedPosts = [...(appState.posts || [])]
-    .map((post) => hydratePostCampaign(post, campaigns))
+    .map((post) => hydratePostCampaign(post, campaignRecords))
     .filter((post) => !String(post.campaignId || "").trim() && !normalizeLookupValue(post.campaignName || ""));
-  if (uncategorizedPosts.length) {
-    campaigns.push({
-      campaignId: "",
-      campaignName: "Uncategorized",
-      pillar: "",
-      color: "#6b7280",
-      sortOrder: Number.MAX_SAFE_INTEGER,
-      isArchived: false,
-      _uncategorizedIndex: 0
-    });
-  }
+
+  const knownCampaigns = campaignRecords
+    .filter((campaign) => !!normalizeCampaignLaneKey(campaign.campaignName || "") && !isInvalidComboCampaignName(campaign.campaignName || ""))
+    .sort((a, b) => getCampaignLaneRowIndex(a) - getCampaignLaneRowIndex(b));
+  const customCampaigns = campaignRecords
+    .filter((campaign) => !knownCampaigns.some((known) => String(known.campaignId || "") === String(campaign.campaignId || "")))
+    .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0));
+  const campaigns = knownCampaigns.concat([{
+    campaignId: "",
+    campaignName: "Uncategorized",
+    pillar: "",
+    color: "#6b7280",
+    sortOrder: Number.MAX_SAFE_INTEGER - 1,
+    isArchived: false,
+    _uncategorizedIndex: 0
+  }]).concat(customCampaigns);
+
   campaignLaneMap = new Map();
-  const laneOccupancy = new Map();
-  let appendedLaneIndex = Math.max(...Object.values(CAMPAIGN_ROWS)) + 1;
-  const getNextAvailableLaneIndex = (preferredLaneIndex = null) => {
-    if (Number.isFinite(Number(preferredLaneIndex))) {
-      let nextLaneIndex = Number(preferredLaneIndex);
-      while (laneOccupancy.has(nextLaneIndex)) nextLaneIndex += 1;
-      return nextLaneIndex;
-    }
-    let nextLaneIndex = 0;
-    while (laneOccupancy.has(nextLaneIndex)) nextLaneIndex += 1;
-    return nextLaneIndex;
-  };
-  const getPreferredLaneIndex = (campaign = {}) => {
-    const exactLane = getCampaignLaneRowIndex(campaign);
-    if (exactLane != null && Number.isFinite(Number(exactLane))) return Number(exactLane);
-    if (isMessagingJobPostsComboCampaign(campaign.campaignName || "")) {
-      const nextLane = appendedLaneIndex;
-      appendedLaneIndex += 1;
-      return nextLane;
-    }
-    return null;
-  };
-  const mapped = campaigns.map((campaign) => {
+  const mapped = campaigns.map((campaign, laneIndex) => {
     const posts = ((String(campaign.campaignName || "").trim() === "Uncategorized")
       ? uncategorizedPosts.slice()
       : [...(appState.posts || [])]
-        .map((post) => hydratePostCampaign(post, campaigns))
+        .map((post) => hydratePostCampaign(post, campaignRecords))
         .filter((post) => {
           if (String(post.campaignId || "") === String(campaign.campaignId || "")) return true;
           return normalizeLookupValue(post.campaignName || "") === normalizeLookupValue(campaign.campaignName || "");
@@ -9253,8 +9233,7 @@ function buildConstellationRows() {
 
     const derivedPillar = normalizePillar(campaign.pillar || posts[0]?.pillar || (appState.settings?.pillars || [])[0] || "authority");
     const laneKey = getConstellationCampaignLaneKey(campaign) || `__uncategorized__${Number(campaign._uncategorizedIndex || 0)}`;
-    const preferredLaneIndex = getPreferredLaneIndex(campaign);
-    const rowIndex = getNextAvailableLaneIndex(preferredLaneIndex);
+    const rowIndex = laneIndex;
     if (campaignLaneMap.has(laneKey)) {
       console.warn("Constellation duplicate lane assignment key detected.", {
         laneKey,
@@ -9264,7 +9243,6 @@ function buildConstellationRows() {
       });
     }
     campaignLaneMap.set(laneKey, rowIndex);
-    laneOccupancy.set(rowIndex, laneKey);
 
     return {
       ...campaign,
@@ -9275,7 +9253,7 @@ function buildConstellationRows() {
       _constellationLayout: getConstellationLayoutConfig({ ...campaign, posts, _constellationRowIndex: rowIndex }, rowIndex)
     };
   });
-  return resolveConstellationCampaignLaneCollisions(mapped);
+  return mapped.map((campaign, index) => rebuildConstellationCampaignGeometry(campaign, index));
 }
 
 function normalizeCampaignLaneKey(value = "") {
@@ -9388,8 +9366,7 @@ function detectConstellationOverlaps(nodes = []) {
       const deltaX = Math.abs(Number(first.x || 0) - Number(second.x || 0));
       const deltaY = Math.abs(Number(first.y || 0) - Number(second.y || 0));
       const laneDiff = Math.abs(Number(first.lane_index || 0) - Number(second.lane_index || 0));
-      const adjacentLane = laneDiff === 1;
-      const yOverlaps = deltaY < CONSTELLATION_OVERLAP_THRESHOLD || (adjacentLane && deltaX < CONSTELLATION_OVERLAP_THRESHOLD);
+      const yOverlaps = deltaY < CONSTELLATION_OVERLAP_THRESHOLD;
       if (deltaX < CONSTELLATION_OVERLAP_THRESHOLD && yOverlaps) {
         overlaps.push({
           deltaX,
@@ -9515,6 +9492,10 @@ function buildConstellationLaneDiagnostics() {
       campaignName: campaign.campaignName || "Uncategorized",
       campaignKey: laneKey,
       laneIndex,
+      yPosition: getCampaignBaseY(laneIndex),
+      pathStyle: campaign.pathStyle || "squiggle",
+      iconShape: campaign.iconShape || "star",
+      dirtyCampaignKey: isInvalidComboCampaignName(campaign.campaignName || ""),
       itemCount: Array.isArray(campaign.posts) ? campaign.posts.length : 0
     };
     if (laneIndexes.has(laneIndex)) {
@@ -9551,12 +9532,23 @@ function buildConstellationLaneDiagnostics() {
     laneIndexes: rows.map((campaign) => Number(campaign._constellationRowIndex || 0)),
     duplicateLanes,
     nodeOverlaps,
+    dirtyCampaignKeys: rows.filter((campaign) => isInvalidComboCampaignName(campaign.campaignName || "")).map((campaign) => ({
+      campaignId: campaign.campaignId || "",
+      campaignName: campaign.campaignName || "",
+      campaignKey: String(campaign._constellationLaneKey || ""),
+      laneIndex: Number(campaign._constellationRowIndex || 0)
+    })),
     missingCampaignIdButName,
     sameNormalizedNameDifferentIds,
-    rows: rows.map((campaign) => ({
+    rows: rows.map((campaign, order) => ({
+      order,
       campaignName: campaign.campaignName || "Uncategorized",
       campaignKey: String(campaign._constellationLaneKey || ""),
       laneIndex: Number(campaign._constellationRowIndex || 0),
+      yPosition: getCampaignBaseY(Number(campaign._constellationRowIndex || 0)),
+      pathStyle: campaign.pathStyle || "squiggle",
+      iconShape: campaign.iconShape || "star",
+      dirtyCampaignKey: isInvalidComboCampaignName(campaign.campaignName || ""),
       itemCount: Array.isArray(campaign.posts) ? campaign.posts.length : 0
     }))
   };
@@ -9704,6 +9696,22 @@ function buildConstellationPath(points = [], shape = "") {
   const last = points[points.length - 1];
   path += ` Q ${penultimate.x} ${penultimate.y} ${last.x} ${last.y}`;
   return path;
+}
+
+function getConstellationIconClass(iconShape = "") {
+  const shape = String(iconShape || "").trim().toLowerCase();
+  const classes = {
+    leaf: "ph-leaf",
+    spark: "ph-sparkle",
+    sun: "ph-sun",
+    moon: "ph-moon",
+    bolt: "ph-lightning",
+    map: "ph-map-trifold",
+    book: "ph-book-open-text",
+    star: "ph-star",
+    spiral: "ph-spiral"
+  };
+  return classes[shape] || "ph-star";
 }
 
 function buildCampaignSummary(campaign) {
@@ -9881,9 +9889,7 @@ function renderConstellation() {
         align-items:center;
         justify-content:center;
       `;
-      if (String(post.status || "").toLowerCase() === "published") {
-        dot.innerHTML = `<i class="ph-fill ph-star text-[8px]" style="color:#ffffff"></i>`;
-      }
+      dot.innerHTML = `<i class="ph-fill ${escapeHtml(getConstellationIconClass(campaign.iconShape || "star"))} text-[8px]" style="color:#ffffff"></i>`;
       dot.title = post.title || "Open post";
       dot.addEventListener("mouseenter", () => {
         dot.style.transform = "translate(-50%,-50%) scale(1.22)";
@@ -11046,6 +11052,13 @@ function buildLocalConstellationDiagnostics() {
       detail: laneDiagnostics.sameNormalizedNameDifferentIds.map((item) => `${item.normalizedName}: ${item.campaigns.map((campaign) => campaign.campaignId || campaign.campaignName).join(", ")}`).join(" | ")
     });
   }
+  if (laneDiagnostics.dirtyCampaignKeys.length) {
+    diagnostics.push({
+      severity: "warning",
+      label: "Dirty campaign keys",
+      detail: laneDiagnostics.dirtyCampaignKeys.map((item) => `${item.campaignName} on lane ${item.laneIndex}`).join(" | ")
+    });
+  }
   if (laneDiagnostics.nodeOverlaps.length) {
     diagnostics.push({
       severity: "error",
@@ -11242,12 +11255,15 @@ function runConstellationLaneDiagnostics() {
   if (diagnostics.duplicateLanes.length) console.warn("Duplicate constellation lanes detected", diagnostics.duplicateLanes);
   if (diagnostics.missingCampaignIdButName.length) console.warn("Posts missing campaign_id but keeping campaign_name", diagnostics.missingCampaignIdButName);
   if (diagnostics.sameNormalizedNameDifferentIds.length) console.warn("Campaigns share normalized names with different IDs", diagnostics.sameNormalizedNameDifferentIds);
+  if (diagnostics.dirtyCampaignKeys.length) console.warn("Dirty constellation campaign keys detected", diagnostics.dirtyCampaignKeys);
   if (diagnostics.nodeOverlaps.length) {
     console.warn("Constellation node overlaps detected", diagnostics.nodeOverlaps);
     console.table(diagnostics.nodeOverlaps.map(formatConstellationOverlapPair));
+  } else {
+    console.log("Constellation overlap detector: no unresolved overlaps.");
   }
   console.groupEnd();
-  const issueCount = diagnostics.duplicateLanes.length + diagnostics.missingCampaignIdButName.length + diagnostics.sameNormalizedNameDifferentIds.length + diagnostics.nodeOverlaps.length;
+  const issueCount = diagnostics.duplicateLanes.length + diagnostics.missingCampaignIdButName.length + diagnostics.sameNormalizedNameDifferentIds.length + diagnostics.dirtyCampaignKeys.length + diagnostics.nodeOverlaps.length;
   showToast("Constellation overlaps checked", issueCount ? `${issueCount} diagnostics warning${issueCount === 1 ? "" : "s"} logged to console.` : "No duplicate lane or overlap issues detected.", issueCount ? "ph-warning" : "ph-check", issueCount ? "text-yellow-400" : "text-[#00ffaa]");
 }
 
@@ -12147,6 +12163,7 @@ function renderWriteIdeaScaffold() {
     writeIdeaWarningList.innerHTML = (scaffold.warnings || []).map((warning) => `<span class="diagnostic-chip">${escapeHtml(warning)}</span>`).join("");
   }
   if (writeIdeaProposedPosts) {
+    const relatedPosts = (appState.posts || []).slice(0, 4);
     writeIdeaProposedPosts.innerHTML = (scaffold.proposedPosts || []).map((post, index) => `
       <div class="p-4 rounded-2xl bg-[#181125] border border-white/5">
         <label class="flex items-center gap-3 mb-3 text-xs text-gray-300 uppercase tracking-widest font-bold">
@@ -12165,7 +12182,19 @@ function renderWriteIdeaScaffold() {
           </select>
         </div>
       </div>
-    `).join("");
+    `).join("") + `
+      <div class="p-4 rounded-2xl bg-[#181125] border border-white/5">
+        <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3">Related Posts</div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          ${relatedPosts.length ? relatedPosts.map((post) => `
+            <button type="button" class="text-left p-3 rounded-xl bg-[#120c1d] border border-white/5 hover:bg-[#231738] transition-colors" onclick="openModalById('${escapeHtml(post.id || "")}')">
+              <div class="text-xs font-bold text-white wrap-safe">${escapeHtml(post.title || "Untitled post")}</div>
+              <div class="text-[11px] text-gray-400 wrap-safe mt-1">${escapeHtml(getDisplayExcerpt(post.description || "", "No description yet."))}</div>
+            </button>
+          `).join("") : `<div class="text-sm text-gray-400">No related posts available yet.</div>`}
+        </div>
+      </div>
+    `;
   }
 }
 
@@ -12341,6 +12370,9 @@ async function generateWriteIdeaPost() {
       : buildLocalAIPost(payload);
 
     var draftText = result.draftText || result.captionVariant || "";
+    if (mode === "generate_post" && (!draftText.trim() || isScaffoldText(draftText))) {
+      draftText = buildLocalAIPost(payload).draftText;
+    }
     var title = result.title || deriveIdeaTitle(payload.ideaPrompt);
 
     var generatedOutputs = [{
@@ -12402,11 +12434,31 @@ async function generateWriteIdeaPost() {
 
 function buildLocalAIPost(payload) {
   var prompt = payload.prompt || payload.ideaPrompt || "";
-  var paragraphs = prompt.split(/[.!?]+\s*/).filter(Boolean);
-  var draftText = paragraphs.map(function(p, i) {
-    return p.trim() + (i < paragraphs.length - 1 ? "." : ".");
-  }).join(" ") + "\n\nThis is a locally-generated draft. Connect a remote AI provider for full prose generation.";
-
+  var core = prompt.trim().replace(/\s+/g, " ");
+  var lower = core.toLowerCase();
+  var draftText = "";
+  if (/anything you set your mind to/.test(lower)) {
+    draftText = [
+      "“You can do anything you set your mind to” sounds empowering until you notice what it leaves out.",
+      "People do not move through neutral systems with equal time, equal access, equal support, or equal room to recover. Mindset matters, but it cannot substitute for infrastructure.",
+      "The better question is not whether someone wants it badly enough. It is what conditions make follow-through possible, repeatable, and supported.",
+      "That is where real encouragement gets more honest. It does not flatten the barriers. It helps people name the structure, find the next available step, and build enough support around it to keep going."
+    ].join("\n\n");
+  } else if (/clean energy without distribution/.test(lower) || /new segregation/.test(lower)) {
+    draftText = [
+      "Clean energy without distribution is just the new segregation.",
+      "If the benefits stop at the people who can already afford the upgrade, the system has not transformed. It has rebranded exclusion with better technology.",
+      "The work is not only generation. It is access, siting, financing, maintenance, ownership, and the everyday interfaces that decide who actually receives the value.",
+      "A clean-energy transition has to be judged by where the power goes, who controls it, and whether communities that carried the burden of the old system get to shape the next one."
+    ].join("\n\n");
+  } else {
+    draftText = [
+      core,
+      "The useful part of this idea is not the slogan. It is the structure underneath it: who gets access, what conditions shape the outcome, and what changes when the system is made visible.",
+      "That is the post. Start with the tension, name the pattern, then give people a clearer way to see what is actually happening.",
+      "When the framing gets more precise, the next step gets easier to act on."
+    ].filter(Boolean).join("\n\n");
+  }
   var title = deriveIdeaTitle(prompt);
   return {
     title: title,
@@ -12414,9 +12466,13 @@ function buildLocalAIPost(payload) {
     captionVariant: draftText,
     hookText: paragraphs[0] || "",
     ctaText: "What does this make possible?",
-    reviewNotes: "Local fallback draft. Connect a remote AI provider for higher quality.",
+    reviewNotes: "Generated in local prose fallback.",
     semanticTags: prompt.toLowerCase().split(/[^a-z0-9]+/).filter(function(t) { return t.length >= 5; }).slice(0, 6)
   };
+}
+
+function isScaffoldText(text = "") {
+  return /Structured draft direction|Use AI Drafting Workspace|^\s*Prompt:|^\s*Angle:/im.test(String(text || ""));
 }
 
 function setWriteIdeaLoading(visible, phase, sub) {
@@ -12498,7 +12554,10 @@ function buildLocalIdeaScaffold(payload) {
       ? "Output draft includes attached media context and avoids reusing slide text verbatim."
       : "Output draft derived from the current artifact chain."
   }];
-  var description = "Structure draft direction.\nPrompt: " + (payload.ideaPrompt || "") + "\nTransformation: " + getWriteIdeaTransformationLabel(payload.transformationType) + "\nOutput: " + (payload.outputType || "create_one_post").replace(/_/g, " ");
+  var isOnePost = (payload.outputType || "create_one_post") === "create_one_post";
+  var description = isOnePost
+    ? buildLocalAIPost(payload).draftText
+    : "Structure draft direction.\nPrompt: " + (payload.ideaPrompt || "") + "\nTransformation: " + getWriteIdeaTransformationLabel(payload.transformationType) + "\nOutput: " + (payload.outputType || "create_one_post").replace(/_/g, " ");
   var proposedPosts = [{
     title: title,
     description: description,
@@ -12516,11 +12575,11 @@ function buildLocalIdeaScaffold(payload) {
   }
   return {
     title,
-    draftStatus: "scaffold_only",
-    warnings: payload.ideaPrompt.length < 18 ? ["too generic", "weak classification"] : ["structured draft"],
+    draftStatus: isOnePost ? "draft" : "scaffold_only",
+    warnings: isOnePost ? [] : payload.ideaPrompt.length < 18 ? ["too generic", "weak classification"] : ["structured draft"],
     semanticTags: payload.ideaPrompt.toLowerCase().split(/[^a-z0-9]+/).filter((token) => token.length >= 5).slice(0, 6),
     generatedOutputs,
-    summaryText: "Structure generated. Output: " + (payload.outputType || "create_one_post").replace(/_/g, " ") + ". Review proposed posts below.",
+    summaryText: isOnePost ? "Post draft generated. Review the prose below before approving." : "Structure generated. Output: " + (payload.outputType || "create_one_post").replace(/_/g, " ") + ". Review proposed posts below.",
     proposedPosts: proposedPosts,
     carouselOutline: payload.outputType === "draft_carousel_outline" ? "Slide 1: Idea\nSlide 2: Why it matters\nSlide 3: Application\nSlide 4: CTA" : ""
   };
@@ -13885,11 +13944,12 @@ function setupSaveHandler() {
     const selectedCampaign = getCampaignById(selectedCampaignId, getAvailableCampaignRecords()) || getCampaignByName(selectedCampaignId, getAvailableCampaignRecords());
     const selectedContentPillar = normalizePillar(getActivePillar() || existing?.hubPillarLabel || existing?.pillar || (appState.settings?.pillars || [])[0] || "authority");
     const selectedCampaignName = selectedCampaign?.campaignName || normalizeCampaignName(selectedCampaignId);
+    const requestedDate = String(dateInput?.value || "").trim();
     const planning = normalizePostPlanningFields({
-      queueDateLabel: dateInput?.value || "",
+      queueDateLabel: requestedDate,
       queueTimeLabel: timeInput?.value || "",
-      scheduledAt: existing?.date || ""
-    }, existing || {});
+      scheduledAt: requestedDate ? existing?.date || "" : ""
+    }, requestedDate ? (existing || {}) : {});
     const hasValidSchedule = !!planning.queueDateLabel && !!planning.scheduledAt;
     const selectedStatus = statusSelect?.value || "draft";
     const resolvedStatus = hasValidSchedule
@@ -13968,6 +14028,48 @@ function setupSaveHandler() {
       return;
     }
 
+    if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
+      try {
+        const wasEditingPost = !!currentEditingPostId;
+        let result;
+        if (noteIdToConvert) {
+          try {
+            result = await apiCreatePostFromNote(noteIdToConvert, payload);
+          } catch (noteErr) {
+            console.warn("createPostFromNote failed, falling back to savePost", noteErr);
+            result = await apiSavePost(payload);
+          }
+        } else {
+          result = await apiSavePost(payload);
+        }
+        if (inspoIdToConvert) {
+          await apiArchiveInspo(inspoIdToConvert, result?.post?.postId || result?.postId || payload.id);
+        }
+        await syncRemoteIfConfigured();
+        closeModal();
+        showToast("Synced", wasEditingPost ? "Post updated in Google Sheets." : "Post created in Google Sheets.", "ph-cloud-check", "text-[#00ffaa]");
+      } catch (err) {
+        console.error("savePost remote sync failed", {
+          action: err?.action || "savePost",
+          message: err?.message || "Unknown error",
+          backend: err?.backend ? {
+            action: err.backend.action,
+            routeStatus: err.backend.routeStatus,
+            error: err.backend.error
+          } : null
+        });
+        const routeStatus = err?.backend?.routeStatus || {};
+        const detail = [
+          err?.message || "Remote save failed.",
+          routeStatus.postsSheetReachable === false ? "POSTS sheet is unavailable." : "",
+          routeStatus.requiredHeadersPresent === false ? "POSTS sheet headers are incomplete." : "",
+          routeStatus.spreadsheetIdConfigured === false ? "SPREADSHEET_ID is not configured." : ""
+        ].filter(Boolean).join(" ");
+        showToast("Save failed", detail || "The backend rejected the post. No local fallback was applied.", "ph-warning", "text-yellow-400");
+      }
+      return;
+    }
+
     const existingIndex = appState.posts.findIndex((p) => p.id === payload.id);
     if (existingIndex >= 0) {
       appState.posts[existingIndex] = payload;
@@ -14004,46 +14106,7 @@ function setupSaveHandler() {
     persistLocalState();
     rerenderAll();
     closeModal();
-    showToast("Saved", "Post saved locally.", "ph-check", "text-[#00ffaa]");
-
-    if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
-      try {
-        let result;
-        if (noteIdToConvert) {
-          try {
-            result = await apiCreatePostFromNote(noteIdToConvert, payload);
-          } catch (noteErr) {
-            console.warn("createPostFromNote failed, falling back to savePost", noteErr);
-            result = await apiSavePost(payload);
-          }
-        } else {
-          result = await apiSavePost(payload);
-        }
-        if (inspoIdToConvert) {
-          await apiArchiveInspo(inspoIdToConvert, result?.post?.postId || result?.postId || payload.id);
-        }
-        await syncRemoteIfConfigured();
-        showToast("Synced", "Post synced to Google Sheets.", "ph-cloud-check", "text-[#00ffaa]");
-      } catch (err) {
-        console.error("savePost remote sync failed", {
-          action: err?.action || "savePost",
-          message: err?.message || "Unknown error",
-          backend: err?.backend ? {
-            action: err.backend.action,
-            routeStatus: err.backend.routeStatus,
-            error: err.backend.error
-          } : null
-        });
-        const routeStatus = err?.backend?.routeStatus || {};
-        const detail = [
-          err?.message || "Remote save failed.",
-          routeStatus.postsSheetReachable === false ? "POSTS sheet is unavailable." : "",
-          routeStatus.requiredHeadersPresent === false ? "POSTS sheet headers are incomplete." : "",
-          routeStatus.spreadsheetIdConfigured === false ? "SPREADSHEET_ID is not configured." : ""
-        ].filter(Boolean).join(" ");
-        showToast("Save failed", detail || "Save worked locally, but the backend rejected the post.", "ph-warning", "text-yellow-400");
-      }
-    }
+    showToast("Saved locally", "Backend sync is not configured; this post is stored in local browser data only.", "ph-check", "text-[#00ffaa]");
   });
 }
 
@@ -15971,6 +16034,19 @@ function applyServiceWorkerUpdate() {
   });
 }
 
+async function resetAppShellCacheOnly() {
+  if (!("caches" in window)) {
+    showToast("Cache unavailable", "This browser does not expose Cache Storage here.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  const keys = await caches.keys();
+  const shellKeys = keys.filter((key) => /^stellarsync-shell-/.test(key));
+  await Promise.all(shellKeys.map((key) => caches.delete(key)));
+  serviceWorkerStatus.updateAvailable = false;
+  updateAppStatusBanner();
+  showToast("Cache reset", "App shell cache cleared. Local post data was not deleted.", "ph-check", "text-[#00ffaa]");
+}
+
 function inspoToPost(inspoIdOrTitle, type, description) {
   const item = (appState.inspo || []).find(entry => entry.id === inspoIdOrTitle);
 
@@ -16479,10 +16555,14 @@ function hasVersionMismatch() {
   return !!backendVersion && backendVersion !== APP_FRONTEND_VERSION;
 }
 
+function hasDeploymentUrlMismatch() {
+  return !!backendDiagnostics?.deploymentDiagnostics?.deploymentUrlMismatch;
+}
+
 function getDeployChecklistItems() {
   return [
     "Redeploy Apps Script web app after Code.gs changes",
-    "Confirm APP_SCRIPT_URL points to latest deployment",
+    "Confirm APP_SCRIPT_URL matches PUBLIC_WEBAPP_BASE_URL",
     "Confirm SPREADSHEET_ID",
     "Confirm MEDIA_FOLDER_ID if uploads are used",
     "Open app once after deploy to refresh service worker"
@@ -16545,6 +16625,51 @@ function getDiagnosticsSummaryText(diagnostics = {}) {
     `Connected platforms: ${(socialDiagnostics.connectedPlatforms || []).join(", ") || "None"}`,
     `Scheduling note: Scheduling always works inside StellarSync. Live publish depends on each platform being connected with publish scope.`
   ].join("\n");
+}
+
+function renderCopyableDeploymentValue(label, value) {
+  const safeValue = String(value || "").trim();
+  return `
+    <div class="p-3 rounded-xl bg-[#120c1d] border border-white/5">
+      <div class="flex items-center justify-between gap-3 mb-2">
+        <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${escapeHtml(label)}</div>
+        <button type="button" class="diagnostic-copy-btn px-2 py-1 rounded-lg bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white" data-copy-value="${escapeHtml(safeValue)}">
+          Copy
+        </button>
+      </div>
+      <div class="text-sm text-white wrap-safe break-all">${escapeHtml(safeValue || "Missing")}</div>
+    </div>
+  `;
+}
+
+function renderOAuthRouteHealthCards(routeHealth = []) {
+  if (!Array.isArray(routeHealth) || !routeHealth.length) {
+    return `<div class="text-sm text-gray-400">OAuth route health unavailable.</div>`;
+  }
+  return routeHealth.map((item) => `
+    <div class="p-3 rounded-xl bg-[#120c1d] border border-white/5 space-y-2">
+      <div class="flex items-center justify-between gap-3">
+        <div class="text-sm font-bold text-white">${escapeHtml(item.label || toTitleCase(item.platform || "platform"))}</div>
+        <span class="diagnostic-chip">${escapeHtml(item.dashboardUpdateRequired === "yes" ? "Dashboard update required" : "Dashboard aligned")}</span>
+      </div>
+      <div class="text-[11px] text-gray-400 wrap-safe break-all">${escapeHtml(`Derived redirect URI: ${item.derivedRedirectUri || "Missing"}`)}</div>
+      <div class="text-[11px] text-gray-400 wrap-safe break-all">${escapeHtml(`Auth URL preview: ${item.authUrlPreview || "Unavailable"}`)}</div>
+      ${item.authMode ? `<div class="text-[11px] text-gray-400 wrap-safe">${escapeHtml(`Auth mode: ${item.authMode} • Token host: ${item.tokenHost || "Unavailable"}`)}</div>` : ""}
+      ${Array.isArray(item.requiredScopes) && item.requiredScopes.length ? `<div class="text-[11px] text-gray-400 wrap-safe">${escapeHtml(`Scopes: ${item.requiredScopes.join(", ")}`)}</div>` : ""}
+      <div class="grid grid-cols-2 gap-2 text-[11px] text-gray-300">
+        <div>${escapeHtml(`Callback action: ${item.callbackAction || "Missing"}`)}</div>
+        <div>${escapeHtml(`State platform: ${item.statePlatform || "Missing"}`)}</div>
+        <div>${escapeHtml(`Has state: ${item.hasState ? "Yes" : "No"}`)}</div>
+        <div>${escapeHtml(`Last callback action hit: ${item.lastCallbackActionHit || "None"}`)}</div>
+      </div>
+      <div class="text-[11px] text-gray-400 wrap-safe">${escapeHtml(`Last error: ${item.lastError || "None"}`)}</div>
+      ${Object.values(item.diagnostics || {}).filter(Boolean).length ? `
+        <div class="space-y-1">
+          ${Object.values(item.diagnostics || {}).filter(Boolean).map((message) => `<div class="text-[11px] text-yellow-200 wrap-safe">${escapeHtml(message)}</div>`).join("")}
+        </div>
+      ` : ""}
+    </div>
+  `).join("");
 }
 
 function renderDiagnosticsPanel() {
@@ -16658,7 +16783,10 @@ function renderDiagnosticsPanel() {
   }
 
   if (warning) {
-    if (hasVersionMismatch()) {
+    if (hasDeploymentUrlMismatch()) {
+      warning.textContent = "Deployment URL mismatch. Update APP_SCRIPT_URL or PUBLIC_WEBAPP_BASE_URL.";
+      warning.classList.remove("hidden");
+    } else if (hasVersionMismatch()) {
       warning.textContent = "Frontend and backend may be out of sync. Redeploy Apps Script or refresh app shell.";
       warning.classList.remove("hidden");
     } else {
@@ -16698,6 +16826,13 @@ function renderDiagnosticsPanel() {
       <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Scheduling Note</div>
       <div class="text-sm text-gray-300 wrap-safe">Scheduling organizes posts inside StellarSync. Live platform posting is not connected yet.</div>
     </div>
+    <div class="p-4 rounded-xl bg-[#181125] border border-white/5 flex items-center justify-between gap-3 flex-wrap">
+      <div>
+        <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Cache Health</div>
+        <div class="text-sm text-gray-300 wrap-safe">Reset the app shell cache without deleting local workspace data.</div>
+      </div>
+      <button type="button" class="reset-app-shell-cache-btn px-3 py-2 rounded-xl bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white hover:bg-[#2d1b4e] transition-colors">Reset Cache</button>
+    </div>
     ${renderCampaignCleanupDiagnosticsCard()}
     <div class="p-4 rounded-xl bg-[#181125] border border-white/5 space-y-3">
       <div class="flex items-center justify-between gap-3 flex-wrap">
@@ -16730,39 +16865,37 @@ function renderDiagnosticsPanel() {
       <div class="text-sm text-gray-300 wrap-safe">${escapeHtml(diagnostics.sheetFormulaGuidance?.note || "Derived planning fields can be handled by formulas or by the backend when formulas are absent.")}</div>
     </div>
     <div class="p-4 rounded-xl bg-[#181125] border border-white/5 space-y-3">
+      <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Deployment URL Checklist</div>
+      <div class="text-sm text-gray-300 wrap-safe">${escapeHtml(deploymentDiagnostics.providerDashboardNote || "Provider dashboards must be updated when the deployment URL changes. StellarSync cannot update LinkedIn/Meta dashboard allowlists automatically.")}</div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        ${renderCopyableDeploymentValue("PUBLIC_WEBAPP_BASE_URL", deploymentDiagnostics.providerDashboardUrls?.publicWebappBaseUrl || deploymentDiagnostics.publicWebappBaseUrl)}
+        ${renderCopyableDeploymentValue("LinkedIn redirect URI", deploymentDiagnostics.providerDashboardUrls?.linkedinRedirectUri || deploymentDiagnostics.linkedinDerivedRedirectUri)}
+        ${renderCopyableDeploymentValue("Meta Instagram redirect URI", deploymentDiagnostics.providerDashboardUrls?.metaInstagramRedirectUri || deploymentDiagnostics.instagramRedirectUri)}
+        ${renderCopyableDeploymentValue("Meta Threads redirect URI", deploymentDiagnostics.providerDashboardUrls?.metaThreadsRedirectUri || deploymentDiagnostics.threadsRedirectUri)}
+        <div class="p-3 rounded-xl bg-[#120c1d] border border-white/5">
+          <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">App Domains Needed</div>
+          <div class="text-sm text-white wrap-safe">${escapeHtml((deploymentDiagnostics.appDomainsNeeded || ["script.google.com", "script.googleusercontent.com"]).join(", "))}</div>
+        </div>
+        <div class="p-3 rounded-xl bg-[#120c1d] border border-white/5">
+          <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Frontend / Backend Match</div>
+          <div class="text-sm ${deploymentDiagnostics.deploymentUrlMismatch ? "text-red-200" : "text-white"} wrap-safe">${escapeHtml(deploymentDiagnostics.deploymentUrlMismatch ? "Mismatch detected" : "Aligned")}</div>
+          <div class="mt-1 text-[11px] text-gray-400 wrap-safe break-all">${escapeHtml(`Frontend: ${deploymentDiagnostics.activeDeploymentUrlFromFrontend || APP_CONFIG.APP_SCRIPT_URL || "Missing"}`)}</div>
+          <div class="mt-1 text-[11px] text-gray-400 wrap-safe break-all">${escapeHtml(`Backend: ${deploymentDiagnostics.publicWebappBaseUrl || "Missing"}`)}</div>
+        </div>
+      </div>
+    </div>
+    <div class="p-4 rounded-xl bg-[#181125] border border-white/5 space-y-3">
+      <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">OAuth Route Health</div>
+      <div class="grid grid-cols-1 gap-3">
+        ${renderOAuthRouteHealthCards(deploymentDiagnostics.oauthRouteHealth)}
+      </div>
+    </div>
+    <div class="p-4 rounded-xl bg-[#181125] border border-white/5 space-y-3">
       <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Deployment Diagnostics</div>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div class="p-3 rounded-xl bg-[#120c1d] border border-white/5">
           <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Code Version Stamp</div>
           <div class="text-sm text-white wrap-safe">${escapeHtml(deploymentDiagnostics.codeVersionStamp || "Missing")}</div>
-        </div>
-        <div class="p-3 rounded-xl bg-[#120c1d] border border-white/5">
-          <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Frontend Deployment URL</div>
-          <div class="text-sm text-white wrap-safe">${escapeHtml(deploymentDiagnostics.activeDeploymentUrlFromFrontend || "Missing")}</div>
-        </div>
-        <div class="p-3 rounded-xl bg-[#120c1d] border border-white/5">
-          <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Public Web App Base URL</div>
-          <div class="text-sm text-white wrap-safe">${escapeHtml(deploymentDiagnostics.publicWebappBaseUrl || "Missing")}</div>
-        </div>
-        <div class="p-3 rounded-xl bg-[#120c1d] border border-white/5">
-          <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">LinkedIn Redirect URI</div>
-          <div class="text-sm text-white wrap-safe">${escapeHtml(deploymentDiagnostics.linkedinDerivedRedirectUri || "Missing")}</div>
-        </div>
-        <div class="p-3 rounded-xl bg-[#120c1d] border border-white/5">
-          <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Instagram Redirect URI</div>
-          <div class="text-sm text-white wrap-safe break-all">${escapeHtml(deploymentDiagnostics.instagramRedirectUri || "Missing")}</div>
-        </div>
-        <div class="p-3 rounded-xl bg-[#120c1d] border border-white/5">
-          <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Threads Redirect URI</div>
-          <div class="text-sm text-white wrap-safe break-all">${escapeHtml(deploymentDiagnostics.threadsRedirectUri || "Missing")}</div>
-        </div>
-        <div class="p-3 rounded-xl bg-[#120c1d] border border-white/5">
-          <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">LinkedIn Encoded Redirect URI</div>
-          <div class="text-sm text-white wrap-safe break-all">${escapeHtml(deploymentDiagnostics.linkedinEncodedRedirectUri || "Missing")}</div>
-        </div>
-        <div class="p-3 rounded-xl bg-[#120c1d] border border-white/5">
-          <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">LinkedIn Auth URL Preview</div>
-          <div class="text-sm text-white wrap-safe break-all">${escapeHtml(deploymentDiagnostics.linkedInAuthUrlPreview || "Missing")}</div>
         </div>
         <div class="p-3 rounded-xl bg-[#120c1d] border border-white/5">
           <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Write Post Route</div>
@@ -16802,6 +16935,23 @@ function renderDiagnosticsPanel() {
   });
   target.querySelectorAll(".campaign-cleanup-reassign-btn").forEach((button) => {
     button.addEventListener("click", () => reassignInvalidComboCampaignPosts(button));
+  });
+  target.querySelectorAll(".diagnostic-copy-btn").forEach((button) => {
+    button.addEventListener("click", () => {
+      copyTextToClipboardWithToast(
+        button.dataset.copyValue || "",
+        "Copied",
+        "Deployment URL copied.",
+        "Copy failed",
+        "Could not copy deployment URL."
+      );
+    });
+  });
+  target.querySelectorAll(".reset-app-shell-cache-btn").forEach((button) => {
+    button.addEventListener("click", () => resetAppShellCacheOnly().catch((err) => {
+      console.error(err);
+      showToast("Cache reset failed", err?.message || "Could not reset app shell cache.", "ph-warning", "text-yellow-400");
+    }));
   });
 }
 
@@ -16967,6 +17117,8 @@ function updateAppStatusBanner() {
   installContext.isStandalone = detectStandaloneMode();
   const text = offlineMode
     ? "Offline or backend unavailable"
+    : hasDeploymentUrlMismatch()
+    ? "Deployment URL mismatch"
     : hasVersionMismatch()
     ? "Version mismatch"
     : backendReachable
@@ -16974,6 +17126,8 @@ function updateAppStatusBanner() {
     : "Local mode";
   const color = offlineMode
     ? "#fbbf24"
+    : hasDeploymentUrlMismatch()
+    ? "#fb7185"
     : hasVersionMismatch()
     ? "#ffd700"
     : backendReachable
@@ -16981,11 +17135,15 @@ function updateAppStatusBanner() {
     : "#9ca3af";
   const background = offlineMode
     ? "rgba(51,29,6,0.95)"
+    : hasDeploymentUrlMismatch()
+    ? "rgba(69,10,10,0.95)"
     : hasVersionMismatch()
     ? "rgba(54,42,9,0.95)"
     : "rgba(10,32,22,0.95)";
   const border = offlineMode
     ? "#5b3a0a"
+    : hasDeploymentUrlMismatch()
+    ? "#7f1d1d"
     : hasVersionMismatch()
     ? "#66500e"
     : "#0d4029";

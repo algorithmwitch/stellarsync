@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LinkedIn Post Export Helper",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Export your visible LinkedIn posts locally for StellarSync import.",
   "icons": {
     "16": "icons/stellarsync-16.png",
