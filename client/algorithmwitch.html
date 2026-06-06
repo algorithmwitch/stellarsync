@@ -3085,13 +3085,28 @@
       </div>
 
       <div>
-        <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2">Constellation Shape</label>
-        <select id="campaign-shape-input" class="form-input text-sm font-medium">
-          <option value="">Default Path</option>
+        <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2">Path Style</label>
+        <select id="campaign-path-style-input" class="form-input text-sm font-medium">
+          <option value="">Default Squiggle</option>
           <option value="straight">Straight</option>
           <option value="squiggle">Squiggle</option>
           <option value="zigzag">Zigzag</option>
           <option value="arc">Arc</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2">Symbol</label>
+        <select id="campaign-symbol-input" class="form-input text-sm font-medium">
+          <option value="">None</option>
+          <option value="leaf">Leaf</option>
+          <option value="spark">Spark</option>
+          <option value="sun">Sun</option>
+          <option value="moon">Moon</option>
+          <option value="bolt">Bolt</option>
+          <option value="map">Map</option>
+          <option value="book">Book</option>
+          <option value="star">Star</option>
+          <option value="spiral">Spiral</option>
         </select>
       </div>
 
@@ -3462,6 +3477,20 @@
             <div id="ai-brand-alignment-list" class="space-y-2"></div>
           </div>
           <div class="p-4 rounded-2xl bg-[#0f0a18] border border-white/5">
+            <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3">Generation Style</p>
+            <p class="text-xs text-gray-400 mb-3">Controls how the AI matches your historical writing patterns. Default uses the strongest detected style signals.</p>
+            <select id="ai-generation-style" class="form-input text-sm font-medium mb-3">
+              <option value="match_my_style">Match My Historical Style</option>
+              <option value="default">Default (Generic)</option>
+              <option value="match_framework">Match Framework</option>
+              <option value="experimental">Experimental</option>
+              <option value="newsletter">Newsletter</option>
+              <option value="carousel">Carousel</option>
+              <option value="linkedin_reflection">LinkedIn Reflection</option>
+            </select>
+            <div id="creator-memory-diagnostics" class="space-y-2"></div>
+          </div>
+          <div class="p-4 rounded-2xl bg-[#0f0a18] border border-white/5">
             <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3">Diversity Controls</p>
             <div id="ai-diversity-controls" class="space-y-2"></div>
           </div>
@@ -3640,6 +3669,7 @@
               <button id="audit-flow-integrity-btn" type="button" class="px-4 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Audit Flow Integrity</button>
               <button id="repair-date-fields-btn" type="button" class="px-4 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Repair Date Fields</button>
               <button id="workspace-open-accounts-from-diagnostics-btn" type="button" class="px-4 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Connected Accounts</button>
+              <button id="open-creator-memory-dashboard-btn" type="button" class="px-4 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Creator Memory Dashboard</button>
             </div>
             <div class="platform-card space-y-3">
               <div class="flex items-start justify-between gap-3 flex-wrap">
@@ -3671,6 +3701,7 @@
             <div id="cleanup-imported-linkedin-status" class="text-xs text-gray-400 wrap-safe"></div>
             <div id="cleanup-imported-linkedin-preview" class="space-y-3"></div>
             <div id="workspace-diagnostics-panel" class="space-y-4"></div>
+            <div id="creator-memory-dashboard" class="space-y-4"></div>
           </section>
         </div>
       </div>
@@ -3946,6 +3977,7 @@ let selectedCalendarDateKey = toDateKey(new Date());
 let scale = 0.62;
 let panX = 80;
 let panY = 60;
+let constellationFirstOpen = true;
 let isDragging = false;
 let startPanX = 0;
 let startPanY = 0;
@@ -4186,6 +4218,8 @@ const linkedInRewriteRouteStatus = document.getElementById("linkedin-rewrite-rou
 const cleanupImportedLinkedInStatus = document.getElementById("cleanup-imported-linkedin-status");
 const cleanupImportedLinkedInPreview = document.getElementById("cleanup-imported-linkedin-preview");
 const workspaceDiagnosticsPanel = document.getElementById("workspace-diagnostics-panel");
+const openCreatorMemoryDashboardBtn = document.getElementById("open-creator-memory-dashboard-btn");
+const creatorMemoryDashboardContainer = document.getElementById("creator-memory-dashboard");
 const connectionSetupModal = document.getElementById("connection-setup-modal");
 const connectionSetupModalCard = document.getElementById("connection-setup-modal-card");
 const closeConnectionSetupBtn = document.getElementById("close-connection-setup-btn");
@@ -4331,6 +4365,8 @@ const aiHistorySourceTypeInput = document.getElementById("ai-history-source-type
 const aiHistoryStartDateInput = document.getElementById("ai-history-start-date");
 const aiHistoryEndDateInput = document.getElementById("ai-history-end-date");
 const aiAllowStylizedUnicodeInput = document.getElementById("ai-allow-stylized-unicode");
+const aiGenerationStyleInput = document.getElementById("ai-generation-style");
+const creatorMemoryDiagnostics = document.getElementById("creator-memory-diagnostics");
 const aiBrandAlignmentList = document.getElementById("ai-brand-alignment-list");
 const aiDiversityControls = document.getElementById("ai-diversity-controls");
 const aiDraftStatusInput = document.getElementById("ai-draft-status");
@@ -4563,6 +4599,113 @@ function getSemanticNeighbors(targetId, targetType, limit = 6) {
   });
 }
 
+function buildMemoryGraph() {
+  const corpus = getSemanticCorpus();
+  const nodes = corpus.map((item) => ({
+    id: item.id,
+    type: item.type,
+    title: item.title,
+    campaignId: item.campaignId,
+    campaignName: item.campaignName,
+    platform: item.platform,
+    tags: item.tags,
+    semanticSummary: item.semanticSummary,
+    createdAt: item.createdAt,
+    raw: item.raw
+  }));
+  const edges = [];
+  const nodeMap = {};
+  nodes.forEach((node) => { nodeMap[node.id + ":" + node.type] = node; });
+  for (let i = 0; i < nodes.length; i += 1) {
+    for (let j = i + 1; j < nodes.length; j += 1) {
+      const a = nodes[i];
+      const b = nodes[j];
+      if (a.campaignId && b.campaignId && a.campaignId === b.campaignId) {
+        edges.push({ from: a.id, fromType: a.type, to: b.id, toType: b.type, type: "same_campaign", strength: 1.0 });
+        continue;
+      }
+      if (a.platform && b.platform && a.platform === b.platform) {
+        edges.push({ from: a.id, fromType: a.type, to: b.id, toType: b.type, type: "same_platform", strength: 0.3 });
+      }
+      const sharedTags = (a.tags || []).filter((t) => (b.tags || []).includes(t)).length;
+      const union = new Set((a.tags || []).concat(b.tags || [])).size || 1;
+      if (sharedTags / union > 0.3) {
+        edges.push({ from: a.id, fromType: a.type, to: b.id, toType: b.type, type: "similar_tags", strength: sharedTags / union });
+      }
+      const aTopic = (a.tags || []).slice(0, 3).join("/");
+      const bTopic = (b.tags || []).slice(0, 3).join("/");
+      if (aTopic && aTopic === bTopic) {
+        edges.push({ from: a.id, fromType: a.type, to: b.id, toType: b.type, type: "same_topic", strength: 0.8 });
+      }
+    }
+  }
+  nodes.forEach((node) => {
+    if (node.type === "post" && node.raw) {
+      const srcNoteId = String(node.raw.sourceNoteId || node.raw.createdFromNoteId || "").trim();
+      if (srcNoteId && nodeMap[srcNoteId + ":note"]) {
+        edges.push({ from: node.id, fromType: "post", to: srcNoteId, toType: "note", type: "created_from", strength: 1.0 });
+      }
+      const srcInspoId = String(node.raw.sourceInspoId || node.raw.createdFromInspoId || "").trim();
+      if (srcInspoId && nodeMap[srcInspoId + ":inspo"]) {
+        edges.push({ from: node.id, fromType: "post", to: srcInspoId, toType: "inspo", type: "created_from", strength: 1.0 });
+      }
+      const srcDraftId = String(node.raw.sourceAiDraftId || "").trim();
+      if (srcDraftId && nodeMap[srcDraftId + ":ai_draft"]) {
+        edges.push({ from: node.id, fromType: "post", to: srcDraftId, toType: "ai_draft", type: "created_from", strength: 1.0 });
+      }
+      if (String(node.raw.sourceImportJobId || node.raw.importJobId || "").trim()) {
+        edges.push({ from: node.id, fromType: "post", to: "", toType: "import_job", type: "imported_from", strength: 0.9 });
+      }
+    }
+  });
+  const relationshipTypes = {};
+  edges.forEach((e) => { relationshipTypes[e.type] = (relationshipTypes[e.type] || 0) + 1; });
+  const campaigns = {};
+  edges.filter((e) => e.type === "same_campaign").forEach((e) => {
+    const key = corpus.find((item) => item.id === e.from)?.campaignName || "unknown";
+    campaigns[key] = (campaigns[key] || 0) + 1;
+  });
+  const topCampaigns = Object.entries(campaigns).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const topics = {};
+  nodes.forEach((n) => {
+    const topic = (n.tags || []).slice(0, 3).join(" / ");
+    if (topic) topics[topic] = (topics[topic] || 0) + 1;
+  });
+  const topTopics = Object.entries(topics).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const postsByType = { post: 0, note: 0, inspo: 0, campaign: 0, ai_draft: 0, media: 0 };
+  nodes.forEach((n) => { if (postsByType[n.type] !== undefined) postsByType[n.type] += 1; });
+  const importedLinkedIn = nodes.filter((n) => n.type === "post" && String(n.raw?.sourceImportJobId || n.raw?.importJobId || "").trim());
+  const orphanNodes = nodes.filter((n) => {
+    return !edges.some((e) => (e.from === n.id && e.fromType === n.type) || (e.to === n.id && e.toType === n.type));
+  });
+  return {
+    mode: "memory-graph-v1",
+    totalNodes: nodes.length,
+    totalEdges: edges.length,
+    nodesByType: postsByType,
+    importedLinkedInCount: importedLinkedIn.length,
+    orphanCount: orphanNodes.length,
+    orphanSamples: orphanNodes.slice(0, 5).map((n) => ({ id: n.id, type: n.type, title: n.title })),
+    topTopics,
+    topCampaigns,
+    relationshipTypes,
+    edges,
+    nodes
+  };
+}
+
+function getMemoryGraphNeighbors(graph, targetId, targetType, limit = 6) {
+  const edges = graph.edges || [];
+  const neighbors = edges.filter((e) => (e.from === targetId && e.fromType === targetType) || (e.to === targetId && e.toType === targetType));
+  const corpus = getSemanticCorpus();
+  return neighbors.slice(0, limit).map((edge) => {
+    const neighborId = edge.from === targetId && edge.fromType === targetType ? edge.to : edge.from;
+    const neighborType = edge.from === targetId && edge.fromType === targetType ? edge.toType : edge.fromType;
+    const descriptor = corpus.find((item) => item.id === neighborId && item.type === neighborType);
+    return { ...edge, neighbor: descriptor || null };
+  });
+}
+
 function detectRecurringPatterns(corpus = getSemanticCorpus()) {
   const map = new Map();
   corpus.forEach((item) => {
@@ -4707,6 +4850,356 @@ function getSemanticThemeBuckets(descriptor) {
   };
 }
 
+const CREATOR_STYLE_VERSION = "creator-memory-v1";
+
+const KNOWN_CREATOR_FRAMEWORKS = [
+  "watershed communication", "participation pathways", "attention systems",
+  "community entry points", "climate as infrastructure", "infrastructure thinking",
+  "prioritization as visibility", "community-led growth", "community-led systems",
+  "participation architecture", "classification before distribution",
+  "digital communications as public infrastructure",
+  "embedded builder/analyzer perspective", "interpreter of systems",
+  "alternate realities", "solarpunk", "orientation", "legibility"
+];
+
+const KNOWN_CREATOR_METAPHORS = [
+  "river", "watershed", "tributary", "ecosystem", "infrastructure",
+  "pathway", "doorway", "bridge", "map", "territory",
+  "architecture", "landscape", "orbit", "constellation", "gravity",
+  "signal", "territory", "boundary", "current", "stream"
+];
+
+const KNOWN_CREATOR_STRUCTURES = [
+  "observation → explanation → implication",
+  "system → examples → recommendation",
+  "personal story → framework",
+  "framework → examples → takeaway",
+  "problem → diagnosis → solution",
+  "question → exploration → insight",
+  "pattern → mechanism → application",
+  "hook → context → insight → cta",
+  "definition → anatomy → application"
+];
+
+const KNOWN_CREATOR_VOICE_TRAITS = [
+  "analytical", "systems-oriented", "explanatory", "community-focused",
+  "non-hyperbolic", "avoids buzzwords", "avoids heavy antithesis",
+  "builder perspective", "spatial/geographic thinking", "classification-first",
+  "infrastructure-minded", "legibility-focused"
+];
+
+function buildCreatorStyleProfile() {
+  const corpus = getSemanticCorpus();
+  const posts = appState.posts || [];
+  const aiDrafts = appState.aiDrafts || [];
+  const notes = appState.notes || [];
+  const inspo = appState.inspo || [];
+
+  const allTexts = corpus.map(function(item) {
+    var raw = item.raw || {};
+    return [item.title, raw.description, raw.body, raw.notes, raw.draftText, raw.prompt, raw.summary, raw.semanticSummary].filter(Boolean).join(" ").toLowerCase();
+  }).filter(Boolean);
+  var combined = allTexts.join(" ");
+
+  var frameworkCounts = {};
+  KNOWN_CREATOR_FRAMEWORKS.forEach(function(fw) {
+    var re = new RegExp(fw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
+    var m = combined.match(re);
+    if (m) frameworkCounts[fw] = m.length;
+  });
+
+  var metaphorCounts = {};
+  KNOWN_CREATOR_METAPHORS.forEach(function(meta) {
+    var re = new RegExp("\\b" + meta.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "gi");
+    var m = combined.match(re);
+    if (m) metaphorCounts[meta] = m.length;
+  });
+
+  var structureCounts = {};
+  KNOWN_CREATOR_STRUCTURES.forEach(function(s) { structureCounts[s] = 0; });
+  corpus.forEach(function(item) {
+    var flags = normalizeStringList(item.recurringPatternFlags);
+    flags.forEach(function(f) {
+      var norm = f.toLowerCase().trim();
+      KNOWN_CREATOR_STRUCTURES.forEach(function(s) {
+        if (norm === s || s.indexOf(norm) !== -1 || norm.indexOf(s) !== -1) structureCounts[s] = (structureCounts[s] || 0) + 1;
+      });
+      if (norm && !KNOWN_CREATOR_STRUCTURES.some(function(s) { return s.indexOf(norm) !== -1 || norm.indexOf(s) !== -1; })) {
+        structureCounts[norm] = (structureCounts[norm] || 0) + 1;
+      }
+    });
+  });
+
+  var formatCounts = {};
+  posts.forEach(function(p) { var f = p.postType || "text"; formatCounts[f] = (formatCounts[f] || 0) + 1; });
+  aiDrafts.forEach(function(d) {
+    var mode = d.generationMode || "ai_draft";
+    formatCounts["ai_" + mode] = (formatCounts["ai_" + mode] || 0) + 1;
+  });
+
+  var voiceScores = {};
+  var lower = combined.toLowerCase();
+  if (/system|structure|pattern|framework|architecture|infrastructure/.test(lower)) voiceScores["systems-oriented"] = (lower.match(/system|structure|pattern|framework|architecture|infrastructure/g) || []).length;
+  if (/community|participation|recognition|visibility|access|onboarding/.test(lower)) voiceScores["community-focused"] = (lower.match(/community|participation|recognition|visibility|access|onboarding/g) || []).length;
+  if (/because|therefore|since|implies|meaning|this is why|this matters because/.test(lower)) voiceScores["explanatory"] = (lower.match(/because|therefore|since|implies/g) || []).length;
+  if (/classif|taxonomy|signal|semantic|category|bucket/.test(lower)) voiceScores["classification-first"] = (lower.match(/classif|taxonomy|signal|semantic|category/g) || []).length;
+  if (/map|territory|spatial|geographic|landscape|boundar|current|stream/.test(lower)) voiceScores["spatial/geographic thinking"] = (lower.match(/map|territory|spatial|geographic|landscape/g) || []).length;
+  if (/infrastructure|public|utility|bridge|pathway/.test(lower)) voiceScores["infrastructure-minded"] = (lower.match(/infrastructure|public|utility|bridge/g) || []).length;
+  if (/buzzword|hype|trending|viral|disrupt/.test(lower)) voiceScores["avoids buzzwords"] = -10;
+  if (/however|but|yet|although|on the other hand/.test(lower)) voiceScores["avoids heavy antithesis"] = -5;
+  if (/analyz|examin|break.?down|deconstruct/.test(lower)) voiceScores["analytical"] = (lower.match(/analyz|examin|break.?down|deconstruct/g) || []).length;
+  if (/builder|maker|build|create|design/.test(lower)) voiceScores["builder perspective"] = (lower.match(/builder|maker|build/g) || []).length;
+
+  var hookCandidates = {};
+  posts.forEach(function(p) {
+    var text = String(p.description || p.body || "").trim();
+    var first = text.split(/[.?!\n]/)[0];
+    if (first && first.length > 10 && first.length < 200) {
+      var key = first.slice(0, 60);
+      hookCandidates[key] = (hookCandidates[key] || 0) + 1;
+    }
+  });
+
+  var ctaCandidates = {};
+  posts.forEach(function(p) {
+    var text = String(p.description || p.body || "").trim();
+    var sentences = text.split(/[.?!]/);
+    var last = (sentences[sentences.length - 1] || "").trim().toLowerCase();
+    if (last && (last.indexOf("follow") !== -1 || last.indexOf("share") !== -1 || last.indexOf("comment") !== -1 || last.indexOf("subscribe") !== -1 || last.indexOf("join") !== -1 || last.indexOf("let me know") !== -1 || last.indexOf("tag") !== -1 || last.indexOf("repost") !== -1)) {
+      var key = last.slice(0, 60);
+      ctaCandidates[key] = (ctaCandidates[key] || 0) + 1;
+    }
+  });
+
+  var importedLinkedIn = posts.filter(function(p) { return String(p.sourceImportJobId || p.importJobId || "").trim(); });
+
+  var campaignCounts = {};
+  posts.forEach(function(p) {
+    var cn = p.campaignName || p.campaign || "";
+    if (cn) campaignCounts[cn] = (campaignCounts[cn] || 0) + 1;
+  });
+  aiDrafts.forEach(function(d) {
+    var cn = d.campaignName || d.campaign || "";
+    if (cn) campaignCounts[cn] = (campaignCounts[cn] || 0) + 1;
+  });
+
+  var frameworks = Object.entries(frameworkCounts).filter(function(e) { return e[1] > 0; }).sort(function(a, b) { return b[1] - a[1]; }).map(function(e) { return { name: e[0], count: e[1] }; });
+  var metaphors = Object.entries(metaphorCounts).filter(function(e) { return e[1] > 0; }).sort(function(a, b) { return b[1] - a[1]; }).map(function(e) { return { name: e[0], count: e[1] }; });
+  var structures = Object.entries(structureCounts).filter(function(e) { return e[1] > 0; }).sort(function(a, b) { return b[1] - a[1]; }).map(function(e) { return { name: e[0], count: e[1] }; });
+  var formats = Object.entries(formatCounts).sort(function(a, b) { return b[1] - a[1]; }).map(function(e) { return { name: e[0], count: e[1] }; });
+  var hooks = Object.entries(hookCandidates).filter(function(e) { return e[1] > 1; }).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 10).map(function(e) { return { text: e[0].slice(0, 80), count: e[1] }; });
+  var ctas = Object.entries(ctaCandidates).filter(function(e) { return e[1] > 1; }).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 5).map(function(e) { return { text: e[0].slice(0, 60), count: e[1] }; });
+  var topCampaigns = Object.entries(campaignCounts).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 5).map(function(e) { return { name: e[0], count: e[1] }; });
+
+  var voiceTraits = Object.entries(voiceScores).filter(function(e) { return e[1] > 2; }).sort(function(a, b) { return b[1] - a[1]; }).map(function(e) { return { trait: e[0], score: e[1] }; });
+  if (voiceTraits.length === 0) voiceTraits = [{ trait: "analytical", score: 1 }];
+
+  return {
+    version: CREATOR_STYLE_VERSION,
+    profile: {
+      totalPostsAnalyzed: posts.length,
+      importedLinkedInAnalyzed: importedLinkedIn.length,
+      notesAnalyzed: notes.length,
+      inspoAnalyzed: inspo.length,
+      aiDraftsAnalyzed: aiDrafts.length,
+      frameworks: frameworks,
+      metaphors: metaphors,
+      structures: structures,
+      formatTypes: formats,
+      voiceTraits: voiceTraits,
+      topCampaigns: topCampaigns,
+      recurringHooks: hooks,
+      recurringCTAs: ctas
+    },
+    generatedAt: new Date().toISOString(),
+    corpusLength: corpus.length,
+    memoryGraph: buildMemoryGraph()
+  };
+}
+
+function getStyleAwareContext(targetId, targetType, styleProfile) {
+  if (!styleProfile) styleProfile = appState._creatorStyleProfile || buildCreatorStyleProfile();
+  var profile = styleProfile.profile || styleProfile;
+  var corpus = getSemanticCorpus();
+  var memoryGraph = styleProfile.memoryGraph || buildMemoryGraph();
+  var targetNeighbors = [];
+  if (targetId && targetType) {
+    targetNeighbors = getMemoryGraphNeighbors(memoryGraph, targetId, targetType, 8);
+  }
+
+  var topFrameworks = (profile.frameworks || []).slice(0, 5).map(function(f) { return f.name; });
+  var topMetaphors = (profile.metaphors || []).slice(0, 5).map(function(m) { return m.name; });
+  var topStructures = (profile.structures || []).slice(0, 3).map(function(s) { return s.name; });
+  var topFormats = (profile.formatTypes || []).slice(0, 4).map(function(f) { return f.name; });
+  var topVoice = (profile.voiceTraits || []).slice(0, 4).map(function(v) { return v.trait; });
+  var recentHooks = (profile.recurringHooks || []).slice(0, 3).map(function(h) { return { text: h.text, count: h.count }; });
+  var recentCTAs = (profile.recurringCTAs || []).slice(0, 2).map(function(c) { return { text: c.text, count: c.count }; });
+
+  var strongestNeighbor = targetNeighbors[0] || null;
+
+  return {
+    styleProfile: {
+      frameworksDetected: profile.frameworks.length,
+      metaphorsDetected: profile.metaphors.length,
+      structuresDetected: profile.structures.length,
+      totalPostsAnalyzed: profile.totalPostsAnalyzed,
+      voiceTraits: topVoice
+    },
+    nearestContent: targetNeighbors.slice(0, 5).map(function(n) {
+      return { title: n.neighbor?.title || "Untitled", type: n.relationshipType, strength: n.strength };
+    }),
+    nearestFrameworks: topFrameworks,
+    recurringMetaphors: topMetaphors,
+    preferredStructures: topStructures,
+    topFormatTypes: topFormats,
+    recentHooks: recentHooks,
+    recentCTAs: recentCTAs,
+    strongestNeighbor: strongestNeighbor ? { title: strongestNeighbor.neighbor?.title, type: strongestNeighbor.neighbor?.type, relationshipType: strongestNeighbor.relationshipType } : null,
+    memoryGraph: { totalNodes: memoryGraph.totalNodes, totalEdges: memoryGraph.totalEdges, topCampaigns: memoryGraph.topCampaigns, topTopics: memoryGraph.topTopics }
+  };
+}
+
+function renderCreatorMemoryDiagnostics(styleContext, container) {
+  if (!container) return;
+  if (!styleContext) {
+    container.innerHTML = '<div class="text-sm text-gray-400">Build creator memory to see style-aware generation context.</div>';
+    return;
+  }
+  var sp = styleContext.styleProfile || {};
+  var html = [
+    '<div class="space-y-3">',
+    '<div class="p-3 rounded-xl bg-[#181125] border border-white/5">',
+    '<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Creator Memory v1</div>',
+    '<div class="text-xs text-gray-300">' + escapeHtml(sp.totalPostsAnalyzed || 0) + ' posts analyzed</div>',
+    '<div class="text-xs text-gray-300">' + escapeHtml((sp.frameworksDetected || 0)) + ' unique frameworks detected</div>',
+    '<div class="text-xs text-gray-300">' + escapeHtml((sp.metaphorsDetected || 0)) + ' recurring metaphors</div>',
+    '<div class="text-xs text-gray-300">' + escapeHtml((sp.structuresDetected || 0)) + ' recurring structures</div>',
+    '</div>'
+  ];
+
+  if (styleContext.nearestFrameworks && styleContext.nearestFrameworks.length) {
+    html.push('<div class="p-3 rounded-xl bg-[#181125] border border-white/5">');
+    html.push('<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Frameworks Used</div>');
+    html.push(styleContext.nearestFrameworks.map(function(f) { return '<div class="text-xs text-gray-300">• ' + escapeHtml(f) + '</div>'; }).join(""));
+    html.push('</div>');
+  }
+
+  if (styleContext.preferredStructures && styleContext.preferredStructures.length) {
+    html.push('<div class="p-3 rounded-xl bg-[#181125] border border-white/5">');
+    html.push('<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Structure Selected</div>');
+    html.push(styleContext.preferredStructures.map(function(s) { return '<div class="text-xs text-gray-300">• ' + escapeHtml(s) + '</div>'; }).join(""));
+    html.push('</div>');
+  }
+
+  if (styleContext.recurringMetaphors && styleContext.recurringMetaphors.length) {
+    html.push('<div class="p-3 rounded-xl bg-[#181125] border border-white/5">');
+    html.push('<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Metaphors Reused</div>');
+    html.push(styleContext.recurringMetaphors.map(function(m) { return '<div class="text-xs text-gray-300">• ' + escapeHtml(m) + '</div>'; }).join(""));
+    html.push('</div>');
+  }
+
+  if (sp.voiceTraits && sp.voiceTraits.length) {
+    html.push('<div class="p-3 rounded-xl bg-[#181125] border border-white/5">');
+    html.push('<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Voice Profile</div>');
+    html.push(sp.voiceTraits.map(function(v) { return '<div class="text-xs text-gray-300">• ' + escapeHtml(v) + '</div>'; }).join(""));
+    html.push('</div>');
+  }
+
+  if (styleContext.nearestContent && styleContext.nearestContent.length) {
+    html.push('<div class="p-3 rounded-xl bg-[#181125] border border-white/5">');
+    html.push('<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Historical Posts Referenced</div>');
+    html.push(styleContext.nearestContent.map(function(n) { return '<div class="text-xs text-gray-300">• ' + escapeHtml(n.title) + ' (' + escapeHtml(n.type) + ', ' + Math.round((n.strength || 0) * 100) + '%)</div>'; }).join(""));
+    html.push('</div>');
+  }
+
+  if (styleContext.recentHooks && styleContext.recentHooks.length) {
+    html.push('<div class="p-3 rounded-xl bg-[#181125] border border-white/5">');
+    html.push('<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Style Confidence</div>');
+    html.push(styleContext.recentHooks.map(function(h) { return '<div class="text-xs text-gray-300">Hook pattern repeated ' + escapeHtml(String(h.count)) + 'x: "' + escapeHtml(h.text) + '..."</div>'; }).join(""));
+    html.push('</div>');
+  }
+
+  html.push('</div>');
+  container.innerHTML = html.join("\n");
+}
+
+function buildCreatorMemoryDiagnosticsPanel() {
+  var profile = appState._creatorStyleProfile || buildCreatorStyleProfile();
+  appState._creatorStyleProfile = profile;
+  var p = profile.profile || profile;
+  return {
+    totalPostsAnalyzed: p.totalPostsAnalyzed || 0,
+    importedLinkedInAnalyzed: p.importedLinkedInAnalyzed || 0,
+    notesAnalyzed: p.notesAnalyzed || 0,
+    inspoAnalyzed: p.inspoAnalyzed || 0,
+    aiDraftsAnalyzed: p.aiDraftsAnalyzed || 0,
+    frameworksDetected: (p.frameworks || []).length,
+    recurringMetaphors: (p.metaphors || []).slice(0, 8),
+    recurringStructures: (p.structures || []).slice(0, 6),
+    topCampaigns: (p.topCampaigns || []).slice(0, 5),
+    voiceSummary: (p.voiceTraits || []).slice(0, 6).map(function(v) { return v.trait; }).join(", "),
+    recurringHooks: (p.recurringHooks || []).slice(0, 3),
+    formatTypes: (p.formatTypes || []).slice(0, 5)
+  };
+}
+
+function renderCreatorMemoryDashboard(container) {
+  if (!container) return;
+  var data = buildCreatorMemoryDiagnosticsPanel();
+  var html = [
+    '<div class="p-4 rounded-2xl bg-[#0f0a18] border border-white/5 space-y-4">',
+    '<div class="flex items-center justify-between">',
+    '<p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Creator Memory Dashboard</p>',
+    '<button type="button" onclick="appState._creatorStyleProfile = null; renderCreatorMemoryDashboard(document.getElementById(\'creator-memory-dashboard\')); showToast(\"Refreshed\", \"Creator profile rebuilt from corpus.\", \"ph-arrows-clockwise\", \"text-[#00ffaa]\");" class="text-[10px] text-[#c77dff] hover:underline">Refresh</button>',
+    '</div>',
+    '<div class="grid grid-cols-2 md:grid-cols-4 gap-3">',
+    '<div class="p-3 rounded-xl bg-[#181125] border border-white/5 text-center"><div class="text-lg font-bold text-white">' + data.totalPostsAnalyzed + '</div><div class="text-[10px] text-gray-400">Posts Analyzed</div></div>',
+    '<div class="p-3 rounded-xl bg-[#181125] border border-white/5 text-center"><div class="text-lg font-bold text-white">' + data.importedLinkedInAnalyzed + '</div><div class="text-[10px] text-gray-400">LinkedIn Imported</div></div>',
+    '<div class="p-3 rounded-xl bg-[#181125] border border-white/5 text-center"><div class="text-lg font-bold text-white">' + data.frameworksDetected + '</div><div class="text-[10px] text-gray-400">Frameworks Detected</div></div>',
+    '<div class="p-3 rounded-xl bg-[#181125] border border-white/5 text-center"><div class="text-lg font-bold text-white">' + (data.notesAnalyzed + data.inspoAnalyzed + data.aiDraftsAnalyzed) + '</div><div class="text-[10px] text-gray-400">Notes + Inspo + Drafts</div></div>',
+    '</div>'
+  ].join("\n");
+
+  if (data.recurringMetaphors.length) {
+    html += '<div class="p-3 rounded-xl bg-[#181125] border border-white/5">';
+    html += '<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Recurring Metaphors</div>';
+    html += '<div class="flex flex-wrap gap-2">';
+    html += data.recurringMetaphors.map(function(m) { return '<span class="px-2 py-1 rounded-lg bg-[#120c1d] border border-white/5 text-xs text-gray-300">' + escapeHtml(m.name) + ' (' + m.count + ')</span>'; }).join("");
+    html += '</div></div>';
+  }
+
+  if (data.recurringStructures.length) {
+    html += '<div class="p-3 rounded-xl bg-[#181125] border border-white/5">';
+    html += '<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Recurring Structures</div>';
+    html += data.recurringStructures.map(function(s) { return '<div class="text-xs text-gray-300">• ' + escapeHtml(s.name) + '</div>'; }).join("");
+    html += '</div>';
+  }
+
+  if (data.topCampaigns.length) {
+    html += '<div class="p-3 rounded-xl bg-[#181125] border border-white/5">';
+    html += '<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Top Campaigns</div>';
+    html += data.topCampaigns.map(function(c) { return '<div class="text-xs text-gray-300">• ' + escapeHtml(c.name) + ' (' + c.count + ' posts)</div>'; }).join("");
+    html += '</div>';
+  }
+
+  if (data.voiceSummary) {
+    html += '<div class="p-3 rounded-xl bg-[#181125] border border-white/5">';
+    html += '<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Style Profile Summary</div>';
+    html += '<div class="text-xs text-gray-300 wrap-safe">' + escapeHtml(data.voiceSummary) + '</div>';
+    html += '</div>';
+  }
+
+  if (data.recurringHooks.length) {
+    html += '<div class="p-3 rounded-xl bg-[#181125] border border-white/5">';
+    html += '<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Recurring Hooks</div>';
+    html += data.recurringHooks.map(function(h) { return '<div class="text-xs text-gray-300">• "' + escapeHtml(h.text) + '" (' + h.count + 'x)</div>'; }).join("");
+    html += '</div>';
+  }
+
+  html += '</div>';
+  container.innerHTML = html;
+}
+
 function buildSemanticAIDraftPayload() {
   const sourceType = String(aiSourceTypeInput?.value || "manual").trim();
   const sourceId = String(aiSourceIdInput?.value || "").trim();
@@ -4827,6 +5320,8 @@ function renderAISemanticMemoryCards() {
     recurringPatternFlags: semanticPayload.recurringPatternFlags
   }, "ai_draft");
   const neighbors = sourceRecord ? getSemanticNeighbors(String(sourceId || sourceRecord.id || "").trim(), sourceType, 6) : [];
+  const memoryGraph = buildMemoryGraph();
+  const graphNeighbors = sourceRecord ? getMemoryGraphNeighbors(memoryGraph, String(sourceId || sourceRecord.id || "").trim(), sourceType, 6) : [];
   const strongestNeighbor = neighbors[0]?.neighbor || null;
   const strongestSimilarity = neighbors[0]?.strength || Math.max(0, ...corpus.map((entry) => semanticSimilarity(draftDescriptor, entry)));
   const overused = detectOverusedPatterns(corpus);
@@ -4839,7 +5334,31 @@ function renderAISemanticMemoryCards() {
     draftText: aiDraftPreviewInput?.value || "",
     semanticTags: semanticPayload.semanticTags
   }, corpus);
+  const importedLinkedInPosts = corpus.filter((item) => item.type === "post" && String(item.raw?.sourceImportJobId || item.raw?.importJobId || "").trim());
+  const recurringTopics = detectRecurringPatterns(corpus).slice(0, 5);
   const cards = [];
+
+  if (graphNeighbors.length) {
+    cards.push({
+      title: `Memory graph shows ${graphNeighbors.length} nearby records`,
+      detail: graphNeighbors.slice(0, 3).map((n) => `${n.neighbor?.title || "Untitled"} (${n.relationshipType})`).join(", ") + ".",
+      tone: "repeat"
+    });
+  }
+  if (importedLinkedInPosts.length) {
+    cards.push({
+      title: `${importedLinkedInPosts.length} imported LinkedIn posts in memory`,
+      detail: "Imported archive posts are indexed and available for AI context. Originals are preferred over reposts.",
+      tone: "signal"
+    });
+  }
+  if (recurringTopics.length) {
+    cards.push({
+      title: "Recurring themes: " + recurringTopics.map((t) => t.pattern).join(", "),
+      detail: "Top recurring tag combinations across all indexed records.",
+      tone: "campaign"
+    });
+  }
 
   if (strongestNeighbor) {
     cards.push({
@@ -7033,6 +7552,8 @@ const campaignPillarInput = document.getElementById("campaign-pillar-input");
 const campaignColorInput = document.getElementById("campaign-color-input");
 const campaignColorSwatches = document.getElementById("campaign-color-swatches");
 const campaignShapeInput = document.getElementById("campaign-shape-input");
+const campaignPathStyleInput = document.getElementById("campaign-path-style-input");
+const campaignSymbolInput = document.getElementById("campaign-symbol-input");
 const campaignArchivedInput = document.getElementById("campaign-archived-input");
 const campaignMergeShell = document.getElementById("campaign-merge-shell");
 const campaignMergeTargetInput = document.getElementById("campaign-merge-target-input");
@@ -7171,6 +7692,12 @@ function setupWorkspaceUI() {
   });
   checkConstellationLanesBtn?.addEventListener("click", runConstellationLaneDiagnostics);
   auditFlowIntegrityBtn?.addEventListener("click", () => {
+  openCreatorMemoryDashboardBtn?.addEventListener("click", function() {
+    if (creatorMemoryDashboardContainer) {
+      renderCreatorMemoryDashboard(creatorMemoryDashboardContainer);
+      creatorMemoryDashboardContainer.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  });
     refreshBackendDiagnostics().then(() => {
       renderWorkspaceHub();
       const flow = backendDiagnostics?.flowIntegrityDiagnostics || {};
@@ -7245,6 +7772,42 @@ function setupWorkspaceUI() {
       showToast("Flow repair failed", err?.message || "Could not repair flow integrity.", "ph-warning", "text-yellow-400");
     } finally {
       repairButton.removeAttribute("disabled");
+    }
+  });
+  workspaceDiagnosticsPanel?.addEventListener("click", async (event) => {
+    const campaignBtn = event.target.closest(".campaign-key-repair-btn");
+    if (!campaignBtn) return;
+    const issueData = campaignBtn.dataset.issue;
+    const action = campaignBtn.dataset.action || "";
+    let issue;
+    try { issue = JSON.parse(issueData); } catch (_) { return; }
+    if (!issue || !issue.campaignName) return;
+    campaignBtn.setAttribute("disabled", "disabled");
+    try {
+      if (action === "reassign") {
+        const targetName = await openPromptModal({ title: "Reassign posts", message: `Reassign posts from "${issue.campaignName}" to which campaign?`, placeholder: "Enter target campaign name", defaultValue: "" });
+        if (!targetName) { campaignBtn.removeAttribute("disabled"); return; }
+        await apiRepairCampaignKeyIssues({ repairAction: "reassign", sourceCampaignName: issue.campaignName, targetCampaignName: targetName });
+      } else if (action === "merge_duplicate") {
+        const targetName = await openPromptModal({ title: "Merge duplicate campaigns", message: `Merge duplicates of "${issue.campaignName}" into which campaign name?`, placeholder: "Enter target campaign name", defaultValue: issue.campaignName });
+        if (!targetName) { campaignBtn.removeAttribute("disabled"); return; }
+        await apiRepairCampaignKeyIssues({ repairAction: "merge_duplicate", sourceCampaignName: issue.campaignName, targetCampaignName: targetName });
+      } else if (action === "clear_campaign") {
+        const confirmed = await openConfirmActionModal({ title: "Clear campaign from posts", message: `Remove campaign "${issue.campaignName}" from all posts that reference it?`, confirmLabel: "Clear", cancelLabel: "Cancel" });
+        if (!confirmed) { campaignBtn.removeAttribute("disabled"); return; }
+        await apiRepairCampaignKeyIssues({ repairAction: "clear_campaign", sourceCampaignName: issue.campaignName });
+      }
+      await syncRemoteIfConfigured();
+      await refreshBackendDiagnostics({ silent: true });
+      rerenderAll();
+      if (!workspaceHubModal?.classList.contains("opacity-0")) renderWorkspaceHub();
+      showToast("Campaign repair complete", action.replace(/_/g, " "), "ph-check", "text-[#00ffaa]");
+      runConstellationLaneDiagnostics();
+    } catch (err) {
+      console.error(err);
+      showToast("Campaign repair failed", err?.message || "Could not repair campaign key issues.", "ph-warning", "text-yellow-400");
+    } finally {
+      campaignBtn.removeAttribute("disabled");
     }
   });
   linkedInRewriteDryRunBtn?.addEventListener("click", async () => {
@@ -7387,7 +7950,7 @@ function setupWorkspaceUI() {
     applyShellLayout();
     rerenderAll();
     requestAnimationFrame(() => {
-      if (currentView === "constellation") fitConstellation();
+      if (currentView === "constellation") fitConstellation({ preserveUserView: true });
     });
   });
   signalOverviewToggle?.addEventListener("click", () => {
@@ -7396,7 +7959,7 @@ function setupWorkspaceUI() {
     applyShellLayout();
     rerenderAll();
     requestAnimationFrame(() => {
-      if (currentView === "constellation") fitConstellation();
+      if (currentView === "constellation") fitConstellation({ preserveUserView: true });
     });
   });
 }
@@ -7438,6 +8001,14 @@ function setupAIAndBrandWorkspaces() {
     renderAISemanticMemoryCards();
   });
   aiGenerationModeInput?.addEventListener("change", renderAISemanticMemoryCards);
+  aiGenerationStyleInput?.addEventListener("change", function() {
+    appState._creatorStyleProfile = null;
+    var profile = buildCreatorStyleProfile();
+    appState._creatorStyleProfile = profile;
+    var styleContext = getStyleAwareContext(String(aiSourceIdInput?.value || "").trim(), String(aiSourceTypeInput?.value || "manual").trim(), profile);
+    renderCreatorMemoryDiagnostics(styleContext, creatorMemoryDiagnostics);
+    renderAISemanticMemoryCards();
+  });
   aiWorkspacePrompt?.addEventListener("input", renderAISemanticMemoryCards);
   aiDraftTitleInput?.addEventListener("input", renderAISemanticMemoryCards);
   aiDraftPreviewInput?.addEventListener("input", renderAISemanticMemoryCards);
@@ -7655,7 +8226,8 @@ function openCampaignModal(options = "authority") {
   if (campaignNameInput) campaignNameInput.value = existingCampaign?.campaignName || "";
   renderCampaignPillarInputOptions(selectedPillar);
   renderCampaignColorControls(existingCampaign?.color || defaultCampaignColor(existingCampaign?.campaignName || config.campaignName || "", selectedPillar));
-  if (campaignShapeInput) campaignShapeInput.value = existingCampaign?.iconShape || "";
+  if (campaignPathStyleInput) campaignPathStyleInput.value = existingCampaign?.pathStyle || "";
+  if (campaignSymbolInput) campaignSymbolInput.value = existingCampaign?.iconShape || "";
   if (campaignArchivedInput) campaignArchivedInput.checked = !!existingCampaign?.isArchived;
   if (campaignMergeShell) campaignMergeShell.classList.toggle("hidden", !isEditing);
   if (mergeCampaignBtn) mergeCampaignBtn.classList.toggle("hidden", !isEditing);
@@ -7688,7 +8260,8 @@ function closeCampaignModal() {
     if (campaignNameInput) campaignNameInput.value = "";
     if (campaignPillarInput) campaignPillarInput.value = "authority";
     renderCampaignColorControls(defaultCampaignColor("", "authority"));
-    if (campaignShapeInput) campaignShapeInput.value = "";
+    if (campaignPathStyleInput) campaignPathStyleInput.value = "";
+    if (campaignSymbolInput) campaignSymbolInput.value = "";
     if (campaignArchivedInput) campaignArchivedInput.checked = false;
     if (campaignMergeShell) campaignMergeShell.classList.add("hidden");
     if (mergeCampaignBtn) mergeCampaignBtn.classList.add("hidden");
@@ -7704,7 +8277,8 @@ async function saveCampaignFromModal() {
   const campaignName = campaignNameInput?.value.trim() || "";
   const pillar = normalizePillar(campaignPillarInput?.value || "authority");
   const selectedColor = String(campaignColorInput?.value || "").trim();
-  const iconShape = String(campaignShapeInput?.value || "").trim().toLowerCase();
+  const iconShape = String(campaignSymbolInput?.value || "").trim().toLowerCase();
+  const pathStyle = String(campaignPathStyleInput?.value || "").trim().toLowerCase();
   const isArchived = !!campaignArchivedInput?.checked;
 
   if (!campaignName) {
@@ -7729,7 +8303,8 @@ async function saveCampaignFromModal() {
       color,
       sortOrder: Number(existingCampaign?.sortOrder || nextSortOrder),
       isArchived,
-      iconShape
+      iconShape,
+      pathStyle
     });
     if (existingCampaign && String(existingCampaign.color || "").trim().toLowerCase() !== String(color || "").trim().toLowerCase()) {
       result = await apiUpdateCampaignColor({
@@ -7745,6 +8320,7 @@ async function saveCampaignFromModal() {
       pillar: result.campaign.pillar || pillar,
       color: result.campaign.color || color,
       iconShape: String(result.campaign.iconShape || result.campaign.icon_shape || iconShape || "").trim().toLowerCase(),
+      pathStyle: String(result.campaign.pathStyle || result.campaign.path_style || pathStyle || "").trim().toLowerCase(),
       sortOrder: Number(result.campaign.sortOrder || existingCampaign?.sortOrder || nextSortOrder),
       isArchived: !!result.campaign.isArchived,
       createdAt: result.campaign.createdAt || ""
@@ -8487,8 +9063,9 @@ function buildConstellationNodeLayoutSnapshot(rows = buildConstellationRows()) {
       ...getConstellationLayoutConfig(campaign, index),
       rowIndex
     };
-    const points = getIconPathPoints(
-      String(campaign.iconShape || "").trim().toLowerCase(),
+    const style = String(campaign.pathStyle || "").trim().toLowerCase();
+    const shape = ["straight", "squiggle", "zigzag", "arc"].includes(style) ? style : (["straight", "squiggle", "zigzag", "arc"].includes(String(campaign.iconShape || "").trim().toLowerCase()) ? String(campaign.iconShape).trim().toLowerCase() : "squiggle");
+    const points = getIconPathPoints(shape,
       Math.max((campaign.posts || []).length, 1),
       anchor.x,
       anchor.y,
@@ -8923,8 +9500,10 @@ function renderConstellation() {
     rowGroup.style.width = `${worldWidth}px`;
     rowGroup.style.height = `${minCanvasHeight}px`;
 
-    const points = getIconPathPoints(String(campaign.iconShape || "").trim().toLowerCase(), Math.max((campaign.posts || []).length, 1), anchor.x, anchor.y, layout, String(campaign.campaignId || campaign.campaignName || index));
-    const pathData = buildConstellationPath(points, String(campaign.iconShape || "").trim().toLowerCase());
+    const rawPathStyle = String(campaign.pathStyle || campaign.iconShape || "").trim().toLowerCase();
+    const pathStyle = ["straight", "squiggle", "zigzag", "arc"].includes(rawPathStyle) ? rawPathStyle : "squiggle";
+    const points = getIconPathPoints(pathStyle, Math.max((campaign.posts || []).length, 1), anchor.x, anchor.y, layout, String(campaign.campaignId || campaign.campaignName || index));
+    const pathData = buildConstellationPath(points, pathStyle);
     const labelTop = clamp(getCampaignBaseY(rowIndex) - 94, 40, minCanvasHeight - 160);
 
     const label = document.createElement("button");
@@ -9301,7 +9880,7 @@ function setupConstellationInteractions() {
 
   document.getElementById("zoom-in")?.addEventListener("click", () => zoomConstellation(1.15));
   document.getElementById("zoom-out")?.addEventListener("click", () => zoomConstellation(0.87));
-  document.getElementById("zoom-reset")?.addEventListener("click", () => fitConstellation());
+  document.getElementById("zoom-reset")?.addEventListener("click", resetConstellationViewToStart);
 
   let constellationResizeFrame = null;
 
@@ -9333,6 +9912,17 @@ function zoomConstellation(multiplier) {
   panY = centerY - worldY * scale;
 
   updateTransform();
+}
+
+function resetConstellationViewToStart() {
+  if (!viewport) return;
+  const rect = viewport.getBoundingClientRect();
+  const isMobile = rect.width <= 768;
+  scale = isMobile ? 0.45 : 0.62;
+  panX = 20 - LANE_LABEL_X * scale;
+  panY = 20;
+  updateTransform();
+  console.log("constellation initial viewport", { panX, panY, zoom: scale, leftAligned: true });
 }
 
 function fitConstellation({ preserveUserView = false } = {}) {
@@ -10449,6 +11039,27 @@ function renderWorkspaceDiagnosticsPanel() {
             </div>
           `).join("")}
         </div>
+        ${(flow.campaignKeyIssues || []).length ? `
+        <div class="platform-card">
+          <div class="text-sm font-bold text-white mb-3">Campaign Key Issues (${flow.campaignKeyIssues.length})</div>
+          <div class="space-y-3 max-h-64 overflow-y-auto">
+            ${flow.campaignKeyIssues.map((issue) => `
+            <div class="p-3 rounded-xl bg-[#251218] border border-red-400/15">
+              <div class="flex items-start justify-between gap-3 flex-wrap">
+                <div class="text-sm text-red-100 wrap-safe font-bold">${escapeHtml(issue.campaignName)}</div>
+                <span class="diagnostic-chip text-[10px]">${escapeHtml(issue.issue)}</span>
+              </div>
+              <div class="text-[11px] text-red-200/80 wrap-safe mt-1">Normalized key: ${escapeHtml(issue.normalizedKey || "")} • ${issue.conflictsWith ? "Conflicts: " + escapeHtml(issue.conflictsWith.join(", ")) : ""}</div>
+              <div class="flex gap-2 mt-2 flex-wrap">
+                <button type="button" class="px-2 py-1 rounded-lg bg-[#2d1b4e] hover:bg-[#3a2366] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors campaign-key-repair-btn" data-issue='${escapeHtml(JSON.stringify(issue))}' data-action="reassign">Reassign Posts</button>
+                <button type="button" class="px-2 py-1 rounded-lg bg-[#2d1b4e] hover:bg-[#3a2366] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors campaign-key-repair-btn" data-issue='${escapeHtml(JSON.stringify(issue))}' data-action="merge_duplicate">Merge Duplicate</button>
+                <button type="button" class="px-2 py-1 rounded-lg bg-[#2d1b4e] hover:bg-[#3a2366] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors campaign-key-repair-btn" data-issue='${escapeHtml(JSON.stringify(issue))}' data-action="clear_campaign">Clear from Posts</button>
+              </div>
+            </div>
+            `).join("")}
+          </div>
+        </div>
+        ` : ""}
         <div class="flex flex-wrap gap-2">
           <button type="button" data-flow-repair="relink_source_post" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Relink Source → Post</button>
           <button type="button" data-flow-repair="archive_duplicate_source_rows" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Archive Duplicate Source Rows</button>
@@ -10949,6 +11560,7 @@ function getWriteIdeaPayload() {
     historyStartDate: writeIdeaState.historyStartDate,
     historyEndDate: writeIdeaState.historyEndDate,
     generationMode: "write_an_idea",
+    generationStyle: "match_my_style",
     transformationType: writeIdeaState.transformationType,
     analysisMode: writeIdeaState.analysisMode,
     inputArtifacts: writeIdeaState.inputArtifacts,
@@ -13075,7 +13687,12 @@ function switchView(viewName) {
 
       if (viewName === "constellation") {
         renderConstellation();
-        fitConstellation();
+        if (constellationFirstOpen) {
+          constellationFirstOpen = false;
+          resetConstellationViewToStart();
+        } else {
+          fitConstellation({ preserveUserView: true });
+        }
       }
       renderMobileUtilitySheet();
     });
@@ -13192,6 +13809,36 @@ function closeConfirmActionModal() {
   confirmActionModal.classList.add("opacity-0", "pointer-events-none");
   confirmActionModalCard.classList.remove("scale-100");
   confirmActionModalCard.classList.add("scale-95");
+}
+
+function openPromptModal({ title = "Enter value", message = "", placeholder = "", defaultValue = "" } = {}) {
+  if (!confirmActionModal || !confirmActionModalCard) return Promise.resolve("");
+  if (confirmActionTitle) confirmActionTitle.textContent = title;
+  if (confirmActionSubtitle) confirmActionSubtitle.textContent = message;
+  if (confirmActionMessage) {
+    confirmActionMessage.innerHTML = `<div class="text-sm text-gray-300 wrap-safe mb-3">${escapeHtml(message)}</div><input id="prompt-modal-input" type="text" class="w-full px-4 py-3 rounded-xl bg-[#120c1d] border border-white/10 text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#c77dff]/40" placeholder="${escapeHtml(placeholder)}" value="${escapeHtml(defaultValue)}">`;
+  }
+  if (confirmActionConfirmBtn) confirmActionConfirmBtn.textContent = "Submit";
+  if (confirmActionCancelBtn) confirmActionCancelBtn.textContent = "Cancel";
+  confirmActionModal.classList.remove("opacity-0", "pointer-events-none");
+  confirmActionModalCard.classList.remove("scale-95");
+  confirmActionModalCard.classList.add("scale-100");
+  const input = document.getElementById("prompt-modal-input");
+  if (input) {
+    setTimeout(() => input.focus(), 100);
+    input.addEventListener("keydown", function promptEnterHandler(e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        confirmActionConfirmBtn?.click();
+      }
+    }, { once: true });
+  }
+  return new Promise((resolve) => {
+    confirmActionResolver = (value) => {
+      const inputEl = document.getElementById("prompt-modal-input");
+      resolve(inputEl ? inputEl.value.trim() : "");
+    };
+  });
 }
 
 function getLinkedInBrowserCaptureScript() {
@@ -15601,6 +16248,14 @@ function renderDiagnosticsPanel() {
           <div class="text-sm text-white wrap-safe">${escapeHtml(deploymentDiagnostics.linkedinDerivedRedirectUri || "Missing")}</div>
         </div>
         <div class="p-3 rounded-xl bg-[#120c1d] border border-white/5">
+          <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Instagram Redirect URI</div>
+          <div class="text-sm text-white wrap-safe break-all">${escapeHtml(deploymentDiagnostics.instagramRedirectUri || "Missing")}</div>
+        </div>
+        <div class="p-3 rounded-xl bg-[#120c1d] border border-white/5">
+          <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Threads Redirect URI</div>
+          <div class="text-sm text-white wrap-safe break-all">${escapeHtml(deploymentDiagnostics.threadsRedirectUri || "Missing")}</div>
+        </div>
+        <div class="p-3 rounded-xl bg-[#120c1d] border border-white/5">
           <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">LinkedIn Encoded Redirect URI</div>
           <div class="text-sm text-white wrap-safe break-all">${escapeHtml(deploymentDiagnostics.linkedinEncodedRedirectUri || "Missing")}</div>
         </div>
@@ -16133,6 +16788,14 @@ function openAIWorkspaceModal() {
   renderAIDraftList();
   renderAISemanticMemoryCards();
   try {
+    var profile = appState._creatorStyleProfile || buildCreatorStyleProfile();
+    appState._creatorStyleProfile = profile;
+    var styleContext = getStyleAwareContext(String(aiSourceIdInput?.value || "").trim(), String(aiSourceTypeInput?.value || "manual").trim(), profile);
+    renderCreatorMemoryDiagnostics(styleContext, creatorMemoryDiagnostics);
+  } catch (err) {
+    if (creatorMemoryDiagnostics) creatorMemoryDiagnostics.innerHTML = '<div class="text-sm text-gray-400">Creator memory unavailable.</div>';
+  }
+  try {
     const filters = buildAIHistoryFilterPayload();
     renderAIContextDiagnostics({ historicalSummary: buildLocalAIHistorySummary(filters) }, filters);
   } catch (err) {
@@ -16168,7 +16831,13 @@ async function generateAIDraftPreview() {
   const sourceId = aiSourceIdInput?.value || "";
   const mode = aiGenerationModeInput?.value || "LinkedIn draft";
   const prompt = String(aiWorkspacePrompt?.value || "").trim();
+  const generationStyle = aiGenerationStyleInput?.value || "match_my_style";
   const historyFilters = buildAIHistoryFilterPayload();
+
+  var styleProfile = appState._creatorStyleProfile || buildCreatorStyleProfile();
+  appState._creatorStyleProfile = styleProfile;
+  var styleContext = getStyleAwareContext(sourceId, sourceType, styleProfile);
+
   const payload = {
     aiDraftId: currentAIDraftId || "",
     sourceType,
@@ -16176,6 +16845,7 @@ async function generateAIDraftPreview() {
     platform: aiPlatformInput?.value || "linkedin",
     postType: aiPostTypeInput?.value || "text",
     generationMode: mode,
+    generationStyle: generationStyle,
     outlineMode: !!aiOutlineModeInput?.checked,
     targetField: "draft",
     title: String(aiDraftTitleInput?.value || "").trim(),
@@ -16207,17 +16877,19 @@ async function generateAIDraftPreview() {
   if (aiReviewNotesInput && !String(aiReviewNotesInput.value || "").trim()) aiReviewNotesInput.value = result.reviewNotes || "";
   renderAIContextDiagnostics({ historicalSummary: result.historicalSummary || context?.historicalSummary || {} }, historyFilters);
   if (aiDraftMeta) {
+    var styleLabel = generationStyle === "match_my_style" ? "Match My Style" : generationStyle === "match_framework" ? "Match Framework" : generationStyle === "experimental" ? "Experimental" : generationStyle === "newsletter" ? "Newsletter" : generationStyle === "carousel" ? "Carousel" : generationStyle === "linkedin_reflection" ? "LinkedIn Reflection" : "Default";
     aiDraftMeta.innerHTML = [
       { label: "Provider", value: result.provider || "Unavailable" },
       { label: "Model", value: result.model || "Unavailable" },
       { label: "Mode", value: result.outlineMode ? "Outline" : "Full draft" },
       { label: "Platform", value: toTitleCase(result.platform || payload.platform || "linkedin") },
       { label: "Post Type", value: toTitleCase(result.postType || payload.postType || "text") },
-      { label: "Source", value: sourceType },
+      { label: "Style", value: styleLabel },
       { label: "Unicode", value: historyFilters.allowStylizedUnicode ? "Hook-only stylized Unicode allowed" : "Accessibility-safe plain text" }
     ].map((item) => `<div class="p-3 rounded-xl bg-[#181125] border border-white/5"><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">${escapeHtml(item.label)}</div><div class="text-sm text-white wrap-safe">${escapeHtml(item.value)}</div></div>`).join("");
   }
   renderAISemanticMemoryCards();
+  renderCreatorMemoryDiagnostics(styleContext, creatorMemoryDiagnostics);
   showToast("Draft ready", "AI draft generated.", "ph-check", "text-[#00ffaa]");
 }
 
@@ -16517,6 +17189,7 @@ function normalizeRemoteCampaign(campaign) {
     x: Number(pickRemoteValue(campaign?.x, 0)) || 0,
     y: Number(pickRemoteValue(campaign?.y, 0)) || 0,
     iconShape: String(pickRemoteValue(campaign?.iconShape, campaign?.icon_shape, "")).trim().toLowerCase(),
+    pathStyle: String(pickRemoteValue(campaign?.pathStyle, campaign?.path_style, "")).trim().toLowerCase(),
     sortOrder: Number(pickRemoteValue(campaign?.sortOrder, campaign?.sort_order, 0)) || 0,
     isArchived: normalizeRemoteBoolean(pickRemoteValue(campaign?.isArchived, campaign?.is_archived, false)),
     createdAt: String(pickRemoteValue(campaign?.createdAt, campaign?.created_at, "")).trim(),
@@ -16960,6 +17633,10 @@ async function apiRepairDateFields(payload = {}) {
 async function apiRepairFlowIntegrity(payload = {}) {
   const result = await apiPost("repairFlowIntegrity", payload);
   return result?.results || result;
+}
+
+async function apiRepairCampaignKeyIssues(payload = {}) {
+  return apiPost("repairCampaignKeyIssues", payload);
 }
 
 function getLinkedInRewritePayload(dryRun = true) {
