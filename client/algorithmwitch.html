@@ -2120,40 +2120,22 @@
             <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
               <div>
                 <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Review Before Save</div>
-                <div class="text-sm text-white mt-1">Approve selected drafts before anything is written into POSTS.</div>
+                <div id="write-idea-review-subtitle" class="text-sm text-white mt-1">Review generated content before saving to POSTS.</div>
               </div>
-              <span id="write-idea-status-chip" class="diagnostic-chip">Structured draft</span>
+              <span id="write-idea-status-chip" class="diagnostic-chip">Ready</span>
             </div>
-            <div id="write-idea-review-summary" class="text-sm text-gray-300 wrap-safe mb-4">Idea captured state will appear here after you generate a scaffold.</div>
+            <div id="write-idea-review-summary" class="text-sm text-gray-300 wrap-safe mb-4">Generate a post or structure to review here.</div>
             <div id="write-idea-warning-list" class="flex flex-wrap gap-2 mb-4"></div>
             <div id="write-idea-proposed-posts" class="space-y-3"></div>
-            <div id="write-idea-loading" class="hidden write-idea-review-card space-y-3">
+            <div id="write-idea-loading" class="hidden space-y-3 py-4">
               <div class="flex items-center gap-3">
                 <div class="w-5 h-5 rounded-full border-2 border-[#c77dff] border-t-transparent animate-spin"></div>
                 <div class="text-xs text-gray-300 font-medium">
-                  <span id="write-idea-loading-phase">Searching historical posts...</span>
+                  <span id="write-idea-loading-phase">Generating...</span>
                   <span class="text-gray-500 ml-2" id="write-idea-loading-sub"></span>
                 </div>
               </div>
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div class="h-24 rounded-xl bg-[#181125] border border-white/5 animate-pulse"></div>
-                <div class="h-24 rounded-xl bg-[#181125] border border-white/5 animate-pulse"></div>
-                <div class="h-24 rounded-xl bg-[#181125] border border-white/5 animate-pulse"></div>
-              </div>
             </div>
-          </div>
-
-          <div class="write-idea-review-card">
-            <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
-              <div>
-                <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Review Before Save</div>
-                <div class="text-sm text-white mt-1">Approve selected drafts before anything is written into POSTS.</div>
-              </div>
-              <span id="write-idea-status-chip" class="diagnostic-chip">Structured draft</span>
-            </div>
-            <div id="write-idea-review-summary" class="text-sm text-gray-300 wrap-safe mb-4">Idea captured state will appear here after you generate a scaffold.</div>
-            <div id="write-idea-warning-list" class="flex flex-wrap gap-2 mb-4"></div>
-            <div id="write-idea-proposed-posts" class="space-y-3"></div>
             <div class="flex flex-wrap gap-3 mt-5">
               <button id="write-idea-approve-btn" type="button" class="px-4 py-3 rounded-2xl bg-[#231738] border border-white/5 text-white text-xs uppercase tracking-[0.2em] font-bold">Approve Selected</button>
               <button id="write-idea-save-drafts-btn" type="button" class="px-4 py-3 rounded-2xl bg-[#181125] border border-white/5 text-white text-xs uppercase tracking-[0.2em] font-bold">Save as Drafts</button>
@@ -4360,6 +4342,7 @@ const writeIdeaSaveManualBtn = document.getElementById("write-idea-save-manual-b
 const writeIdeaApproveBtn = document.getElementById("write-idea-approve-btn");
 const writeIdeaSaveDraftsBtn = document.getElementById("write-idea-save-drafts-btn");
 const writeIdeaStatusChip = document.getElementById("write-idea-status-chip");
+const writeIdeaReviewSubtitle = document.getElementById("write-idea-review-subtitle");
 const writeIdeaReviewSummary = document.getElementById("write-idea-review-summary");
 const writeIdeaWarningList = document.getElementById("write-idea-warning-list");
 const writeIdeaProposedPosts = document.getElementById("write-idea-proposed-posts");
@@ -12106,7 +12089,7 @@ function renderWriteIdeaDraftList() {
         </div>
       </div>
     `).join("")
-    : makeEmptyState("No idea drafts yet", "Generate or save a scaffold to keep idea records here.", "ph-sparkle");
+    : makeEmptyState("No idea drafts yet", "Generate or save a draft to keep idea records here.", "ph-sparkle");
 }
 
 function renderWriteIdeaScaffold() {
@@ -12137,8 +12120,14 @@ function renderWriteIdeaScaffold() {
   if (writeIdeaHistoryEndDateInput) writeIdeaHistoryEndDateInput.value = writeIdeaState.historyEndDate || "";
   renderWriteIdeaHistoryFilterStatus();
   renderWriteIdeaArtifactWorkspace();
+  var mode = writeIdeaState.generationMode || "generate_post";
+  var subtitleText = mode === "generate_post" ? "Review generated post before saving to POSTS."
+    : mode === "generate_structure" ? "Review proposed posts and dates before saving."
+    : mode === "generate_carousel" ? "Review carousel slides before saving."
+    : mode === "generate_newsletter" ? "Review newsletter draft before saving."
+    : "Review reflection before saving.";
+  if (writeIdeaReviewSubtitle) writeIdeaReviewSubtitle.textContent = subtitleText;
   if (!writeIdeaLastScaffold) {
-    var mode = writeIdeaState.generationMode || "generate_post";
     var emptyHint = mode === "generate_post" ? "Generate a post to review finished prose."
       : mode === "generate_structure" ? "Generate a structure to review proposed posts and dates."
       : mode === "generate_carousel" ? "Generate a carousel to review slide content."
@@ -12151,7 +12140,7 @@ function renderWriteIdeaScaffold() {
     return;
   }
   const scaffold = writeIdeaLastScaffold.scaffold || writeIdeaLastScaffold;
-  var modeLabel = writeIdeaState.generationMode || "";
+  var modeLabel = mode;
   if (writeIdeaStatusChip) writeIdeaStatusChip.textContent = scaffold.draftStatus === "scaffold_only" ? "Structured draft" : modeLabel === "generate_post" ? "Post draft" : modeLabel === "generate_carousel" ? "Carousel" : modeLabel === "generate_newsletter" ? "Newsletter" : modeLabel === "generate_linkedin_reflection" ? "Reflection" : toTitleCase(scaffold.draftStatus || "draft");
   if (writeIdeaReviewSummary) writeIdeaReviewSummary.textContent = scaffold.summaryText || "Idea draft ready for manual review.";
   if (writeIdeaWarningList) {
@@ -12375,10 +12364,11 @@ async function generateWriteIdeaPost() {
     }
 
     var summaryText = mode === "generate_post" ? "Post draft generated. Review the prose below before approving."
+      : mode === "generate_structure" ? "Outline structure generated. Review proposed posts and dates below."
       : mode === "generate_carousel" ? "Carousel draft generated. Each slide has complete copy."
       : mode === "generate_newsletter" ? "Newsletter draft generated. Long-form essay style."
       : mode === "generate_linkedin_reflection" ? "LinkedIn reflection generated. Personal, conversational tone."
-      : "Structured draft direction generated.";
+      : "Draft generated. Review before saving.";
 
     writeIdeaLastScaffold = {
       idea: {
@@ -12508,22 +12498,31 @@ function buildLocalIdeaScaffold(payload) {
       ? "Output draft includes attached media context and avoids reusing slide text verbatim."
       : "Output draft derived from the current artifact chain."
   }];
-  const proposedPosts = [{
-    title,
-    description: `Structured draft direction.\nPrompt: ${payload.ideaPrompt}\nTransformation: ${getWriteIdeaTransformationLabel(payload.transformationType)}\nOutput: ${payload.outputType.replace(/_/g, " ")}`,
+  var description = "Structure draft direction.\nPrompt: " + (payload.ideaPrompt || "") + "\nTransformation: " + getWriteIdeaTransformationLabel(payload.transformationType) + "\nOutput: " + (payload.outputType || "create_one_post").replace(/_/g, " ");
+  var proposedPosts = [{
+    title: title,
+    description: description,
     platform: payload.platform || "linkedin",
     postType: payload.outputType === "draft_carousel_outline" ? "carousel" : "text",
     queueDateLabel: payload.targetDate || normalizeQueueDateLabel(new Date())
   }];
+  if (payload.outputType === "draft_carousel_outline") {
+    proposedPosts[0].carouselSlides = [
+      { title: "Idea", copy: "Core observation" },
+      { title: "Why it matters", copy: "Context and relevance" },
+      { title: "Application", copy: "Practical takeaway" },
+      { title: "CTA", copy: "What to do next" }
+    ];
+  }
   return {
     title,
     draftStatus: "scaffold_only",
     warnings: payload.ideaPrompt.length < 18 ? ["too generic", "weak classification"] : ["structured draft"],
     semanticTags: payload.ideaPrompt.toLowerCase().split(/[^a-z0-9]+/).filter((token) => token.length >= 5).slice(0, 6),
     generatedOutputs,
-    summaryText: "Idea captured. Local structured-draft mode is active. Branch, reuse, or save any generated artifact.",
-    proposedPosts,
-    carouselOutline: "Slide 1: Idea\nSlide 2: Observation\nSlide 3: Why it matters\nSlide 4: Application\nSlide 5: CTA"
+    summaryText: "Structure generated. Output: " + (payload.outputType || "create_one_post").replace(/_/g, " ") + ". Review proposed posts below.",
+    proposedPosts: proposedPosts,
+    carouselOutline: payload.outputType === "draft_carousel_outline" ? "Slide 1: Idea\nSlide 2: Why it matters\nSlide 3: Application\nSlide 4: CTA" : ""
   };
 }
 
@@ -12549,12 +12548,13 @@ async function saveWriteIdeaDraft() {
   }
   recordWriteIdeaHistory("Saved draft", deriveIdeaTitle(payload.ideaPrompt));
   renderWriteIdeaDraftList();
-  showToast("Idea saved", "Idea prompt saved as a draft scaffold.", "ph-check", "text-[#00ffaa]");
+  showToast("Idea saved", "Idea prompt saved as a draft.", "ph-check", "text-[#00ffaa]");
 }
 
 async function approveWriteIdeaSelection() {
   if (!writeIdeaLastScaffold) {
-    showToast("No scaffold", "Generate a scaffold first.", "ph-warning", "text-yellow-400");
+    var mode = writeIdeaState.generationMode || "generate_post";
+    showToast("Nothing to approve", mode === "generate_post" ? "Generate a post first." : "Generate a structure first.", "ph-warning", "text-yellow-400");
     return;
   }
   const selectedPosts = collectWriteIdeaSelectedPosts();
@@ -12629,7 +12629,9 @@ async function approveWriteIdeaSelection() {
       : await apiCreatePostFromIdea(payload);
     await syncRemoteIfConfigured();
     rerenderAll();
-    showToast("Drafts created", `${(result?.result?.createdPosts || result?.createdPosts || []).length || 1} drafts created from the approved scaffold.`, "ph-check", "text-[#00ffaa]");
+    var approvedCount = (result?.result?.createdPosts || result?.createdPosts || []).length || 1;
+    var remoteMsg = writeIdeaState.generationMode === "generate_post" ? approvedCount + " generated post saved to POSTS." : approvedCount + " drafts from approved structure saved to POSTS.";
+    showToast("Saved", remoteMsg, "ph-check", "text-[#00ffaa]");
   } else {
     selectedPosts.forEach((post) => {
       const planning = normalizePostPlanningFields({ queueDateLabel: post.queueDateLabel });
@@ -12652,7 +12654,8 @@ async function approveWriteIdeaSelection() {
     });
     persistLocalState();
     rerenderAll();
-    showToast("Drafts created", `${selectedPosts.length} local drafts created from the approved scaffold.`, "ph-check", "text-[#00ffaa]");
+    var localMsg = writeIdeaState.generationMode === "generate_post" ? selectedPosts.length + " generated post saved to POSTS." : selectedPosts.length + " local drafts from approved structure saved to POSTS.";
+    showToast("Saved", localMsg, "ph-check", "text-[#00ffaa]");
   }
 }
 
