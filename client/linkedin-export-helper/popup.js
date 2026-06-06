@@ -3,9 +3,15 @@ const EXPORT_COLUMNS = [
   "post_type",
   "is_repost",
   "author",
+  "repost_author",
   "original_author",
+  "repost_commentary",
+  "original_post_excerpt",
   "date_label",
+  "relative_date_label",
   "timestamp",
+  "decoded_post_date",
+  "date_confidence",
   "text",
   "rawText",
   "url",
@@ -36,65 +42,65 @@ function setDiagnostics(value) {
 }
 
 function setButtonsEnabled(enabled) {
-  [
-    "copy-tsv-btn",
-    "download-json-btn",
-    "download-csv-btn",
-    "download-tsv-btn"
-  ].forEach((id) => {
+  ["copy-tsv-btn", "download-json-btn", "download-csv-btn", "download-tsv-btn"].forEach(function(id) {
     $(id).disabled = !enabled;
   });
 }
 
 function csvEscape(value, delimiter) {
-  const text = String(value == null ? "" : value);
+  var text = String(value == null ? "" : value);
   if (delimiter === "\t") return text.replace(/\t/g, " ").replace(/\r?\n/g, " ");
   if (!/[",\r\n]/.test(text)) return text;
-  return `"${text.replace(/"/g, '""')}"`;
+  return '"' + text.replace(/"/g, '""') + '"';
 }
 
 function toExportRows(payload) {
-  const exportedAt = payload.generated_at || new Date().toISOString();
-  return (payload.items || []).map((item) => ({
-    platform: "linkedin",
-    post_type: String(item.post_type || "").trim(),
-    is_repost: item.is_repost ? "true" : "false",
-    author: String(item.author || "").trim(),
-    original_author: String(item.original_author || "").trim(),
-    date_label: String(item.date_label || "").trim(),
-    timestamp: String(item.timestamp || "").trim(),
-    text: String(item.text || "").trim(),
-    rawText: String(item.rawText || "").trim(),
-    url: String(item.post_url || item.url || "").trim(),
-    impressions: String(item.impression_count || item.metrics?.impressions || "").trim(),
-    reactions: String(item.reaction_count || item.metrics?.reactions || "").trim(),
-    comments: String(item.comment_count || item.metrics?.comments || "").trim(),
-    reposts: String(item.repost_count || item.metrics?.reposts || "").trim(),
-    media_count: String(item.media_count || (item.media_urls || []).length || 0),
-    source_url: String(payload.source_url || "").trim(),
-    exported_at: exportedAt
-  }));
+  var exportedAt = payload.generated_at || new Date().toISOString();
+  return (payload.items || []).map(function(item) {
+    var metrics = item.metrics || {};
+    var mediaUrls = item.media_urls || item.mediaUrls || [];
+    return {
+      platform: "linkedin",
+      post_type: String(item.post_type || item.postType || "").trim(),
+      is_repost: item.is_repost ? "true" : "false",
+      author: String(item.author || "").trim(),
+      repost_author: String(item.repost_author || item.repostAuthor || "").trim(),
+      original_author: String(item.original_author || item.originalAuthor || "").trim(),
+      repost_commentary: String(item.repost_commentary || item.repostCommentary || "").trim(),
+      original_post_excerpt: String(item.original_post_excerpt || item.originalPostExcerpt || "").trim(),
+      date_label: String(item.date_label || item.dateLabel || "").trim(),
+      relative_date_label: String(item.relative_date_label || item.relativeDateLabel || "").trim(),
+      timestamp: String(item.timestamp || "").trim(),
+      decoded_post_date: String(item.decoded_post_date || item.decodedPostDate || "").trim(),
+      date_confidence: String(item.date_confidence || item.dateConfidence || "").trim(),
+      text: String(item.text || "").trim(),
+      rawText: String(item.rawText || "").trim(),
+      url: String(item.url || item.post_url || "").trim(),
+      impressions: String(metrics.impressions || item.impression_count || item.impressions || ""),
+      reactions: String(metrics.reactions || item.reaction_count || item.reactions || ""),
+      comments: String(metrics.comments || item.comment_count || item.comments || ""),
+      reposts: String(metrics.reposts || item.repost_count || item.reposts || ""),
+      media_count: String(mediaUrls.length || item.media_count || "0"),
+      source_url: String(payload.source_url || "").trim(),
+      exported_at: exportedAt
+    };
+  });
 }
 
 function serializeDelimited(rows, delimiter) {
-  const header = EXPORT_COLUMNS.join(delimiter);
-  const lines = rows.map((row) => EXPORT_COLUMNS.map((column) => csvEscape(row[column], delimiter)).join(delimiter));
+  var header = EXPORT_COLUMNS.join(delimiter);
+  var lines = rows.map(function(row) {
+    return EXPORT_COLUMNS.map(function(column) { return csvEscape(row[column], delimiter); }).join(delimiter);
+  });
   return [header].concat(lines).join("\n");
 }
 
 function downloadBlob(filename, mimeType, content) {
-  const blob = new Blob([content], { type: mimeType });
-  const url = URL.createObjectURL(blob);
-  chrome.downloads.download(
-    {
-      url,
-      filename,
-      saveAs: true
-    },
-    () => {
-      setTimeout(() => URL.revokeObjectURL(url), 2000);
-    }
-  );
+  var blob = new Blob([content], { type: mimeType });
+  var url = URL.createObjectURL(blob);
+  chrome.downloads.download({ url: url, filename: filename, saveAs: true }, function() {
+    setTimeout(function() { URL.revokeObjectURL(url); }, 2000);
+  });
 }
 
 function isLinkedInUrl(url) {
@@ -102,31 +108,24 @@ function isLinkedInUrl(url) {
 }
 
 async function getActiveTab() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab || !tab.id) {
-    throw new Error("No active tab was found.");
-  }
+  var tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+  var tab = tabs[0];
+  if (!tab || !tab.id) throw new Error("No active tab was found.");
   return tab;
 }
 
 function sendTabMessage(tabId, message) {
-  return new Promise((resolve, reject) => {
-    chrome.tabs.sendMessage(tabId, message, (response) => {
-      const runtimeError = chrome.runtime.lastError;
-      if (runtimeError) {
-        reject(new Error(runtimeError.message));
-        return;
-      }
+  return new Promise(function(resolve, reject) {
+    chrome.tabs.sendMessage(tabId, message, function(response) {
+      var err = chrome.runtime.lastError;
+      if (err) { reject(new Error(err.message)); return; }
       resolve(response);
     });
   });
 }
 
 async function injectContentScript(tabId) {
-  await chrome.scripting.executeScript({
-    target: { tabId },
-    files: [CONTENT_SCRIPT_FILE]
-  });
+  await chrome.scripting.executeScript({ target: { tabId: tabId }, files: [CONTENT_SCRIPT_FILE] });
 }
 
 function isReceivingEndError(error) {
@@ -135,45 +134,54 @@ function isReceivingEndError(error) {
 
 async function ensureContentScriptReady(tab) {
   try {
-    const response = await sendTabMessage(tab.id, { type: "ping" });
-    if (response && response.ok && response.ready) {
-      return response;
-    }
-  } catch (error) {
-    if (!isReceivingEndError(error)) {
-      throw error;
-    }
+    var response = await sendTabMessage(tab.id, { type: "ping" });
+    if (response && response.ready && response.source === LINKEDIN_READY_SOURCE) return response;
+  } catch (e) {
+    if (!isReceivingEndError(e)) throw e;
   }
-
   try {
     await injectContentScript(tab.id);
-    const retry = await sendTabMessage(tab.id, { type: "ping" });
-    if (retry && retry.ok && retry.ready && retry.source === LINKEDIN_READY_SOURCE) {
-      return retry;
-    }
-  } catch (error) {
-    if (isReceivingEndError(error)) {
-      throw new Error("Could not load the capture helper in this LinkedIn tab. Refresh LinkedIn and try again.");
-    }
-    throw error;
+    var retry = await sendTabMessage(tab.id, { type: "ping" });
+    if (retry && retry.ready && retry.source === LINKEDIN_READY_SOURCE) return retry;
+  } catch (e) {
+    if (isReceivingEndError(e)) throw new Error("Could not load the capture helper in this LinkedIn tab. Refresh LinkedIn and try again.");
+    throw e;
   }
-
   throw new Error("Could not load the capture helper in this LinkedIn tab. Refresh LinkedIn and try again.");
 }
 
 function renderDiagnosticsFromPayload(payload) {
   if (payload && payload.diagnostics) {
-    setDiagnostics(payload.diagnostics);
+    var diag = payload.diagnostics;
+    var lines = [];
+    lines.push("Page URL: " + (diag.pageUrl || "unknown"));
+    if (payload.page_type) lines.push("Page type: " + payload.page_type);
+    if (diag.cardsDetected != null) lines.push("Cards detected: " + diag.cardsDetected);
+    if (diag.itemsDetected != null) lines.push("Items extracted: " + diag.itemsDetected);
+    if (diag.itemsWithRawText != null) lines.push("Items with raw text: " + diag.itemsWithRawText);
+    if (diag.selectorsTried && diag.selectorsTried.length) {
+      lines.push("Selectors:");
+      diag.selectorsTried.forEach(function(sel) {
+        var count = (diag.selectorCounts || {})[sel] || 0;
+        lines.push("  " + sel + ": " + count);
+      });
+    }
+    if (diag.skippedReasons && diag.skippedReasons.length) {
+      lines.push("Skipped: " + diag.skippedReasons.join(", "));
+    }
+    if (diag.itemsDetected === 0) {
+      lines.push("");
+      lines.push("No post cards detected. Open your profile Activity > Posts page or scroll the feed until posts are visible, then click Export again.");
+    }
+    setDiagnostics(lines.join("\n"));
     return;
   }
   setDiagnostics("No diagnostics returned.");
 }
 
 async function requireLinkedInReady() {
-  const tab = await getActiveTab();
-  if (!isLinkedInUrl(tab.url)) {
-    throw new Error("Open a LinkedIn activity/profile page first.");
-  }
+  var tab = await getActiveTab();
+  if (!isLinkedInUrl(tab.url)) throw new Error("Open a LinkedIn activity/profile page first.");
   await ensureContentScriptReady(tab);
   return tab;
 }
@@ -181,15 +189,16 @@ async function requireLinkedInReady() {
 async function exportVisiblePosts() {
   setStatus("Exporting visible LinkedIn posts from the active tab...");
   try {
-    const tab = await requireLinkedInReady();
-    const response = await sendTabMessage(tab.id, { type: "exportVisiblePosts" });
-    if (!response || !response.ok || !response.payload) {
+    var tab = await requireLinkedInReady();
+    var response = await sendTabMessage(tab.id, { type: "exportVisiblePosts" });
+    if (!response || response.error) {
       throw new Error(response && response.error ? response.error : "The capture helper did not return export data.");
     }
-    latestPayload = response.payload;
-    const rows = toExportRows(latestPayload);
+    latestPayload = response;
+    var items = response.items || [];
+    var rows = toExportRows(latestPayload);
     setButtonsEnabled(rows.length > 0);
-    setStatus(`${rows.length} visible post${rows.length === 1 ? "" : "s"} ready. Download JSON/CSV/TSV or copy TSV for Google Sheets.`);
+    setStatus(rows.length + " visible post" + (rows.length === 1 ? "" : "s") + " ready. Download JSON/CSV/TSV or copy TSV for Google Sheets.");
     renderDiagnosticsFromPayload(latestPayload);
   } catch (error) {
     latestPayload = null;
@@ -202,13 +211,29 @@ async function exportVisiblePosts() {
 async function showDiagnostics() {
   setStatus("Checking the active LinkedIn tab...");
   try {
-    const tab = await requireLinkedInReady();
-    const response = await sendTabMessage(tab.id, { type: "getDiagnostics" });
-    if (!response || !response.ok) {
+    var tab = await requireLinkedInReady();
+    var response = await sendTabMessage(tab.id, { type: "getDiagnostics" });
+    if (!response || response.error) {
       throw new Error(response && response.error ? response.error : "The capture helper did not return diagnostics.");
     }
     setStatus("Diagnostics loaded from the active LinkedIn tab.");
-    setDiagnostics(response);
+    var lines = [];
+    lines.push("Page URL: " + (response.pageUrl || "unknown"));
+    if (response.cardsDetected != null) lines.push("Cards detected: " + response.cardsDetected);
+    if (response.itemsDetected != null) lines.push("Items extracted: " + response.itemsDetected);
+    if (response.itemsWithRawText != null) lines.push("Items with raw text: " + response.itemsWithRawText);
+    if (response.items != null) lines.push("Total items: " + response.items);
+    if (response.selectorsTried) {
+      response.selectorsTried.forEach(function(sel) {
+        var count = (response.selectorCounts || {})[sel] || 0;
+        lines.push("  " + sel + ": " + count);
+      });
+    }
+    if (response.itemsDetected === 0) {
+      lines.push("");
+      lines.push("No post cards detected. Scroll until posts are visible, open your profile Activity > Posts page, then click Export again.");
+    }
+    setDiagnostics(lines.join("\n"));
   } catch (error) {
     setStatus(error && error.message ? error.message : "Could not load diagnostics.");
     setDiagnostics("Diagnostics unavailable until the helper loads in the active LinkedIn tab.");
@@ -216,16 +241,14 @@ async function showDiagnostics() {
 }
 
 function requirePayload() {
-  if (!latestPayload) {
-    throw new Error("Run Export Visible Posts first.");
-  }
+  if (!latestPayload) throw new Error("Run Export Visible Posts first.");
   return latestPayload;
 }
 
 async function copyTsv() {
   try {
-    const payload = requirePayload();
-    const text = serializeDelimited(toExportRows(payload), "\t");
+    var payload = requirePayload();
+    var text = serializeDelimited(toExportRows(payload), "\t");
     await navigator.clipboard.writeText(text);
     setStatus("TSV copied. Paste it into Google Sheets or StellarSync.");
   } catch (error) {
@@ -235,12 +258,8 @@ async function copyTsv() {
 
 function downloadJson() {
   try {
-    const payload = requirePayload();
-    downloadBlob(
-      `linkedin-visible-posts-${new Date().toISOString().replace(/[:.]/g, "-")}.json`,
-      "application/json",
-      JSON.stringify(payload, null, 2)
-    );
+    var payload = requirePayload();
+    downloadBlob("linkedin-visible-posts-" + new Date().toISOString().replace(/[:.]/g, "-") + ".json", "application/json", JSON.stringify(payload, null, 2));
     setStatus("JSON download started.");
   } catch (error) {
     setStatus(error && error.message ? error.message : "Could not download JSON.");
@@ -249,12 +268,8 @@ function downloadJson() {
 
 function downloadCsv() {
   try {
-    const payload = requirePayload();
-    downloadBlob(
-      `linkedin-visible-posts-${new Date().toISOString().replace(/[:.]/g, "-")}.csv`,
-      "text/csv;charset=utf-8",
-      serializeDelimited(toExportRows(payload), ",")
-    );
+    var payload = requirePayload();
+    downloadBlob("linkedin-visible-posts-" + new Date().toISOString().replace(/[:.]/g, "-") + ".csv", "text/csv;charset=utf-8", serializeDelimited(toExportRows(payload), ","));
     setStatus("CSV download started.");
   } catch (error) {
     setStatus(error && error.message ? error.message : "Could not download CSV.");
@@ -263,12 +278,8 @@ function downloadCsv() {
 
 function downloadTsv() {
   try {
-    const payload = requirePayload();
-    downloadBlob(
-      `linkedin-visible-posts-${new Date().toISOString().replace(/[:.]/g, "-")}.tsv`,
-      "text/tab-separated-values;charset=utf-8",
-      serializeDelimited(toExportRows(payload), "\t")
-    );
+    var payload = requirePayload();
+    downloadBlob("linkedin-visible-posts-" + new Date().toISOString().replace(/[:.]/g, "-") + ".tsv", "text/tab-separated-values;charset=utf-8", serializeDelimited(toExportRows(payload), "\t"));
     setStatus("TSV download started.");
   } catch (error) {
     setStatus(error && error.message ? error.message : "Could not download TSV.");

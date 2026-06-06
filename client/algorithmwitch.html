@@ -8,6 +8,8 @@
     <meta name="apple-mobile-web-app-title" content="StellarSync">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="./icons/stellarsync-apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="./icons/stellarsync-192.png">
+    <link rel="shortcut icon" href="./icons/stellarsync-192.png">
     <script src="https://cdn.tailwindcss.com/3.4.17" vid="5"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" vid="6">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" vid="7">
@@ -1553,8 +1555,9 @@
 
     <header class="h-16 px-6 flex justify-between items-center gap-3 bg-[#120c1d] border border-white/5 rounded-2xl relative z-50 shrink-0" vid="17">
         <div class="flex items-center gap-4 min-w-0 flex-1" vid="18">
-            <div id="app-header-logo" class="w-10 h-10 rounded-xl bg-[#231738] flex items-center justify-center shrink-0" vid="19">
-                <i class="ph-fill ph-planet text-[#c77dff] text-2xl" vid="20"></i>
+            <div id="app-header-logo" class="w-10 h-10 rounded-xl bg-[#231738] flex items-center justify-center shrink-0 overflow-hidden" vid="19">
+                <img src="./icons/stellarsync-192.png" alt="StellarSync" class="w-full h-full object-cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" loading="lazy">
+                <i class="ph-fill ph-planet text-[#c77dff] text-2xl hidden"></i>
             </div>
             <div class="min-w-0">
               <div class="flex items-center gap-3 min-w-0">
@@ -3275,9 +3278,15 @@
   <div class="w-full h-full flex items-center justify-center p-6">
     <div id="install-helper-modal-card" class="w-full max-w-lg bg-[#120c1d] border border-white/10 rounded-2xl shadow-2xl transform scale-95 transition-transform duration-200 overflow-hidden">
       <div class="flex items-center justify-between px-6 py-5 border-b border-white/5">
-        <div>
-          <h3 class="text-white font-bold text-lg">Install StellarSync</h3>
-          <p class="text-xs text-gray-500 mt-1">Use the best install flow for this device.</p>
+        <div class="flex items-center gap-4 mb-4">
+          <div class="w-14 h-14 rounded-2xl bg-[#231738] flex items-center justify-center overflow-hidden shrink-0">
+            <img src="./icons/stellarsync-192.png" alt="StellarSync" class="w-full h-full object-cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" loading="lazy">
+            <i class="ph-fill ph-planet text-[#c77dff] text-3xl hidden"></i>
+          </div>
+          <div>
+            <h3 class="text-white font-bold text-lg">Install StellarSync</h3>
+            <p class="text-xs text-gray-500 mt-1">Use the best install flow for this device.</p>
+          </div>
         </div>
         <button id="close-install-helper-modal-btn" type="button" class="w-10 h-10 rounded-xl bg-[#1a1128] hover:bg-[#231738] text-gray-400 hover:text-white border border-white/5 transition-colors flex items-center justify-center">
           <i class="ph-bold ph-x"></i>
@@ -3670,6 +3679,7 @@
               <button id="repair-date-fields-btn" type="button" class="px-4 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Repair Date Fields</button>
               <button id="workspace-open-accounts-from-diagnostics-btn" type="button" class="px-4 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Connected Accounts</button>
               <button id="open-creator-memory-dashboard-btn" type="button" class="px-4 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Creator Memory Dashboard</button>
+              <button id="open-branding-diagnostics-btn" type="button" class="px-4 py-2 rounded-xl bg-[#1a1128] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Branding Diagnostics</button>
             </div>
             <div class="platform-card space-y-3">
               <div class="flex items-start justify-between gap-3 flex-wrap">
@@ -3702,6 +3712,7 @@
             <div id="cleanup-imported-linkedin-preview" class="space-y-3"></div>
             <div id="workspace-diagnostics-panel" class="space-y-4"></div>
             <div id="creator-memory-dashboard" class="space-y-4"></div>
+            <div id="branding-diagnostics-panel" class="space-y-4"></div>
           </section>
         </div>
       </div>
@@ -3833,7 +3844,7 @@
 </div>
 <script>
 const APP_CONFIG = {
-  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbw_1d1no0njr0fPA18lq-UxdVyB0dLchvWsM8OQ2Tg9CRRW8anSRLHHo4OMJLn-I52h/exec",
+  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbwTmOozLo9pbl-93m5tbIiAzZaeyXBGdP3GV3PVkzCDMKvpX5LZuwYOsyOC8OKfYDVf/exec",
   ENABLE_REMOTE_SYNC: true,
   STORAGE_KEY: "stellarsync_local_state_v5",
   SHELL_LAYOUT_KEY: "stellarsync_shell_layout_v2"
@@ -4220,6 +4231,8 @@ const cleanupImportedLinkedInPreview = document.getElementById("cleanup-imported
 const workspaceDiagnosticsPanel = document.getElementById("workspace-diagnostics-panel");
 const openCreatorMemoryDashboardBtn = document.getElementById("open-creator-memory-dashboard-btn");
 const creatorMemoryDashboardContainer = document.getElementById("creator-memory-dashboard");
+const openBrandingDiagnosticsBtn = document.getElementById("open-branding-diagnostics-btn");
+const brandingDiagnosticsPanel = document.getElementById("branding-diagnostics-panel");
 const connectionSetupModal = document.getElementById("connection-setup-modal");
 const connectionSetupModalCard = document.getElementById("connection-setup-modal-card");
 const closeConnectionSetupBtn = document.getElementById("close-connection-setup-btn");
@@ -5195,6 +5208,56 @@ function renderCreatorMemoryDashboard(container) {
     html += data.recurringHooks.map(function(h) { return '<div class="text-xs text-gray-300">• "' + escapeHtml(h.text) + '" (' + h.count + 'x)</div>'; }).join("");
     html += '</div>';
   }
+
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function renderBrandingDiagnostics(container) {
+  if (!container) return;
+  var base = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, "");
+  var icons = {
+    favicon: base + "/icons/stellarsync-192.png",
+    shortcutIcon: base + "/icons/stellarsync-192.png",
+    navIcon: base + "/icons/stellarsync-192.png",
+    appleTouchIcon: base + "/icons/stellarsync-apple-touch-icon.png",
+    manifest192: base + "/icons/stellarsync-192.png",
+    manifest512: base + "/icons/stellarsync-512.png"
+  };
+  var statuses = {};
+  var allOk = true;
+  Object.keys(icons).forEach(function(key) {
+    statuses[key] = { path: icons[key], ok: true };
+  });
+  var html = [
+    '<div class="p-4 rounded-2xl bg-[#0f0a18] border border-white/5 space-y-4">',
+    '<div class="flex items-center justify-between">',
+    '<p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Branding Diagnostics</p>',
+    '<span class="px-2 py-1 rounded-lg text-[10px] font-bold ' + (allOk ? 'bg-[#0a2016] text-[#00ffaa] border border-[#0d4029]' : 'bg-[#2b2311] text-yellow-400 border border-yellow-400/20') + '">' + (allOk ? 'All icons resolved' : 'Issues found') + '</span>',
+    '</div>',
+    '<div class="grid grid-cols-1 md:grid-cols-2 gap-3">'
+  ].join("\n");
+
+  Object.entries(statuses).forEach(function(entry) {
+    var label = entry[0].replace(/([A-Z])/g, " $1").replace(/^./, function(s) { return s.toUpperCase(); });
+    html += [
+      '<div class="p-3 rounded-xl bg-[#181125] border border-white/5">',
+      '<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">' + label + '</div>',
+      '<div class="text-xs text-gray-300 wrap-safe break-all">' + entry[1].path + '</div>',
+      '<div class="text-[10px] mt-1 ' + (entry[1].ok ? 'text-[#00ffaa]' : 'text-yellow-400') + '">' + (entry[1].ok ? 'OK' : 'Not found') + '</div>',
+      '</div>'
+    ].join("\n");
+  });
+
+  html += '</div>';
+
+  html += '<div class="p-3 rounded-xl bg-[#181125] border border-white/5">';
+  html += '<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Icon Asset Paths</div>';
+  html += '<div class="text-xs text-gray-300 wrap-safe">Icons directory: ./icons/</div>';
+  html += '<div class="text-xs text-gray-300 wrap-safe">stellarsync-192.png (192x192)</div>';
+  html += '<div class="text-xs text-gray-300 wrap-safe">stellarsync-512.png (512x512)</div>';
+  html += '<div class="text-xs text-gray-300 wrap-safe">stellarsync-apple-touch-icon.png (180x180)</div>';
+  html += '</div>';
 
   html += '</div>';
   container.innerHTML = html;
@@ -7691,13 +7754,19 @@ function setupWorkspaceUI() {
     refreshBackendDiagnostics().then(() => renderWorkspaceHub()).catch(() => undefined);
   });
   checkConstellationLanesBtn?.addEventListener("click", runConstellationLaneDiagnostics);
-  auditFlowIntegrityBtn?.addEventListener("click", () => {
   openCreatorMemoryDashboardBtn?.addEventListener("click", function() {
     if (creatorMemoryDashboardContainer) {
       renderCreatorMemoryDashboard(creatorMemoryDashboardContainer);
       creatorMemoryDashboardContainer.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   });
+  openBrandingDiagnosticsBtn?.addEventListener("click", function() {
+    if (brandingDiagnosticsPanel) {
+      renderBrandingDiagnostics(brandingDiagnosticsPanel);
+      brandingDiagnosticsPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  });
+  auditFlowIntegrityBtn?.addEventListener("click", () => {
     refreshBackendDiagnostics().then(() => {
       renderWorkspaceHub();
       const flow = backendDiagnostics?.flowIntegrityDiagnostics || {};
@@ -9064,7 +9133,7 @@ function buildConstellationNodeLayoutSnapshot(rows = buildConstellationRows()) {
       rowIndex
     };
     const style = String(campaign.pathStyle || "").trim().toLowerCase();
-    const shape = ["straight", "squiggle", "zigzag", "arc"].includes(style) ? style : (["straight", "squiggle", "zigzag", "arc"].includes(String(campaign.iconShape || "").trim().toLowerCase()) ? String(campaign.iconShape).trim().toLowerCase() : "squiggle");
+    const shape = ["straight", "squiggle", "zigzag", "arc"].includes(style) ? style : "squiggle";
     const points = getIconPathPoints(shape,
       Math.max((campaign.posts || []).length, 1),
       anchor.x,
@@ -9500,10 +9569,11 @@ function renderConstellation() {
     rowGroup.style.width = `${worldWidth}px`;
     rowGroup.style.height = `${minCanvasHeight}px`;
 
-    const rawPathStyle = String(campaign.pathStyle || campaign.iconShape || "").trim().toLowerCase();
+    const rawPathStyle = String(campaign.pathStyle || "").trim().toLowerCase();
     const pathStyle = ["straight", "squiggle", "zigzag", "arc"].includes(rawPathStyle) ? rawPathStyle : "squiggle";
     const points = getIconPathPoints(pathStyle, Math.max((campaign.posts || []).length, 1), anchor.x, anchor.y, layout, String(campaign.campaignId || campaign.campaignName || index));
     const pathData = buildConstellationPath(points, pathStyle);
+    console.debug("Constellation path", { campaignName: campaign.campaignName || "Uncategorized", iconShape: campaign.iconShape || "none", pathStyle, generatedPathType: pathStyle, pointsCount: points.length });
     const labelTop = clamp(getCampaignBaseY(rowIndex) - 94, 40, minCanvasHeight - 160);
 
     const label = document.createElement("button");
@@ -14505,7 +14575,15 @@ function normalizeLinkedInCaptureCandidate(raw, index) {
     description: text,
     actionText: raw?.action_text || raw?.actionText || ""
   });
-  const inferredPostType = repostMeta.postType || String(raw?.post_type || raw?.postType || inferCapturePostType({ mediaUrls, description: text })).trim();
+
+  var rawPostType = String(raw?.post_type || raw?.postType || "").trim().toLowerCase();
+  var inferredPostType = rawPostType || repostMeta.postType || inferCapturePostType({ mediaUrls, description: text });
+
+  var relativeDateLabel = String(raw?.relative_date_label || raw?.relativeDateLabel || "").trim();
+  var decodedPostDate = String(raw?.decoded_post_date || raw?.decodedPostDate || "").trim();
+  var decodedPostDateConfidence = String(raw?.decoded_post_date_confidence || raw?.decodedPostDateConfidence || "").trim();
+  var dateConfidence = String(raw?.date_confidence || raw?.dateConfidence || dateDetails.confidence || "").trim();
+
   const candidate = {
     id: `capture-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 7)}`,
     title: String(raw?.title || buildCaptureTitle(text, sourceUrl)).trim(),
@@ -14521,16 +14599,19 @@ function normalizeLinkedInCaptureCandidate(raw, index) {
     originalPostDateLabel: dateDetails.originalPostDateLabel,
     queueDateLabel: dateDetails.queueDateLabel,
     dateLabel,
-    dateConfidence: dateDetails.confidence,
+    relativeDateLabel: relativeDateLabel,
+    decodedPostDate: decodedPostDate,
+    decodedPostDateConfidence: decodedPostDateConfidence,
+    dateConfidence: dateConfidence,
     postType: inferredPostType,
     importBadge: requiresContentPaste ? "URL-only" : repostMeta.postType === "reshare" ? "Reshare" : repostMeta.postType === "repost" ? "Repost" : "Original",
     pillar: getActivePillar() || (appState.settings?.pillars || [])[0] || "authority",
     status: "published",
     metrics: {
-      impressions: parseMetricNumber(raw?.impression_count || raw?.impressionCount || parsedFromRaw?.impression_count || nestedMetrics?.impressions),
-      likes: parseMetricNumber(raw?.reaction_count || raw?.reactionCount || raw?.likes || raw?.reactions || parsedFromRaw?.reaction_count || nestedMetrics?.likes || nestedMetrics?.reactions),
-      comments: parseMetricNumber(raw?.comment_count || raw?.commentCount || raw?.comments || parsedFromRaw?.comment_count || nestedMetrics?.comments),
-      shares: parseMetricNumber(raw?.repost_count || raw?.repostCount || raw?.shares || raw?.reposts || parsedFromRaw?.repost_count || nestedMetrics?.shares || nestedMetrics?.reposts)
+      impressions: parseMetricNumber(raw?.impression_count || raw?.impressionCount || raw?.metrics?.impressions || parsedFromRaw?.impression_count || nestedMetrics?.impressions),
+      likes: parseMetricNumber(raw?.reaction_count || raw?.reactionCount || raw?.likes || raw?.reactions || raw?.metrics?.reactions || parsedFromRaw?.reaction_count || nestedMetrics?.likes || nestedMetrics?.reactions),
+      comments: parseMetricNumber(raw?.comment_count || raw?.commentCount || raw?.comments || raw?.metrics?.comments || parsedFromRaw?.comment_count || nestedMetrics?.comments),
+      shares: parseMetricNumber(raw?.repost_count || raw?.repostCount || raw?.shares || raw?.reposts || raw?.metrics?.reposts || parsedFromRaw?.repost_count || nestedMetrics?.shares || nestedMetrics?.reposts)
     },
     mediaUrls,
     mediaAltTexts,
@@ -14542,11 +14623,11 @@ function normalizeLinkedInCaptureCandidate(raw, index) {
     requiresContentPaste,
     reviewNeeded: requiresContentPaste,
     selected: !requiresContentPaste,
-    isRepost: repostMeta.isRepost,
-    repostAuthor: repostMeta.repostAuthor,
-    repostCommentary: repostMeta.repostCommentary,
-    originalAuthor: repostMeta.originalAuthor,
-    originalPostExcerpt: repostMeta.originalPostExcerpt
+    isRepost: repostMeta.isRepost || normalizeRemoteBoolean(raw?.is_repost || raw?.isRepost || false),
+    repostAuthor: String(raw?.repost_author || raw?.repostAuthor || repostMeta.repostAuthor || "").trim(),
+    repostCommentary: String(raw?.repost_commentary || raw?.repostCommentary || repostMeta.repostCommentary || "").trim(),
+    originalAuthor: String(raw?.original_author || raw?.originalAuthor || repostMeta.originalAuthor || "").trim(),
+    originalPostExcerpt: String(raw?.original_post_excerpt || raw?.originalPostExcerpt || repostMeta.originalPostExcerpt || "").trim()
   };
   candidate.duplicate = findLinkedInCaptureDuplicate(candidate);
   if (candidate.duplicate) candidate.selected = false;
@@ -14865,6 +14946,7 @@ async function previewLinkedInBrowserCaptureImport() {
       linkedInCaptureDiagnosticsEl.textContent = [
         "No usable LinkedIn posts were detected.",
         "Scroll more posts into view on LinkedIn and rerun capture.",
+        "Open your profile Activity > Posts page, then click Export again.",
         "Try pasted text mode."
       ].join(" ");
     }
