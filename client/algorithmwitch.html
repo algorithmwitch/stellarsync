@@ -4164,7 +4164,7 @@
 </div>
 <script>
 const APP_CONFIG = {
-  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbwKCJgcHXI8qFD5N-HwnvDZC77xYXDfZ8NdYQOjzGsnHpaL6ZU80htLLAb42sVTROdi/exec",
+  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbxuCe8f8wBdNCKMg4lzaknpMXo3zcbC0hDRP42ziItPxPYOqmONjPRphb1S77Cd8lgw/exec",
   ENABLE_REMOTE_SYNC: true,
   STORAGE_KEY: "stellarsync_local_state_v5",
   SHELL_LAYOUT_KEY: "stellarsync_shell_layout_v2"
@@ -4400,8 +4400,91 @@ function countPostsBy(posts, getter) {
   return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
 }
 
-function getDisplayTitle(item, fallback = "Untitled") {
-  return String(item?.title || item?.campaignName || item?.assetName || item?.name || fallback).trim() || fallback;
+function getPostTitle(post, fallback = "Untitled") {
+  if (!post) return fallback;
+  return String(
+    post.title || post.post_title || post.postTitle || post.queue_title || post.queueTitle || post.headline || post.captionTitle || post.caption_title ||
+    firstNonEmptyLine(post.caption) || firstNonEmptyLine(post.description) || firstNonEmptyLine(post.body) || firstNonEmptyLine(post.content) ||
+    fallback
+  ).trim() || fallback;
+}
+
+function getNoteTitle(note, fallback = "Untitled note") {
+  if (!note) return fallback;
+  var candidate = note.title || note.note_title || note.headline || firstNonEmptyLine(note.body || note.note_body || note.description || "");
+  if (candidate && candidate.length > 80) candidate = candidate.slice(0, 80);
+  return String(candidate || fallback).trim() || fallback;
+}
+
+function getMediaTitle(asset, fallback = "Untitled media") {
+  if (!asset) return fallback;
+  var candidate = asset.title || asset.media_title || asset.mediaTitle || asset.asset_title || asset.assetTitle || asset.assetName || asset.asset_name || asset.alt_text || asset.altText || asset.filename || asset.originalFilename || asset.original_filename;
+  var sourceUrl = asset.source_url || asset.sourceUrl || asset.url || asset.fileUrl || asset.file_url;
+  if (!candidate && sourceUrl) {
+    try {
+      var url = new URL(sourceUrl);
+      candidate = url.pathname.split("/").pop() || url.hostname;
+    } catch (_) {}
+  }
+  return String(candidate || fallback).trim() || fallback;
+}
+
+function getCampaignName(item, fallback = "") {
+  if (!item) return fallback;
+  return String(
+    item.campaignName || item.campaign_name || item.campaign || item.targetCampaign || item.sourceCampaign || fallback
+  ).trim() || fallback;
+}
+
+function getMetricValue(item, aliases, fallback = 0) {
+  if (!item) return fallback;
+  for (var i = 0; i < aliases.length; i += 1) {
+    var key = aliases[i];
+    var camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+    var value = item[key] !== undefined ? item[key] : item[camelKey];
+    if (key && value !== undefined && value !== null && String(value).trim() !== "") {
+      var num = normalizeMetricNumber(value);
+      if (!Number.isNaN(num)) return num;
+    }
+  }
+  return fallback;
+}
+
+function getEngagementTotal(post) {
+  if (!post) return 0;
+  if (post.engagementTotal !== undefined || post.engagement_total !== undefined || post.total_engagement !== undefined) {
+    var val = normalizeMetricNumber(post.engagementTotal ?? post.engagement_total ?? post.total_engagement);
+    if (!Number.isNaN(val) && val > 0) return val;
+  }
+  return getMetricValue(post, ["likes", "reactions"]) +
+         getMetricValue(post, ["comments", "comment_count"]) +
+         getMetricValue(post, ["shares", "reposts"]) +
+         getMetricValue(post, ["saves", "save_count"]) +
+         getMetricValue(post, ["clicks", "link_clicks"]);
+}
+
+function getEngagementRate(post) {
+  if (!post) return 0;
+  if (post.engagementRate !== undefined || post.engagement_rate !== undefined) {
+    var val = normalizeMetricNumber(post.engagementRate ?? post.engagement_rate);
+    if (!Number.isNaN(val) && val > 0) return val;
+  }
+  var impressions = getMetricValue(post, ["impressions", "views", "reach"]);
+  if (impressions > 0) {
+    return getEngagementTotal(post) / impressions;
+  }
+  return 0;
+}
+
+function getDisplayTitle(item, fallback = "Untitled", maxLength = 0) {
+  var title = String(
+    item?.title || item?.campaignName || item?.assetName || item?.name ||
+    firstNonEmptyLine(item?.caption) || firstNonEmptyLine(item?.description) ||
+    firstNonEmptyLine(item?.body) || firstNonEmptyLine(item?.content) ||
+    fallback
+  ).trim() || fallback;
+  if (maxLength && title.length > maxLength) title = title.slice(0, maxLength);
+  return title;
 }
 
 function firstNonEmptyLine(value) {
@@ -12192,14 +12275,14 @@ function renderMedia() {
         : item.sourceType === "external"
         ? "External URL"
         : "";
-    const metaLine = [item.meta || "", campaignLabel, sourceLabel].filter(Boolean).join(" • ");
-    const displayTitle = getDisplayTitle(item.title || "Untitled asset");
+const metaLine = [item.meta || "", campaignLabel, sourceLabel].filter(Boolean).join(" • ");
+     const displayTitle = getMediaTitle(item);
     const assetUrl = isGroup ? (item.sourceUrl || linkedPost?.sourceUrl || "") : (item.fileUrl || item.sourceUrl || "");
     const overlayLabel = item.fileUrl ? "Open Asset" : item.sourceUrl ? "Open Link" : "View";
     const previewBlock = isCarouselPreview
       ? `<div class="stacked-preview">${["a","b","c"].map(() => "<span></span>").join("")}</div>`
       : hasImagePreview
-      ? `<img src="${escapeHtml(previewUrl)}" alt="${escapeHtml(item.title || "Media asset")}" class="w-full h-full object-cover rounded-none" loading="lazy" onerror="handleBrokenMediaPreview(this)">`
+      ? `<img src="${escapeHtml(previewUrl)}" alt="${escapeHtml(displayTitle)}" class="w-full h-full object-cover rounded-none" loading="lazy" onerror="handleBrokenMediaPreview(this)">`
       : hasVideoPreview
       ? `<video src="${escapeHtml(previewUrl)}" class="w-full h-full object-cover rounded-none" muted playsinline preload="metadata"></video>`
       : `<div class="w-full h-full flex items-center justify-center"><i class="ph-fill ${icon} text-gray-600 text-5xl"></i></div>`;
@@ -12216,7 +12299,7 @@ function renderMedia() {
           </div>
         </div>
         <div class="p-4">
-          <p class="text-white text-sm font-semibold wrap-safe mb-1" title="${escapeHtml(item.title || "Untitled asset")}">${escapeHtml(displayTitle)}</p>
+          <p class="text-white text-sm font-semibold wrap-safe mb-1" title="${escapeHtml(displayTitle)}">${escapeHtml(displayTitle)}</p>
           <p class="text-gray-500 text-[10px] font-medium wrap-safe">${escapeHtml(metaLine)}</p>
           ${isCarouselPreview ? `<p class="text-gray-600 text-[10px] font-medium wrap-safe mt-1">${(item.assets?.length || linkedPostAssets.length || (linkedPost?.carouselAssetIds || []).length)} linked images</p>` : ""}
           ${assetUrl ? `<p class="text-gray-600 text-[10px] font-medium wrap-safe mt-1">${escapeHtml(getDisplayExcerpt(assetUrl, assetUrl))}</p>` : ""}
@@ -15316,7 +15399,7 @@ function renderInspo() {
   }
   if (String(filters.query || "").trim()) {
     const query = String(filters.query).trim().toLowerCase();
-    items = items.filter((item) => `${item.title || ""} ${item.description || ""} ${item.notes || ""}`.toLowerCase().includes(query));
+    items = items.filter((item) => `${getDisplayTitle(item, "Untitled inspiration")} ${item.description || ""} ${item.summary || ""} ${item.notes || ""}`.toLowerCase().includes(query));
   }
 
   if (!items.length) {
@@ -15423,7 +15506,7 @@ function renderNotes() {
   }
   if (String(filters.query || "").trim()) {
     const query = String(filters.query).trim().toLowerCase();
-    items = items.filter((item) => `${item.title || ""} ${item.body || ""} ${(item.bullets || []).join(" ")}`.toLowerCase().includes(query));
+    items = items.filter((item) => `${getNoteTitle(item)} ${item.body || item.note_body || ""} ${(item.bullets || []).join(" ")}`.toLowerCase().includes(query));
   }
   if (!items.length) {
     grid.innerHTML = makeEmptyState("No notes", "Capture hooks, one-line insights, or bullet ideas here before drafting posts.", "ph-note-pencil");
@@ -15440,7 +15523,7 @@ function renderNotes() {
       <div class="glass-card notes-card flex flex-col p-5">
         <div class="flex items-start justify-between gap-3 mb-4">
           <div class="min-w-0">
-            <h3 class="text-white text-base font-bold wrap-safe mb-2">${escapeHtml(getDisplayTitle(item.title || "Untitled note", "Untitled note", 8))}</h3>
+            <h3 class="text-white text-base font-bold wrap-safe mb-2">${escapeHtml(getNoteTitle(item))}</h3>
             <div class="flex items-center gap-2 flex-wrap text-[10px]">
               <span class="px-2 py-1 rounded-full bg-[#120c1d] border border-white/5 text-gray-300 font-semibold">${escapeHtml(pillPlatform)}</span>
               <span class="px-2 py-1 rounded-full bg-[#120c1d] border border-white/5 text-gray-300 font-semibold">${escapeHtml(pillPillar)}</span>
@@ -15479,7 +15562,7 @@ function noteToPost(noteId) {
   const bulletText = (item.bullets || []).length ? "\n\n- " + item.bullets.join("\n- ") : "";
   currentModalNoteId = item.noteId || item.id || "";
   openPostModal(
-    item.title || "",
+    getNoteTitle(item),
     item.suggestedPlatform || "linkedin",
     item.suggestedPillar || "authority",
     "",
@@ -16091,6 +16174,13 @@ function renderDiagnosticsPanel() {
     ...(Array.isArray(diagnostics.frontendBackendMismatchNotes) ? diagnostics.frontendBackendMismatchNotes : [])
   ];
   const semanticDiagnostics = diagnostics.semanticDiagnostics || {};
+  const schemaDiagnostics = diagnostics.schemaFlowValidation || {};
+  const frontendSource = Array.from(document.scripts || []).map((script) => script.textContent || "").join("\n");
+  const frontendHardCodedRisks = [
+    { pattern: /\.cells\s*\[\s*\d+\s*\]/g, label: "DOM cell index access" },
+    { pattern: /\.getRange\s*\([^)]*,\s*\d+\s*,/g, label: "Fixed column getRange access" },
+    { pattern: /\[[\s\n]*\d+[\s\n]*\]/g, label: "Numeric array index access" }
+  ].map((risk) => ({ label: risk.label, count: (frontendSource.match(risk.pattern) || []).length })).filter((risk) => risk.count);
   const campaignCleanupDiagnostics = diagnostics.campaignCleanupDiagnostics || {};
   const metrics = [
     { label: "Backend reachable", value: backendReachable ? "Yes" : "No", color: backendReachable ? "#00ffaa" : "#fbbf24" },
@@ -16103,6 +16193,13 @@ function renderDiagnosticsPanel() {
   const issueRows = [
     { label: "Missing sheets", severity: "error", value: missingSheets.length, detail: missingSheets.join(", ") || "None", guidance: "Errors need action." },
     { label: "Missing headers", severity: "error", value: missingHeaders.reduce((sum, [, headers]) => sum + headers.length, 0), detail: missingHeaders.length ? missingHeaders.map(([sheet, headers]) => `${sheet}: ${headers.join(", ")}`).join(" | ") : "None", guidance: "Errors need action." },
+    { label: "Formula errors in derived columns", severity: "error", value: (schemaDiagnostics.formulaErrors || []).length, detail: formatDetailedDiagnostics(schemaDiagnostics.formulaErrors || [], (item) => `${item.sheet || "sheet"} ${item.header || "formula"} row ${item.row || "?"}: ${item.error || "formula error"}`), guidance: "Errors need action." },
+    { label: "Formula columns missing formulas", severity: "warning", value: (schemaDiagnostics.formulaColumnsMissingFormulas || []).reduce((sum, item) => sum + Number(item.count || 0), 0), detail: formatDetailedDiagnostics(schemaDiagnostics.formulaColumnsMissingFormulas || [], (item) => `${item.sheet || "sheet"} ${item.header || "formula"}: ${item.count || 0} rows`), guidance: "Warnings are okay for intentionally manual helper fields." },
+    { label: "Rows missing fallback titles", severity: "warning", value: Object.values(schemaDiagnostics.rowsMissingTitles || {}).reduce((sum, value) => sum + Number(value || 0), 0), detail: Object.entries(schemaDiagnostics.rowsMissingTitles || {}).map(([sheet, count]) => `${sheet}: ${count}`).join(" | ") || "None", guidance: "Fallback titles prevent blank cards, but source rows should still be named." },
+    { label: "AI draft lineage orphans", severity: "warning", value: (schemaDiagnostics.orphanAiDrafts || []).length, detail: formatDetailedDiagnostics(schemaDiagnostics.orphanAiDrafts || [], (item) => `${item.aiDraftId || "unknown"}: ${item.title || "Untitled draft"}`), guidance: "Warnings are okay for standalone drafts; linked flows should have parent/root/source IDs." },
+    { label: "Media not linked to post/draft", severity: "warning", value: (schemaDiagnostics.orphanMedia || []).length, detail: formatDetailedDiagnostics(schemaDiagnostics.orphanMedia || [], (item) => `${item.assetId || "unknown"}: ${item.title || "Untitled media"}`), guidance: "Warnings are okay for library-only assets." },
+    { label: "Notes not linked to drafts/posts", severity: "warning", value: (schemaDiagnostics.notesNotLinkedToDraftsOrPosts || []).length, detail: formatDetailedDiagnostics(schemaDiagnostics.notesNotLinkedToDraftsOrPosts || [], (item) => `${item.noteId || "unknown"}: ${item.title || "Untitled note"}`), guidance: "Warnings are okay for raw notes; converted notes should carry lineage." },
+    { label: "Hard-coded index risks detected", severity: "warning", value: frontendHardCodedRisks.reduce((sum, item) => sum + item.count, 0) + (schemaDiagnostics.hardCodedIndexRisks || []).length, detail: frontendHardCodedRisks.map((item) => `${item.label}: ${item.count}`).concat((schemaDiagnostics.hardCodedIndexRisks || []).map((item) => item.detail || item.label || String(item))).join(" | ") || "None", guidance: "Review any fixed indexes near sheet or render mapping code." },
     { label: "Malformed scheduled_at rows", severity: "error", value: (diagnostics.malformedScheduledRows || []).length, detail: formatDiagnosticIds(diagnostics.malformedScheduledRows, "postId"), guidance: "Errors need action." },
     { label: "Invalid queue_date_label rows", severity: "error", value: (diagnostics.invalidQueueDateLabelRows || []).length, detail: formatDetailedDiagnostics(diagnostics.invalidQueueDateLabelRows, (item) => `${item.postId || "unknown"}: ${item.queueDateLabel || "missing"}${item.scheduledAt ? ` • normalized display ${formatQueueDateLabel(item.scheduledAt)}` : ""}`), guidance: "Repair or normalize queue_date_label to M/D/YYYY." },
     { label: "Date mismatch rows", severity: "warning", value: (diagnostics.dateMismatchRows || []).length, detail: formatDetailedDiagnostics(diagnostics.dateMismatchRows, (item) => `${item.postId || "unknown"}: ${Array.isArray(item.diagnostics) ? item.diagnostics.join(", ") : "date warning"}${item.normalizedDisplayDate ? ` • display ${item.normalizedDisplayDate}` : ""}`), guidance: "Warnings are okay when queue_date_label is the intended calendar day." },
@@ -17244,14 +17341,24 @@ function normalizeRemotePost(post, campaigns = [], mediaItems = []) {
     flowState: String(pickRemoteValue(post?.flowState, post?.flow_state, post?.status, "draft")).trim(),
     campaignId: String(campaignId || matchedCampaign?.campaignId || "").trim(),
     campaignName: normalizeCampaignName(pickRemoteValue(post?.campaignName, post?.campaign_name, matchedCampaign?.campaignName, "")),
-    impressions: normalizeMetricNumber(pickRemoteValue(post?.impressions, 0)),
-    reach: normalizeMetricNumber(pickRemoteValue(post?.reach, 0)),
-    likes: normalizeMetricNumber(pickRemoteValue(post?.likes, 0)),
-    comments: normalizeMetricNumber(pickRemoteValue(post?.comments, 0)),
-    shares: normalizeMetricNumber(pickRemoteValue(post?.shares, 0)),
-    saves: normalizeMetricNumber(pickRemoteValue(post?.saves, 0)),
-    clicks: normalizeMetricNumber(pickRemoteValue(post?.clicks, 0)),
+    impressions: normalizeMetricNumber(pickRemoteValue(post?.impressions, post?.views, post?.reach, 0)),
+    views: normalizeMetricNumber(pickRemoteValue(post?.views, post?.impressions, post?.reach, 0)),
+    reach: normalizeMetricNumber(pickRemoteValue(post?.reach, post?.impressions, post?.views, 0)),
+    likes: normalizeMetricNumber(pickRemoteValue(post?.likes, post?.reactions, 0)),
+    reactions: normalizeMetricNumber(pickRemoteValue(post?.reactions, post?.likes, 0)),
+    comments: normalizeMetricNumber(pickRemoteValue(post?.comments, post?.comment_count, post?.commentCount, 0)),
+    comment_count: normalizeMetricNumber(pickRemoteValue(post?.comment_count, post?.commentCount, post?.comments, 0)),
+    shares: normalizeMetricNumber(pickRemoteValue(post?.shares, post?.reposts, 0)),
+    reposts: normalizeMetricNumber(pickRemoteValue(post?.reposts, post?.shares, 0)),
+    saves: normalizeMetricNumber(pickRemoteValue(post?.saves, post?.save_count, post?.saveCount, 0)),
+    save_count: normalizeMetricNumber(pickRemoteValue(post?.save_count, post?.saveCount, post?.saves, 0)),
+    clicks: normalizeMetricNumber(pickRemoteValue(post?.clicks, post?.link_clicks, post?.linkClicks, 0)),
+    link_clicks: normalizeMetricNumber(pickRemoteValue(post?.link_clicks, post?.linkClicks, post?.clicks, 0)),
+    engagementTotal: normalizeMetricNumber(pickRemoteValue(post?.engagementTotal, post?.engagement_total, post?.total_engagement, 0)),
+    engagement_total: normalizeMetricNumber(pickRemoteValue(post?.engagement_total, post?.engagementTotal, post?.total_engagement, 0)),
+    total_engagement: normalizeMetricNumber(pickRemoteValue(post?.total_engagement, post?.engagement_total, post?.engagementTotal, 0)),
     engagementRate: normalizeMetricNumber(pickRemoteValue(post?.engagementRate, post?.engagement_rate, 0)),
+    engagement_rate: normalizeMetricNumber(pickRemoteValue(post?.engagement_rate, post?.engagementRate, 0)),
     sourceUrl: String(pickRemoteValue(post?.sourceUrl, post?.source_url, "")).trim(),
     sourcePlatform: String(pickRemoteValue(post?.sourcePlatform, post?.source_platform, "")).trim(),
     sourceTitle: String(pickRemoteValue(post?.sourceTitle, post?.source_title, "")).trim(),
@@ -17294,6 +17401,15 @@ function normalizeRemotePost(post, campaigns = [], mediaItems = []) {
     dateDiagnostics: Array.isArray(post?.dateDiagnostics) ? post.dateDiagnostics : [],
     createdAt: String(pickRemoteValue(post?.createdAt, post?.created_at, "")).trim()
   };
+  if (!normalizedPost.engagementTotal && !normalizedPost.engagement_total && !normalizedPost.total_engagement) {
+    normalizedPost.engagementTotal = normalizedPost.likes + normalizedPost.comments + normalizedPost.shares + normalizedPost.saves + normalizedPost.clicks;
+    normalizedPost.engagement_total = normalizedPost.engagementTotal;
+    normalizedPost.total_engagement = normalizedPost.engagementTotal;
+  }
+  if (!normalizedPost.engagementRate && !normalizedPost.engagement_rate && normalizedPost.impressions > 0) {
+    normalizedPost.engagementRate = normalizedPost.engagementTotal / normalizedPost.impressions;
+    normalizedPost.engagement_rate = normalizedPost.engagementRate;
+  }
   return hydratePostCampaign({ ...normalizedPost, ...normalizeRemoteSemanticFields(post) }, campaigns);
 }
 
@@ -17352,16 +17468,32 @@ function normalizeRemoteNote(item) {
   const bullets = Array.isArray(item?.bullets)
     ? item.bullets
     : String(pickRemoteValue(item?.bullets, "")).split(/\r?\n/).map(line => line.replace(/^\s*[-*•]\s*/, "").trim()).filter(Boolean);
+  const noteId = String(pickRemoteValue(item?.noteId, item?.note_id, item?.id, "")).trim();
+  const body = String(pickRemoteValue(item?.body, item?.note_body, item?.noteBody, item?.description, item?.summary, "")).trim();
+  const normalizedTitle = getNoteTitle({
+    title: pickRemoteValue(item?.title, item?.note_title, item?.noteTitle, ""),
+    note_title: pickRemoteValue(item?.note_title, item?.noteTitle, ""),
+    headline: pickRemoteValue(item?.headline, ""),
+    body
+  });
   return {
-    id: String(pickRemoteValue(item?.noteId, item?.note_id, item?.id, "")).trim(),
-    noteId: String(pickRemoteValue(item?.noteId, item?.note_id, item?.id, "")).trim(),
-    title: String(pickRemoteValue(item?.title, "")).trim(),
-    body: String(pickRemoteValue(item?.body, item?.description, "")).trim(),
+    id: noteId,
+    noteId,
+    note_id: noteId,
+    title: normalizedTitle,
+    note_title: String(pickRemoteValue(item?.note_title, item?.noteTitle, normalizedTitle)).trim() || normalizedTitle,
+    body,
+    note_body: String(pickRemoteValue(item?.note_body, item?.noteBody, body)).trim(),
+    summary: String(pickRemoteValue(item?.summary, item?.description, "")).trim(),
     bullets,
     suggestedPlatform: String(pickRemoteValue(item?.suggestedPlatform, item?.suggested_platform, "linkedin")).trim() || "linkedin",
     suggestedPillar: getCanonicalPillarValue(pickRemoteValue(item?.suggestedPillar, item?.suggested_pillar, ""), (appState.settings?.pillars || [])[0] || "authority") || ((appState.settings?.pillars || [])[0] || "authority"),
     status: String(pickRemoteValue(item?.status, "active")).trim() || "active",
-    convertedPostId: String(pickRemoteValue(item?.convertedPostId, item?.converted_post_id, "")).trim(),
+    convertedPostId: String(pickRemoteValue(item?.convertedPostId, item?.converted_post_id, item?.linkedPostId, item?.linked_post_id, "")).trim(),
+    linkedPostId: String(pickRemoteValue(item?.linkedPostId, item?.linked_post_id, item?.convertedPostId, item?.converted_post_id, "")).trim(),
+    linked_post_id: String(pickRemoteValue(item?.linked_post_id, item?.linkedPostId, item?.converted_post_id, item?.convertedPostId, "")).trim(),
+    linkedAiDraftId: String(pickRemoteValue(item?.linkedAiDraftId, item?.linked_ai_draft_id, item?.sourceAiDraftId, item?.source_ai_draft_id, "")).trim(),
+    linked_ai_draft_id: String(pickRemoteValue(item?.linked_ai_draft_id, item?.linkedAiDraftId, item?.source_ai_draft_id, item?.sourceAiDraftId, "")).trim(),
     sourceNoteId: String(pickRemoteValue(item?.sourceNoteId, item?.source_note_id, item?.noteId, item?.note_id, "")).trim(),
     sourceInspoId: String(pickRemoteValue(item?.sourceInspoId, item?.source_inspo_id, "")).trim(),
     sourceAiDraftId: String(pickRemoteValue(item?.sourceAiDraftId, item?.source_ai_draft_id, "")).trim(),
@@ -17373,6 +17505,14 @@ function normalizeRemoteNote(item) {
     sourceUrl: String(pickRemoteValue(item?.sourceUrl, item?.source_url, "")).trim(),
     sourcePlatform: String(pickRemoteValue(item?.sourcePlatform, item?.source_platform, "")).trim(),
     sourceLabel: String(pickRemoteValue(item?.sourceLabel, item?.source_label, "")).trim(),
+    campaignName: String(pickRemoteValue(item?.campaignName, item?.campaign_name, item?.campaign, "")).trim(),
+    campaign_name: String(pickRemoteValue(item?.campaign_name, item?.campaignName, item?.campaign, "")).trim(),
+    pillar: String(pickRemoteValue(item?.pillar, item?.suggestedPillar, item?.suggested_pillar, "")).trim(),
+    source_type: String(pickRemoteValue(item?.source_type, item?.sourceType, "")).trim(),
+    createdAt: String(pickRemoteValue(item?.createdAt, item?.created_at, "")).trim(),
+    created_at: String(pickRemoteValue(item?.created_at, item?.createdAt, "")).trim(),
+    updatedAt: String(pickRemoteValue(item?.updatedAt, item?.updated_at, "")).trim(),
+    updated_at: String(pickRemoteValue(item?.updated_at, item?.updatedAt, "")).trim(),
     ...normalizeRemoteSemanticFields(item)
   };
 }
@@ -17380,32 +17520,49 @@ function normalizeRemoteNote(item) {
 function normalizeRemoteMedia(asset) {
   const assetId = String(pickRemoteValue(asset?.assetId, asset?.asset_id, asset?.id, "")).trim();
   const linkedPostId = String(pickRemoteValue(asset?.linkedPostId, asset?.linked_post_id, asset?.postId, asset?.post_id, "")).trim();
-  const assetName = String(pickRemoteValue(asset?.assetName, asset?.asset_name, asset?.title, "")).trim();
-  const assetType = String(pickRemoteValue(asset?.assetType, asset?.asset_type, asset?.type, "image")).trim().toLowerCase() || "image";
+  const assetName = getMediaTitle(asset);
+  const assetType = String(pickRemoteValue(asset?.type, asset?.media_type, asset?.mediaType, asset?.assetType, asset?.asset_type, "image")).trim().toLowerCase() || "image";
   const assetMeta = String(pickRemoteValue(asset?.assetMeta, asset?.asset_meta, asset?.meta, "")).trim();
   const assetStatus = String(pickRemoteValue(asset?.assetStatus, asset?.asset_status, asset?.status, "")).trim();
 
   return {
     id: assetId,
     assetId,
+    asset_id: assetId,
     title: assetName,
+    media_title: String(pickRemoteValue(asset?.media_title, asset?.mediaTitle, assetName)).trim() || assetName,
+    asset_title: String(pickRemoteValue(asset?.asset_title, asset?.assetTitle, asset?.asset_name, asset?.assetName, assetName)).trim() || assetName,
     assetName,
+    asset_name: assetName,
     type: assetType,
+    media_type: assetType,
     assetType,
+    asset_type: assetType,
     postId: linkedPostId,
     linkedPostId,
+    linked_post_id: linkedPostId,
+    linkedAiDraftId: String(pickRemoteValue(asset?.linkedAiDraftId, asset?.linked_ai_draft_id, asset?.aiDraftId, asset?.ai_draft_id, "")).trim(),
+    linked_ai_draft_id: String(pickRemoteValue(asset?.linked_ai_draft_id, asset?.linkedAiDraftId, asset?.ai_draft_id, asset?.aiDraftId, "")).trim(),
     assetBadge: String(pickRemoteValue(asset?.assetBadge, asset?.asset_badge, "")).trim(),
     meta: assetMeta,
     assetMeta,
     status: assetStatus,
     assetStatus,
     placeholderIcon: String(pickRemoteValue(asset?.placeholderIcon, asset?.placeholder_icon, "")).trim(),
-    fileUrl: String(pickRemoteValue(asset?.fileUrl, asset?.file_url, "")).trim(),
-    campaign: String(pickRemoteValue(asset?.campaign, "")).trim(),
+    fileUrl: String(pickRemoteValue(asset?.fileUrl, asset?.file_url, asset?.url, "")).trim(),
+    url: String(pickRemoteValue(asset?.url, asset?.fileUrl, asset?.file_url, asset?.sourceUrl, asset?.source_url, "")).trim(),
+    thumbnailUrl: String(pickRemoteValue(asset?.thumbnailUrl, asset?.thumbnail_url, asset?.fileUrl, asset?.file_url, "")).trim(),
+    thumbnail_url: String(pickRemoteValue(asset?.thumbnail_url, asset?.thumbnailUrl, asset?.file_url, asset?.fileUrl, "")).trim(),
+    campaign: String(pickRemoteValue(asset?.campaign, asset?.campaignName, asset?.campaign_name, "")).trim(),
+    campaignName: String(pickRemoteValue(asset?.campaignName, asset?.campaign_name, asset?.campaign, "")).trim(),
+    campaign_name: String(pickRemoteValue(asset?.campaign_name, asset?.campaignName, asset?.campaign, "")).trim(),
     notes: String(pickRemoteValue(asset?.notes, "")).trim(),
     driveFileId: String(pickRemoteValue(asset?.driveFileId, asset?.drive_file_id, "")).trim(),
     sourceUrl: String(pickRemoteValue(asset?.sourceUrl, asset?.source_url, "")).trim(),
+    source_url: String(pickRemoteValue(asset?.source_url, asset?.sourceUrl, "")).trim(),
     sourceType: String(pickRemoteValue(asset?.sourceType, asset?.source_type, "")).trim(),
+    altText: String(pickRemoteValue(asset?.altText, asset?.alt_text, "")).trim(),
+    alt_text: String(pickRemoteValue(asset?.alt_text, asset?.altText, "")).trim(),
     mimeType: String(pickRemoteValue(asset?.mimeType, asset?.mime_type, "")).trim(),
     fileSizeBytes: Number(pickRemoteValue(asset?.fileSizeBytes, asset?.file_size_bytes, 0)) || 0,
     originalFilename: String(pickRemoteValue(asset?.originalFilename, asset?.original_filename, assetName)).trim(),
@@ -17453,25 +17610,47 @@ function removeCompletedImportJobsFromState() {
 }
 
 function normalizeRemoteAIDraft(draft) {
+  const aiDraftId = String(pickRemoteValue(draft?.aiDraftId, draft?.ai_draft_id, "")).trim();
+  const draftText = String(pickRemoteValue(draft?.draftText, draft?.draft_text, "")).trim();
+  const prompt = String(pickRemoteValue(draft?.prompt, "")).trim();
+  const title = String(pickRemoteValue(draft?.title, draft?.draft_title, draft?.draftTitle, "")).trim() || firstNonEmptyLine(draftText || prompt).slice(0, 80) || "Untitled draft";
+  const sourceId = String(pickRemoteValue(draft?.sourceId, draft?.source_id, draft?.sourceArtifactIds, draft?.source_artifact_ids, "")).trim();
+  const sourceType = String(pickRemoteValue(draft?.sourceType, draft?.source_type, "")).trim();
+  const parentArtifactId = String(pickRemoteValue(draft?.parentArtifactId, draft?.parent_artifact_id, sourceId, "")).trim();
+  const rootArtifactId = String(pickRemoteValue(draft?.rootArtifactId, draft?.root_artifact_id, parentArtifactId, sourceId, "")).trim();
+  const derivedFromIds = String(pickRemoteValue(draft?.derivedFromIds, draft?.derived_from_ids, draft?.sourceArtifactIds, draft?.source_artifact_ids, sourceId, "")).trim();
+  const mediaIds = String(pickRemoteValue(draft?.mediaIds, draft?.media_ids, "")).trim();
+  const performanceContext = String(pickRemoteValue(draft?.performanceContext, draft?.performance_context, "")).trim();
+  const analysisMode = String(pickRemoteValue(draft?.analysisMode, draft?.analysis_mode, "")).trim();
+  const createdPostId = String(pickRemoteValue(draft?.createdPostId, draft?.created_post_id, "")).trim();
+  const draftStatus = String(pickRemoteValue(draft?.draftStatus, draft?.draft_status, draft?.status, "needs_review")).trim() || "needs_review";
   return {
-    aiDraftId: String(pickRemoteValue(draft?.aiDraftId, draft?.ai_draft_id, "")).trim(),
+    aiDraftId,
+    ai_draft_id: aiDraftId,
     ideaId: String(pickRemoteValue(draft?.ideaId, draft?.idea_id, draft?.aiDraftId, draft?.ai_draft_id, "")).trim(),
     artifactId: String(pickRemoteValue(draft?.artifactId, draft?.artifact_id, draft?.aiDraftId, draft?.ai_draft_id, "")).trim(),
     artifactType: String(pickRemoteValue(draft?.artifactType, draft?.artifact_type, "ai_draft")).trim() || "ai_draft",
-    parentArtifactId: String(pickRemoteValue(draft?.parentArtifactId, draft?.parent_artifact_id, "")).trim(),
-    rootArtifactId: String(pickRemoteValue(draft?.rootArtifactId, draft?.root_artifact_id, "")).trim(),
+    parentArtifactId,
+    parent_artifact_id: parentArtifactId,
+    rootArtifactId,
+    root_artifact_id: rootArtifactId,
     ideaPrompt: String(pickRemoteValue(draft?.ideaPrompt, draft?.idea_prompt, draft?.prompt, "")).trim(),
-    title: String(pickRemoteValue(draft?.title, "")).trim(),
+    title,
+    draft_title: String(pickRemoteValue(draft?.draft_title, draft?.draftTitle, title)).trim() || title,
     platform: String(pickRemoteValue(draft?.platform, "linkedin")).trim() || "linkedin",
     postType: String(pickRemoteValue(draft?.postType, draft?.post_type, draft?.format, "text")).trim() || "text",
     generationMode: String(pickRemoteValue(draft?.generationMode, draft?.generation_mode, "")).trim(),
     transformationType: String(pickRemoteValue(draft?.transformationType, draft?.transformation_type, "expand")).trim() || "expand",
-    analysisMode: String(pickRemoteValue(draft?.analysisMode, draft?.analysis_mode, "")).trim(),
-    sourceType: String(pickRemoteValue(draft?.sourceType, draft?.source_type, "")).trim(),
-    sourceId: String(pickRemoteValue(draft?.sourceId, draft?.source_id, "")).trim(),
+    analysisMode,
+    analysis_mode: analysisMode,
+    sourceType,
+    source_type: sourceType,
+    sourceId,
+    source_id: sourceId,
     sourceIds: String(pickRemoteValue(draft?.sourceIds, draft?.source_ids, "")).trim(),
     sourceArtifactIds: String(pickRemoteValue(draft?.sourceArtifactIds, draft?.source_artifact_ids, "")).trim(),
-    derivedFromIds: String(pickRemoteValue(draft?.derivedFromIds, draft?.derived_from_ids, "")).trim(),
+    derivedFromIds,
+    derived_from_ids: derivedFromIds,
     outputType: String(pickRemoteValue(draft?.outputType, draft?.output_type, "")).trim(),
     outputArtifacts: Array.isArray(draft?.outputArtifacts)
       ? draft.outputArtifacts
@@ -17487,14 +17666,19 @@ function normalizeRemoteAIDraft(draft) {
       ? draft.generatedOutputs
       : String(pickRemoteValue(draft?.generatedOutputs, draft?.generated_outputs, "")).split("|").filter(Boolean).map((item, index) => ({ artifactId: `${draft?.aiDraftId || draft?.ai_draft_id || "draft"}-generated-${index + 1}`, artifactType: "artifact", title: item, summary: item })),
     campaignId: String(pickRemoteValue(draft?.campaignId, draft?.campaign_id, "")).trim(),
+    campaign_id: String(pickRemoteValue(draft?.campaign_id, draft?.campaignId, "")).trim(),
     campaignName: String(pickRemoteValue(draft?.campaignName, draft?.campaign_name, "")).trim(),
-    prompt: String(pickRemoteValue(draft?.prompt, "")).trim(),
-    draftText: String(pickRemoteValue(draft?.draftText, draft?.draft_text, "")).trim(),
+    campaign_name: String(pickRemoteValue(draft?.campaign_name, draft?.campaignName, "")).trim(),
+    prompt,
+    draftText,
+    draft_text: draftText,
     hookText: String(pickRemoteValue(draft?.hookText, draft?.hook_text, "")).trim(),
     ctaText: String(pickRemoteValue(draft?.ctaText, draft?.cta_text, "")).trim(),
     carouselOutline: String(pickRemoteValue(draft?.carouselOutline, draft?.carousel_outline, "")).trim(),
     brandFrameworkVersion: String(pickRemoteValue(draft?.brandFrameworkVersion, draft?.brand_framework_version, "")).trim(),
-    draftStatus: String(pickRemoteValue(draft?.draftStatus, draft?.draft_status, "needs_review")).trim() || "needs_review",
+    draftStatus,
+    draft_status: draftStatus,
+    status: draftStatus,
     reviewNotes: String(pickRemoteValue(draft?.reviewNotes, draft?.review_notes, "")).trim(),
     alignmentScore: normalizeMetricNumber(pickRemoteValue(draft?.alignmentScore, draft?.alignment_score, 0)),
     diversityControls: String(pickRemoteValue(draft?.diversityControls, draft?.diversity_controls, "")).trim(),
@@ -17502,9 +17686,12 @@ function normalizeRemoteAIDraft(draft) {
     inputArtifacts: Array.isArray(draft?.inputArtifacts)
       ? draft.inputArtifacts
       : String(pickRemoteValue(draft?.sourceArtifactIds, draft?.source_artifact_ids, "")).split("|").filter(Boolean).map((item) => ({ artifactId: item, artifactType: "artifact", title: item, summary: item })),
-    mediaIds: String(pickRemoteValue(draft?.mediaIds, draft?.media_ids, "")).trim(),
-    performanceContext: String(pickRemoteValue(draft?.performanceContext, draft?.performance_context, "")).trim(),
-    createdPostId: String(pickRemoteValue(draft?.createdPostId, draft?.created_post_id, "")).trim(),
+    mediaIds,
+    media_ids: mediaIds,
+    performanceContext,
+    performance_context: performanceContext,
+    createdPostId,
+    created_post_id: createdPostId,
     ...normalizeRemoteSemanticFields(draft)
   };
 }
@@ -18422,11 +18609,11 @@ function safeRender(fn, label) {
 
 function renderOverviewPanel() {
   console.log("[render] renderOverviewPanel start", getAppStateCounts());
-  const topPost = (appState.posts || []).slice().sort((a, b) => normalizeMetricNumber(b.impressions || b.views || 0) - normalizeMetricNumber(a.impressions || a.views || 0))[0] || null;
+  const topPost = (appState.posts || []).slice().sort((a, b) => getMetricValue(b, ["impressions", "views", "reach"]) - getMetricValue(a, ["impressions", "views", "reach"]))[0] || null;
   const topTarget = document.getElementById("overview-top-post-card");
   if (topTarget) {
     topTarget.innerHTML = topPost
-      ? `<div class="p-3 rounded-xl bg-[#181125] border border-white/5"><div class="text-sm font-bold text-white wrap-safe">${escapeHtml(getPostDisplayTitle(topPost))}</div><div class="text-[11px] text-gray-400 mt-1">${escapeHtml(formatCampaignDisplayName(topPost.campaignName || "Uncategorized"))}</div></div>`
+      ? `<div class="p-3 rounded-xl bg-[#181125] border border-white/5"><div class="text-sm font-bold text-white wrap-safe">${escapeHtml(getPostDisplayTitle(topPost))}</div><div class="text-[11px] text-gray-400 mt-1">${escapeHtml(formatCampaignDisplayName(getCampaignName(topPost, "Uncategorized")))}</div></div>`
       : makeEmptyState("No top post yet", "Add posts or sync history to populate overview signals.", "ph-chart-line-up");
   }
   const performanceTarget = document.getElementById("overview-performance-snapshot");
@@ -18483,20 +18670,26 @@ function renderPerformanceView() {
   if (kpis) {
     const scheduled = posts.filter((post) => post.status === "scheduled").length;
     const published = posts.filter((post) => post.status === "published").length;
-    const impressions = posts.reduce((sum, post) => sum + normalizeMetricNumber(post.impressions || post.views || 0), 0);
-    kpis.innerHTML = [["Posts", posts.length], ["Scheduled", scheduled], ["Published", published], ["Impressions", impressions]].map(([label, value]) => `<div class="mini-card p-4"><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${label}</div><div class="text-2xl font-bold text-white mt-1">${value}</div></div>`).join("");
+    const impressions = posts.reduce((sum, post) => sum + getMetricValue(post, ["impressions", "views", "reach"]), 0);
+    const engagement = posts.reduce((sum, post) => sum + getEngagementTotal(post), 0);
+    kpis.innerHTML = [["Posts", posts.length], ["Scheduled", scheduled], ["Published", published], ["Impressions", impressions], ["Engagement", engagement]].map(([label, value]) => `<div class="mini-card p-4"><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${label}</div><div class="text-2xl font-bold text-white mt-1">${value}</div></div>`).join("");
   }
   const topPosts = document.getElementById("performance-top-posts");
   if (topPosts) {
-    topPosts.innerHTML = posts.slice().sort((a, b) => normalizeMetricNumber(b.impressions || b.views || 0) - normalizeMetricNumber(a.impressions || a.views || 0)).slice(0, 5)
-      .map((post) => `<div class="p-3 rounded-xl bg-[#181125] border border-white/5"><div class="text-sm font-bold text-white wrap-safe">${escapeHtml(getPostDisplayTitle(post))}</div><div class="text-[11px] text-gray-400 mt-1">${escapeHtml(String(normalizeMetricNumber(post.impressions || post.views || 0)))} impressions</div></div>`).join("") || makeEmptyState("No performance data", "Metrics appear after history is imported or synced.", "ph-chart-line-up");
+    topPosts.innerHTML = posts.slice().sort((a, b) => getMetricValue(b, ["impressions", "views", "reach"]) - getMetricValue(a, ["impressions", "views", "reach"])).slice(0, 5)
+      .map((post) => {
+        const impressions = getMetricValue(post, ["impressions", "views", "reach"]);
+        const engagement = getEngagementTotal(post);
+        const rate = getEngagementRate(post);
+        return `<div class="p-3 rounded-xl bg-[#181125] border border-white/5"><div class="text-sm font-bold text-white wrap-safe">${escapeHtml(getPostDisplayTitle(post))}</div><div class="text-[11px] text-gray-400 mt-1">${escapeHtml(String(impressions))} impressions • ${escapeHtml(String(engagement))} engagement • ${(rate * 100).toFixed(1)}%</div></div>`;
+      }).join("") || makeEmptyState("No performance data", "Metrics appear after history is imported or synced.", "ph-chart-line-up");
   }
   const renderComparison = (id, rows) => {
     const target = document.getElementById(id);
     if (!target) return;
     target.innerHTML = rows.slice(0, 6).map(([label, count]) => `<div class="flex items-center justify-between gap-3 text-sm"><span class="text-gray-300 wrap-safe">${escapeHtml(formatCampaignDisplayName(label))}</span><span class="text-white font-bold">${count}</span></div>`).join("") || `<div class="text-sm text-gray-500">No data.</div>`;
   };
-  renderComparison("performance-campaign-comparison", countPostsBy(posts, (post) => post.campaignName || "Uncategorized"));
+  renderComparison("performance-campaign-comparison", countPostsBy(posts, (post) => getCampaignName(post, "Uncategorized")));
   renderComparison("performance-pillar-comparison", countPostsBy(posts, (post) => getPostContentPillar(post)));
   renderComparison("performance-platform-comparison", countPostsBy(posts, (post) => post.platform || "linkedin"));
   console.log("[render] renderPerformanceView done", {
