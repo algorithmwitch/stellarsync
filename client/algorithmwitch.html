@@ -4107,7 +4107,7 @@
 </div>
 <script>
 const APP_CONFIG = {
-  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbzy7zqAC-BMPoavo63acY5jhmxTBopQ5-RX2Mn-0liYzk8jsNPKgvRvFZFl_TSJF-rg/exec",
+  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbwTmOozLo9pbl-93m5tbIiAzZaeyXBGdP3GV3PVkzCDMKvpX5LZuwYOsyOC8OKfYDVf/exec",
   ENABLE_REMOTE_SYNC: true,
   STORAGE_KEY: "stellarsync_local_state_v5",
   SHELL_LAYOUT_KEY: "stellarsync_shell_layout_v2"
@@ -6875,6 +6875,21 @@ function renderModalPillarButtons(activePillar = "") {
   setPillar(nextActive);
 }
 
+function parseLocalDate(value) {
+  if (!value && value !== 0) return null;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return new Date(value);
+  var text = String(value).trim();
+  if (!text) return null;
+  var dateTimeMatch = text.match(/^(\d{4})-(\d{2})-(\d{2})(?:T| )/);
+  if (dateTimeMatch) return new Date(Number(dateTimeMatch[1]), Number(dateTimeMatch[2]) - 1, Number(dateTimeMatch[3]));
+  var ymdMatch = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (ymdMatch) return new Date(Number(ymdMatch[1]), Number(ymdMatch[2]) - 1, Number(ymdMatch[3]));
+  var mdyMatch = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (mdyMatch) return new Date(Number(mdyMatch[3]), Number(mdyMatch[1]) - 1, Number(mdyMatch[2]));
+  var fallback = new Date(text);
+  return !Number.isNaN(fallback.getTime()) ? fallback : null;
+}
+
 function parsePostDate(value) {
   if (!value) return null;
   if (value instanceof Date && !Number.isNaN(value.getTime())) return new Date(value);
@@ -6904,6 +6919,9 @@ function parsePostDate(value) {
   }
 
   if (/^\d+(?:\.\d+)?$/.test(text)) return null;
+
+  var localParsed = parseLocalDate(text);
+  if (localParsed) return localParsed;
 
   const parsed = new Date(text);
   return !Number.isNaN(parsed.getTime()) ? parsed : null;
@@ -9249,9 +9267,16 @@ function renderCalendarPill(post, isWeekMode = false) {
     : displayTitle;
   const hydrated = hydratePostCampaign(post);
   const campaignColor = getCampaignColor(hydrated, getPostContentPillar(hydrated));
+  function buildDateDiagnosticTitle(post) {
+    var rawVal = post.queueDateLabel || post.queue_date_label || post.date || post.scheduledAt || "none";
+    var key = normalizePostCalendarDateKey(post) || "unknown";
+    var tz = "";
+    try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch(e) { tz = "unknown"; }
+    return "Raw: " + rawVal + " | Key: " + key + " | TZ: " + tz;
+  }
   if (compactMonth) {
     return `
-      <button type="button" class="post-pill compact-month mt-1 text-left" onclick="event.stopPropagation();openModalById('${escapeHtml(post.id)}')" title="${escapeHtml(post.title || "")}" style="background:${campaignColor}14;border:1px solid ${campaignColor}30;box-shadow:inset 2px 0 0 ${campaignColor};">
+      <button type="button" class="post-pill compact-month mt-1 text-left" onclick="event.stopPropagation();openModalById('${escapeHtml(post.id)}')" title="${escapeHtml(buildDateDiagnosticTitle(post))}" style="background:${campaignColor}14;border:1px solid ${campaignColor}30;box-shadow:inset 2px 0 0 ${campaignColor};">
         <span class="compact-month-icons">
           <span class="calendar-mobile-dot" style="background:${campaignColor};box-shadow:0 0 10px ${campaignColor}66;"></span>
           ${iconBlock}
@@ -9263,7 +9288,7 @@ function renderCalendarPill(post, isWeekMode = false) {
   }
 
   return `
-    <button type="button" class="post-pill mt-1 text-left" onclick="event.stopPropagation();openModalById('${escapeHtml(post.id)}')" title="${escapeHtml(post.title || "")}" style="background:${campaignColor}14;border:1px solid ${campaignColor}30;box-shadow:inset 3px 0 0 ${campaignColor};">
+    <button type="button" class="post-pill mt-1 text-left" onclick="event.stopPropagation();openModalById('${escapeHtml(post.id)}')" title="${escapeHtml(buildDateDiagnosticTitle(post))}" style="background:${campaignColor}14;border:1px solid ${campaignColor}30;box-shadow:inset 3px 0 0 ${campaignColor};">
       <div class="flex items-center gap-1.5 w-full">
         <span class="w-2 h-2 rounded-full shrink-0" style="background:${campaignColor};box-shadow:0 0 10px ${campaignColor}66;"></span>
         ${iconBlock}
@@ -12973,7 +12998,9 @@ function renderWriteIdeaHistoricalReferences(titleHint, references = null) {
       platform: ref.platform || ""
     };
   }) : (appState.posts || []).slice().sort(function(a, b) {
-    return new Date(b.date || b.scheduledAt || b.importedAt || 0) - new Date(a.date || a.scheduledAt || a.importedAt || 0);
+    var aDate = parseLocalDate(a.date || a.scheduledAt || a.importedAt);
+    var bDate = parseLocalDate(b.date || b.scheduledAt || b.importedAt);
+    return (bDate ? bDate.getTime() : 0) - (aDate ? aDate.getTime() : 0);
   }).slice(0, 6);
   if (!posts.length) {
     writeIdeaHistoricalReferencesEl.classList.add("hidden");
@@ -14352,13 +14379,14 @@ function populateLedgerPillarMenu() {
 }
     
 function formatDateTimeLocal(date) {
-  const d = new Date(date);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  const hours = String(d.getHours()).padStart(2, "0");
-  const minutes = String(d.getMinutes()).padStart(2, "0");
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
+  var d = parseLocalDate(date) || new Date(date);
+  if (Number.isNaN(d.getTime())) d = new Date();
+  var year = d.getFullYear();
+  var month = String(d.getMonth() + 1).padStart(2, "0");
+  var day = String(d.getDate()).padStart(2, "0");
+  var hours = String(d.getHours()).padStart(2, "0");
+  var minutes = String(d.getMinutes()).padStart(2, "0");
+  return year + "-" + month + "-" + day + "T" + hours + ":" + minutes;
 }
 
 function formatDateInputValue(date) {
@@ -15206,12 +15234,13 @@ function parseImportedDateDetails(value, generatedAt = "") {
     confidence: text ? "label_only" : "missing"
   };
   if (!text) return result;
-  const direct = new Date(text);
-  if (!Number.isNaN(direct.getTime())) {
-    const iso = direct.toISOString();
+  var direct = parseLocalDate(text);
+  if (!direct && !Number.isNaN(new Date(text).getTime())) direct = new Date(text);
+  if (direct && !Number.isNaN(direct.getTime())) {
+    var iso = direct.toISOString();
     result.originalPostDate = iso;
     result.scheduledAt = iso;
-    result.queueDateLabel = `${direct.getMonth() + 1}/${direct.getDate()}/${direct.getFullYear()}`;
+    result.queueDateLabel = (direct.getMonth() + 1) + "/" + direct.getDate() + "/" + direct.getFullYear();
     result.confidence = "exact";
     return result;
   }
@@ -15662,8 +15691,9 @@ function parseLinkedInCaptureInputDetailed(raw, urlInput = "") {
   return { items, error: "", diagnostics };
 }
 
-function formatImportPreviewDate(value, fallbackLabel = "") {
-  const parsed = value ? new Date(value) : null;
+function formatImportPreviewDate(value, fallbackLabel) {
+  if (fallbackLabel === undefined) fallbackLabel = "";
+  var parsed = value ? parseLocalDate(value) || new Date(value) : null;
   if (parsed && !Number.isNaN(parsed.getTime())) {
     return parsed.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   }
