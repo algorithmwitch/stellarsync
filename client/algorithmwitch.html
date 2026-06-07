@@ -4164,7 +4164,7 @@
 </div>
 <script>
 const APP_CONFIG = {
-  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbw6XJ-MwOTrHAxQ6bhLWLkChyFPCTnl4LkASV1JpnOsbgCBOVKS4r-JmOyWxuDL5inD/exec",
+  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbwKCJgcHXI8qFD5N-HwnvDZC77xYXDfZ8NdYQOjzGsnHpaL6ZU80htLLAb42sVTROdi/exec",
   ENABLE_REMOTE_SYNC: true,
   STORAGE_KEY: "stellarsync_local_state_v5",
   SHELL_LAYOUT_KEY: "stellarsync_shell_layout_v2"
@@ -15804,8 +15804,55 @@ async function apiCreateCarouselOutlineFromIdea(payload) {
   return apiPost("createCarouselOutlineFromIdea", payload);
 }
 
+const AI_DRAFT_FORMULA_BACKED_FIELDS = new Set([
+  "sourceId",
+  "source_id",
+  "campaignId",
+  "campaign_id",
+  "hookText",
+  "hook_text",
+  "ctaText",
+  "cta_text",
+  "diversityControls",
+  "diversity_controls",
+  "antiPatternFlags",
+  "anti_pattern_flags",
+  "semanticClusters",
+  "semantic_clusters",
+  "semanticOrigin",
+  "semantic_origin",
+  "semanticRelationshipType",
+  "semantic_relationship_type",
+  "semanticSummary",
+  "semantic_summary",
+  "recurringPatternFlags",
+  "recurring_pattern_flags",
+  "targetCampaignId",
+  "target_campaign_id",
+  "targetDateRange",
+  "target_date_range",
+  "generatedCampaignId",
+  "generated_campaign_id",
+  "parentArtifactId",
+  "parent_artifact_id",
+  "rootArtifactId",
+  "root_artifact_id",
+  "analysisMode",
+  "analysis_mode",
+  "derivedFromIds",
+  "derived_from_ids",
+  "mediaIds",
+  "media_ids",
+  "performanceContext",
+  "performance_context"
+]);
+
+function stripFormulaBackedAIDraftFields(payload = {}) {
+  return Object.fromEntries(Object.entries(payload || {}).filter(([key]) => !AI_DRAFT_FORMULA_BACKED_FIELDS.has(key)));
+}
+
 async function apiSaveAIDraft(payload) {
-  return apiPost("saveAIDraft", payload);
+  return apiPost("saveAIDraft", stripFormulaBackedAIDraftFields(payload));
 }
 
 async function apiCreatePostFromAIDraft(aiDraftId, post = {}) {
@@ -17169,7 +17216,7 @@ function normalizeRemotePost(post, campaigns = [], mediaItems = []) {
     pillar: getCanonicalPillarValue(pickRemoteValue(post?.pillar, post?.hubPillarLabel, post?.hub_pillar_label, matchedCampaign?.pillar), (appState.settings?.pillars || [])[0] || "authority") || ((appState.settings?.pillars || [])[0] || "authority"),
     date: planning.scheduledAt || scheduledAt,
     status: String(pickRemoteValue(post?.status, "draft")).trim() || "draft",
-    postType: String(pickRemoteValue(post?.postType, post?.post_type, "text")).trim() || "text",
+    postType: String(pickRemoteValue(post?.postType, post?.post_type, post?.format, "text")).trim() || "text",
     description: rawDescription,
     caption: String(pickRemoteValue(post?.caption, "")).trim(),
     body: String(pickRemoteValue(post?.body, "")).trim(),
@@ -17416,7 +17463,7 @@ function normalizeRemoteAIDraft(draft) {
     ideaPrompt: String(pickRemoteValue(draft?.ideaPrompt, draft?.idea_prompt, draft?.prompt, "")).trim(),
     title: String(pickRemoteValue(draft?.title, "")).trim(),
     platform: String(pickRemoteValue(draft?.platform, "linkedin")).trim() || "linkedin",
-    postType: String(pickRemoteValue(draft?.postType, draft?.post_type, "text")).trim() || "text",
+    postType: String(pickRemoteValue(draft?.postType, draft?.post_type, draft?.format, "text")).trim() || "text",
     generationMode: String(pickRemoteValue(draft?.generationMode, draft?.generation_mode, "")).trim(),
     transformationType: String(pickRemoteValue(draft?.transformationType, draft?.transformation_type, "expand")).trim() || "expand",
     analysisMode: String(pickRemoteValue(draft?.analysisMode, draft?.analysis_mode, "")).trim(),
