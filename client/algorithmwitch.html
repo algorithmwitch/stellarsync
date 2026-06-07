@@ -4368,6 +4368,63 @@ let performanceFilters = {
   range: "30"
 };
 
+function normalizeQueueDateLabel(value) {
+  try {
+    if (!value) return "";
+    var d = null;
+    if (typeof value === "object" && typeof value.getMonth === "function") {
+      d = value;
+    } else {
+      var text = String(value).trim();
+      if (!text) return "";
+      var m = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+      if (m) {
+        d = new Date(Number(m[3]), Number(m[1]) - 1, Number(m[2]));
+      } else {
+        var iso = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (iso) {
+          d = new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+        } else {
+          d = new Date(text);
+        }
+      }
+    }
+    if (!d || Number.isNaN(d.getTime())) return "";
+    return (d.getMonth() + 1) + "/" + d.getDate() + "/" + d.getFullYear();
+  } catch (_) {
+    return "";
+  }
+}
+
+function parsePlanningDateLocal(value) {
+  try {
+    if (!value && value !== 0) return null;
+    if (typeof value === "object" && typeof value.getMonth === "function") return new Date(value.getTime());
+    var text = String(value).trim();
+    if (!text) return null;
+    var m = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) {
+      var d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+      if (!Number.isNaN(d.getTime())) return d;
+    }
+    m = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+    if (m) {
+      var y = Number(m[3]); if (y < 100) y += 2000;
+      d = new Date(y, Number(m[1]) - 1, Number(m[2]));
+      if (!Number.isNaN(d.getTime())) return d;
+    }
+    d = new Date(text);
+    return Number.isNaN(d.getTime()) ? null : d;
+  } catch (_) {
+    return null;
+  }
+}
+
+function makeEmptyState(title, detail, icon) {
+  var cls = icon || "ph-file-text";
+  return '<div class="flex items-center justify-center h-48 text-gray-500 text-sm"><div class="text-center"><i class="ph-bold ' + cls + ' text-2xl text-gray-400 block mb-2"></i>' + (title || "") + '<div class="text-[10px] text-gray-600 mt-1">' + (detail || "") + '</div></div></div>';
+}
+
 let writeIdeaState = {
   prompt: "",
   outputType: "create_one_post",
