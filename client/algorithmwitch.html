@@ -4269,6 +4269,7 @@ const inspoNotesInput = document.getElementById("inspo-notes");
 const inspoTypeButtons = Array.from(document.querySelectorAll(".inspo-type-btn"));
 const existingPostImportModal = document.getElementById("existing-post-import-modal");
 const existingPostImportModalCard = document.getElementById("existing-post-import-modal-card");
+const closeExistingPostImportModalBtn = document.getElementById("close-existing-post-import-modal-btn");
 
 let scale = 0.62;
 let panX = 80;
@@ -7127,16 +7128,24 @@ function normalizePostPlanningFields(post = {}, existing = {}) {
   };
 }
 
+function getPostCalendarDateKey(post) {
+  if (!post || typeof post !== "object") return "";
+  var label = parseDisplayDateKey(post.queueDateLabel || post.queue_date_label || "");
+  if (label) return label;
+  var schedKey = parseDisplayDateKey(post.scheduledDateKey || "");
+  if (schedKey) return schedKey;
+  var fromSchedAt = parseDisplayDateKey(String(post.scheduledAt || post.scheduled_at || post.date || "").slice(0, 10));
+  if (fromSchedAt) return fromSchedAt;
+  var fromCreated = parseDisplayDateKey(String(post.createdAt || post.created_at || "").slice(0, 10));
+  if (fromCreated) return fromCreated;
+  var fromValue = getPlanningDateKeyFromValue(post.scheduledAt || post.scheduled_at || post.date || post.createdAt || post.created_at);
+  if (fromValue) return fromValue;
+  return toDateKey(post.scheduledAt || post.scheduled_at || post.date || post.createdAt || post.created_at);
+}
+
 function normalizePostCalendarDateKey(post) {
   if (!post || typeof post !== "object") return getPostDateKey(post);
-  return (
-    getPostPlanningDateKey(post) ||
-    parseDisplayDateKey(post.scheduledDateKey) ||
-    parseDisplayDateKey(String(post.scheduledAt || post.scheduled_at || post.date || "").slice(0, 10)) ||
-    parseDisplayDateKey(String(post.createdAt || post.created_at || "").slice(0, 10)) ||
-    getPlanningDateKeyFromValue(post.scheduledAt || post.scheduled_at || post.date || post.createdAt || post.created_at) ||
-    toDateKey(post.scheduledAt || post.scheduled_at || post.date || post.createdAt || post.created_at)
-  );
+  return getPostCalendarDateKey(post) || getPostPlanningDateKey(post) || parseDisplayDateKey(post.scheduledDateKey) || parseDisplayDateKey(String(post.scheduledAt || post.scheduled_at || post.date || "").slice(0, 10)) || parseDisplayDateKey(String(post.createdAt || post.created_at || "").slice(0, 10)) || getPlanningDateKeyFromValue(post.scheduledAt || post.scheduled_at || post.date || post.createdAt || post.created_at) || toDateKey(post.scheduledAt || post.scheduled_at || post.date || post.createdAt || post.created_at);
 }
 
 function getPostDateKey(postOrValue) {
@@ -7505,17 +7514,22 @@ function initApp() {
       closeWorkspaceHub();
       openLinkedInCaptureImporter();
     });
+  }, "initApp/generalSetup");
+
+  safeSetup("existing-post-import-modal", function() {
     writeIdeaImportExistingPostBtn?.addEventListener("click", openExistingPostImportModal);
     existingPostImportPreviewBtn?.addEventListener("click", previewExistingPostImport);
     existingPostImportSaveBtn?.addEventListener("click", saveExistingPostImportAsIdea);
     closeExistingPostImportModalBtn?.addEventListener("click", closeExistingPostImportModal);
-    existingPostImportModal?.addEventListener("click", (event) => {
+    existingPostImportModal?.addEventListener("click", function(event) {
       if (event.target === existingPostImportModal) closeExistingPostImportModal();
     });
     closeLinkedInBulkImportModalBtn?.addEventListener("click", closeLinkedInBulkImportModal);
-    linkedInBulkImportModal?.addEventListener("click", (event) => {
+    linkedInBulkImportModal?.addEventListener("click", function(event) {
       if (event.target === linkedInBulkImportModal) closeLinkedInBulkImportModal();
     });
+  });
+  safeRender(function() {
     linkedInImportModeTextBtn?.addEventListener("click", () => setLinkedInImportMode("text"));
     linkedInImportModeJsonBtn?.addEventListener("click", () => setLinkedInImportMode("json"));
     linkedInImportModeUrlsBtn?.addEventListener("click", () => setLinkedInImportMode("urls"));
@@ -7611,26 +7625,40 @@ function initApp() {
     setupMediaLinkModal();
     setupUploadStagingModal();
     setupModalMediaUpload();
+  }, "initApp/viewSetup");
+
+  safeSetup("side-panels", function() {
     setupOverviewControls();
     setupPerformanceControls();
     setupSplitPane();
+  });
 
+  safeSetup("modals", function() {
     setupInspoModal();
     setupNoteModal();
     setupCampaignControls();
     setupWorkspaceReturnButtons();
+  });
+
+  safeSetup("workspace-hub", function() {
     setupWorkspaceUI();
     setupAIAndBrandWorkspaces();
     setupWriteIdeaWorkspace();
+  });
+
+  safeSetup("constellation-drag", function() {
     setupConstellationInteractions();
+  });
+
+  safeRender(function() {
     setupLedgerControls();
     setupMediaAdvancedFilters();
-    document.getElementById("audit-refresh-diagnostics-btn")?.addEventListener("click", () => {
-      refreshBackendDiagnostics().then((result) => {
+    document.getElementById("audit-refresh-diagnostics-btn")?.addEventListener("click", function() {
+      refreshBackendDiagnostics().then(function(result) {
         if (result) showToast("Diagnostics updated", "Backend diagnostics refreshed.", "ph-shield-check", "text-[#00ffaa]");
-      }).catch(() => undefined);
+      }).catch(function() {});
     });
-    auditCopyDiagnosticsBtn?.addEventListener("click", async () => {
+    auditCopyDiagnosticsBtn?.addEventListener("click", async function() {
       try {
         await navigator.clipboard.writeText(getDiagnosticsSummaryText(backendDiagnostics || {}));
         showToast("Copied", "Diagnostics summary copied.", "ph-copy", "text-[#00ffaa]");
@@ -7639,7 +7667,7 @@ function initApp() {
         showToast("Copy failed", "Could not copy diagnostics summary.", "ph-warning", "text-yellow-400");
       }
     });
-  }, "initApp/setupUI");
+  }, "initApp/remainingSetup");
 
   safeRender(() => {
     switchView("calendar");
@@ -7729,6 +7757,29 @@ function safeRender(fn, name) {
     return undefined;
   }
 }
+
+function safeSetup(name, fn) {
+  window.__setupErrors = window.__setupErrors || [];
+  try {
+    var result = fn();
+    if (result instanceof Promise) {
+      result.catch(function(err) {
+        console.error("[safeSetup] async error in " + name + ":", err);
+        window.__setupErrors.push({ msg: String(err), stack: err && err.stack, section: name, time: Date.now() });
+      });
+    }
+    return result;
+  } catch (err) {
+    console.error("[safeSetup] error in " + name + ":", err);
+    window.__setupErrors.push({ msg: String(err), stack: err && err.stack, section: name, time: Date.now() });
+    window.__appErrors = window.__appErrors || [];
+    window.__appErrors.push({ msg: String(err), stack: err && err.stack, phase: "setup/" + name, time: Date.now() });
+    showToast("Setup Error", name + " — " + (err.message || err), "ph-bug", "text-yellow-400");
+    return undefined;
+  }
+}
+
+var __constellationDragStats = { dragStarts: 0, dragMoves: 0, dragEnds: 0, lastPanX: 0, lastPanY: 0, lastScale: 0 };
 
 function rerenderAll() {
   safeRender(() => {
@@ -9373,11 +9424,13 @@ function renderCalendarPill(post, isWeekMode = false) {
   const hydrated = hydratePostCampaign(post);
   const campaignColor = getCampaignColor(hydrated, getPostContentPillar(hydrated));
   function buildDateDiagnosticTitle(post) {
-    var rawVal = post.queueDateLabel || post.queue_date_label || post.date || post.scheduledAt || "none";
-    var key = normalizePostCalendarDateKey(post) || "unknown";
+    var pid = post.id || post.post_id || "no-id";
+    var rawLabel = (post.queueDateLabel || post.queue_date_label || "").trim() || "—";
+    var rawSched = (post.scheduledAt || post.scheduled_at || "").trim() || "—";
+    var dateKey = getPostCalendarDateKey(post) || "none";
     var tz = "";
     try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch(e) { tz = "unknown"; }
-    return "Raw: " + rawVal + " | Key: " + key + " | TZ: " + tz;
+    return "ID: " + pid + " | Label: " + rawLabel + " | sched: " + rawSched + " | Key: " + dateKey + " | TZ: " + tz;
   }
   if (compactMonth) {
     return `
@@ -10438,6 +10491,8 @@ function createPostForCampaign(campaignId) {
 function setConstellationDraggingState(active) {
   viewport?.classList.toggle("is-dragging", Boolean(active));
   document.body.classList.toggle("constellation-dragging", Boolean(active));
+  if (active) { __constellationDragStats.dragStarts++; }
+  else { __constellationDragStats.dragEnds++; __constellationDragStats.lastPanX = panX; __constellationDragStats.lastPanY = panY; __constellationDragStats.lastScale = scale; }
 }
     
 function setupConstellationInteractions() {
@@ -10500,6 +10555,10 @@ function setupConstellationInteractions() {
       scale = clamp(pinchStartScale * (distance / Math.max(pinchStartDistance, 1)), 0.18, 5.5);
       panX = centerX - pinchWorldCenter.x * scale;
       panY = centerY - pinchWorldCenter.y * scale;
+      __constellationDragStats.dragMoves++;
+      __constellationDragStats.lastPanX = panX;
+      __constellationDragStats.lastPanY = panY;
+      __constellationDragStats.lastScale = scale;
       updateTransform();
       return;
     }
@@ -11241,8 +11300,17 @@ function toggleProfileMenu(force) {
 }
 
 async function openWorkspaceHub(tab = "settings") {
+  window.__workspaceHubStats = window.__workspaceHubStats || { openRequests: 0, lastTab: "", lastError: null, modalFound: false };
+  window.__workspaceHubStats.openRequests++;
+  window.__workspaceHubStats.lastTab = tab;
+  window.__workspaceHubStats.modalFound = !!workspaceHubModal;
+  if (!workspaceHubModal) {
+    window.__workspaceHubStats.lastError = "workspace-hub-modal element missing";
+    showToast("Workspace Hub Error", "Settings modal element not found in DOM.", "ph-warning", "text-yellow-400");
+    return;
+  }
   currentWorkspaceSettingsTab = tab;
-  workspaceHubModal?.classList.remove("opacity-0", "pointer-events-none");
+  workspaceHubModal.classList.remove("opacity-0", "pointer-events-none");
   workspaceHubModalCard?.classList.remove("scale-95");
   workspaceHubModalCard?.classList.add("scale-100");
   toggleProfileMenu(false);
@@ -11251,6 +11319,7 @@ async function openWorkspaceHub(tab = "settings") {
   try {
     await refreshSocialImportContext();
   } catch (err) {
+    window.__workspaceHubStats.lastError = String(err);
     console.error(err);
   }
 }
@@ -17364,6 +17433,7 @@ function renderViewHealthCard() {
         <div class="text-[10px] font-mono ${errorColor} text-right">${errorLabel}</div>
         ${s.lastRenderTime ? `<div class="text-[10px] text-gray-500 col-span-2">Last render: ${escapeHtml(s.lastRenderTime)} • ${escapeHtml(String(s.lastRenderDuration || "?"))}ms • #${escapeHtml(String(s.renderCount || 0))}</div>` : '<div class="text-[10px] text-gray-600 col-span-2">Not yet rendered</div>'}
         ${lastError ? `<div class="text-[10px] text-red-300 break-all col-span-2">${escapeHtml(String(lastError).slice(0, 120))}</div>` : ""}
+        ${view.name === "constellation" ? `<div class="text-[10px] text-gray-500 col-span-2">Drag: ${__constellationDragStats.dragStarts} starts • ${__constellationDragStats.dragMoves} moves • ${__constellationDragStats.dragEnds} ends • pan (${Math.round(__constellationDragStats.lastPanX)}, ${Math.round(__constellationDragStats.lastPanY)}) • zoom ${__constellationDragStats.lastScale.toFixed(2)}</div>` : ""}
       </div>`;
   }).join("");
   return `
@@ -17375,6 +17445,27 @@ function renderViewHealthCard() {
       ${rows}
       <div class="text-[10px] text-gray-500">Workspace Hub tabs (Settings, Connected Accounts, Diagnostics) use openWorkspaceHub() — not switchView — and are tracked separately.</div>
     </div>`;
+}
+
+function renderDateConsistencyCard() {
+  var posts = (appState.posts || []).filter(Boolean);
+  var mismatches = [];
+  posts.forEach(function(post) {
+    var label = parseDisplayDateKey(post.queueDateLabel || post.queue_date_label || "");
+    var schedKey = parseDisplayDateKey(String(post.scheduledAt || post.scheduled_at || "").slice(0, 10));
+    if (label && schedKey && label !== schedKey) {
+      mismatches.push({ id: post.id || post.post_id || "?", label: label, schedKey: schedKey, title: post.title || "" });
+    }
+  });
+  if (!mismatches.length) return "";
+  return '<div class="p-4 rounded-xl bg-[#251218] border border-yellow-400/15 space-y-3">' +
+    '<div class="text-[10px] uppercase tracking-widest text-yellow-200 font-bold">Date Consistency</div>' +
+    '<div class="text-xs text-gray-300 wrap-safe">Posts where queue_date_label and scheduled_at disagree:</div>' +
+    mismatches.map(function(m) {
+      return '<div class="p-2 rounded-lg bg-[#120c1d] border border-white/5 text-[11px] text-gray-300 wrap-safe">' +
+        '<span class="text-white font-bold">' + escapeHtml(m.title || "Untitled") + '</span> ' +
+        escapeHtml(m.id) + ' &mdash; label: <span class="text-yellow-200">' + escapeHtml(m.label) + '</span> vs sched: <span class="text-red-200">' + escapeHtml(m.schedKey) + '</span></div>';
+    }).join("") + '</div>';
 }
 
 function renderCopyableDeploymentValue(label, value) {
@@ -17599,7 +17690,22 @@ function renderDiagnosticsPanel() {
         <div class="text-[10px] text-gray-500">Errors are captured from the current session only; they reset on page reload.</div>
       </div>`;
     })()}
+    ${(() => {
+      const setupErrors = window.__setupErrors || [];
+      if (!setupErrors.length) return "";
+      return '<div class="p-4 rounded-xl bg-[#2b2311] border border-yellow-400/15 space-y-3">' +
+        '<div class="text-[10px] uppercase tracking-widest text-yellow-200 font-bold flex items-center gap-2">' +
+        '<i class="ph-bold ph-wrench text-yellow-400"></i> Setup Section Errors (' + setupErrors.length + ')</div>' +
+        setupErrors.slice(-3).map(function(err) {
+          return '<div class="text-[11px] text-yellow-100/80 wrap-safe break-all">' +
+            '<span class="text-yellow-300">' + escapeHtml(err.msg || "Unknown error") + '</span>' +
+            (err.section ? '<span class="text-gray-500"> in ' + escapeHtml(err.section) + '</span>' : "") +
+            '</div>';
+        }).join("") +
+        '<div class="text-[10px] text-gray-500">Setup errors may prevent some features from binding correctly.</div></div>';
+    })()}
     ${renderViewHealthCard()}
+    ${renderDateConsistencyCard()}
     <div class="p-4 rounded-xl bg-[#181125] border border-white/5 flex items-center justify-between gap-3 flex-wrap">
       <div>
         <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Cache Health</div>
