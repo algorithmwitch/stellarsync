@@ -1844,7 +1844,7 @@
                 <span class="absolute left-16 bg-[#181125] border border-white/5 text-white text-[10px] px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-xl">Write an Idea</span>
             </button>
             <div class="mt-auto" vid="47">
-                <button id="settings-open-btn" type="button" title="Open Brand OS" onclick="openWorkspaceHub('settings')" class="w-12 h-12 rounded-xl text-gray-500 hover:text-white hover:bg-[#1a1128] flex items-center justify-center transition-colors" vid="48">
+                <button id="settings-open-btn" type="button" title="Open Brand OS" class="w-12 h-12 rounded-xl text-gray-500 hover:text-white hover:bg-[#1a1128] flex items-center justify-center transition-colors" vid="48">
                     <i class="ph-fill ph-gear text-xl" vid="49"></i>
                 </button>
             </div>
@@ -4467,7 +4467,13 @@ function getPostMediaKind(post) {
 
 function getPublishingBadge(post) {
   const status = String(post?.status || post?.publishStatus || "draft").trim();
-  return { label: toTitleCase(status), tone: status === "published" ? "text-emerald-300" : status === "scheduled" ? "text-sky-300" : "text-gray-300" };
+  const map = {
+    published: { label: "Published", tone: "text-emerald-300", color: "#00ffaa", icon: "ph-check-circle" },
+    scheduled: { label: "Scheduled", tone: "text-sky-300", color: "#38bdf8", icon: "ph-clock" },
+    needs_review: { label: "Needs Review", tone: "text-yellow-300", color: "#ffd700", icon: "ph-warning-circle" },
+    draft: { label: "Draft", tone: "text-gray-300", color: "#9ca3af", icon: "ph-file-text" }
+  };
+  return map[status] || { label: toTitleCase(status), tone: "text-gray-300", color: "#9ca3af", icon: "ph-file-text" };
 }
 
 function renderPillarShape(pillar, className = "", theme = getPillarTheme(pillar)) {
@@ -4479,39 +4485,206 @@ function renderStackedAssetPreview(assets = []) {
   return `<div class="stacked-preview">${items.map(() => "<span></span>").join("")}</div>`;
 }
 
-function renderPublishingReadiness() {}
-function renderCampaignOptions() {}
-function updateModalCampaignPreview() {}
+function renderPublishingReadiness(post = {}) {
+  const target = publishReadinessEl || document.getElementById("audit-publishing-readiness");
+  if (!target) return;
+  const platformTargets = Array.isArray(post.platformTargets) && post.platformTargets.length
+    ? post.platformTargets
+    : String(post.platform || platSelect?.value || "linkedin").split(/[|,\n]/).map((item) => item.trim()).filter(Boolean);
+  const status = String(post.publishStatus || post.status || statusSelect?.value || "draft").trim().toLowerCase();
+  const rows = (platformTargets.length ? platformTargets : ["linkedin"]).map((platform) => {
+    const account = typeof getConnectedAccount === "function" ? getConnectedAccount(platform) : null;
+    const connected = !!(account && (account.connected || account.hasAccessToken || account.accessStatus === "connected"));
+    const publishSupported = !!(account && account.publishSupported);
+    const ready = status !== "published" && connected && publishSupported;
+    const tone = ready ? "text-emerald-300" : connected ? "text-yellow-300" : "text-gray-400";
+    const label = ready ? "Ready for publish validation" : connected ? (account.publishSupportLabel || "Connected, publish scope pending") : "StellarSync draft mode";
+    return `
+      <div class="p-3 rounded-xl bg-[#181125] border border-white/5">
+        <div class="flex items-center justify-between gap-3">
+          <div class="text-sm font-bold text-white">${escapeHtml(toTitleCase(platform))}</div>
+          <span class="publishing-chip ${tone}">${escapeHtml(label)}</span>
+        </div>
+        <div class="text-[11px] text-gray-400 mt-2 wrap-safe">${escapeHtml(account?.lastError ? "Last account error: " + account.lastError : "Scheduling remains available inside StellarSync.")}</div>
+      </div>
+    `;
+  });
+  target.innerHTML = rows.join("");
+}
+
+function renderCampaignOptions(campaigns = getAvailableCampaignRecords(), currentValue = "") {
+  const activeCampaigns = (Array.isArray(campaigns) ? campaigns : [])
+    .filter((campaign) => !campaign.isArchived)
+    .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0) || String(a.campaignName || "").localeCompare(String(b.campaignName || "")));
+  const selectedCampaignId = String(currentValue || "").trim();
+  const selected = getCampaignById(selectedCampaignId, activeCampaigns) || getCampaignByName(selectedCampaignId, activeCampaigns);
+  const options = ['<option value="">No campaign</option>'].concat(activeCampaigns.map((campaign) => {
+    const id = String(campaign.campaignId || campaign.id || campaign.campaignName || "").trim();
+    const label = formatCampaignDisplayName(campaign.campaignName || id);
+    const selectedAttr = selected && String(selected.campaignId || selected.id || selected.campaignName || "") === id ? " selected" : "";
+    return `<option value="${escapeHtml(id)}"${selectedAttr}>${escapeHtml(label)}</option>`;
+  }));
+  return {
+    html: options.join(""),
+    selectedCampaignId: selected ? String(selected.campaignId || selected.id || selected.campaignName || "") : ""
+  };
+}
+
+function updateModalCampaignPreview() {
+  if (!campaignSelect || !document.getElementById("modal-campaign-preview")) return;
+  const preview = document.getElementById("modal-campaign-preview");
+  const selected = getCampaignById(campaignSelect.value) || getCampaignByName(campaignSelect.value);
+  if (!selected) {
+    preview.hidden = true;
+    preview.innerHTML = "";
+    return;
+  }
+  const color = getCampaignColor(selected, selected.pillar);
+  preview.hidden = false;
+  preview.innerHTML = `
+    <div class="flex items-start gap-3">
+      <span class="inline-block w-3 h-3 rounded-full mt-1.5 shrink-0" style="background:${escapeHtml(color)}"></span>
+      <div class="min-w-0">
+        <div class="text-sm font-bold text-white wrap-safe">${escapeHtml(formatCampaignDisplayName(selected.campaignName || selected.campaignId))}</div>
+        <div class="text-[11px] text-gray-400 wrap-safe">${escapeHtml(formatContentPillarLabel(selected.pillar || "authority"))} • ${escapeHtml(selected.pathStyle || "squiggle")}</div>
+      </div>
+    </div>
+  `;
+}
 function setModalSourceContext(type = "manual", label = "", detail = "", sourceId = "") {
   currentModalSourceContext = { type, label, detail, sourceId };
 }
 
 function renderMediaLinkConnectedAccountActions() {
-  if (mediaLinkConnectedAccountActions) mediaLinkConnectedAccountActions.innerHTML = "";
+  if (!mediaLinkConnectedAccountActions) return;
+  const state = typeof getSocialCardState === "function" ? getSocialCardState() : { detected: "external" };
+  if (typeof renderConnectedAccountActions === "function") {
+    renderConnectedAccountActions(state);
+    return;
+  }
+  mediaLinkConnectedAccountActions.innerHTML = `<div class="text-[10px] text-gray-500">Connected account actions unavailable for this source.</div>`;
 }
 
 function renderCreatorMemoryDashboard(target) {
-  if (target) target.innerHTML = makeEmptyState("Creator memory unavailable", "No creator memory diagnostics are loaded yet.", "ph-brain");
+  if (!target) return;
+  const profile = buildCreatorStyleProfile();
+  const history = typeof buildLocalAIHistorySummary === "function" ? buildLocalAIHistorySummary({}) : {};
+  target.innerHTML = `
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      ${[
+        ["Historical posts", history.totalHistoricalPostsAvailable ?? (appState.posts || []).length],
+        ["Voice traits", profile.voiceTraits.length],
+        ["Framework rules", (appState.brandFramework || []).filter((item) => item.enabled !== false).length]
+      ].map(([label, value]) => `
+        <div class="platform-card">
+          <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${escapeHtml(label)}</div>
+          <div class="text-2xl font-bold text-white mt-1">${escapeHtml(String(value))}</div>
+        </div>
+      `).join("")}
+    </div>
+    <div class="platform-card">
+      <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Creator Memory Signals</div>
+      <div class="text-sm text-gray-300 wrap-safe">${escapeHtml(profile.recurringThemes.join(", ") || "No recurring themes detected yet.")}</div>
+    </div>
+  `;
 }
 
 function renderCreatorMemoryDiagnostics(context, target) {
-  if (target) target.innerHTML = context ? JSON.stringify(context, null, 2) : "No creator memory diagnostics available.";
+  if (!target) return;
+  const ctx = context || getStyleAwareContext();
+  const rows = [
+    ["Voice traits", ctx.styleProfile?.voiceTraits?.join(", ") || "None detected"],
+    ["Recurring themes", ctx.styleProfile?.recurringThemes?.join(", ") || "None detected"],
+    ["Nearest frameworks", (ctx.nearestFrameworks || []).join(", ") || "None"],
+    ["Nearest content", String((ctx.nearestContent || []).length)]
+  ];
+  target.innerHTML = rows.map(([label, value]) => `
+    <div class="flex items-start justify-between gap-4 border-b border-white/5 py-2 last:border-b-0">
+      <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${escapeHtml(label)}</div>
+      <div class="text-sm text-white text-right wrap-safe">${escapeHtml(value)}</div>
+    </div>
+  `).join("");
 }
 
 function renderBrandingDiagnostics(target) {
-  if (target) target.innerHTML = makeEmptyState("Brand diagnostics unavailable", "No branding diagnostics are loaded yet.", "ph-palette");
+  if (!target) return;
+  const rules = (appState.brandFramework || []).filter((item) => item.enabled !== false);
+  const missingContent = rules.filter((item) => !String(item.content || "").trim());
+  const antiPatterns = rules.filter((item) => item.antiPattern || String(item.ruleType || "").toLowerCase().includes("anti"));
+  const preferred = rules.filter((item) => item.preferredPattern);
+  target.innerHTML = [
+    ["Enabled rules", rules.length, "text-white"],
+    ["Missing content", missingContent.length, missingContent.length ? "text-yellow-300" : "text-emerald-300"],
+    ["Anti-patterns", antiPatterns.length, "text-red-200"],
+    ["Preferred patterns", preferred.length, "text-emerald-300"]
+  ].map(([label, value, color]) => `
+    <div class="platform-card">
+      <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${escapeHtml(label)}</div>
+      <div class="text-xl font-bold ${color} mt-1">${escapeHtml(String(value))}</div>
+    </div>
+  `).join("");
 }
 
 function buildCreatorStyleProfile() {
-  return { voiceTraits: [], recurringThemes: [], preferredStructures: [] };
+  const posts = (appState.posts || []).filter((post) => String(post.description || post.body || "").trim());
+  const text = posts.map((post) => String(post.description || post.body || "")).join("\n").toLowerCase();
+  const rules = (appState.brandFramework || []).filter((item) => item.enabled !== false);
+  const recurringThemes = ["systems", "infrastructure", "community", "participation", "classification", "legibility", "distribution", "orientation"]
+    .filter((token) => text.includes(token) || rules.some((rule) => String(rule.content || rule.semanticCategory || "").toLowerCase().includes(token)));
+  const preferredStructures = rules
+    .filter((rule) => rule.preferredPattern || /hook|cta|carousel|structure|pattern/i.test(String(rule.ruleType || rule.section || rule.title || "")))
+    .map((rule) => rule.title || rule.frameworkKey)
+    .filter(Boolean)
+    .slice(0, 8);
+  const voiceTraits = [];
+  if (/system|infrastructure|structure|legible|classification/.test(text)) voiceTraits.push("systems-oriented");
+  if (/community|participation|local|public/.test(text)) voiceTraits.push("community-led");
+  if (/because|means|instead|not just/.test(text)) voiceTraits.push("analytical");
+  return { voiceTraits, recurringThemes, preferredStructures };
 }
 
-function getStyleAwareContext() {
-  return { styleProfile: buildCreatorStyleProfile(), nearestFrameworks: [], nearestContent: [], recurringMetaphors: [], preferredStructures: [] };
+function getStyleAwareContext(sourceId = "", sourceType = "", styleProfile = buildCreatorStyleProfile()) {
+  const promptText = [
+    sourceId,
+    sourceType,
+    aiWorkspacePrompt?.value,
+    writeIdeaPromptInput?.value,
+    aiDraftTitleInput?.value
+  ].map((item) => String(item || "").toLowerCase()).join(" ");
+  const scoreText = (value) => {
+    const text = String(value || "").toLowerCase();
+    return styleProfile.recurringThemes.reduce((score, token) => score + (text.includes(token) || promptText.includes(token) ? 1 : 0), 0);
+  };
+  const nearestFrameworks = (appState.brandFramework || [])
+    .filter((rule) => rule.enabled !== false)
+    .map((rule) => ({ rule, score: scoreText([rule.title, rule.content, rule.semanticCategory].join(" ")) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5)
+    .map((item) => item.rule.title || item.rule.frameworkKey)
+    .filter(Boolean);
+  const nearestContent = (appState.posts || [])
+    .map((post) => ({ post, score: scoreText([post.title, post.description, post.campaignName, post.pillar].join(" ")) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5)
+    .map((item) => item.post);
+  return {
+    styleProfile,
+    nearestFrameworks,
+    nearestContent,
+    recurringMetaphors: styleProfile.recurringThemes,
+    preferredStructures: styleProfile.preferredStructures
+  };
 }
 
 function buildSemanticAIDraftPayload() {
-  return {};
+  const profile = appState._creatorStyleProfile || buildCreatorStyleProfile();
+  const context = getStyleAwareContext(String(aiSourceIdInput?.value || "").trim(), String(aiSourceTypeInput?.value || "manual").trim(), profile);
+  return {
+    semanticTags: profile.recurringThemes.slice(0, 10),
+    styleSignals: profile.voiceTraits.join("|"),
+    nearestFrameworks: context.nearestFrameworks.join("|"),
+    historicalReferenceIds: context.nearestContent.map((post) => post.id || post.postId || "").filter(Boolean).join("|")
+  };
 }
 
 function describeUploadTarget(target) {
@@ -4520,6 +4693,15 @@ function describeUploadTarget(target) {
 
 function validateUploadFile(file) {
   if (!file) return "No file selected.";
+  const type = String(file.type || "").toLowerCase();
+  const name = String(file.name || "").toLowerCase();
+  const isImage = type.startsWith("image/");
+  const isVideo = type.startsWith("video/");
+  const isDocument = /\.(pdf|doc|docx|ppt|pptx|xls|xlsx|txt)$/i.test(name);
+  if (!isImage && !isVideo && !isDocument) return "Unsupported file type.";
+  if (isImage && file.size > MAX_UPLOAD_IMAGE_BYTES) return "Image exceeds 10 MB.";
+  if (isVideo && file.size > MAX_UPLOAD_VIDEO_BYTES) return "Video exceeds 50 MB.";
+  if (isDocument && file.size > MAX_UPLOAD_DOCUMENT_BYTES) return "Document exceeds 25 MB.";
   return "";
 }
 
@@ -5923,12 +6105,18 @@ function setupWorkspaceReturnButtons() {
     });
   });
 
-  (document.getElementById("settings-open-btn") || document.getElementById("workspace-settings-btn"))?.addEventListener("click", () => {
-    openWorkspaceHub("settings");
-  });
 }
 
 function setupWorkspaceUI() {
+  document.getElementById("settings-open-btn")?.addEventListener("click", () => openWorkspaceHub("settings"));
+  document.addEventListener("click", (event) => {
+    const opener = event.target.closest("[data-workspace-open-tab]");
+    if (!opener) return;
+    const nextTab = opener.dataset.workspaceOpenTab || "settings";
+    if (["settings", "accounts", "diagnostics", "providers"].includes(nextTab)) {
+      openWorkspaceHub(nextTab);
+    }
+  });
   profileMenuTrigger?.addEventListener("click", (event) => {
     event.stopPropagation();
     toggleProfileMenu();
@@ -6240,10 +6428,6 @@ function setupWorkspaceUI() {
     });
   });
   mobileAiNavBtn?.addEventListener("click", () => switchView("write-idea"));
-  var panelTogglePending = null;
-  function flushPanelToggle() {
-    if (panelTogglePending) { panelTogglePending(); panelTogglePending = null; }
-  }
   desktopSidebarToggle?.addEventListener("click", function() {
     shellLayout.sidebarCollapsed = !shellLayout.sidebarCollapsed;
     persistShellLayout();
@@ -9113,12 +9297,6 @@ async function openWorkspaceHub(tab = "settings") {
     toggleProfileMenu(false);
     if (nextTab === "accounts") connectedAccountsStatusLoading = true;
     renderWorkspaceHub();
-    if (nextTab === "accounts" && typeof renderConnectedAccounts === "function") renderConnectedAccounts();
-    if (nextTab === "diagnostics" && typeof renderDiagnosticsPanel === "function") renderDiagnosticsPanel();
-    if ((nextTab === "providers" || nextTab === "settings") && typeof renderAIProviderCards === "function") {
-      const providerTarget = document.getElementById("workspace-ai-providers-panel");
-      if (providerTarget) providerTarget.innerHTML = renderAIProviderCards();
-    }
     await refreshSocialImportContext();
   } catch (err) {
     window.__workspaceHubHealth.lastError = err && err.message ? err.message : String(err);
@@ -9409,11 +9587,6 @@ function renderConnectedAccounts() {
   if (accountsPanel) accountsPanel.innerHTML = getConnectedAccountsMarkup();
   const inlineTarget = document.getElementById("settings-connected-accounts-inline");
   if (inlineTarget) inlineTarget.innerHTML = getConnectedAccountsMarkup({ compact: true });
-}
-
-function renderConnectedAccountsStatus() {
-  renderConnectedAccounts();
-  renderMediaLinkConnectedAccountActions();
 }
 
 // ===== AI PROVIDERS UI =====
@@ -15829,7 +16002,7 @@ function renderDiagnosticsPanel() {
     <div class="p-4 rounded-xl bg-[#181125] border border-white/5 space-y-3">
       <div class="flex items-center justify-between gap-3 flex-wrap">
         <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Connected Accounts</div>
-        <button type="button" onclick="openWorkspaceHub('accounts')" class="px-3 py-2 rounded-xl bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white hover:bg-[#2d1b4e] transition-colors">Open Full Panel</button>
+        <button type="button" data-workspace-open-tab="accounts" class="px-3 py-2 rounded-xl bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white hover:bg-[#2d1b4e] transition-colors">Open Full Panel</button>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         ${(connectedAccounts.length ? connectedAccounts : (socialImportCapabilities?.connectedAccounts || [])).map((account) => `
@@ -17769,7 +17942,6 @@ window.closeModal = closeModal;
 window.switchView = switchView;
 window.openWorkspaceHub = openWorkspaceHub;
 window.renderConnectedAccounts = renderConnectedAccounts;
-window.renderConnectedAccountsStatus = renderConnectedAccountsStatus;
 window.renderDiagnosticsPanel = renderDiagnosticsPanel;
 window.renderAIProviderCards = renderAIProviderCards;
 window.getAIProviderConfig = getAIProviderConfig;
@@ -17903,13 +18075,113 @@ function safeRender(fn, label) {
   }
 }
 
-// Stubs for render functions that may not exist yet
-function renderOverviewPanel() { /* stub */ }
-function renderSemanticMemoryPanel() { /* stub */ }
-function renderModalPillarButtons() { /* stub */ }
-function renderPerformanceView() { /* stub */ }
-function renderAuditView() { /* stub */ }
-function renderAISemanticMemoryCards() { /* stub */ }
+function renderOverviewPanel() {
+  const topPost = (appState.posts || []).slice().sort((a, b) => normalizeMetricNumber(b.impressions || b.views || 0) - normalizeMetricNumber(a.impressions || a.views || 0))[0] || null;
+  const topTarget = document.getElementById("overview-top-post-card");
+  if (topTarget) {
+    topTarget.innerHTML = topPost
+      ? `<div class="p-3 rounded-xl bg-[#181125] border border-white/5"><div class="text-sm font-bold text-white wrap-safe">${escapeHtml(topPost.title || "Untitled")}</div><div class="text-[11px] text-gray-400 mt-1">${escapeHtml(formatCampaignDisplayName(topPost.campaignName || "Uncategorized"))}</div></div>`
+      : makeEmptyState("No top post yet", "Add posts or sync history to populate overview signals.", "ph-chart-line-up");
+  }
+  const performanceTarget = document.getElementById("overview-performance-snapshot");
+  if (performanceTarget) {
+    performanceTarget.innerHTML = [
+      ["Posts", (appState.posts || []).length],
+      ["Campaigns", (appState.campaigns || []).filter((item) => !item.isArchived).length],
+      ["Media", (appState.media || []).length]
+    ].map(([label, value]) => `<div class="flex justify-between text-sm"><span class="text-gray-400">${escapeHtml(label)}</span><span class="text-white font-bold">${escapeHtml(String(value))}</span></div>`).join("");
+  }
+  const campaignTarget = document.getElementById("overview-campaign-snapshot");
+  if (campaignTarget) {
+    campaignTarget.innerHTML = countPostsBy(appState.posts || [], (post) => post.campaignName || "Uncategorized").slice(0, 4)
+      .map(([label, count]) => `<div class="flex justify-between text-sm"><span class="text-gray-400 wrap-safe">${escapeHtml(formatCampaignDisplayName(label))}</span><span class="text-white font-bold">${count}</span></div>`).join("") || makeEmptyState("No campaign data", "Campaign counts appear after posts are assigned.", "ph-planet");
+  }
+  renderSemanticMemoryPanel();
+  renderContextualGuidancePanel();
+}
+
+function renderSemanticMemoryPanel() {
+  const target = document.getElementById("semantic-memory-panel");
+  if (!target) return;
+  const profile = appState._creatorStyleProfile || buildCreatorStyleProfile();
+  target.innerHTML = [
+    ["Themes", profile.recurringThemes.join(", ") || "None detected"],
+    ["Voice", profile.voiceTraits.join(", ") || "None detected"],
+    ["Structures", profile.preferredStructures.slice(0, 4).join(", ") || "None detected"]
+  ].map(([label, value]) => `<div class="p-3 rounded-xl bg-[#181125] border border-white/5"><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${escapeHtml(label)}</div><div class="text-sm text-white wrap-safe mt-1">${escapeHtml(value)}</div></div>`).join("");
+}
+
+function renderModalPillarButtons(selectedPillar = "") {
+  const target = document.getElementById("modal-pillar-buttons");
+  if (!target) return;
+  const pillars = getAvailableContentPillars();
+  const active = normalizePillar(selectedPillar || getActivePillar() || pillars[0] || "authority");
+  target.innerHTML = pillars.map((pillar) => {
+    const normalized = normalizePillar(pillar);
+    const theme = getPillarTheme(normalized);
+    const isActive = normalized === active;
+    return `<button type="button" class="pillar-btn ${isActive ? "active" : ""}" data-pillar="${escapeHtml(normalized)}" style="border-color:${isActive ? escapeHtml(theme.color) : "rgba(255,255,255,0.04)"};color:${isActive ? escapeHtml(theme.color) : "#94a3b8"};background:${isActive ? escapeHtml(theme.bg) : "#181125"}">${escapeHtml(formatContentPillarLabel(normalized))}</button>`;
+  }).join("");
+  target.querySelectorAll(".pillar-btn").forEach((btn) => btn.addEventListener("click", () => setPillar(btn.dataset.pillar || "")));
+}
+
+function renderPerformanceView() {
+  const posts = (appState.posts || []).filter((post) => performanceFilters.platform === "all" || String(post.platform || "linkedin") === performanceFilters.platform);
+  const kpis = document.getElementById("performance-kpis");
+  if (kpis) {
+    const scheduled = posts.filter((post) => post.status === "scheduled").length;
+    const published = posts.filter((post) => post.status === "published").length;
+    const impressions = posts.reduce((sum, post) => sum + normalizeMetricNumber(post.impressions || post.views || 0), 0);
+    kpis.innerHTML = [["Posts", posts.length], ["Scheduled", scheduled], ["Published", published], ["Impressions", impressions]].map(([label, value]) => `<div class="mini-card p-4"><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${label}</div><div class="text-2xl font-bold text-white mt-1">${value}</div></div>`).join("");
+  }
+  const topPosts = document.getElementById("performance-top-posts");
+  if (topPosts) {
+    topPosts.innerHTML = posts.slice().sort((a, b) => normalizeMetricNumber(b.impressions || b.views || 0) - normalizeMetricNumber(a.impressions || a.views || 0)).slice(0, 5)
+      .map((post) => `<div class="p-3 rounded-xl bg-[#181125] border border-white/5"><div class="text-sm font-bold text-white wrap-safe">${escapeHtml(post.title || "Untitled")}</div><div class="text-[11px] text-gray-400 mt-1">${escapeHtml(String(normalizeMetricNumber(post.impressions || post.views || 0)))} impressions</div></div>`).join("") || makeEmptyState("No performance data", "Metrics appear after history is imported or synced.", "ph-chart-line-up");
+  }
+  const renderComparison = (id, rows) => {
+    const target = document.getElementById(id);
+    if (!target) return;
+    target.innerHTML = rows.slice(0, 6).map(([label, count]) => `<div class="flex items-center justify-between gap-3 text-sm"><span class="text-gray-300 wrap-safe">${escapeHtml(formatCampaignDisplayName(label))}</span><span class="text-white font-bold">${count}</span></div>`).join("") || `<div class="text-sm text-gray-500">No data.</div>`;
+  };
+  renderComparison("performance-campaign-comparison", countPostsBy(posts, (post) => post.campaignName || "Uncategorized"));
+  renderComparison("performance-pillar-comparison", countPostsBy(posts, (post) => getPostContentPillar(post)));
+  renderComparison("performance-platform-comparison", countPostsBy(posts, (post) => post.platform || "linkedin"));
+}
+
+function renderAuditView() {
+  const working = document.getElementById("audit-working-list");
+  const attention = document.getElementById("audit-attention-list");
+  const nextAction = document.getElementById("audit-next-action");
+  if (working) {
+    working.innerHTML = [
+      `${(appState.posts || []).length} posts loaded`,
+      `${(appState.campaigns || []).filter((item) => !item.isArchived).length} active campaigns`,
+      `${(appState.media || []).length} media records`
+    ].map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+  }
+  if (attention) {
+    const gaps = [];
+    if (!(appState.posts || []).length) gaps.push("No posts loaded");
+    if (!(appState.campaigns || []).length) gaps.push("No campaigns loaded");
+    if (offlineMode) gaps.push("Backend currently offline or unreachable");
+    attention.innerHTML = (gaps.length ? gaps : ["No local blocking issues detected"]).map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+  }
+  if (nextAction) nextAction.textContent = offlineMode ? "Reconnect backend diagnostics when deployment access is available." : "Review diagnostics and resolve any backend-reported errors.";
+  renderPublishingReadiness({ platformTargets: appState.settings?.platforms || ["linkedin"], status: "draft" });
+  renderDeployChecklist();
+  renderDiagnosticsPanel();
+}
+
+function renderAISemanticMemoryCards() {
+  if (!aiSemanticMemoryCards) return;
+  const context = getStyleAwareContext(String(aiSourceIdInput?.value || "").trim(), String(aiSourceTypeInput?.value || "manual").trim(), appState._creatorStyleProfile || buildCreatorStyleProfile());
+  aiSemanticMemoryCards.innerHTML = [
+    ["Frameworks", context.nearestFrameworks.join(", ") || "None matched"],
+    ["Historical posts", String(context.nearestContent.length)],
+    ["Voice traits", context.styleProfile.voiceTraits.join(", ") || "None detected"]
+  ].map(([label, value]) => `<div class="p-3 rounded-xl bg-[#181125] border border-white/5"><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${escapeHtml(label)}</div><div class="text-sm text-white wrap-safe mt-1">${escapeHtml(value)}</div></div>`).join("");
+}
 
 function reportFrontendError(context, error) {
   try {
@@ -17982,13 +18254,6 @@ function bootMinimalApp() {
       var btn = ev.target.closest("[data-view-target]");
       if (btn) { switchView(btn.dataset.viewTarget); }
     });
-    // Bind settings gear
-    var gear = document.getElementById("settings-open-btn") || document.getElementById("workspace-settings-btn");
-    if (gear) {
-      gear.addEventListener("click", function() {
-        if (typeof openWorkspaceHub === "function") openWorkspaceHub("settings");
-      });
-    }
     // Bind profile menu trigger
     var profile = document.getElementById("avatar-menu-btn") || document.getElementById("profile-menu-trigger");
     if (profile) {
