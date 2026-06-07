@@ -1705,6 +1705,30 @@
             <div id="stars-container" class="stars absolute inset-0" vid="16"></div>
         </div>
 
+    <div id="boot-diagnostics" class="hidden fixed inset-0 z-[9999] flex items-center justify-center p-6" style="background:#0a0514;">
+      <div class="w-full max-w-xl bg-[#120c1d] border border-white/10 rounded-2xl p-6 space-y-4">
+        <div class="flex items-center gap-3">
+          <i class="ph-bold ph-bug-beetle text-2xl text-yellow-400"></i>
+          <div>
+            <div class="text-white font-bold text-lg">StellarSync Boot Diagnostics</div>
+            <div id="boot-diag-version" class="text-[10px] uppercase tracking-wider text-gray-500 font-bold">Frontend v1.0</div>
+          </div>
+        </div>
+        <div id="boot-diag-body" class="space-y-2 text-sm text-gray-300 font-mono">
+          <div class="flex items-center gap-2"><span class="text-gray-500">DOMContentLoaded:</span><span id="boot-diag-dom" class="text-yellow-400">checking...</span></div>
+          <div class="flex items-center gap-2"><span class="text-gray-500">initApp started:</span><span id="boot-diag-started" class="text-yellow-400">checking...</span></div>
+          <div class="flex items-center gap-2"><span class="text-gray-500">initApp completed:</span><span id="boot-diag-completed" class="text-yellow-400">checking...</span></div>
+          <div class="flex items-center gap-2"><span class="text-gray-500">First render:</span><span id="boot-diag-render" class="text-yellow-400">checking...</span></div>
+          <div class="flex items-center gap-2"><span class="text-gray-500">Errors:</span><span id="boot-diag-errors" class="text-gray-500">none</span></div>
+          <div id="boot-diag-error-detail" class="hidden p-3 bg-red-900/20 border border-red-900/40 rounded-xl text-red-300 text-xs whitespace-pre-wrap"></div>
+        </div>
+        <div class="flex gap-3">
+          <button onclick="location.reload()" class="px-4 py-2 bg-[#2d1b4e] hover:bg-[#3d2b5e] text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-colors">Reload App</button>
+          <button onclick="try{localStorage.clear();location.reload()}catch(e){alert('Could not clear cache: '+e.message)}" class="px-4 py-2 bg-red-900/40 hover:bg-red-900/60 text-red-300 text-xs uppercase tracking-wider font-bold rounded-xl transition-colors">Reset Cache & Reload</button>
+        </div>
+      </div>
+    </div>
+
     <header class="h-16 px-6 flex justify-between items-center gap-3 bg-[#120c1d] border border-white/5 rounded-2xl relative z-50 shrink-0" vid="17">
         <div class="flex items-center gap-4 min-w-0 flex-1" vid="18">
             <div id="app-header-logo" class="w-10 h-10 rounded-xl bg-[#231738] flex items-center justify-center shrink-0 overflow-hidden" vid="19">
@@ -4116,7 +4140,7 @@
 </div>
 <script>
 const APP_CONFIG = {
-  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbzy7zqAC-BMPoavo63acY5jhmxTBopQ5-RX2Mn-0liYzk8jsNPKgvRvFZFl_TSJF-rg/exec",
+  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbz6TgVmFoCkRhBDy8rlOgONapgWj3ydfstfsSo_9OHv7czYYRK_oM0OEBtvVR3BKnLi/exec",
   ENABLE_REMOTE_SYNC: true,
   STORAGE_KEY: "stellarsync_local_state_v5",
   SHELL_LAYOUT_KEY: "stellarsync_shell_layout_v2"
@@ -17230,9 +17254,109 @@ window.openModal = function(
     matched?.id || null
   );
 };
-    
-initApp();
-    
+
+var bootErrors = [];
+window.__SHOW_BOOT_DIAGNOSTICS = false;
+
+function reportFrontendError(context, error) {
+  try {
+    var msg = "[" + context + "] " + (error && error.message || error || "Unknown error");
+    bootErrors.push(msg);
+    console.error("Boot error:", msg, error);
+    var detail = document.getElementById("boot-diag-error-detail");
+    var errorsEl = document.getElementById("boot-diag-errors");
+    if (detail) {
+      detail.classList.remove("hidden");
+      detail.textContent = bootErrors.join("\n");
+    }
+    if (errorsEl) errorsEl.textContent = String(bootErrors.length) + " error(s)";
+    errorsEl && (errorsEl.className = "text-red-400");
+  } catch (_) {}
+}
+
+function showBootFailurePanel(error) {
+  try {
+    var panel = document.getElementById("boot-diagnostics");
+    if (!panel) return;
+    reportFrontendError("boot/failure", error);
+    var domEl = document.getElementById("boot-diag-dom");
+    var startedEl = document.getElementById("boot-diag-started");
+    var completedEl = document.getElementById("boot-diag-completed");
+    domEl && (domEl.textContent = "yes");
+    startedEl && (startedEl.textContent = window.__BOOT_STARTED ? "yes" : "no");
+    completedEl && (completedEl.textContent = "failed");
+    panel.classList.remove("hidden");
+  } catch (_) {
+    document.body.innerHTML = '<div style="padding:40px;color:white;background:#0a0514;min-height:100vh;font-family:monospace;">' +
+      '<h1>StellarSync Boot Failure</h1>' +
+      '<pre>' + escapeHtml(String(error && error.message || error || "Unknown")) + '</pre>' +
+      '<button onclick="location.reload()" style="margin-top:16px;padding:8px 16px;">Reload</button></div>';
+  }
+}
+
+function initApp() {
+  window.__BOOT_STARTED = true;
+  var domEl = document.getElementById("boot-diag-dom");
+  domEl && (domEl.textContent = "yes");
+  var startedEl = document.getElementById("boot-diag-started");
+  startedEl && (startedEl.textContent = "yes");
+  var versionEl = document.getElementById("boot-diag-version");
+  versionEl && (versionEl.textContent = "Frontend v1.0 · " + new Date().toISOString().slice(0, 10));
+
+  try { seedStars(); } catch (err) { reportFrontendError("initApp/seedStars", err); }
+  try { cleanInvalidImportantToken(); } catch (err) { reportFrontendError("initApp/cleanInvalidImportantToken", err); }
+
+  try { setupWorkspaceUI(); } catch (err) { reportFrontendError("initApp/setupWorkspaceUI", err); }
+  try { setupCalendarControls(); } catch (err) { reportFrontendError("initApp/setupCalendarControls", err); }
+  try { setupInspoModal(); } catch (err) { reportFrontendError("initApp/setupInspoModal", err); }
+  try { setupNoteModal(); } catch (err) { reportFrontendError("initApp/setupNoteModal", err); }
+  try { setupCampaignControls(); } catch (err) { reportFrontendError("initApp/setupCampaignControls", err); }
+  try { setupWriteIdeaWorkspace(); } catch (err) { reportFrontendError("initApp/setupWriteIdeaWorkspace", err); }
+  try { setupAIAndBrandWorkspaces(); } catch (err) { reportFrontendError("initApp/setupAIAndBrandWorkspaces", err); }
+
+  try { setupSplitPane(); } catch (err) { reportFrontendError("initApp/setupSplitPane", err); }
+  try { applyShellLayout(); } catch (err) { reportFrontendError("initApp/applyShellLayout", err); }
+
+  try { rerenderAll(); } catch (err) { reportFrontendError("initApp/rerenderAll", err); }
+  try { switchView("calendar"); } catch (err) { reportFrontendError("initApp/switchView", err); }
+
+  window.__BOOT_COMPLETED = true;
+  var completedEl = document.getElementById("boot-diag-completed");
+  completedEl && (completedEl.textContent = "yes");
+  var renderEl = document.getElementById("boot-diag-render");
+  renderEl && (renderEl.textContent = "scheduled");
+
+  // Hide boot diagnostics if no errors
+  var panel = document.getElementById("boot-diagnostics");
+  if (panel && bootErrors.length === 0 && !window.__SHOW_BOOT_DIAGNOSTICS) {
+    panel.classList.add("hidden");
+  }
+
+  // Async boot: load remote data in background
+  if (typeof syncRemoteIfConfigured === "function") {
+    syncRemoteIfConfigured().catch(function(err) {
+      reportFrontendError("initApp/syncRemoteIfConfigured", err);
+      if (!offlineMode) {
+        offlineMode = true;
+        try { rerenderAll(); } catch (_) {}
+      }
+    });
+  }
+  // Load AI providers in background
+  if (typeof loadAIProviders === "function") {
+    loadAIProviders().catch(function(err) {
+      reportFrontendError("initApp/loadAIProviders", err);
+    });
+  }
+}
+
+try {
+  initApp();
+} catch (error) {
+  showBootFailurePanel(error);
+  reportFrontendError("boot/call", error);
+}
+
 </script>
 </body>
 </html>
