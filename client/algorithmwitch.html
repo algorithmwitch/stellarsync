@@ -4248,6 +4248,9 @@ let calendarMode = "month";
 let calendarCursor = getInitialCalendarCursor();
 let selectedCalendarDateKey = toDateKey(new Date());
 
+const viewport = document.getElementById("starmap-viewport");
+const canvas = document.getElementById("starmap-canvas");
+
 let scale = 0.62;
 let panX = 80;
 let panY = 60;
@@ -7441,170 +7444,192 @@ function buildAuditSummary() {
 }
 
 function initApp() {
-  appState.settings = normalizeRemoteSettings(appState.settings || {});
-  appState.campaigns = (appState.campaigns || []).map((campaign) => normalizeRemoteCampaign(campaign));
-  appState.posts = (appState.posts || []).map((post) => hydratePostCampaign({
-    ...post,
-    pillar: normalizePillar(post?.pillar || post?.hubPillarLabel || (appState.settings?.pillars || [])[0] || "authority")
-  }, appState.campaigns || []));
-  appState.notes = (appState.notes || []).map((note) => normalizeRemoteNote(note));
-  appState.aiDrafts = (appState.aiDrafts || []).map((draft) => normalizeRemoteAIDraft(draft));
-  appState.brandFramework = (appState.brandFramework || []).map((item) => normalizeRemoteBrandFrameworkItem(item));
+  performance.mark("init-start");
+  window.__appErrors = [];
+  window.onerror = function (msg, url, line, col, err) {
+    const errInfo = { msg, url, line, col, stack: err?.stack, time: Date.now() };
+    window.__appErrors.push(errInfo);
+    console.error("[App Error]", errInfo);
+    showToast("App Error", `${msg || "Unknown"} at line ${line || "?"}`, "ph-warning-circle", "text-red-400");
+    return true;
+  };
+  window.onunhandledrejection = function (e) {
+    const errInfo = { msg: String(e.reason), stack: e.reason?.stack, time: Date.now() };
+    window.__appErrors.push(errInfo);
+    console.error("[Unhandled Rejection]", errInfo);
+    e.preventDefault();
+  };
+  safeRender(() => {
+    appState.settings = normalizeRemoteSettings(appState.settings || {});
+    appState.campaigns = (appState.campaigns || []).map((campaign) => normalizeRemoteCampaign(campaign));
+    appState.posts = (appState.posts || []).map((post) => hydratePostCampaign({
+      ...post,
+      pillar: normalizePillar(post?.pillar || post?.hubPillarLabel || (appState.settings?.pillars || [])[0] || "authority")
+    }, appState.campaigns || []));
+    appState.notes = (appState.notes || []).map((note) => normalizeRemoteNote(note));
+    appState.aiDrafts = (appState.aiDrafts || []).map((draft) => normalizeRemoteAIDraft(draft));
+    appState.brandFramework = (appState.brandFramework || []).map((item) => normalizeRemoteBrandFrameworkItem(item));
+  }, "initApp/normalizeState");
 
-  seedStars();
-  cleanInvalidImportantToken();
-  setupPWAInstall();
-  registerServiceWorkerSafe();
+  safeRender(seedStars, "seedStars");
+  safeRender(cleanInvalidImportantToken, "cleanInvalidImportantToken");
+  safeRender(setupPWAInstall, "setupPWAInstall");
+  safeRender(registerServiceWorkerSafe, "registerServiceWorkerSafe");
 
-  renderModalPillarButtons();
-  setupModalControls();
-  setupSaveHandler();
-  loadLinkedInAuthorContext();
-  workspaceOpenLinkedInCaptureBtn?.addEventListener("click", () => {
-    closeWorkspaceHub();
-    openLinkedInCaptureImporter();
-  });
-  writeIdeaImportExistingPostBtn?.addEventListener("click", openExistingPostImportModal);
-  existingPostImportPreviewBtn?.addEventListener("click", previewExistingPostImport);
-  existingPostImportSaveBtn?.addEventListener("click", saveExistingPostImportAsIdea);
-  closeExistingPostImportModalBtn?.addEventListener("click", closeExistingPostImportModal);
-  existingPostImportModal?.addEventListener("click", (event) => {
-    if (event.target === existingPostImportModal) closeExistingPostImportModal();
-  });
-  closeLinkedInBulkImportModalBtn?.addEventListener("click", closeLinkedInBulkImportModal);
-  linkedInBulkImportModal?.addEventListener("click", (event) => {
-    if (event.target === linkedInBulkImportModal) closeLinkedInBulkImportModal();
-  });
-  linkedInImportModeTextBtn?.addEventListener("click", () => setLinkedInImportMode("text"));
-  linkedInImportModeJsonBtn?.addEventListener("click", () => setLinkedInImportMode("json"));
-  linkedInImportModeUrlsBtn?.addEventListener("click", () => setLinkedInImportMode("urls"));
-  linkedInImportModeMediaBtn?.addEventListener("click", () => setLinkedInImportMode("media"));
-  linkedInImportMediaManifestBtn?.addEventListener("click", () => importLinkedInMediaManifest().catch((err) => {
-    console.error(err);
-    showToast("Media import failed", err.message || "Could not import media manifest.", "ph-warning", "text-yellow-400");
-  }));
-  linkedInPasteMediaManifestBtn?.addEventListener("click", () => {
-    if (linkedInMediaManifestInput) {
-      linkedInMediaManifestInput.value = "";
-      linkedInMediaManifestInput.focus();
-    }
-    navigator.clipboard.readText().then((text) => {
-      if (text && linkedInMediaManifestInput) {
-        linkedInMediaManifestInput.value = text;
-        if (linkedInMediaManifestStatus) linkedInMediaManifestStatus.textContent = "Media manifest pasted. Click Parse & Import to process.";
+  safeRender(() => {
+    renderModalPillarButtons();
+    setupModalControls();
+    setupSaveHandler();
+    loadLinkedInAuthorContext();
+    workspaceOpenLinkedInCaptureBtn?.addEventListener("click", () => {
+      closeWorkspaceHub();
+      openLinkedInCaptureImporter();
+    });
+    writeIdeaImportExistingPostBtn?.addEventListener("click", openExistingPostImportModal);
+    existingPostImportPreviewBtn?.addEventListener("click", previewExistingPostImport);
+    existingPostImportSaveBtn?.addEventListener("click", saveExistingPostImportAsIdea);
+    closeExistingPostImportModalBtn?.addEventListener("click", closeExistingPostImportModal);
+    existingPostImportModal?.addEventListener("click", (event) => {
+      if (event.target === existingPostImportModal) closeExistingPostImportModal();
+    });
+    closeLinkedInBulkImportModalBtn?.addEventListener("click", closeLinkedInBulkImportModal);
+    linkedInBulkImportModal?.addEventListener("click", (event) => {
+      if (event.target === linkedInBulkImportModal) closeLinkedInBulkImportModal();
+    });
+    linkedInImportModeTextBtn?.addEventListener("click", () => setLinkedInImportMode("text"));
+    linkedInImportModeJsonBtn?.addEventListener("click", () => setLinkedInImportMode("json"));
+    linkedInImportModeUrlsBtn?.addEventListener("click", () => setLinkedInImportMode("urls"));
+    linkedInImportModeMediaBtn?.addEventListener("click", () => setLinkedInImportMode("media"));
+    linkedInImportMediaManifestBtn?.addEventListener("click", () => importLinkedInMediaManifest().catch((err) => {
+      console.error(err);
+      showToast("Media import failed", err.message || "Could not import media manifest.", "ph-warning", "text-yellow-400");
+    }));
+    linkedInPasteMediaManifestBtn?.addEventListener("click", () => {
+      if (linkedInMediaManifestInput) {
+        linkedInMediaManifestInput.value = "";
+        linkedInMediaManifestInput.focus();
       }
-    }).catch(() => {
-      if (linkedInMediaManifestStatus) linkedInMediaManifestStatus.textContent = "Could not read clipboard. Paste the manifest manually into the textarea.";
+      navigator.clipboard.readText().then((text) => {
+        if (text && linkedInMediaManifestInput) {
+          linkedInMediaManifestInput.value = text;
+          if (linkedInMediaManifestStatus) linkedInMediaManifestStatus.textContent = "Media manifest pasted. Click Parse & Import to process.";
+        }
+      }).catch(() => {
+        if (linkedInMediaManifestStatus) linkedInMediaManifestStatus.textContent = "Could not read clipboard. Paste the manifest manually into the textarea.";
+      });
     });
-  });
-  linkedInParseJsonBtn?.addEventListener("click", () => {
-    setLinkedInImportMode("json");
-    previewLinkedInBrowserCaptureImport();
-  });
-  linkedInImportCapturedJsonBtn?.addEventListener("click", () => {
-    setLinkedInImportMode("json");
-    if (linkedInCaptureFileInput) linkedInCaptureFileInput.click();
-    else linkedInCaptureInput?.focus();
-    showToast("JSON mode", "Upload JSON from Export Helper or paste JSON from Export Helper, then click Parse JSON.", "ph-file-json", "text-[#00ffaa]");
-  });
-  linkedInImportExportBtn?.addEventListener("click", () => {
-    setLinkedInImportMode("json");
-    importSelectedLinkedInCaptureItems();
-  });
-  linkedInTestBackendRouteBtn?.addEventListener("click", testLinkedInBackendImportRoute);
-  linkedInDownloadHelperBtn?.addEventListener("click", downloadLinkedInCaptureHelper);
-  linkedInDownloadHelperZipBtn?.addEventListener("click", () => {
-    showToast("ZIP ready", "Download the packaged helper ZIP, then load it unpacked in Chrome extensions.", "ph-download-simple", "text-[#00ffaa]");
-  });
-  linkedInOpenHelperReadmeBtn?.addEventListener("click", () => {
-    showToast("README opened", "The helper README opens in a new tab.", "ph-book-open", "text-[#00ffaa]");
-  });
-  linkedInCopyHelperInstallBtn?.addEventListener("click", () => {
-    copyTextToClipboardWithToast(
-      LINKEDIN_EXPORT_HELPER_INSTALL_STEPS,
-      "Install steps copied",
-      "Chrome extension install steps copied to clipboard.",
-      "Copy failed",
-      "Could not copy the install steps."
-    );
-  });
-  linkedInCopyHelperJsonFormatBtn?.addEventListener("click", () => {
-    copyTextToClipboardWithToast(
-      LINKEDIN_EXPORT_HELPER_JSON_FORMAT,
-      "JSON format copied",
-      "Supported Export Helper JSON envelope copied to clipboard.",
-      "Copy failed",
-      "Could not copy the JSON format."
-    );
-  });
-  linkedInValidateHelperBtn?.addEventListener("click", () => {
-    renderLinkedInHelperValidation(validateLinkedInCaptureHelperScript(String(linkedInUserscriptOutput?.value || "")));
-  });
-  linkedInSelectScriptBtn?.addEventListener("click", selectLinkedInCaptureScript);
-  linkedInCapturePreviewBtn?.addEventListener("click", previewLinkedInBrowserCaptureImport);
-  linkedInCaptureImportBtn?.addEventListener("click", importSelectedLinkedInCaptureItems);
-  linkedInCaptureFileInput?.addEventListener("change", () => {
-    setLinkedInImportMode("json");
-    previewLinkedInBrowserCaptureImport();
-  });
-  linkedInCaptureSelectAllBtn?.addEventListener("click", () => setLinkedInCaptureSelection(true));
-  linkedInCaptureDeselectAllBtn?.addEventListener("click", () => setLinkedInCaptureSelection(false));
-  linkedInCopyScriptBtn?.addEventListener("click", copyLinkedInCaptureSnippet);
-  linkedInDownloadReportBtn?.addEventListener("click", downloadLinkedInImportReport);
-  validateLinkedInBtn?.addEventListener("click", validateCurrentPostForLinkedIn);
-  prepareLinkedInPayloadBtn?.addEventListener("click", prepareCurrentLinkedInPayload);
-  testLinkedInAuthorBtn?.addEventListener("click", testLinkedInAuthorContext);
-  importTaskTrayRefreshBtn?.addEventListener("click", () => {
-    refreshImportJobsFromBackend().catch((err) => {
-      console.error(err);
-      showToast("Import jobs failed", err?.message || "Could not refresh resumable import jobs.", "ph-warning", "text-yellow-400");
+    linkedInParseJsonBtn?.addEventListener("click", () => {
+      setLinkedInImportMode("json");
+      previewLinkedInBrowserCaptureImport();
     });
-  });
-  ensureLinkedInCaptureSnippets();
-  setLinkedInRewriteApplyEnabled(false);
-  updateLinkedInImportActionState();
+    linkedInImportCapturedJsonBtn?.addEventListener("click", () => {
+      setLinkedInImportMode("json");
+      if (linkedInCaptureFileInput) linkedInCaptureFileInput.click();
+      else linkedInCaptureInput?.focus();
+      showToast("JSON mode", "Upload JSON from Export Helper or paste JSON from Export Helper, then click Parse JSON.", "ph-file-json", "text-[#00ffaa]");
+    });
+    linkedInImportExportBtn?.addEventListener("click", () => {
+      setLinkedInImportMode("json");
+      importSelectedLinkedInCaptureItems();
+    });
+    linkedInTestBackendRouteBtn?.addEventListener("click", testLinkedInBackendImportRoute);
+    linkedInDownloadHelperBtn?.addEventListener("click", downloadLinkedInCaptureHelper);
+    linkedInDownloadHelperZipBtn?.addEventListener("click", () => {
+      showToast("ZIP ready", "Download the packaged helper ZIP, then load it unpacked in Chrome extensions.", "ph-download-simple", "text-[#00ffaa]");
+    });
+    linkedInOpenHelperReadmeBtn?.addEventListener("click", () => {
+      showToast("README opened", "The helper README opens in a new tab.", "ph-book-open", "text-[#00ffaa]");
+    });
+    linkedInCopyHelperInstallBtn?.addEventListener("click", () => {
+      copyTextToClipboardWithToast(
+        LINKEDIN_EXPORT_HELPER_INSTALL_STEPS,
+        "Install steps copied",
+        "Chrome extension install steps copied to clipboard.",
+        "Copy failed",
+        "Could not copy the install steps."
+      );
+    });
+    linkedInCopyHelperJsonFormatBtn?.addEventListener("click", () => {
+      copyTextToClipboardWithToast(
+        LINKEDIN_EXPORT_HELPER_JSON_FORMAT,
+        "JSON format copied",
+        "Supported Export Helper JSON envelope copied to clipboard.",
+        "Copy failed",
+        "Could not copy the JSON format."
+      );
+    });
+    linkedInValidateHelperBtn?.addEventListener("click", () => {
+      renderLinkedInHelperValidation(validateLinkedInCaptureHelperScript(String(linkedInUserscriptOutput?.value || "")));
+    });
+    linkedInSelectScriptBtn?.addEventListener("click", selectLinkedInCaptureScript);
+    linkedInCapturePreviewBtn?.addEventListener("click", previewLinkedInBrowserCaptureImport);
+    linkedInCaptureImportBtn?.addEventListener("click", importSelectedLinkedInCaptureItems);
+    linkedInCaptureFileInput?.addEventListener("change", () => {
+      setLinkedInImportMode("json");
+      previewLinkedInBrowserCaptureImport();
+    });
+    linkedInCaptureSelectAllBtn?.addEventListener("click", () => setLinkedInCaptureSelection(true));
+    linkedInCaptureDeselectAllBtn?.addEventListener("click", () => setLinkedInCaptureSelection(false));
+    linkedInCopyScriptBtn?.addEventListener("click", copyLinkedInCaptureSnippet);
+    linkedInDownloadReportBtn?.addEventListener("click", downloadLinkedInImportReport);
+    validateLinkedInBtn?.addEventListener("click", validateCurrentPostForLinkedIn);
+    prepareLinkedInPayloadBtn?.addEventListener("click", prepareCurrentLinkedInPayload);
+    testLinkedInAuthorBtn?.addEventListener("click", testLinkedInAuthorContext);
+    importTaskTrayRefreshBtn?.addEventListener("click", () => {
+      refreshImportJobsFromBackend().catch((err) => {
+        console.error(err);
+        showToast("Import jobs failed", err?.message || "Could not refresh resumable import jobs.", "ph-warning", "text-yellow-400");
+      });
+    });
+    ensureLinkedInCaptureSnippets();
+    setLinkedInRewriteApplyEnabled(false);
+    updateLinkedInImportActionState();
 
-  setupCalendarControls();
-  setupMediaFilters();
-  setupMediaUpload();
-  setupMediaLinkModal();
-  setupUploadStagingModal();
-  setupModalMediaUpload();
-  setupOverviewControls();
-  setupPerformanceControls();
-  setupSplitPane();
+    setupCalendarControls();
+    setupMediaFilters();
+    setupMediaUpload();
+    setupMediaLinkModal();
+    setupUploadStagingModal();
+    setupModalMediaUpload();
+    setupOverviewControls();
+    setupPerformanceControls();
+    setupSplitPane();
 
-  setupInspoModal();
-  setupNoteModal();
-  setupCampaignControls();
-  setupWorkspaceReturnButtons();
-  setupWorkspaceUI();
-  setupAIAndBrandWorkspaces();
-  setupWriteIdeaWorkspace();
-  setupConstellationInteractions();
-  setupLedgerControls();
-  setupMediaAdvancedFilters();
-  document.getElementById("audit-refresh-diagnostics-btn")?.addEventListener("click", () => {
-    refreshBackendDiagnostics().then((result) => {
-      if (result) showToast("Diagnostics updated", "Backend diagnostics refreshed.", "ph-shield-check", "text-[#00ffaa]");
-    }).catch(() => undefined);
-  });
-  auditCopyDiagnosticsBtn?.addEventListener("click", async () => {
-    try {
-      await navigator.clipboard.writeText(getDiagnosticsSummaryText(backendDiagnostics || {}));
-      showToast("Copied", "Diagnostics summary copied.", "ph-copy", "text-[#00ffaa]");
-    } catch (err) {
-      console.error(err);
-      showToast("Copy failed", "Could not copy diagnostics summary.", "ph-warning", "text-yellow-400");
-    }
-  });
-  switchView("calendar");
-  renderImportTaskTray();
+    setupInspoModal();
+    setupNoteModal();
+    setupCampaignControls();
+    setupWorkspaceReturnButtons();
+    setupWorkspaceUI();
+    setupAIAndBrandWorkspaces();
+    setupWriteIdeaWorkspace();
+    setupConstellationInteractions();
+    setupLedgerControls();
+    setupMediaAdvancedFilters();
+    document.getElementById("audit-refresh-diagnostics-btn")?.addEventListener("click", () => {
+      refreshBackendDiagnostics().then((result) => {
+        if (result) showToast("Diagnostics updated", "Backend diagnostics refreshed.", "ph-shield-check", "text-[#00ffaa]");
+      }).catch(() => undefined);
+    });
+    auditCopyDiagnosticsBtn?.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(getDiagnosticsSummaryText(backendDiagnostics || {}));
+        showToast("Copied", "Diagnostics summary copied.", "ph-copy", "text-[#00ffaa]");
+      } catch (err) {
+        console.error(err);
+        showToast("Copy failed", "Could not copy diagnostics summary.", "ph-warning", "text-yellow-400");
+      }
+    });
+  }, "initApp/setupUI");
+
+  safeRender(() => {
+    switchView("calendar");
+    renderImportTaskTray();
+  }, "initApp/switchView");
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      renderCalendar();
-      renderOverviewPanel();
-      rerenderAll();
+      safeRender(renderCalendar, "initApp/renderCalendar");
+      safeRender(renderOverviewPanel, "initApp/renderOverviewPanel");
+      safeRender(rerenderAll, "initApp/rerenderAll");
     });
   });
 
@@ -7616,48 +7641,78 @@ function initApp() {
     }).catch(() => undefined);
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        if (currentView === "calendar") {
-          renderCalendar();
-          renderOverviewPanel();
-        }
+        safeRender(() => {
+          if (currentView === "calendar") {
+            renderCalendar();
+            renderOverviewPanel();
+          }
+        }, "initApp/syncComplete");
       });
     });
   }).catch((err) => {
     console.error("Remote sync failed during init:", err);
+    window.__appErrors = window.__appErrors || [];
+    window.__appErrors.push({ msg: String(err), stack: err?.stack, phase: "initApp/syncRemote", time: Date.now() });
     refreshSocialImportContext().catch(() => undefined);
     refreshBackendDiagnostics({ silent: true }).catch(() => undefined);
   });
+  performance.mark("init-end");
+  performance.measure("initApp", "init-start", "init-end");
 }
     
+function safeRender(fn, name) {
+  try {
+    const result = fn();
+    if (result instanceof Promise) {
+      result.catch((err) => {
+        console.error(`[safeRender] async error in ${name}:`, err);
+        window.__appErrors = window.__appErrors || [];
+        window.__appErrors.push({ msg: String(err), stack: err?.stack, render: name, time: Date.now() });
+      });
+    }
+    return result;
+  } catch (err) {
+    console.error(`[safeRender] error in ${name}:`, err);
+    window.__appErrors = window.__appErrors || [];
+    window.__appErrors.push({ msg: String(err), stack: err?.stack, render: name, time: Date.now() });
+    showToast("Render Error", `${name} — ${err.message || err}`, "ph-bug", "text-yellow-400");
+    return undefined;
+  }
+}
+
 function rerenderAll() {
-  console.table((appState.posts || []).map((p) => ({
-    title: p.title,
-    scheduledAt: p.scheduledAt,
-    date: p.date,
-    calendarKey: normalizePostCalendarDateKey(p)
-  })));
-  updateHeaderForView(currentView);
-  populateCampaignDropdown();
-  setBackendActionAvailability();
-  updateAppStatusBanner();
-  renderOverviewPanel();
-  renderContextualGuidancePanel();
-  renderSemanticMemoryPanel();
-  renderModalPillarButtons();
-  renderCalendar();
-  renderLedgerFilterMenus();
-  updateLedgerFilterLabels();
-  renderLedger();
-  renderQueue(getScheduledQueue());
-  renderMedia();
-  renderInspo();
-  renderNotes();
-  renderWriteIdeaScaffold();
-  renderConstellation();
-  renderPerformanceView();
-  renderAuditView();
-  renderAISemanticMemoryCards();
-  if (!workspaceHubModal?.classList.contains("opacity-0")) renderWorkspaceHub();
+  safeRender(() => {
+    console.table((appState.posts || []).map((p) => ({
+      title: p.title,
+      scheduledAt: p.scheduledAt,
+      date: p.date,
+      calendarKey: normalizePostCalendarDateKey(p)
+    })));
+  }, "rerenderAll/console");
+  safeRender(() => updateHeaderForView(currentView), "updateHeaderForView");
+  safeRender(populateCampaignDropdown, "populateCampaignDropdown");
+  safeRender(setBackendActionAvailability, "setBackendActionAvailability");
+  safeRender(updateAppStatusBanner, "updateAppStatusBanner");
+  safeRender(renderOverviewPanel, "renderOverviewPanel");
+  safeRender(renderContextualGuidancePanel, "renderContextualGuidancePanel");
+  safeRender(renderSemanticMemoryPanel, "renderSemanticMemoryPanel");
+  safeRender(renderModalPillarButtons, "renderModalPillarButtons");
+  safeRender(renderCalendar, "renderCalendar");
+  safeRender(renderLedgerFilterMenus, "renderLedgerFilterMenus");
+  safeRender(updateLedgerFilterLabels, "updateLedgerFilterLabels");
+  safeRender(renderLedger, "renderLedger");
+  safeRender(() => renderQueue(getScheduledQueue()), "renderQueue");
+  safeRender(renderMedia, "renderMedia");
+  safeRender(renderInspo, "renderInspo");
+  safeRender(renderNotes, "renderNotes");
+  safeRender(renderWriteIdeaScaffold, "renderWriteIdeaScaffold");
+  safeRender(renderConstellation, "renderConstellation");
+  safeRender(renderPerformanceView, "renderPerformanceView");
+  safeRender(renderAuditView, "renderAuditView");
+  safeRender(renderAISemanticMemoryCards, "renderAISemanticMemoryCards");
+  safeRender(() => {
+    if (!workspaceHubModal?.classList.contains("opacity-0")) renderWorkspaceHub();
+  }, "renderWorkspaceHub");
 }
 
 function inspoTypeLabel(type) {
@@ -14692,58 +14747,60 @@ function switchView(viewName) {
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       if (viewName === "calendar") {
-        renderCalendar();
-        renderOverviewPanel();
+        safeRender(renderCalendar, "switchView/calendar");
+        safeRender(renderOverviewPanel, "switchView/overview");
         return;
       }
 
       if (viewName === "ledger") {
-        renderLedgerFilterMenus();
-        updateLedgerFilterLabels();
-        renderLedger();
+        safeRender(renderLedgerFilterMenus, "switchView/ledgerFilter");
+        safeRender(updateLedgerFilterLabels, "switchView/ledgerLabels");
+        safeRender(renderLedger, "switchView/ledger");
         return;
       }
 
       if (viewName === "media") {
-        renderMedia();
+        safeRender(renderMedia, "switchView/media");
         return;
       }
 
       if (viewName === "inspo") {
-        renderInspo();
+        safeRender(renderInspo, "switchView/inspo");
         return;
       }
 
       if (viewName === "notes") {
-        renderNotes();
+        safeRender(renderNotes, "switchView/notes");
         return;
       }
 
       if (viewName === "write-idea") {
-        renderWriteIdeaScaffold();
+        safeRender(renderWriteIdeaScaffold, "switchView/writeIdea");
         return;
       }
 
       if (viewName === "performance") {
-        renderPerformanceView();
+        safeRender(renderPerformanceView, "switchView/performance");
         return;
       }
 
       if (viewName === "audit") {
-        renderAuditView();
+        safeRender(renderAuditView, "switchView/audit");
         return;
       }
 
       if (viewName === "constellation") {
-        renderConstellation();
-        if (constellationFirstOpen) {
-          constellationFirstOpen = false;
-          resetConstellationViewToStart();
-        } else {
-          fitConstellation({ preserveUserView: true });
-        }
+        safeRender(renderConstellation, "switchView/constellation");
+        safeRender(() => {
+          if (constellationFirstOpen) {
+            constellationFirstOpen = false;
+            resetConstellationViewToStart();
+          } else {
+            fitConstellation({ preserveUserView: true });
+          }
+        }, "switchView/constellationReset");
       }
-      renderMobileUtilitySheet();
+      safeRender(renderMobileUtilitySheet, "switchView/mobileSheet");
     });
   });
 }
@@ -16549,31 +16606,39 @@ function registerServiceWorkerSafe() {
     }
   };
 
+  const SW_RELOAD_KEY = "stellarsync_sw_reloaded";
+  const SW_RELOAD_TIME_KEY = "stellarsync_sw_reload_time";
   navigator.serviceWorker.addEventListener("controllerchange", () => {
-    if (sessionStorage.getItem("stellarsync_sw_reloaded") === "1") return;
-    sessionStorage.setItem("stellarsync_sw_reloaded", "1");
+    const lastReload = Number(sessionStorage.getItem(SW_RELOAD_TIME_KEY)) || 0;
+    const now = Date.now();
+    if (sessionStorage.getItem(SW_RELOAD_KEY) === "1" && (now - lastReload) < 30000) {
+      console.warn("Service worker controllerchange throttled — reload skipped to avoid loop.");
+      return;
+    }
+    sessionStorage.setItem(SW_RELOAD_KEY, "1");
+    sessionStorage.setItem(SW_RELOAD_TIME_KEY, String(now));
     window.location.reload();
   });
 
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js").then((registration) => {
-      serviceWorkerStatus.registered = true;
-      serviceWorkerStatus.controllerReady = !!navigator.serviceWorker.controller;
-      setWaitingWorker(registration);
-      registration.addEventListener("updatefound", () => {
-        const installing = registration.installing;
-        if (!installing) return;
-        installing.addEventListener("statechange", () => {
-          if (installing.state === "installed" && navigator.serviceWorker.controller) {
-            serviceWorkerStatus.updateAvailable = true;
-            updateAppStatusBanner();
-          }
-        });
+  navigator.serviceWorker.register("./service-worker.js").then((registration) => {
+    serviceWorkerStatus.registered = true;
+    serviceWorkerStatus.controllerReady = !!navigator.serviceWorker.controller;
+    setWaitingWorker(registration);
+    registration.addEventListener("updatefound", () => {
+      const installing = registration.installing;
+      if (!installing) return;
+      installing.addEventListener("statechange", () => {
+        if (installing.state === "installed" && navigator.serviceWorker.controller) {
+          serviceWorkerStatus.updateAvailable = true;
+          updateAppStatusBanner();
+        }
       });
-      updateAppStatusBanner();
-    }).catch((err) => {
-      console.error("Service worker registration failed", err);
     });
+    updateAppStatusBanner();
+  }).catch((err) => {
+    console.error("Service worker registration failed", err);
+    window.__appErrors = window.__appErrors || [];
+    window.__appErrors.push({ msg: "SW registration failed", stack: err?.stack, phase: "registerServiceWorkerSafe", time: Date.now() });
   });
 }
 
@@ -17286,7 +17351,8 @@ function renderDiagnosticsPanel() {
     { label: "Backend version", value: getBackendVersion() || "Unavailable", color: "#c77dff" },
     { label: "Code version stamp", value: deploymentDiagnostics.codeVersionStamp || diagnostics.codeVersionStamp || "Unavailable", color: "#38bdf8" },
     { label: "Frontend version", value: APP_FRONTEND_VERSION, color: "#38bdf8" },
-    { label: "Service worker version", value: serviceWorkerStatus.version, color: serviceWorkerStatus.updateAvailable ? "#ffd700" : "#9ca3af" }
+    { label: "Service worker version", value: serviceWorkerStatus.version, color: serviceWorkerStatus.updateAvailable ? "#ffd700" : "#9ca3af" },
+    { label: "App errors", value: (window.__appErrors || []).length, color: (window.__appErrors || []).length ? "#ef4444" : "#00ffaa" }
   ];
   const issueRows = [
     { label: "Missing sheets", severity: "error", value: missingSheets.length, detail: missingSheets.join(", ") || "None", guidance: "Errors need action." },
@@ -17414,6 +17480,24 @@ function renderDiagnosticsPanel() {
       <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Scheduling Note</div>
       <div class="text-sm text-gray-300 wrap-safe">Scheduling organizes posts inside StellarSync. Live platform posting is not connected yet.</div>
     </div>
+    ${(() => {
+      const appErrors = window.__appErrors || [];
+      if (!appErrors.length) return "";
+      return `<div class="p-4 rounded-xl bg-[#251218] border border-red-400/15 space-y-3">
+        <div class="text-[10px] uppercase tracking-widest text-red-200 font-bold flex items-center gap-2">
+          <i class="ph-bold ph-warning-circle text-red-400"></i> App Errors (${appErrors.length})
+        </div>
+        ${appErrors.slice(-5).map((err) => `
+          <div class="text-[11px] text-red-100/80 wrap-safe break-all">
+            <span class="text-red-300">${escapeHtml(err.msg || "Unknown error")}</span>
+            ${err.render ? `<span class="text-gray-500"> in ${err.render}</span>` : ""}
+            ${err.phase ? `<span class="text-gray-500"> during ${err.phase}</span>` : ""}
+            ${err.stack ? `<details class="mt-1"><summary class="text-[10px] text-gray-500 cursor-pointer hover:text-gray-300">Stack</summary><pre class="text-[10px] text-gray-400 mt-1 whitespace-pre-wrap">${escapeHtml(err.stack.slice(0, 500))}</pre></details>` : ""}
+          </div>
+        `).join("")}
+        <div class="text-[10px] text-gray-500">Errors are captured from the current session only; they reset on page reload.</div>
+      </div>`;
+    })()}
     <div class="p-4 rounded-xl bg-[#181125] border border-white/5 flex items-center justify-between gap-3 flex-wrap">
       <div>
         <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Cache Health</div>
