@@ -1195,6 +1195,7 @@
             }
 
             #mobile-filter-trigger,
+            #avatar-menu-btn,
             #profile-menu-trigger,
             #mobile-install-app-btn {
                 width: 2.1rem !important;
@@ -1208,6 +1209,7 @@
                 font-size: 0.92rem !important;
             }
 
+            #avatar-menu-btn,
             #profile-menu-trigger {
                 font-size: 0.6rem !important;
             }
@@ -1545,6 +1547,7 @@
             #media-asset-modal-card,
             #install-helper-modal-card,
             #upload-staging-modal-card,
+            #workspace-hub-card,
             #workspace-hub-modal-card,
             #connection-setup-modal-card {
                 width: 100% !important;
@@ -1559,6 +1562,7 @@
             #inspo-modal .modal-content > div:nth-child(2),
             #media-link-modal .p-6,
             #media-asset-modal .grid,
+            #workspace-hub-card,
             #workspace-hub-modal-card,
             #upload-staging-modal-card,
             #connection-setup-modal-card {
@@ -1676,6 +1680,7 @@
                 width: min(320px, calc(100vw - 1.5rem));
             }
 
+            #workspace-hub-card,
             #workspace-hub-modal-card,
             #connection-setup-modal-card {
                 width: 100% !important;
@@ -1685,6 +1690,7 @@
                 border-radius: 1.25rem !important;
             }
 
+            #workspace-hub-card .lg\\:grid-cols-\\[240px_minmax\\(0\\,1fr\\)\\],
             #workspace-hub-modal-card .lg\\:grid-cols-\\[240px_minmax\\(0\\,1fr\\)\\] {
                 grid-template-columns: 1fr !important;
             }
@@ -1761,7 +1767,7 @@
               <i class="ph-bold ph-funnel"></i>
             </button>
             <div class="relative">
-              <button id="profile-menu-trigger" type="button" title="Workspace and Settings" class="w-10 h-10 rounded-xl bg-[#1e152d] border border-white/5 flex items-center justify-center text-xs font-bold cursor-pointer text-gray-300 hover:text-white transition-colors shrink-0" vid="28">
+              <button id="avatar-menu-btn" type="button" title="Workspace and Settings" class="w-10 h-10 rounded-xl bg-[#1e152d] border border-white/5 flex items-center justify-center text-xs font-bold cursor-pointer text-gray-300 hover:text-white transition-colors shrink-0" vid="28">
                   AW
               </button>
               <div id="profile-menu" class="workspace-menu">
@@ -1769,15 +1775,15 @@
                   <span class="flex items-center gap-3"><i class="ph-bold ph-user-circle text-[#c77dff]"></i> Profile / Workspace</span>
                   <i class="ph-bold ph-caret-right text-gray-500"></i>
                 </button>
-                <button type="button" class="workspace-menu-btn" data-workspace-action="settings">
+                <button id="profile-settings-open-btn" type="button" class="workspace-menu-btn" data-workspace-action="settings">
                   <span class="flex items-center gap-3"><i class="ph-bold ph-sliders text-[#00f0ff]"></i> Settings</span>
                   <i class="ph-bold ph-caret-right text-gray-500"></i>
                 </button>
-                <button type="button" class="workspace-menu-btn" data-workspace-action="accounts">
+                <button id="connected-accounts-open-btn" type="button" class="workspace-menu-btn" data-workspace-action="accounts">
                   <span class="flex items-center gap-3"><i class="ph-bold ph-plugs-connected text-[#ffd700]"></i> Connected Accounts</span>
                   <i class="ph-bold ph-caret-right text-gray-500"></i>
                 </button>
-                <button type="button" class="workspace-menu-btn" data-workspace-action="diagnostics">
+                <button id="diagnostics-open-btn" type="button" class="workspace-menu-btn" data-workspace-action="diagnostics">
                   <span class="flex items-center gap-3"><i class="ph-bold ph-shield-check text-[#00ffaa]"></i> Diagnostics</span>
                   <i class="ph-bold ph-caret-right text-gray-500"></i>
                 </button>
@@ -1838,7 +1844,7 @@
                 <span class="absolute left-16 bg-[#181125] border border-white/5 text-white text-[10px] px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-xl">Write an Idea</span>
             </button>
             <div class="mt-auto" vid="47">
-                <button id="workspace-settings-btn" title="Open Brand OS" class="w-12 h-12 rounded-xl text-gray-500 hover:text-white hover:bg-[#1a1128] flex items-center justify-center transition-colors" vid="48">
+                <button id="settings-open-btn" type="button" title="Open Brand OS" onclick="openWorkspaceHub('settings')" class="w-12 h-12 rounded-xl text-gray-500 hover:text-white hover:bg-[#1a1128] flex items-center justify-center transition-colors" vid="48">
                     <i class="ph-fill ph-gear text-xl" vid="49"></i>
                 </button>
             </div>
@@ -3901,7 +3907,7 @@
 
 <div id="workspace-hub-modal" class="fixed inset-0 z-[134] sheet-backdrop opacity-0 pointer-events-none transition-opacity duration-200">
   <div class="w-full h-full flex items-center justify-center p-4">
-    <div id="workspace-hub-modal-card" class="w-full max-w-6xl h-[88vh] bg-[#120c1d] border border-white/10 rounded-2xl shadow-2xl transform scale-95 transition-transform duration-200 overflow-hidden flex flex-col">
+    <div id="workspace-hub-card" class="w-full max-w-6xl h-[88vh] bg-[#120c1d] border border-white/10 rounded-2xl shadow-2xl transform scale-95 transition-transform duration-200 overflow-hidden flex flex-col">
       <div class="flex items-center justify-between px-6 py-5 border-b border-white/5">
         <div>
           <h3 class="text-white font-bold text-lg">Workspace Settings</h3>
@@ -3913,9 +3919,10 @@
       </div>
       <div class="grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)] flex-1 min-h-0">
         <aside id="workspace-settings-sidebar" class="p-5 border-r border-white/5 overflow-y-auto custom-scrollbar space-y-2">
-          <button type="button" class="settings-tab-btn w-full text-left px-4 py-3 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold uppercase tracking-wider text-white active" data-settings-tab="settings">Settings</button>
-          <button type="button" class="settings-tab-btn w-full text-left px-4 py-3 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold uppercase tracking-wider text-gray-300" data-settings-tab="accounts">Connected Accounts</button>
-          <button type="button" class="settings-tab-btn w-full text-left px-4 py-3 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold uppercase tracking-wider text-gray-300" data-settings-tab="diagnostics">Diagnostics</button>
+          <button type="button" class="settings-tab-btn w-full text-left px-4 py-3 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold uppercase tracking-wider text-white active" data-settings-tab="settings" data-workspace-tab="settings">Settings</button>
+          <button type="button" class="settings-tab-btn w-full text-left px-4 py-3 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold uppercase tracking-wider text-gray-300" data-settings-tab="accounts" data-workspace-tab="accounts">Connected Accounts</button>
+          <button type="button" class="settings-tab-btn w-full text-left px-4 py-3 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold uppercase tracking-wider text-gray-300" data-settings-tab="diagnostics" data-workspace-tab="diagnostics">Diagnostics</button>
+          <button type="button" class="settings-tab-btn w-full text-left px-4 py-3 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold uppercase tracking-wider text-gray-300" data-settings-tab="providers" data-workspace-tab="providers">AI Providers</button>
           <button type="button" id="workspace-open-brand-os-btn" class="w-full text-left px-4 py-3 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold uppercase tracking-wider text-gray-300">Brand OS</button>
         </aside>
         <div class="p-6 overflow-y-auto custom-scrollbar min-h-0">
@@ -3967,6 +3974,13 @@
             </div>
           </section>
           <section data-settings-panel="accounts" class="hidden space-y-4"></section>
+          <section data-settings-panel="providers" class="hidden space-y-4">
+            <div class="platform-card">
+              <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">AI Providers</div>
+              <div class="text-sm text-white mt-1">Local Creator Engine remains the default. Provider keys are stored server-side and never rendered back into the UI.</div>
+            </div>
+            <div id="workspace-ai-providers-panel" class="space-y-3"></div>
+          </section>
           <section data-settings-panel="diagnostics" class="hidden space-y-4">
             <div class="flex items-center gap-2 flex-wrap">
               <button id="workspace-refresh-diagnostics-btn" type="button" class="px-4 py-2 rounded-xl bg-[#1a1128] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Refresh Diagnostics</button>
@@ -4153,6 +4167,366 @@ const MAX_UPLOAD_IMAGE_BYTES = 10 * 1024 * 1024;
 const MAX_UPLOAD_VIDEO_BYTES = 50 * 1024 * 1024;
 const MAX_UPLOAD_DOCUMENT_BYTES = 25 * 1024 * 1024;
 
+function normalizeQueueDateLabel(value) {
+  try {
+    if (!value) return "";
+    var d = null;
+    if (typeof value === "object" && typeof value.getMonth === "function") {
+      d = value;
+    } else {
+      var text = String(value).trim();
+      if (!text) return "";
+      var m = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+      if (m) {
+        d = new Date(Number(m[3]), Number(m[1]) - 1, Number(m[2]));
+      } else {
+        var iso = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (iso) {
+          d = new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+        } else {
+          d = new Date(text);
+        }
+      }
+    }
+    if (!d || Number.isNaN(d.getTime())) return "";
+    return (d.getMonth() + 1) + "/" + d.getDate() + "/" + d.getFullYear();
+  } catch (_) {
+    return "";
+  }
+}
+
+function parsePlanningDateLocal(value) {
+  try {
+    if (!value && value !== 0) return null;
+    if (typeof value === "object" && typeof value.getMonth === "function") return new Date(value.getTime());
+    var text = String(value).trim();
+    if (!text) return null;
+    var m = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) {
+      var d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+      if (!Number.isNaN(d.getTime())) return d;
+    }
+    m = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+    if (m) {
+      var y = Number(m[3]); if (y < 100) y += 2000;
+      d = new Date(y, Number(m[1]) - 1, Number(m[2]));
+      if (!Number.isNaN(d.getTime())) return d;
+    }
+    d = new Date(text);
+    return Number.isNaN(d.getTime()) ? null : d;
+  } catch (_) {
+    return null;
+  }
+}
+
+function makeEmptyState(title, detail, icon) {
+  var cls = icon || "ph-file-text";
+  return '<div class="flex items-center justify-center h-48 text-gray-500 text-sm"><div class="text-center"><i class="ph-bold ' + cls + ' text-2xl text-gray-400 block mb-2"></i>' + (title || "") + '<div class="text-[10px] text-gray-600 mt-1">' + (detail || "") + '</div></div></div>';
+}
+
+function parseDisplayDateKey(value) {
+  if (!value) return "";
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    var y = value.getFullYear();
+    var m = String(value.getMonth() + 1).padStart(2, "0");
+    var d = String(value.getDate()).padStart(2, "0");
+    return y + "-" + m + "-" + d;
+  }
+  var text = String(value || "").trim();
+  if (!text) return "";
+  var match = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s].*)?$/);
+  if (match) {
+    var y = Number(match[1]);
+    var m = Number(match[2]);
+    var d = Number(match[3]);
+    if (y && m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+      return String(y).padStart(4, "0") + "-" + String(m).padStart(2, "0") + "-" + String(d).padStart(2, "0");
+    }
+  }
+  match = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (match) {
+    var m = Number(match[1]);
+    var d = Number(match[2]);
+    var y = Number(match[3]);
+    if (y < 100) y += 2000;
+    if (y && m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+      return String(y).padStart(4, "0") + "-" + String(m).padStart(2, "0") + "-" + String(d).padStart(2, "0");
+    }
+  }
+  var parsed = parsePlanningDateLocal(text);
+  if (parsed && !Number.isNaN(parsed.getTime())) {
+    y = parsed.getFullYear();
+    m = String(parsed.getMonth() + 1).padStart(2, "0");
+    d = String(parsed.getDate()).padStart(2, "0");
+    return y + "-" + m + "-" + d;
+  }
+  return "";
+}
+
+function parsePostDate(value) {
+  if (!value && value !== 0) return null;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return new Date(value.getFullYear(), value.getMonth(), value.getDate(), value.getHours(), value.getMinutes(), value.getSeconds(), value.getMilliseconds());
+  const text = String(value || "").trim();
+  if (!text) return null;
+  let match = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s](\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if (match) {
+    const parsed = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), Number(match[4] || 0), Number(match[5] || 0), Number(match[6] || 0), 0);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+  match = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:\s+(\d{1,2}):(\d{2})(?:\s*([AP]M))?)?$/i);
+  if (match) {
+    let year = Number(match[3]);
+    if (year < 100) year += 2000;
+    let hour = Number(match[4] || 0);
+    const minute = Number(match[5] || 0);
+    const meridian = String(match[6] || "").toUpperCase();
+    if (meridian === "PM" && hour < 12) hour += 12;
+    if (meridian === "AM" && hour === 12) hour = 0;
+    const parsed = new Date(year, Number(match[1]) - 1, Number(match[2]), hour, minute, 0, 0);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+  const parsed = new Date(text);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function parseLocalDate(value) {
+  return parsePostDate(value);
+}
+
+function formatQueueDateLabel(value) {
+  const parsed = parsePostDate(value);
+  if (!parsed || Number.isNaN(parsed.getTime())) return "";
+  return (parsed.getMonth() + 1) + "/" + parsed.getDate() + "/" + parsed.getFullYear();
+}
+
+function toTitleCase(value) {
+  return String(value || "")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function normalizePillarToken(value) {
+  return String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "authority";
+}
+
+function normalizePillarLabel(value) {
+  return toTitleCase(normalizePillarToken(value));
+}
+
+function getCanonicalPillarValue(value, fallback = "authority") {
+  return normalizePillarToken(value || fallback);
+}
+
+function formatContentPillarLabel(value) {
+  return normalizePillarLabel(value);
+}
+
+function formatCampaignDisplayName(value) {
+  const text = String(value || "").trim();
+  if (!text) return "Uncategorized";
+  return text === "uncategorized" ? "Uncategorized" : text;
+}
+
+function getPillarTheme(pillar) {
+  const key = normalizePillarToken(pillar);
+  const themes = {
+    authority: { color: "#c77dff", bg: "rgba(199,125,255,0.12)", border: "rgba(199,125,255,0.28)" },
+    community: { color: "#00ffaa", bg: "rgba(0,255,170,0.10)", border: "rgba(0,255,170,0.25)" },
+    education: { color: "#00f0ff", bg: "rgba(0,240,255,0.10)", border: "rgba(0,240,255,0.25)" },
+    promotion: { color: "#ffd700", bg: "rgba(255,215,0,0.10)", border: "rgba(255,215,0,0.25)" }
+  };
+  return themes[key] || themes.authority;
+}
+
+function getAvailableContentPillars() {
+  const configured = appState?.settings?.pillars;
+  return Array.isArray(configured) && configured.length ? configured : ["authority", "community", "education", "promotion"];
+}
+
+function getAvailableCampaignRecords() {
+  return Array.isArray(appState?.campaigns) ? appState.campaigns : [];
+}
+
+function getCampaignById(campaignId, campaigns = getAvailableCampaignRecords()) {
+  const id = String(campaignId || "").trim();
+  if (!id) return null;
+  return campaigns.find((campaign) => String(campaign.campaignId || campaign.id || "").trim() === id) || null;
+}
+
+function getCampaignByName(campaignName, campaigns = getAvailableCampaignRecords()) {
+  const name = String(campaignName || "").trim().toLowerCase();
+  if (!name) return null;
+  return campaigns.find((campaign) => String(campaign.campaignName || campaign.name || "").trim().toLowerCase() === name) || null;
+}
+
+function getCampaignContentPillar(campaign) {
+  return getCanonicalPillarValue(campaign?.pillar || campaign?.hubPillarLabel || campaign?.contentPillar || "authority");
+}
+
+function getPostContentPillar(post) {
+  return getCanonicalPillarValue(post?.pillar || post?.contentPillar || post?.hubPillarLabel || post?.campaignPillar || "authority");
+}
+
+function getDisplayPostContentPillar(post) {
+  return formatContentPillarLabel(getPostContentPillar(post));
+}
+
+function getCampaignColor(item, pillar = "") {
+  return String(item?.color || item?.campaignColor || item?.hexColor || getPillarTheme(pillar || item?.pillar).color || "#c77dff").trim() || "#c77dff";
+}
+
+function getConstellationCampaignLaneKey(campaign) {
+  return String(campaign?.campaignId || campaign?.campaignName || "uncategorized").trim().toLowerCase().replace(/[^a-z0-9]+/g, "_") || "uncategorized";
+}
+
+function countPostsBy(posts, getter) {
+  const counts = new Map();
+  (Array.isArray(posts) ? posts : []).forEach((post) => {
+    const key = String(typeof getter === "function" ? getter(post) : post?.[getter] || "unknown").trim() || "unknown";
+    counts.set(key, (counts.get(key) || 0) + 1);
+  });
+  return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
+}
+
+function getDisplayTitle(item, fallback = "Untitled") {
+  return String(item?.title || item?.campaignName || item?.assetName || item?.name || fallback).trim() || fallback;
+}
+
+function getDisplayExcerpt(value, fallback = "") {
+  return String(value || fallback || "").trim().replace(/\s+/g, " ").slice(0, 220);
+}
+
+function normalizeMetricNumber(value) {
+  const text = String(value ?? "").trim().toLowerCase().replace(/,/g, "");
+  if (!text) return 0;
+  const multiplier = text.endsWith("k") ? 1000 : text.endsWith("m") ? 1000000 : 1;
+  const number = Number(text.replace(/[km]$/, ""));
+  return Number.isFinite(number) ? Math.round(number * multiplier) : 0;
+}
+
+function normalizeScheduledAt(value) {
+  const parsed = parsePostDate(value);
+  return parsed && !Number.isNaN(parsed.getTime()) ? parsed.toISOString() : "";
+}
+
+function normalizePostPlanningFields(post = {}, fallback = {}) {
+  const queueDateLabel = normalizeQueueDateLabel(post.queueDateLabel || post.queue_date_label || post.plannedDate || post.queueDate || fallback.queueDateLabel || fallback.date || post.date || post.scheduledAt || "");
+  const queueTimeLabel = String(post.queueTimeLabel || post.queue_time_label || fallback.queueTimeLabel || "").trim();
+  const parsedDate = parsePostDate(queueDateLabel || post.scheduledAt || post.date || fallback.scheduledAt || fallback.date);
+  let hours = 9;
+  let minutes = 15;
+  const timeMatch = queueTimeLabel.match(/^(\d{1,2}):(\d{2})(?:\s*([AP]M))?$/i);
+  if (timeMatch) {
+    hours = Number(timeMatch[1]);
+    minutes = Number(timeMatch[2]);
+    const meridian = String(timeMatch[3] || "").toUpperCase();
+    if (meridian === "PM" && hours < 12) hours += 12;
+    if (meridian === "AM" && hours === 12) hours = 0;
+  }
+  const scheduled = parsedDate ? new Date(parsedDate.getFullYear(), parsedDate.getMonth(), parsedDate.getDate(), hours, minutes, 0, 0) : null;
+  const finalLabel = queueDateLabel || (scheduled ? formatQueueDateLabel(scheduled) : "");
+  return {
+    queueDateLabel: finalLabel,
+    queueTimeLabel,
+    scheduledAt: scheduled ? scheduled.toISOString() : "",
+    calendarMonth: scheduled ? scheduled.getMonth() + 1 : "",
+    calendarYear: scheduled ? scheduled.getFullYear() : "",
+    calendarDay: scheduled ? scheduled.getDate() : "",
+    hasUserSelectedTime: !!queueTimeLabel
+  };
+}
+
+function hydratePostCampaign(post) {
+  if (!post || typeof post !== "object") return post;
+  const campaign = getCampaignById(post.campaignId) || getCampaignByName(post.campaignName);
+  if (!campaign) return { ...post };
+  return {
+    ...post,
+    campaignId: post.campaignId || campaign.campaignId || "",
+    campaignName: post.campaignName || campaign.campaignName || "",
+    pillar: post.pillar || campaign.pillar || post.contentPillar || ""
+  };
+}
+
+function getPostAssets(post) {
+  const ids = Array.isArray(post?.carouselAssetIds) ? post.carouselAssetIds : String(post?.carouselAssetIds || "").split(/[|,\n]/).filter(Boolean);
+  return ids.map((id) => (appState.media || []).find((asset) => String(asset.assetId || asset.id || "") === String(id))).filter(Boolean);
+}
+
+function findLinkedAssetForPost(post) {
+  const postId = String(post?.id || post?.postId || "").trim();
+  if (!postId) return null;
+  return (appState.media || []).find((asset) => String(asset.postId || asset.linkedPostId || "") === postId) || null;
+}
+
+function getPostMediaKind(post) {
+  return getPostAssets(post)[0]?.assetType || post?.postType || "text";
+}
+
+function getPublishingBadge(post) {
+  const status = String(post?.status || post?.publishStatus || "draft").trim();
+  return { label: toTitleCase(status), tone: status === "published" ? "text-emerald-300" : status === "scheduled" ? "text-sky-300" : "text-gray-300" };
+}
+
+function renderPillarShape(pillar, className = "", theme = getPillarTheme(pillar)) {
+  return `<span class="${escapeHtml(className)} inline-block w-2.5 h-2.5 rounded-full shrink-0" style="background:${escapeHtml(theme.color || "#c77dff")}"></span>`;
+}
+
+function renderStackedAssetPreview(assets = []) {
+  const items = (Array.isArray(assets) ? assets : []).slice(0, 3);
+  return `<div class="stacked-preview">${items.map(() => "<span></span>").join("")}</div>`;
+}
+
+function renderPublishingReadiness() {}
+function renderCampaignOptions() {}
+function updateModalCampaignPreview() {}
+function setModalSourceContext(type = "manual", label = "", detail = "", sourceId = "") {
+  currentModalSourceContext = { type, label, detail, sourceId };
+}
+
+function renderMediaLinkConnectedAccountActions() {
+  if (mediaLinkConnectedAccountActions) mediaLinkConnectedAccountActions.innerHTML = "";
+}
+
+function renderCreatorMemoryDashboard(target) {
+  if (target) target.innerHTML = makeEmptyState("Creator memory unavailable", "No creator memory diagnostics are loaded yet.", "ph-brain");
+}
+
+function renderCreatorMemoryDiagnostics(context, target) {
+  if (target) target.innerHTML = context ? JSON.stringify(context, null, 2) : "No creator memory diagnostics available.";
+}
+
+function renderBrandingDiagnostics(target) {
+  if (target) target.innerHTML = makeEmptyState("Brand diagnostics unavailable", "No branding diagnostics are loaded yet.", "ph-palette");
+}
+
+function buildCreatorStyleProfile() {
+  return { voiceTraits: [], recurringThemes: [], preferredStructures: [] };
+}
+
+function getStyleAwareContext() {
+  return { styleProfile: buildCreatorStyleProfile(), nearestFrameworks: [], nearestContent: [], recurringMetaphors: [], preferredStructures: [] };
+}
+
+function buildSemanticAIDraftPayload() {
+  return {};
+}
+
+function describeUploadTarget(target) {
+  return target === "post" ? "post attachment" : "media vault";
+}
+
+function validateUploadFile(file) {
+  if (!file) return "No file selected.";
+  return "";
+}
+
+function fileToPreview(file) {
+  return file ? URL.createObjectURL(file) : "";
+}
+
 const DEFAULT_STATE = {
   posts: [],
   campaigns: [],
@@ -4310,6 +4684,23 @@ let scale = 0.62;
 let panX = 80;
 let panY = 60;
 let constellationFirstOpen = true;
+window.__constellationHealth = window.__constellationHealth || {
+  rendered: false,
+  nodeCount: 0,
+  laneCount: 0,
+  dragEnabled: false,
+  zoomEnabled: false,
+  lastError: null
+};
+window.__constellationDragStats = window.__constellationDragStats || {
+  dragStarts: 0,
+  dragMoves: 0,
+  dragEnds: 0,
+  lastPanX: 0,
+  lastPanY: 0,
+  lastScale: scale
+};
+var __constellationDragStats = window.__constellationDragStats;
 let isDragging = false;
 let startPanX = 0;
 let startPanY = 0;
@@ -4368,63 +4759,6 @@ let performanceFilters = {
   range: "30"
 };
 
-function normalizeQueueDateLabel(value) {
-  try {
-    if (!value) return "";
-    var d = null;
-    if (typeof value === "object" && typeof value.getMonth === "function") {
-      d = value;
-    } else {
-      var text = String(value).trim();
-      if (!text) return "";
-      var m = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
-      if (m) {
-        d = new Date(Number(m[3]), Number(m[1]) - 1, Number(m[2]));
-      } else {
-        var iso = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
-        if (iso) {
-          d = new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
-        } else {
-          d = new Date(text);
-        }
-      }
-    }
-    if (!d || Number.isNaN(d.getTime())) return "";
-    return (d.getMonth() + 1) + "/" + d.getDate() + "/" + d.getFullYear();
-  } catch (_) {
-    return "";
-  }
-}
-
-function parsePlanningDateLocal(value) {
-  try {
-    if (!value && value !== 0) return null;
-    if (typeof value === "object" && typeof value.getMonth === "function") return new Date(value.getTime());
-    var text = String(value).trim();
-    if (!text) return null;
-    var m = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if (m) {
-      var d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-      if (!Number.isNaN(d.getTime())) return d;
-    }
-    m = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
-    if (m) {
-      var y = Number(m[3]); if (y < 100) y += 2000;
-      d = new Date(y, Number(m[1]) - 1, Number(m[2]));
-      if (!Number.isNaN(d.getTime())) return d;
-    }
-    d = new Date(text);
-    return Number.isNaN(d.getTime()) ? null : d;
-  } catch (_) {
-    return null;
-  }
-}
-
-function makeEmptyState(title, detail, icon) {
-  var cls = icon || "ph-file-text";
-  return '<div class="flex items-center justify-center h-48 text-gray-500 text-sm"><div class="text-center"><i class="ph-bold ' + cls + ' text-2xl text-gray-400 block mb-2"></i>' + (title || "") + '<div class="text-[10px] text-gray-600 mt-1">' + (detail || "") + '</div></div></div>';
-}
-
 let writeIdeaState = {
   prompt: "",
   outputType: "create_one_post",
@@ -4451,6 +4785,30 @@ let writeIdeaState = {
   mediaIds: [],
   performanceContext: []
 };
+
+window.__writeIdeaHealth = window.__writeIdeaHealth || {
+  mode: writeIdeaState.generationMode,
+  currentDraftId: currentWriteIdeaDraftId,
+  proposedPosts: 0,
+  saveInFlight: false,
+  approveInFlight: false,
+  lastSaveError: null,
+  lastApproveError: null
+};
+
+function updateWriteIdeaHealth(patch = {}) {
+  const proposedPosts = writeIdeaLastScaffold?.scaffold?.proposedPosts || writeIdeaLastScaffold?.proposedPosts || [];
+  window.__writeIdeaHealth = {
+    mode: writeIdeaState.generationMode || "generate_post",
+    currentDraftId: currentWriteIdeaDraftId || "",
+    proposedPosts: Array.isArray(proposedPosts) ? proposedPosts.length : 0,
+    saveInFlight: false,
+    approveInFlight: false,
+    lastSaveError: window.__writeIdeaHealth?.lastSaveError || null,
+    lastApproveError: window.__writeIdeaHealth?.lastApproveError || null,
+    ...patch
+  };
+}
 
 const modal = document.getElementById("scheduling-modal");
 const titleInput = document.getElementById("modal-title");
@@ -4595,14 +4953,14 @@ const appUpdateBtn = document.getElementById("app-update-btn");
 const appHeaderSubtitle = document.getElementById("app-header-subtitle");
 const appHeaderViewDetail = document.getElementById("app-header-view-detail");
 const mobileFilterTrigger = document.getElementById("mobile-filter-trigger");
-const profileMenuTrigger = document.getElementById("profile-menu-trigger");
+const profileMenuTrigger = document.getElementById("avatar-menu-btn") || document.getElementById("profile-menu-trigger");
 const profileMenu = document.getElementById("profile-menu");
 const workspaceHubModal = document.getElementById("workspace-hub-modal");
-const workspaceHubModalCard = document.getElementById("workspace-hub-modal-card");
+const workspaceHubModalCard = document.getElementById("workspace-hub-card") || document.getElementById("workspace-hub-modal-card");
 const closeWorkspaceHubBtn = document.getElementById("close-workspace-hub-btn");
 const workspaceSettingsSidebar = document.getElementById("workspace-settings-sidebar");
 const workspaceOpenBrandOsBtn = document.getElementById("workspace-open-brand-os-btn");
-const settingsOpenAccountsBtn = document.getElementById("settings-open-accounts-btn");
+const settingsOpenAccountsBtn = document.getElementById("settings-open-accounts-btn") || document.getElementById("connected-accounts-open-btn");
 const workspaceRefreshDiagnosticsBtn = document.getElementById("workspace-refresh-diagnostics-btn");
 const checkConstellationLanesBtn = document.getElementById("check-constellation-lanes-btn");
 const auditFlowIntegrityBtn = document.getElementById("audit-flow-integrity-btn");
@@ -4619,6 +4977,7 @@ const linkedInRewriteRouteStatus = document.getElementById("linkedin-rewrite-rou
 const cleanupImportedLinkedInStatus = document.getElementById("cleanup-imported-linkedin-status");
 const cleanupImportedLinkedInPreview = document.getElementById("cleanup-imported-linkedin-preview");
 const workspaceDiagnosticsPanel = document.getElementById("workspace-diagnostics-panel");
+const workspaceAIProvidersPanel = document.getElementById("workspace-ai-providers-panel");
 const openCreatorMemoryDashboardBtn = document.getElementById("open-creator-memory-dashboard-btn");
 const creatorMemoryDashboardContainer = document.getElementById("creator-memory-dashboard");
 const openBrandingDiagnosticsBtn = document.getElementById("open-branding-diagnostics-btn");
@@ -4988,6 +5347,16 @@ function inferSemanticRelationships(corpus = getSemanticCorpus()) {
     }
   });
   return edges;
+}
+
+window.__panelStats = window.__panelStats || { panelOpen: false, lastAction: "init", lastDuration: 0 };
+var panelTogglePending = null;
+function flushPanelToggle() {
+  if (typeof panelTogglePending === "function") {
+    var pending = panelTogglePending;
+    panelTogglePending = null;
+    pending();
+  }
 }
 
 document.addEventListener("keydown", function(ev) {
@@ -5554,8 +5923,8 @@ function setupWorkspaceReturnButtons() {
     });
   });
 
-  document.getElementById("workspace-settings-btn")?.addEventListener("click", () => {
-    openBrandFrameworkModal();
+  (document.getElementById("settings-open-btn") || document.getElementById("workspace-settings-btn"))?.addEventListener("click", () => {
+    openWorkspaceHub("settings");
   });
 }
 
@@ -5582,7 +5951,7 @@ function setupWorkspaceUI() {
     }
   });
   document.addEventListener("click", (event) => {
-    if (!event.target.closest("#profile-menu") && !event.target.closest("#profile-menu-trigger")) toggleProfileMenu(false);
+    if (!event.target.closest("#profile-menu") && !event.target.closest("#avatar-menu-btn") && !event.target.closest("#profile-menu-trigger")) toggleProfileMenu(false);
   });
   closeWorkspaceHubBtn?.addEventListener("click", closeWorkspaceHub);
   workspaceHubModal?.addEventListener("click", (event) => {
@@ -5590,13 +5959,11 @@ function setupWorkspaceUI() {
   });
   document.querySelectorAll(".settings-tab-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
-      const nextTab = btn.dataset.settingsTab || "settings";
-      if (nextTab === "accounts") {
-        openWorkspaceHub("accounts");
+      const nextTab = btn.dataset.workspaceTab || btn.dataset.settingsTab || "settings";
+      if (["settings", "accounts", "diagnostics", "providers"].includes(nextTab)) {
+        openWorkspaceHub(nextTab);
         return;
       }
-      currentWorkspaceSettingsTab = nextTab;
-      renderWorkspaceHub();
     });
   });
   workspaceOpenBrandOsBtn?.addEventListener("click", () => {
@@ -5850,6 +6217,7 @@ function setupWorkspaceUI() {
     if (action === "settings") return openWorkspaceHub("settings");
     if (action === "accounts") return openWorkspaceHub("accounts");
     if (action === "diagnostics") return openWorkspaceHub("diagnostics");
+    if (action === "providers") return openWorkspaceHub("providers");
     if (action === "linkedin-import") return openLinkedInCaptureImporter();
     if (action === "utility") {
       renderMobileUtilitySheet();
@@ -7474,18 +7842,29 @@ function selectConstellationPost(post, color, campaignName = "") {
 }
 
 function renderConstellation() {
-  if (!canvas) return;
+  window.__constellationHealth = window.__constellationHealth || {};
+  window.__constellationHealth.lastError = null;
+  window.__constellationHealth.dragEnabled = !!viewport;
+  window.__constellationHealth.zoomEnabled = !!viewport;
+  if (!canvas) {
+    window.__constellationHealth.rendered = false;
+    window.__constellationHealth.lastError = "starmap-canvas missing";
+    showToast("Constellation unavailable", "Starmap canvas is missing.", "ph-warning", "text-yellow-400");
+    return;
+  }
 
-  const rows = buildConstellationRows();
-  const { worldWidth, worldHeight: minCanvasHeight } = getConstellationWorldDimensions(rows);
+  try {
+    const rows = buildConstellationRows();
+    const { worldWidth, worldHeight: minCanvasHeight } = getConstellationWorldDimensions(rows);
+    window.__constellationHealth.laneCount = rows.length;
 
-  canvas.style.height = `${minCanvasHeight}px`;
-  canvas.style.width = `${worldWidth}px`;
-  canvas.dataset.worldWidth = String(worldWidth);
-  canvas.dataset.worldHeight = String(minCanvasHeight);
-  canvas.innerHTML = "";
-  if (constellationSelectionCard) constellationSelectionCard.classList.add("hidden");
-  selectedConstellationPostId = "";
+    canvas.style.height = `${minCanvasHeight}px`;
+    canvas.style.width = `${worldWidth}px`;
+    canvas.dataset.worldWidth = String(worldWidth);
+    canvas.dataset.worldHeight = String(minCanvasHeight);
+    canvas.innerHTML = "";
+    if (constellationSelectionCard) constellationSelectionCard.classList.add("hidden");
+    selectedConstellationPostId = "";
 
   const anchorByCampaign = new Map();
   rows.forEach((campaign, index) => {
@@ -7726,7 +8105,15 @@ function renderConstellation() {
     openCampaignModal();
   });
 
-  updateTransform();
+    window.__constellationHealth.nodeCount = canvas.querySelectorAll("[data-constellation-post-id]").length;
+    window.__constellationHealth.rendered = true;
+    updateTransform();
+  } catch (err) {
+    window.__constellationHealth.rendered = false;
+    window.__constellationHealth.lastError = err && err.message ? err.message : String(err);
+    console.error("Constellation render failed", err);
+    showToast("Constellation Error", window.__constellationHealth.lastError, "ph-warning", "text-yellow-400");
+  }
 }
 
 async function promptCreateCampaignRow() {
@@ -7764,7 +8151,13 @@ function setConstellationDraggingState(active) {
 }
     
 function setupConstellationInteractions() {
-  if (!viewport || !canvas) return;
+  window.__constellationHealth = window.__constellationHealth || {};
+  if (!viewport || !canvas) {
+    window.__constellationHealth.dragEnabled = false;
+    window.__constellationHealth.zoomEnabled = false;
+    window.__constellationHealth.lastError = "constellation viewport or canvas missing";
+    return;
+  }
 
   viewport.style.cursor = "grab";
   constellationSelectionCloseBtn?.addEventListener("click", clearConstellationSelection);
@@ -7899,6 +8292,8 @@ function setupConstellationInteractions() {
   document.getElementById("zoom-in")?.addEventListener("click", () => zoomConstellation(1.15));
   document.getElementById("zoom-out")?.addEventListener("click", () => zoomConstellation(0.87));
   document.getElementById("zoom-reset")?.addEventListener("click", resetConstellationViewToStart);
+  window.__constellationHealth.dragEnabled = true;
+  window.__constellationHealth.zoomEnabled = true;
 
   let constellationResizeFrame = null;
 
@@ -8689,27 +9084,46 @@ function toggleProfileMenu(force) {
 }
 
 async function openWorkspaceHub(tab = "settings") {
-  window.__workspaceHubStats = window.__workspaceHubStats || { openRequests: 0, lastTab: "", lastError: null, modalFound: false };
-  window.__workspaceHubStats.openRequests++;
-  window.__workspaceHubStats.lastTab = tab;
-  window.__workspaceHubStats.modalFound = !!workspaceHubModal;
+  window.__workspaceHubHealth = window.__workspaceHubHealth || { modalFound: false, cardFound: false, lastTab: "", openCount: 0, lastError: null };
+  window.__workspaceHubStats = window.__workspaceHubStats || window.__workspaceHubHealth;
+  const requestedTab = String(tab || "settings").trim().toLowerCase() || "settings";
+  const allowedTabs = ["settings", "accounts", "diagnostics", "providers"];
+  const nextTab = allowedTabs.includes(requestedTab) ? requestedTab : "settings";
+  window.__workspaceHubHealth.openCount++;
+  window.__workspaceHubHealth.lastTab = nextTab;
+  window.__workspaceHubHealth.modalFound = !!workspaceHubModal;
+  window.__workspaceHubHealth.cardFound = !!workspaceHubModalCard;
+  window.__workspaceHubHealth.lastError = null;
+  window.__workspaceHubStats = window.__workspaceHubHealth;
   if (!workspaceHubModal) {
-    window.__workspaceHubStats.lastError = "workspace-hub-modal element missing";
-    showToast("Workspace Hub Error", "Settings modal element not found in DOM.", "ph-warning", "text-yellow-400");
+    window.__workspaceHubHealth.lastError = "workspace-hub-modal element missing";
+    showToast("Workspace Hub modal missing.", "Settings cannot open because #workspace-hub-modal is not in the DOM.", "ph-warning", "text-yellow-400");
     return;
   }
-  currentWorkspaceSettingsTab = tab;
-  workspaceHubModal.classList.remove("opacity-0", "pointer-events-none");
-  workspaceHubModalCard?.classList.remove("scale-95");
-  workspaceHubModalCard?.classList.add("scale-100");
-  toggleProfileMenu(false);
-  if (tab === "accounts") connectedAccountsStatusLoading = true;
-  renderWorkspaceHub();
   try {
+    const tabButton = document.querySelector(`[data-workspace-tab="${nextTab}"], [data-settings-tab="${nextTab}"]`);
+    const tabPanel = document.querySelector(`[data-settings-panel="${nextTab}"]`);
+    if (!tabButton || !tabPanel) {
+      throw new Error(`Workspace Hub tab missing: ${nextTab}`);
+    }
+    currentWorkspaceSettingsTab = nextTab;
+    workspaceHubModal.classList.remove("opacity-0", "pointer-events-none");
+    workspaceHubModalCard?.classList.remove("scale-95");
+    workspaceHubModalCard?.classList.add("scale-100");
+    toggleProfileMenu(false);
+    if (nextTab === "accounts") connectedAccountsStatusLoading = true;
+    renderWorkspaceHub();
+    if (nextTab === "accounts" && typeof renderConnectedAccounts === "function") renderConnectedAccounts();
+    if (nextTab === "diagnostics" && typeof renderDiagnosticsPanel === "function") renderDiagnosticsPanel();
+    if ((nextTab === "providers" || nextTab === "settings") && typeof renderAIProviderCards === "function") {
+      const providerTarget = document.getElementById("workspace-ai-providers-panel");
+      if (providerTarget) providerTarget.innerHTML = renderAIProviderCards();
+    }
     await refreshSocialImportContext();
   } catch (err) {
-    window.__workspaceHubStats.lastError = String(err);
+    window.__workspaceHubHealth.lastError = err && err.message ? err.message : String(err);
     console.error(err);
+    showToast("Workspace Hub Error", window.__workspaceHubHealth.lastError, "ph-warning", "text-yellow-400");
   }
 }
 
@@ -8990,6 +9404,18 @@ function getConnectedAccountsMarkup(options = {}) {
   }).join("");
 }
 
+function renderConnectedAccounts() {
+  const accountsPanel = document.querySelector('[data-settings-panel="accounts"]');
+  if (accountsPanel) accountsPanel.innerHTML = getConnectedAccountsMarkup();
+  const inlineTarget = document.getElementById("settings-connected-accounts-inline");
+  if (inlineTarget) inlineTarget.innerHTML = getConnectedAccountsMarkup({ compact: true });
+}
+
+function renderConnectedAccountsStatus() {
+  renderConnectedAccounts();
+  renderMediaLinkConnectedAccountActions();
+}
+
 // ===== AI PROVIDERS UI =====
 
 async function loadAIProviders() {
@@ -9005,6 +9431,18 @@ async function loadAIProviders() {
 }
 
 function renderAIProviderCards() {
+  if (!Array.isArray(aiProviders) || aiProviders.length === 0) {
+    aiProviders = [
+      { id: "local_creator_engine", label: "Local Creator Engine", defaultApiUrl: "", keyConfigured: true },
+      { id: "openai", label: "OpenAI", defaultApiUrl: "https://api.openai.com/v1", keyConfigured: false },
+      { id: "claude", label: "Claude", defaultApiUrl: "https://api.anthropic.com/v1", keyConfigured: false },
+      { id: "gemini", label: "Gemini", defaultApiUrl: "https://generativelanguage.googleapis.com/v1beta", keyConfigured: false },
+      { id: "deepseek", label: "DeepSeek", defaultApiUrl: "https://api.deepseek.com/v1", keyConfigured: false },
+      { id: "opencode", label: "OpenCode", defaultApiUrl: "", keyConfigured: false },
+      { id: "ollama", label: "Ollama", defaultApiUrl: "", keyConfigured: false },
+      { id: "custom", label: "Custom", defaultApiUrl: "", keyConfigured: false }
+    ];
+  }
   if (aiProviders.length === 0) {
     return '<div class="text-sm text-gray-400">No AI providers available.</div>';
   }
@@ -9103,7 +9541,7 @@ function promptUser(message, defaultValue) {
 
 function renderWorkspaceHub() {
   document.querySelectorAll(".settings-tab-btn").forEach((btn) => {
-    const active = btn.dataset.settingsTab === currentWorkspaceSettingsTab;
+    const active = (btn.dataset.workspaceTab || btn.dataset.settingsTab) === currentWorkspaceSettingsTab;
     btn.classList.toggle("active", active);
     btn.classList.toggle("text-white", active);
     btn.classList.toggle("text-gray-300", !active);
@@ -9112,18 +9550,23 @@ function renderWorkspaceHub() {
     panel.classList.toggle("hidden", panel.dataset.settingsPanel !== currentWorkspaceSettingsTab);
   });
   const settings = appState.settings || {};
-  document.getElementById("settings-platform-summary").textContent = (settings.platforms || []).map(toTitleCase).join(", ") || "None";
-  document.getElementById("settings-pillar-summary").textContent = (settings.pillars || []).map(formatContentPillarLabel).join(", ") || "None";
-  document.getElementById("settings-posttype-summary").textContent = (settings.postTypes || []).map(toTitleCase).join(", ") || "None";
-  document.getElementById("settings-queue-summary").textContent = settings.queueLimit || "No queue limit";
-  const inlineTarget = document.getElementById("settings-connected-accounts-inline");
-  if (inlineTarget) inlineTarget.innerHTML = getConnectedAccountsMarkup({ compact: true });
+  const platformSummary = document.getElementById("settings-platform-summary");
+  const pillarSummary = document.getElementById("settings-pillar-summary");
+  const postTypeSummary = document.getElementById("settings-posttype-summary");
+  const queueSummary = document.getElementById("settings-queue-summary");
+  if (platformSummary) platformSummary.textContent = (settings.platforms || []).map(toTitleCase).join(", ") || "None";
+  if (pillarSummary) pillarSummary.textContent = (settings.pillars || []).map(formatContentPillarLabel).join(", ") || "None";
+  if (postTypeSummary) postTypeSummary.textContent = (settings.postTypes || []).map(toTitleCase).join(", ") || "None";
+  if (queueSummary) queueSummary.textContent = settings.queueLimit || "No queue limit";
+  renderConnectedAccounts();
   try {
     var aiInlineContainer = document.getElementById("settings-ai-providers-inline");
     if (aiInlineContainer) aiInlineContainer.innerHTML = renderAIProviderCards();
-  } catch (err) { /* silent */ }
-  const accountsPanel = document.querySelector('[data-settings-panel="accounts"]');
-  if (accountsPanel) accountsPanel.innerHTML = getConnectedAccountsMarkup();
+    if (workspaceAIProvidersPanel) workspaceAIProvidersPanel.innerHTML = renderAIProviderCards();
+  } catch (err) {
+    if (window.__workspaceHubHealth) window.__workspaceHubHealth.lastError = err && err.message ? err.message : String(err);
+    showToast("AI Providers Error", err && err.message ? err.message : "Could not render AI providers.", "ph-warning", "text-yellow-400");
+  }
   renderLinkedInRewriteRouteDiagnostics(backendDiagnostics?.linkedInRewriteRouteDiagnostics || null);
   renderWorkspaceDiagnosticsPanel();
   var instagramRouteHealth = Array.isArray(backendDiagnostics?.oauthRouteHealth) ? backendDiagnostics.oauthRouteHealth.find(function(r) { return r.platform === "instagram"; }) : null;
@@ -9569,6 +10012,7 @@ function renderMobileMoreSheet() {
     { label: "Settings", icon: "ph-sliders", action: "settings" },
     { label: isMobile ? "Accounts" : "Connected Accounts", icon: "ph-plugs-connected", action: "accounts" },
     { label: "Diagnostics", icon: "ph-bug-beetle", action: "diagnostics" },
+    { label: "AI Providers", icon: "ph-cpu", action: "providers" },
     { label: "Panels", icon: "ph-sidebar", action: "utility" }
   ];
   mobileMoreList.innerHTML = items.map((item) => `
@@ -10252,6 +10696,7 @@ function renderWriteIdeaDraftList() {
 }
 
 function renderWriteIdeaScaffold() {
+  updateWriteIdeaHealth();
   renderWriteIdeaGuidance();
   renderWriteIdeaDraftList();
   renderWriteIdeaMemoryZone();
@@ -10831,39 +11276,50 @@ function buildLocalIdeaScaffold(payload) {
 }
 
 async function saveWriteIdeaDraft() {
+  updateWriteIdeaHealth({ saveInFlight: true, lastSaveError: null });
   const payload = getWriteIdeaPayload();
   if (!payload.ideaPrompt) {
     showToast("Missing idea", "Add an idea prompt first.", "ph-warning", "text-yellow-400");
+    updateWriteIdeaHealth({ saveInFlight: false });
     return;
   }
-  if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
-    const result = await apiSaveIdeaPrompt(payload);
-    const draft = normalizeRemoteAIDraft(result.idea || result.draft || result);
-    currentWriteIdeaDraftId = draft.aiDraftId || currentWriteIdeaDraftId;
-    const existingIndex = (appState.aiDrafts || []).findIndex((item) => item.aiDraftId === draft.aiDraftId);
-    if (existingIndex >= 0) appState.aiDrafts[existingIndex] = draft;
-    else appState.aiDrafts.unshift(draft);
-    persistLocalState();
-  } else {
-    const localDraft = normalizeRemoteAIDraft({ aiDraftId: currentWriteIdeaDraftId || `local-${Date.now()}`, title: deriveIdeaTitle(payload.ideaPrompt), ideaPrompt: payload.ideaPrompt, outputType: payload.outputType, targetPlatforms: payload.targetPlatforms.join("|"), targetDate: payload.targetDate, draftStatus: "idea_captured", generationMode: "write_an_idea", transformationType: payload.transformationType, analysisMode: payload.analysisMode, inputArtifacts: payload.inputArtifacts, outputArtifacts: payload.outputArtifacts, sourceArtifactIds: payload.sourceArtifactIds, derivedFromIds: payload.derivedFromIds, mediaIds: payload.mediaIds, performanceContext: payload.performanceContext });
-    currentWriteIdeaDraftId = localDraft.aiDraftId;
-    appState.aiDrafts.unshift(localDraft);
-    persistLocalState();
+  try {
+    if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
+      const result = await apiSaveIdeaPrompt(payload);
+      const draft = normalizeRemoteAIDraft(result.idea || result.draft || result);
+      currentWriteIdeaDraftId = draft.aiDraftId || currentWriteIdeaDraftId;
+      const existingIndex = (appState.aiDrafts || []).findIndex((item) => item.aiDraftId === draft.aiDraftId);
+      if (existingIndex >= 0) appState.aiDrafts[existingIndex] = draft;
+      else appState.aiDrafts.unshift(draft);
+      persistLocalState();
+    } else {
+      const localDraft = normalizeRemoteAIDraft({ aiDraftId: currentWriteIdeaDraftId || `local-${Date.now()}`, title: deriveIdeaTitle(payload.ideaPrompt), ideaPrompt: payload.ideaPrompt, outputType: payload.outputType, targetPlatforms: payload.targetPlatforms.join("|"), targetDate: payload.targetDate, draftStatus: "idea_captured", generationMode: "write_an_idea", transformationType: payload.transformationType, analysisMode: payload.analysisMode, inputArtifacts: payload.inputArtifacts, outputArtifacts: payload.outputArtifacts, sourceArtifactIds: payload.sourceArtifactIds, derivedFromIds: payload.derivedFromIds, mediaIds: payload.mediaIds, performanceContext: payload.performanceContext });
+      currentWriteIdeaDraftId = localDraft.aiDraftId;
+      appState.aiDrafts.unshift(localDraft);
+      persistLocalState();
+    }
+    recordWriteIdeaHistory("Saved draft", deriveIdeaTitle(payload.ideaPrompt));
+    renderWriteIdeaDraftList();
+    showToast("Idea saved", "Idea prompt saved as a draft.", "ph-check", "text-[#00ffaa]");
+    updateWriteIdeaHealth({ saveInFlight: false, lastSaveError: null });
+  } catch (err) {
+    updateWriteIdeaHealth({ saveInFlight: false, lastSaveError: err && err.message ? err.message : String(err) });
+    throw err;
   }
-  recordWriteIdeaHistory("Saved draft", deriveIdeaTitle(payload.ideaPrompt));
-  renderWriteIdeaDraftList();
-  showToast("Idea saved", "Idea prompt saved as a draft.", "ph-check", "text-[#00ffaa]");
 }
 
 async function approveWriteIdeaSelection() {
+  updateWriteIdeaHealth({ approveInFlight: true, lastApproveError: null });
   if (!writeIdeaLastScaffold) {
     var mode = writeIdeaState.generationMode || "generate_post";
     showToast("Nothing to approve", mode === "generate_post" ? "Generate a post first." : "Generate a structure first.", "ph-warning", "text-yellow-400");
+    updateWriteIdeaHealth({ approveInFlight: false });
     return;
   }
   const selectedPosts = collectWriteIdeaSelectedPosts();
   if (!selectedPosts.length && !["add_to_notes", "add_to_inspo", "draft_carousel_outline"].includes(writeIdeaState.outputType)) {
     showToast("Nothing selected", "Select at least one proposed draft.", "ph-warning", "text-yellow-400");
+    updateWriteIdeaHealth({ approveInFlight: false });
     return;
   }
   const payload = {
@@ -10892,6 +11348,7 @@ async function approveWriteIdeaSelection() {
       rerenderAll();
     }
     showToast("Saved to Notes", "Idea saved to Notes for manual development.", "ph-check", "text-[#00ffaa]");
+    updateWriteIdeaHealth({ approveInFlight: false, lastApproveError: null });
     return;
   }
   if (writeIdeaState.outputType === "add_to_inspo") {
@@ -10913,6 +11370,7 @@ async function approveWriteIdeaSelection() {
       rerenderAll();
     }
     showToast("Saved to Inspo", "Idea saved to Inspo.", "ph-check", "text-[#00ffaa]");
+    updateWriteIdeaHealth({ approveInFlight: false, lastApproveError: null });
     return;
   }
   if (writeIdeaState.outputType === "draft_carousel_outline") {
@@ -10925,41 +11383,48 @@ async function approveWriteIdeaSelection() {
     } else {
       await saveWriteIdeaDraft();
     }
+    updateWriteIdeaHealth({ approveInFlight: false, lastApproveError: null });
     return;
   }
-  if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
-    const result = ["create_campaign", "populate_campaign_queue", "populate_calendar_week"].includes(writeIdeaState.outputType)
-      ? await apiCreateCampaignFromIdea(payload)
-      : await apiCreatePostFromIdea(payload);
-    await syncRemoteIfConfigured();
-    rerenderAll();
-    var approvedCount = (result?.result?.createdPosts || result?.createdPosts || []).length || 1;
-    var remoteMsg = writeIdeaState.generationMode === "generate_post" ? approvedCount + " generated post saved to POSTS." : approvedCount + " drafts from approved structure saved to POSTS.";
-    showToast("Saved", remoteMsg, "ph-check", "text-[#00ffaa]");
-  } else {
-    selectedPosts.forEach((post) => {
-      const planning = normalizePostPlanningFields({ queueDateLabel: post.queueDateLabel });
-      appState.posts.unshift({
-        id: generateId("post"),
-        title: post.title,
-        description: post.description,
-        platform: post.platform,
-        postType: post.postType,
-        pillar: "authority",
-        status: "draft",
-        date: planning.scheduledAt,
-        queueDateLabel: planning.queueDateLabel,
-        queueTimeLabel: "",
-        calendarMonth: planning.calendarMonth,
-        calendarYear: planning.calendarYear,
-        calendarDay: planning.calendarDay,
-        hasUserSelectedTime: false
+  try {
+    if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
+      const result = ["create_campaign", "populate_campaign_queue", "populate_calendar_week"].includes(writeIdeaState.outputType)
+        ? await apiCreateCampaignFromIdea(payload)
+        : await apiCreatePostFromIdea(payload);
+      await syncRemoteIfConfigured();
+      rerenderAll();
+      var approvedCount = (result?.result?.createdPosts || result?.createdPosts || []).length || 1;
+      var remoteMsg = writeIdeaState.generationMode === "generate_post" ? approvedCount + " generated post saved to POSTS." : approvedCount + " drafts from approved structure saved to POSTS.";
+      showToast("Saved", remoteMsg, "ph-check", "text-[#00ffaa]");
+    } else {
+      selectedPosts.forEach((post) => {
+        const planning = normalizePostPlanningFields({ queueDateLabel: post.queueDateLabel });
+        appState.posts.unshift({
+          id: generateId("post"),
+          title: post.title,
+          description: post.description,
+          platform: post.platform,
+          postType: post.postType,
+          pillar: "authority",
+          status: "draft",
+          date: planning.scheduledAt,
+          queueDateLabel: planning.queueDateLabel,
+          queueTimeLabel: "",
+          calendarMonth: planning.calendarMonth,
+          calendarYear: planning.calendarYear,
+          calendarDay: planning.calendarDay,
+          hasUserSelectedTime: false
+        });
       });
-    });
-    persistLocalState();
-    rerenderAll();
-    var localMsg = writeIdeaState.generationMode === "generate_post" ? selectedPosts.length + " generated post saved to POSTS." : selectedPosts.length + " local drafts from approved structure saved to POSTS.";
-    showToast("Saved", localMsg, "ph-check", "text-[#00ffaa]");
+      persistLocalState();
+      rerenderAll();
+      var localMsg = writeIdeaState.generationMode === "generate_post" ? selectedPosts.length + " generated post saved to POSTS." : selectedPosts.length + " local drafts from approved structure saved to POSTS.";
+      showToast("Saved", localMsg, "ph-check", "text-[#00ffaa]");
+    }
+    updateWriteIdeaHealth({ approveInFlight: false, lastApproveError: null });
+  } catch (err) {
+    updateWriteIdeaHealth({ approveInFlight: false, lastApproveError: err && err.message ? err.message : String(err) });
+    throw err;
   }
 }
 
@@ -12402,9 +12867,43 @@ async function duplicatePostById(postId) {
 }
 
 function switchView(viewName) {
-  currentView = viewName;
+  const registeredViews = getRegisteredViewNames();
+  const requestedView = String(viewName || "calendar").trim();
+  const routeFound = registeredViews.includes(requestedView);
+  const targetName = routeFound ? requestedView : "calendar";
+  const targetView = document.getElementById(`view-${targetName}`);
+  const targetNav = document.querySelector(`[data-view-target="${targetName}"], #nav-${targetName}`);
+  const renderFn = getViewRenderFunction(targetName);
+  registeredViews.forEach((name) => {
+    const health = ensureViewHealth(name);
+    health.containerFound = !!document.getElementById(`view-${name}`);
+    health.navFound = !!document.querySelector(`[data-view-target="${name}"], #nav-${name}`);
+    health.renderFound = typeof getViewRenderFunction(name) === "function";
+    health.routeFound = true;
+    health.ready = health.containerFound && health.navFound && health.renderFound && !health.lastRenderError;
+  });
+  if (!routeFound || !targetView) {
+    const health = ensureViewHealth(requestedView || "unknown");
+    health.routeFound = routeFound;
+    health.containerFound = !!targetView;
+    health.lastRenderError = !routeFound ? "view route missing" : "view container missing";
+    showToast("View unavailable", `${requestedView || "Unknown"} could not open. Calendar restored.`, "ph-warning", "text-yellow-400");
+  }
+  if (!targetView) {
+    const calendarView = document.getElementById("view-calendar");
+    calendarView?.classList.remove("hidden");
+    calendarView?.classList.add("flex");
+    currentView = "calendar";
+    return;
+  }
+  const currentHealth = ensureViewHealth(targetName);
+  currentHealth.containerFound = true;
+  currentHealth.navFound = !!targetNav;
+  currentHealth.renderFound = typeof renderFn === "function";
+  currentHealth.routeFound = true;
+  currentView = targetName;
   const mainShell = document.getElementById("main-shell-panel");
-  updateHeaderForView(viewName);
+  updateHeaderForView(targetName);
   if (mobileFilterTrigger) mobileFilterTrigger.classList.toggle("opacity-50", !currentViewSupportsFilters());
 
   document.querySelectorAll(".nav-btn").forEach((btn) => {
@@ -12414,7 +12913,7 @@ function switchView(viewName) {
 
   document.querySelectorAll(".nav-btn").forEach((btn) => {
     const target = btn.dataset.viewTarget || btn.id?.replace(/^nav-/, "");
-    if (target === viewName) {
+    if (target === targetName) {
       btn.classList.remove("text-gray-500", "hover:text-white", "hover:bg-[#1a1128]");
       btn.classList.add("bg-[#2d1b4e]", "text-white", "active");
     }
@@ -12425,12 +12924,9 @@ function switchView(viewName) {
     section.classList.remove("flex");
   });
 
-  const targetView = document.getElementById(`view-${viewName}`);
-  if (targetView) {
-    targetView.classList.remove("hidden");
-    targetView.classList.add("flex");
-    targetView.scrollTop = 0;
-  }
+  targetView.classList.remove("hidden");
+  targetView.classList.add("flex");
+  targetView.scrollTop = 0;
 
   if (mainShell) {
     mainShell.scrollTop = 0;
@@ -12440,50 +12936,50 @@ function switchView(viewName) {
 
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      if (viewName === "calendar") {
+      if (targetName === "calendar") {
         safeRender(renderCalendar, "switchView/calendar");
         safeRender(renderOverviewPanel, "switchView/overview");
         return;
       }
 
-      if (viewName === "ledger") {
+      if (targetName === "ledger") {
         safeRender(renderLedgerFilterMenus, "switchView/ledgerFilter");
         safeRender(updateLedgerFilterLabels, "switchView/ledgerLabels");
         safeRender(renderLedger, "switchView/ledger");
         return;
       }
 
-      if (viewName === "media") {
+      if (targetName === "media") {
         safeRender(renderMedia, "switchView/media");
         return;
       }
 
-      if (viewName === "inspo") {
+      if (targetName === "inspo") {
         safeRender(renderInspo, "switchView/inspo");
         return;
       }
 
-      if (viewName === "notes") {
+      if (targetName === "notes") {
         safeRender(renderNotes, "switchView/notes");
         return;
       }
 
-      if (viewName === "write-idea") {
+      if (targetName === "write-idea") {
         safeRender(renderWriteIdeaScaffold, "switchView/writeIdea");
         return;
       }
 
-      if (viewName === "performance") {
+      if (targetName === "performance") {
         safeRender(renderPerformanceView, "switchView/performance");
         return;
       }
 
-      if (viewName === "audit") {
+      if (targetName === "audit") {
         safeRender(renderAuditView, "switchView/audit");
         return;
       }
 
-      if (viewName === "constellation") {
+      if (targetName === "constellation") {
         safeRender(renderConstellation, "switchView/constellation");
         safeRender(() => {
           if (constellationFirstOpen) {
@@ -14844,6 +15340,22 @@ async function apiTestAIProviderConnection(provider) {
 
 async function apiDisconnectAIProvider(provider) {
   return apiGet("disconnectAIProvider", { provider: provider });
+}
+
+async function getAIProviderConfig(provider) {
+  return apiGetAIProviderConfig(provider);
+}
+
+async function saveAIProviderConfig(provider, apiKey, apiUrl) {
+  return apiSaveAIProviderConfig(provider, apiKey, apiUrl);
+}
+
+async function testAIProviderConnection(provider) {
+  return apiTestAIProviderConnection(provider);
+}
+
+async function disconnectAIProvider(provider) {
+  return apiDisconnectAIProvider(provider);
 }
 
 async function apiTestLinkedInHistoricalAccess() {
@@ -17256,6 +17768,14 @@ window.openMediaAsset = openMediaAsset;
 window.closeModal = closeModal;
 window.switchView = switchView;
 window.openWorkspaceHub = openWorkspaceHub;
+window.renderConnectedAccounts = renderConnectedAccounts;
+window.renderConnectedAccountsStatus = renderConnectedAccountsStatus;
+window.renderDiagnosticsPanel = renderDiagnosticsPanel;
+window.renderAIProviderCards = renderAIProviderCards;
+window.getAIProviderConfig = getAIProviderConfig;
+window.saveAIProviderConfig = saveAIProviderConfig;
+window.testAIProviderConnection = testAIProviderConnection;
+window.disconnectAIProvider = disconnectAIProvider;
 window.openLinkedInCaptureImporter = openLinkedInCaptureImporter;
 window.openExistingPostImportModal = openExistingPostImportModal;
 window.aiGenerate = aiGenerate;
@@ -17312,13 +17832,74 @@ window.openModal = function(
 var bootErrors = [];
 var __setupErrors = [];
 window.__SHOW_BOOT_DIAGNOSTICS = false;
+window.__viewHealth = window.__viewHealth || {};
+
+function getViewHealthKey(label) {
+  var text = String(label || "").replace(/^switchView\//, "");
+  var map = { writeIdea: "write-idea", ledgerFilter: "ledger", ledgerLabels: "ledger", overview: "calendar", constellationReset: "constellation", mobileSheet: "mobile" };
+  return map[text] || text || "unknown";
+}
+
+function getRegisteredViewNames() {
+  return ["calendar", "ledger", "constellation", "media", "inspo", "notes", "write-idea", "performance", "audit"];
+}
+
+function getViewRenderFunction(viewName) {
+  var renderers = {
+    calendar: typeof renderCalendar === "function" ? renderCalendar : null,
+    ledger: typeof renderLedger === "function" ? renderLedger : null,
+    constellation: typeof renderConstellation === "function" ? renderConstellation : null,
+    media: typeof renderMedia === "function" ? renderMedia : null,
+    inspo: typeof renderInspo === "function" ? renderInspo : null,
+    notes: typeof renderNotes === "function" ? renderNotes : null,
+    "write-idea": typeof renderWriteIdeaScaffold === "function" ? renderWriteIdeaScaffold : null,
+    performance: typeof renderPerformanceView === "function" ? renderPerformanceView : null,
+    audit: typeof renderAuditView === "function" ? renderAuditView : null
+  };
+  return renderers[viewName] || null;
+}
+
+function ensureViewHealth(viewName) {
+  window.__viewHealth = window.__viewHealth || {};
+  if (!window.__viewHealth[viewName]) {
+    window.__viewHealth[viewName] = {
+      ready: false,
+      renderCount: 0,
+      lastRenderTime: "",
+      lastRenderDuration: 0,
+      lastRenderError: null,
+      containerFound: false,
+      navFound: false,
+      renderFound: false,
+      routeFound: false
+    };
+  }
+  return window.__viewHealth[viewName];
+}
 
 function safeRender(fn, label) {
+  var healthKey = getViewHealthKey(label);
+  var health = ensureViewHealth(healthKey);
+  var started = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
   try {
-    if (typeof fn === "function") { fn(); }
-    else { console.warn("safeRender: not a function", label); }
+    if (typeof fn === "function") {
+      fn();
+      health.ready = true;
+      health.renderCount += 1;
+      health.lastRenderTime = new Date().toISOString();
+      health.lastRenderError = null;
+    } else {
+      health.ready = false;
+      health.lastRenderError = "render function missing";
+      console.warn("safeRender: not a function", label);
+    }
   } catch (err) {
+    health.ready = false;
+    health.lastRenderError = err && err.message ? err.message : String(err);
     console.error("safeRender error in", label || "unknown", err);
+  } finally {
+    var ended = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+    health.lastRenderDuration = Math.round((ended - started) * 100) / 100;
   }
 }
 
@@ -17402,14 +17983,14 @@ function bootMinimalApp() {
       if (btn) { switchView(btn.dataset.viewTarget); }
     });
     // Bind settings gear
-    var gear = document.getElementById("workspace-settings-btn");
+    var gear = document.getElementById("settings-open-btn") || document.getElementById("workspace-settings-btn");
     if (gear) {
       gear.addEventListener("click", function() {
         if (typeof openWorkspaceHub === "function") openWorkspaceHub("settings");
       });
     }
     // Bind profile menu trigger
-    var profile = document.getElementById("profile-menu-trigger");
+    var profile = document.getElementById("avatar-menu-btn") || document.getElementById("profile-menu-trigger");
     if (profile) {
       profile.addEventListener("click", function(ev) {
         ev.stopPropagation();
