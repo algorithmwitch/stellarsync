@@ -2372,7 +2372,7 @@
 </section>
 
             
-<section id="view-media" class="view-section hidden w-full h-full p-8 min-h-0 flex-col overflow-hidden bg-[#120c1d] border border-white/5 rounded-2xl">
+<section id="view-media" class="view-section hidden w-full h-full p-8 min-h-0 flex-col overflow-y-auto bg-[#120c1d] border border-white/5 rounded-2xl">
   <div class="flex justify-between items-end mb-8">
     <div>
       <h2 class="text-4xl font-bold text-white tracking-tight">Media Vault</h2>
@@ -2469,7 +2469,7 @@
     </button>
   </div>
 
-  <div id="media-grid" class="grid grid-cols-3 gap-4 overflow-y-auto custom-scrollbar flex-1 min-h-0 content-start"></div>
+  <div id="media-grid" class="grid grid-cols-3 gap-4 overflow-visible flex-1 min-h-0 content-start"></div>
 </section>
 
 <section id="view-performance" class="view-section hidden w-full h-full p-8 min-h-0 flex-col overflow-y-auto custom-scrollbar bg-[#120c1d] border border-white/5 rounded-2xl">
@@ -4257,6 +4257,18 @@ const constellationSelectionExcerpt = document.getElementById("constellation-sel
 const constellationSelectionOpenBtn = document.getElementById("constellation-selection-open");
 const constellationSelectionDayBtn = document.getElementById("constellation-selection-day");
 const constellationSelectionCloseBtn = document.getElementById("constellation-selection-close");
+const inspoModal = document.getElementById("inspo-modal");
+const inspoModalCard = document.getElementById("inspo-modal-card");
+const openInspoModalBtn = document.getElementById("open-inspo-modal-btn");
+const closeInspoModalBtn = document.getElementById("close-inspo-modal-btn");
+const cancelInspoBtn = document.getElementById("cancel-inspo-btn");
+const saveInspoBtn = document.getElementById("save-inspo-btn");
+const inspoTitleInput = document.getElementById("inspo-title");
+const inspoUrlInput = document.getElementById("inspo-url");
+const inspoNotesInput = document.getElementById("inspo-notes");
+const inspoTypeButtons = Array.from(document.querySelectorAll(".inspo-type-btn"));
+const existingPostImportModal = document.getElementById("existing-post-import-modal");
+const existingPostImportModalCard = document.getElementById("existing-post-import-modal-card");
 
 let scale = 0.62;
 let panX = 80;
@@ -6450,7 +6462,7 @@ function renderSignalsOverview() {
 }
 
 function renderOverviewPanel() {
-  renderSignalsOverview();
+  safeRender(renderSignalsOverview, "renderSignalsOverview");
 
   const topPostCard = document.getElementById("overview-top-post-card");
   const topPostRank = document.getElementById("overview-top-post-rank");
@@ -7453,6 +7465,7 @@ function buildAuditSummary() {
 function initApp() {
   performance.mark("init-start");
   window.__appErrors = [];
+  window.__viewRenderStats = {};
   window.onerror = function (msg, url, line, col, err) {
     const errInfo = { msg, url, line, col, stack: err?.stack, time: Date.now() };
     window.__appErrors.push(errInfo);
@@ -7668,21 +7681,51 @@ function initApp() {
 }
     
 function safeRender(fn, name) {
+  const start = performance.now();
+  const viewName = name || "unnamed";
   try {
     const result = fn();
     if (result instanceof Promise) {
-      result.catch((err) => {
-        console.error(`[safeRender] async error in ${name}:`, err);
+      result.then(() => {
+        window.__viewRenderStats = window.__viewRenderStats || {};
+        window.__viewRenderStats[viewName] = window.__viewRenderStats[viewName] || {};
+        window.__viewRenderStats[viewName].lastRenderTime = new Date().toLocaleTimeString();
+        window.__viewRenderStats[viewName].lastRenderDuration = Math.round(performance.now() - start);
+        window.__viewRenderStats[viewName].lastRenderError = null;
+        window.__viewRenderStats[viewName].renderCount = (window.__viewRenderStats[viewName].renderCount || 0) + 1;
+        window.__viewRenderStats[viewName].ready = true;
+      }).catch((err) => {
+        console.error(`[safeRender] async error in ${viewName}:`, err);
         window.__appErrors = window.__appErrors || [];
-        window.__appErrors.push({ msg: String(err), stack: err?.stack, render: name, time: Date.now() });
+        window.__appErrors.push({ msg: String(err), stack: err?.stack, render: viewName, time: Date.now() });
+        window.__viewRenderStats = window.__viewRenderStats || {};
+        window.__viewRenderStats[viewName] = window.__viewRenderStats[viewName] || {};
+        window.__viewRenderStats[viewName].lastRenderTime = new Date().toLocaleTimeString();
+        window.__viewRenderStats[viewName].lastRenderDuration = Math.round(performance.now() - start);
+        window.__viewRenderStats[viewName].lastRenderError = String(err);
+        window.__viewRenderStats[viewName].renderCount = (window.__viewRenderStats[viewName].renderCount || 0) + 1;
       });
+    } else {
+      window.__viewRenderStats = window.__viewRenderStats || {};
+      window.__viewRenderStats[viewName] = window.__viewRenderStats[viewName] || {};
+      window.__viewRenderStats[viewName].lastRenderTime = new Date().toLocaleTimeString();
+      window.__viewRenderStats[viewName].lastRenderDuration = Math.round(performance.now() - start);
+      window.__viewRenderStats[viewName].lastRenderError = null;
+      window.__viewRenderStats[viewName].renderCount = (window.__viewRenderStats[viewName].renderCount || 0) + 1;
+      window.__viewRenderStats[viewName].ready = true;
     }
     return result;
   } catch (err) {
-    console.error(`[safeRender] error in ${name}:`, err);
+    console.error(`[safeRender] error in ${viewName}:`, err);
     window.__appErrors = window.__appErrors || [];
-    window.__appErrors.push({ msg: String(err), stack: err?.stack, render: name, time: Date.now() });
-    showToast("Render Error", `${name} — ${err.message || err}`, "ph-bug", "text-yellow-400");
+    window.__appErrors.push({ msg: String(err), stack: err?.stack, render: viewName, time: Date.now() });
+    window.__viewRenderStats = window.__viewRenderStats || {};
+    window.__viewRenderStats[viewName] = window.__viewRenderStats[viewName] || {};
+    window.__viewRenderStats[viewName].lastRenderTime = new Date().toLocaleTimeString();
+    window.__viewRenderStats[viewName].lastRenderDuration = Math.round(performance.now() - start);
+    window.__viewRenderStats[viewName].lastRenderError = String(err);
+    window.__viewRenderStats[viewName].renderCount = (window.__viewRenderStats[viewName].renderCount || 0) + 1;
+    showToast("Render Error", `${viewName} — ${err.message || err}`, "ph-bug", "text-yellow-400");
     return undefined;
   }
 }
@@ -17283,6 +17326,57 @@ function getDiagnosticsSummaryText(diagnostics = {}) {
   ].join("\n");
 }
 
+function renderViewHealthCard() {
+  const views = [
+    { name: "calendar",     label: "Calendar",     route: true,  container: !!document.getElementById("view-calendar"),     renderFn: typeof renderCalendar === "function" },
+    { name: "constellation",label: "Constellation", route: true,  container: !!document.getElementById("view-constellation"), renderFn: typeof renderConstellation === "function" },
+    { name: "ledger",       label: "Ledger",        route: true,  container: !!document.getElementById("view-ledger"),        renderFn: typeof renderLedger === "function" },
+    { name: "media",        label: "Media",         route: true,  container: !!document.getElementById("view-media"),         renderFn: typeof renderMedia === "function" },
+    { name: "inspo",        label: "Inspo",         route: true,  container: !!document.getElementById("view-inspo"),         renderFn: typeof renderInspo === "function" },
+    { name: "notes",        label: "Notes",         route: true,  container: !!document.getElementById("view-notes"),         renderFn: typeof renderNotes === "function" },
+    { name: "write-idea",   label: "Write Idea",    route: true,  container: !!document.getElementById("view-write-idea"),    renderFn: typeof renderWriteIdeaScaffold === "function" },
+    { name: "performance",  label: "Performance",   route: true,  container: !!document.getElementById("view-performance"),   renderFn: typeof renderPerformanceView === "function" },
+    { name: "audit",        label: "Audit",         route: true,  container: !!document.getElementById("view-audit"),         renderFn: typeof renderAuditView === "function" },
+    { name: "dashboard",    label: "Dashboard",     route: false, container: false,                                          renderFn: false }
+  ];
+  const stats = window.__viewRenderStats || {};
+  const rows = views.map((view) => {
+    const s = stats[view.name] || stats["switchView/" + view.name] || {};
+    const errors = window.__appErrors || [];
+    const viewErrors = errors.filter((e) => e.render === view.name || e.render === "switchView/" + view.name);
+    const ready = s.ready || false;
+    const lastError = s.lastRenderError || (viewErrors.length ? viewErrors[viewErrors.length - 1].msg : null);
+    const readyColor = ready ? "text-emerald-300" : "text-red-400";
+    const containerColor = view.container ? "text-emerald-300" : "text-red-400";
+    const routeColor = view.route ? "text-emerald-300" : "text-gray-500";
+    const renderFnColor = view.renderFn ? "text-emerald-300" : "text-red-400";
+    const errorColor = lastError ? "text-red-400" : "text-emerald-300";
+    const errorLabel = lastError ? "Error" : "OK";
+    return `
+      <div class="p-3 rounded-xl bg-[#120c1d] border border-white/5 grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 items-center">
+        <div class="text-sm font-bold text-white">${escapeHtml(view.label)}</div>
+        <div class="text-xs font-mono ${readyColor} text-right">${ready ? "Ready" : "—"}</div>
+        <div class="text-[10px] text-gray-400 flex gap-3">
+          <span class="${containerColor}">${view.container ? "✓" : "✗"} DOM</span>
+          <span class="${routeColor}">${view.route ? "✓" : "✗"} Route</span>
+          <span class="${renderFnColor}">${view.renderFn ? "✓" : "✗"} Fn</span>
+        </div>
+        <div class="text-[10px] font-mono ${errorColor} text-right">${errorLabel}</div>
+        ${s.lastRenderTime ? `<div class="text-[10px] text-gray-500 col-span-2">Last render: ${escapeHtml(s.lastRenderTime)} • ${escapeHtml(String(s.lastRenderDuration || "?"))}ms • #${escapeHtml(String(s.renderCount || 0))}</div>` : '<div class="text-[10px] text-gray-600 col-span-2">Not yet rendered</div>'}
+        ${lastError ? `<div class="text-[10px] text-red-300 break-all col-span-2">${escapeHtml(String(lastError).slice(0, 120))}</div>` : ""}
+      </div>`;
+  }).join("");
+  return `
+    <div class="p-4 rounded-xl bg-[#181125] border border-white/5 space-y-3">
+      <div class="flex items-center justify-between gap-3">
+        <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">View Health</div>
+        <span class="text-[10px] text-gray-500">switchView routes</span>
+      </div>
+      ${rows}
+      <div class="text-[10px] text-gray-500">Workspace Hub tabs (Settings, Connected Accounts, Diagnostics) use openWorkspaceHub() — not switchView — and are tracked separately.</div>
+    </div>`;
+}
+
 function renderCopyableDeploymentValue(label, value) {
   const safeValue = String(value || "").trim();
   return `
@@ -17505,6 +17599,7 @@ function renderDiagnosticsPanel() {
         <div class="text-[10px] text-gray-500">Errors are captured from the current session only; they reset on page reload.</div>
       </div>`;
     })()}
+    ${renderViewHealthCard()}
     <div class="p-4 rounded-xl bg-[#181125] border border-white/5 flex items-center justify-between gap-3 flex-wrap">
       <div>
         <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Cache Health</div>
