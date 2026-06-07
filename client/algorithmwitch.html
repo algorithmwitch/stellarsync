@@ -4164,7 +4164,7 @@
 </div>
 <script>
 const APP_CONFIG = {
-  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbxIyW198u2h21M-mhLnJlTbjRZrNDFOPrPsuqIOzsnzlc417LNV4msMZybNKuNpXKc7/exec",
+  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbw6XJ-MwOTrHAxQ6bhLWLkChyFPCTnl4LkASV1JpnOsbgCBOVKS4r-JmOyWxuDL5inD/exec",
   ENABLE_REMOTE_SYNC: true,
   STORAGE_KEY: "stellarsync_local_state_v5",
   SHELL_LAYOUT_KEY: "stellarsync_shell_layout_v2"
@@ -4402,6 +4402,49 @@ function countPostsBy(posts, getter) {
 
 function getDisplayTitle(item, fallback = "Untitled") {
   return String(item?.title || item?.campaignName || item?.assetName || item?.name || fallback).trim() || fallback;
+}
+
+function firstNonEmptyLine(value) {
+  return String(value || "")
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean)[0] || "";
+}
+
+function getPostDisplayTitle(post, fallback = "Untitled") {
+  if (!post) return fallback;
+  if (typeof post === "string") return String(post || "").trim() || fallback;
+  return String(
+    post.title ||
+    post.post_title ||
+    post.postTitle ||
+    post.queue_title ||
+    post.queueTitle ||
+    post.headline ||
+    post.captionTitle ||
+    post.caption_title ||
+    firstNonEmptyLine(post.caption) ||
+    firstNonEmptyLine(post.description) ||
+    firstNonEmptyLine(post.body) ||
+    firstNonEmptyLine(post.content) ||
+    firstNonEmptyLine(post.copy) ||
+    fallback
+  ).trim() || fallback;
+}
+
+function getConstellationLabel(item) {
+  try {
+    if (!item) return "Untitled";
+    if (typeof item === "string") return String(item || "").trim() || "Untitled";
+    if (item.type === "campaign" || item.kind === "campaign") {
+      return item.name || item.title || item.campaignName || "Campaign";
+    }
+    return getPostDisplayTitle(item);
+  } catch (err) {
+    console.error("getConstellationLabel failed:", err);
+    pushAppError("getConstellationLabel", err);
+    return "Untitled";
+  }
 }
 
 function getDisplayExcerpt(value, fallback = "") {
@@ -6014,8 +6057,8 @@ function getScheduledQueue() {
     .sort((a, b) => (parsePostDate(normalizePostCalendarDateKey(a) || a.date)?.getTime() || 0) - (parsePostDate(normalizePostCalendarDateKey(b) || b.date)?.getTime() || 0))
     .map(post => ({
       postId: post.id,
-      title: post.title,
-      displayTitle: getDisplayTitle(post.title),
+      title: getPostDisplayTitle(post),
+      displayTitle: getPostDisplayTitle(post),
       platform: post.platform,
       pillar: getPostContentPillar(post),
       scheduledAt: normalizeScheduledAt(post.date, post.queueDateLabel, post.queueTimeLabel),
@@ -7261,7 +7304,7 @@ function renderMobileDayCalendar() {
         <div class="flex items-start justify-between gap-3 mb-2">
           <div>
             <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${escapeHtml(post.queueTimeLabel || "No time")}</div>
-            <h4 class="text-white text-sm font-bold wrap-safe mt-1">${escapeHtml(post.title || "Untitled post")}</h4>
+            <h4 class="text-white text-sm font-bold wrap-safe mt-1">${escapeHtml(getPostDisplayTitle(post, "Untitled post"))}</h4>
           </div>
           <span class="publishing-chip" style="color:${badge.color};border-color:${badge.color}33;">
             <i class="ph-bold ${badge.icon}"></i>${escapeHtml(badge.label)}
@@ -7287,7 +7330,7 @@ function renderCalendarPill(post, isWeekMode = false) {
     post.status === "scheduled" ? "#ffd700" :
     "#94a3b8";
 
-  const displayTitle = getDisplayTitle(post.title);
+  const displayTitle = getPostDisplayTitle(post);
   const pillTitle = isWeekMode
     ? `${post.queueTimeLabel || ""} ${displayTitle}`.trim()
     : displayTitle;
@@ -7425,7 +7468,7 @@ function renderLedger() {
       "ph-linkedin-logo";
 
     const iconColor = post.platform === "linkedin" ? "#0A66C2" : post.platform === "instagram" ? "#b25fff" : "#ffd700";
-    const displayTitle = getDisplayTitle(post.title);
+    const displayTitle = getPostDisplayTitle(post);
     const displayDescription = getDisplayExcerpt(post.description, post.ledgerExcerpt || "");
     const platformIconClass = post.platform === "linkedin" ? "ledger-linkedin" : "";
     const campaignLabel = formatCampaignDisplayName(hydrated.campaignName || "Unassigned");
@@ -7455,7 +7498,7 @@ function renderLedger() {
               </span>
               <span class="text-gray-500 text-[10px] font-medium">${escapeHtml(formatLedgerDate(post))}</span>
             </div>
-            <h3 class="text-white font-bold text-base mb-2 wrap-safe" title="${escapeHtml(post.title || "")}">${escapeHtml(displayTitle)}</h3>
+            <h3 class="text-white font-bold text-base mb-2 wrap-safe" title="${escapeHtml(displayTitle)}">${escapeHtml(displayTitle)}</h3>
             <p class="text-gray-400 text-sm leading-relaxed wrap-safe" title="${escapeHtml(post.description || "")}">${escapeHtml(displayDescription)}</p>
             <div class="mt-4 ledger-action-bar">
               <button type="button" class="ledger-open-btn ledger-action-btn text-gray-300 hover:text-white text-xs font-medium transition-colors">
@@ -7657,7 +7700,7 @@ function buildConstellationNodeLayoutSnapshot(rows = buildConstellationRows()) {
     (campaign.posts || []).forEach((post, postIndex) => {
       entries.push({
         post_id: String(post.id || post.postId || "").trim(),
-        title: String(post.title || "").trim(),
+        title: getPostDisplayTitle(post, ""),
         campaign_id: String(campaign.campaignId || "").trim(),
         campaign_name: String(campaign.campaignName || "Uncategorized").trim(),
         campaign_lane_key: String(campaign._constellationLaneKey || "").trim(),
@@ -7878,9 +7921,9 @@ function formatConstellationOverlapPair(overlap = {}) {
   const second = overlap.second || {};
   return {
     firstCampaign: first.campaign_name || "Uncategorized",
-    firstPost: first.title || first.post_id || "Untitled",
+    firstPost: getPostDisplayTitle(first, first.post_id || "Untitled"),
     secondCampaign: second.campaign_name || "Uncategorized",
-    secondPost: second.title || second.post_id || "Untitled",
+    secondPost: getPostDisplayTitle(second, second.post_id || "Untitled"),
     firstCoords: `(${Number(first.x || 0)}, ${Number(first.y || 0)})`,
     secondCoords: `(${Number(second.x || 0)}, ${Number(second.y || 0)})`,
     deltaX: Number(overlap.deltaX || 0),
@@ -8063,7 +8106,7 @@ function selectConstellationPost(post, color, campaignName = "") {
   });
   if (!constellationSelectionCard) return;
   const badge = getPublishingBadge(post);
-  constellationSelectionTitle.textContent = post.title || "Untitled post";
+  constellationSelectionTitle.textContent = getPostDisplayTitle(post, "Untitled post");
   constellationSelectionMeta.textContent = `${formatCampaignDisplayName(campaignName || post.campaignName || "Unassigned")} • ${toTitleCase(post.platform || "linkedin")} • ${badge.label}`;
   constellationSelectionMeta.style.color = color || "#c77dff";
   constellationSelectionExcerpt.textContent = getDisplayExcerpt(post.description, post.description || "No description yet.");
@@ -8234,7 +8277,7 @@ function renderConstellation() {
         justify-content:center;
       `;
       dot.innerHTML = `<i class="ph-fill ${escapeHtml(getConstellationIconClass(campaign.iconShape || "star"))} text-[8px]" style="color:#ffffff"></i>`;
-      dot.title = post.title || "Open post";
+      dot.title = getPostDisplayTitle(post, "Open post");
       dot.addEventListener("mouseenter", () => {
         dot.style.transform = "translate(-50%,-50%) scale(1.22)";
         path.setAttribute("opacity", "0.8");
@@ -8258,11 +8301,11 @@ function renderConstellation() {
       dotLabel.style.left = `${Math.min(dotX + 24, worldWidth - 260)}px`;
       dotLabel.style.top = `${dotY}px`;
       dotLabel.style.borderColor = `${color}40`;
-      dotLabel.innerHTML = `<span>${escapeHtml(getConstellationLabel(post.title))}</span>`;
+      dotLabel.innerHTML = `<span>${escapeHtml(getConstellationLabel(post))}</span>`;
       dotLabel.style.display = "inline-flex";
       dotLabel.style.alignItems = "center";
       dotLabel.style.gap = "8px";
-      dotLabel.title = post.title || "Open post";
+      dotLabel.title = getPostDisplayTitle(post, "Open post");
       dotLabel.addEventListener("click", () => selectConstellationPost(post, color, campaign.campaignName));
 
       rowGroup.appendChild(dot);
@@ -9984,7 +10027,7 @@ function renderCampaignCleanupDiagnosticsCard() {
           <div class="space-y-2 max-h-56 overflow-y-auto pr-1">
             ${cleanup.invalidComboCampaigns.map((item) => `
               <div class="p-2 rounded-lg bg-[#181125] border border-white/5">
-                <div class="text-sm text-white wrap-safe">${escapeHtml(item.title || "Untitled post")}</div>
+                <div class="text-sm text-white wrap-safe">${escapeHtml(getPostDisplayTitle(item, "Untitled post"))}</div>
                 <div class="text-[11px] text-gray-400 wrap-safe">${escapeHtml(item.postId || "missing post id")} • ${escapeHtml(item.campaignName || "")}</div>
               </div>
             `).join("")}
@@ -11019,7 +11062,7 @@ function renderWriteIdeaScaffold() {
     writeIdeaProposedPosts.innerHTML = (scaffold.proposedPosts || []).map((post, index) => `
       <div class="p-5 rounded-2xl bg-[#181125] border border-white/5">
         <div class="flex items-center justify-between gap-3 mb-3">
-          <div class="text-sm font-bold text-white">${escapeHtml(post.title || "Generated Post")}</div>
+          <div class="text-sm font-bold text-white">${escapeHtml(getPostDisplayTitle(post, "Generated Post"))}</div>
           <span class="diagnostic-chip">${escapeHtml(toTitleCase(post.platform || "linkedin"))}</span>
         </div>
         <textarea data-write-idea-post-description="${index}" class="form-input min-h-[130px] text-sm mb-3">${escapeHtml(post.description || "")}</textarea>
@@ -11336,7 +11379,7 @@ function buildLocalAIPost(payload) {
 	    historicalReferences: (appState.posts || []).slice(0, 3).map(function(post) {
 	      return {
 	        postId: post.postId || "",
-	        title: post.title || "",
+	        title: getPostDisplayTitle(post, ""),
 	        campaignName: post.campaignName || "",
 	        platform: post.platform || "",
 	        excerpt: String(post.description || post.body || "").slice(0, 180)
@@ -12035,7 +12078,7 @@ function buildMediaVaultItems() {
       items.push({
         id: `group:${post.id}`,
         kind: "group",
-        title: post.mediaLabel || post.title || "Carousel Group",
+        title: post.mediaLabel || getPostDisplayTitle(post, "Carousel Group"),
         type: "carousel",
         postId: post.id,
         campaign: post.campaignName || "",
@@ -12189,7 +12232,7 @@ function getMediaAssetDetailRows(item, linkedPost) {
   return [
     { label: "Type", value: toTitleCase(item.type || item.assetType || "asset") },
     { label: "Campaign", value: linkedPost?.campaignName ? formatCampaignDisplayName(linkedPost.campaignName) : item.campaign ? formatCampaignDisplayName(item.campaign) : "Unassigned" },
-    { label: "Linked Post", value: linkedPost?.title ? getDisplayTitle(linkedPost.title, linkedPost.title) : "Not linked" },
+    { label: "Linked Post", value: linkedPost ? getPostDisplayTitle(linkedPost, "Untitled post") : "Not linked" },
     { label: "Source", value: item.sourceType ? toTitleCase(item.sourceType) : item.fileUrl ? "Drive Upload" : item.sourceUrl ? "Linked URL" : "Unknown" },
     { label: "Badge", value: item.assetBadge || "None" },
     { label: "Carousel Assets", value: linkedAssets.length > 1 ? `${linkedAssets.length} linked assets` : "Single asset" },
@@ -15495,6 +15538,14 @@ async function syncRemoteIfConfigured() {
     socialImportCapabilities = socialCapabilitiesResult.status === "fulfilled" ? (socialCapabilitiesResult.value?.capabilities || socialCapabilitiesResult.value) : socialImportCapabilities;
     connectedAccounts = connectedAccountsResult.status === "fulfilled" ? (connectedAccountsResult.value?.accounts || connectedAccountsResult.value || []) : connectedAccounts;
 
+    console.log("[sync] backend posts first 5", (Array.isArray(posts) ? posts : []).slice(0, 5).map(post => ({
+      postId: post?.postId || post?.post_id || post?.id || "",
+      title: post?.title || "",
+      description: post?.description || "",
+      caption: post?.caption || "",
+      body: post?.body || ""
+    })));
+
     try { await loadAIProviders(); } catch (err) { /* silent */ }
 
     appState.settings = normalizeRemoteSettings(settings);
@@ -15509,6 +15560,12 @@ async function syncRemoteIfConfigured() {
 
     if (Array.isArray(posts)) {
       appState.posts = posts.map(post => normalizeRemotePost(post, appState.campaigns || [], appState.media || []));
+      console.log("[sync] normalized posts first 5", appState.posts.slice(0, 5).map(post => ({
+        postId: post.id || "",
+        title: post.title || "",
+        displayTitle: post.displayTitle || getPostDisplayTitle(post),
+        description: post.description || ""
+      })));
     }
 
     if (Array.isArray(inspo)) {
@@ -15904,7 +15961,7 @@ function renderDateConsistencyCard() {
     var label = parseDisplayDateKey(post.queueDateLabel || post.queue_date_label || "");
     var schedKey = parseDisplayDateKey(String(post.scheduledAt || post.scheduled_at || "").slice(0, 10));
     if (label && schedKey && label !== schedKey) {
-      mismatches.push({ id: post.id || post.post_id || "?", label: label, schedKey: schedKey, title: post.title || "" });
+      mismatches.push({ id: post.id || post.post_id || "?", label: label, schedKey: schedKey, title: getPostDisplayTitle(post, "") });
     }
   });
   if (!mismatches.length) return "";
@@ -16601,7 +16658,7 @@ function populateAISourceOptions() {
   if (sourceType === "note") items = (appState.notes || []).map(item => ({ value: item.noteId || item.id, label: item.title || "Untitled note" }));
   else if (sourceType === "inspo") items = (appState.inspo || []).map(item => ({ value: item.id, label: item.title || "Untitled inspo" }));
   else if (sourceType === "media") items = buildMediaVaultItems().map(item => ({ value: item.id, label: item.title || item.assetName || "Untitled media" }));
-  else if (sourceType === "post") items = (appState.posts || []).map(item => ({ value: item.id, label: item.title || "Untitled post" }));
+  else if (sourceType === "post") items = (appState.posts || []).map(item => ({ value: item.id, label: getPostDisplayTitle(item, "Untitled post") }));
   else if (sourceType === "campaign") items = (appState.campaigns || []).map(item => ({ value: item.campaignId, label: item.campaignName || "Untitled campaign" }));
   aiSourceIdInput.innerHTML = ['<option value="">Select source</option>'].concat(items.map((item) => `<option value="${escapeHtml(item.value)}">${escapeHtml(getDisplayTitle(item.label, item.label, 6))}</option>`)).join("");
 }
@@ -17088,7 +17145,8 @@ function normalizeRemotePost(post, campaigns = [], mediaItems = []) {
   const incomingCampaignName = normalizeCampaignName(pickRemoteValue(post?.campaignName, post?.campaign_name, ""));
   const matchedCampaign = getCampaignById(campaignId, campaigns) || getCampaignByName(incomingCampaignName, campaigns);
   const postId = String(pickRemoteValue(post?.postId, post?.post_id, post?.id, "")).trim();
-  const title = String(pickRemoteValue(post?.title, post?.postTitle, "")).trim();
+  const rawDescription = String(pickRemoteValue(post?.description, post?.caption, post?.body, post?.content, post?.copy, "")).trim();
+  const title = getPostDisplayTitle({ ...post, description: rawDescription }, "");
   const scheduledAt = String(pickRemoteValue(post?.scheduledAt, post?.scheduled_at, post?.date, "")).trim();
   const planning = normalizePostPlanningFields({
     scheduledAt,
@@ -17106,12 +17164,17 @@ function normalizeRemotePost(post, campaigns = [], mediaItems = []) {
   const normalizedPost = {
     id: postId || `remote-${normalizeLookupValue(title || "post")}-${scheduledAt || "undated"}`,
     title,
+    displayTitle: title || "Untitled",
     platform: String(pickRemoteValue(post?.platform, "linkedin")).trim() || "linkedin",
     pillar: getCanonicalPillarValue(pickRemoteValue(post?.pillar, post?.hubPillarLabel, post?.hub_pillar_label, matchedCampaign?.pillar), (appState.settings?.pillars || [])[0] || "authority") || ((appState.settings?.pillars || [])[0] || "authority"),
     date: planning.scheduledAt || scheduledAt,
     status: String(pickRemoteValue(post?.status, "draft")).trim() || "draft",
     postType: String(pickRemoteValue(post?.postType, post?.post_type, "text")).trim() || "text",
-    description: String(pickRemoteValue(post?.description, post?.caption, post?.body, "")).trim(),
+    description: rawDescription,
+    caption: String(pickRemoteValue(post?.caption, "")).trim(),
+    body: String(pickRemoteValue(post?.body, "")).trim(),
+    content: String(pickRemoteValue(post?.content, "")).trim(),
+    copy: String(pickRemoteValue(post?.copy, "")).trim(),
     ledgerExcerpt: String(pickRemoteValue(post?.ledgerExcerpt, post?.ledger_excerpt, "")).trim(),
     assetId: String(pickRemoteValue(post?.assetId, post?.asset_id, "")).trim(),
     hubTitle: String(pickRemoteValue(post?.hubTitle, post?.hub_title, title)).trim(),
@@ -18316,7 +18379,7 @@ function renderOverviewPanel() {
   const topTarget = document.getElementById("overview-top-post-card");
   if (topTarget) {
     topTarget.innerHTML = topPost
-      ? `<div class="p-3 rounded-xl bg-[#181125] border border-white/5"><div class="text-sm font-bold text-white wrap-safe">${escapeHtml(topPost.title || "Untitled")}</div><div class="text-[11px] text-gray-400 mt-1">${escapeHtml(formatCampaignDisplayName(topPost.campaignName || "Uncategorized"))}</div></div>`
+      ? `<div class="p-3 rounded-xl bg-[#181125] border border-white/5"><div class="text-sm font-bold text-white wrap-safe">${escapeHtml(getPostDisplayTitle(topPost))}</div><div class="text-[11px] text-gray-400 mt-1">${escapeHtml(formatCampaignDisplayName(topPost.campaignName || "Uncategorized"))}</div></div>`
       : makeEmptyState("No top post yet", "Add posts or sync history to populate overview signals.", "ph-chart-line-up");
   }
   const performanceTarget = document.getElementById("overview-performance-snapshot");
@@ -18379,7 +18442,7 @@ function renderPerformanceView() {
   const topPosts = document.getElementById("performance-top-posts");
   if (topPosts) {
     topPosts.innerHTML = posts.slice().sort((a, b) => normalizeMetricNumber(b.impressions || b.views || 0) - normalizeMetricNumber(a.impressions || a.views || 0)).slice(0, 5)
-      .map((post) => `<div class="p-3 rounded-xl bg-[#181125] border border-white/5"><div class="text-sm font-bold text-white wrap-safe">${escapeHtml(post.title || "Untitled")}</div><div class="text-[11px] text-gray-400 mt-1">${escapeHtml(String(normalizeMetricNumber(post.impressions || post.views || 0)))} impressions</div></div>`).join("") || makeEmptyState("No performance data", "Metrics appear after history is imported or synced.", "ph-chart-line-up");
+      .map((post) => `<div class="p-3 rounded-xl bg-[#181125] border border-white/5"><div class="text-sm font-bold text-white wrap-safe">${escapeHtml(getPostDisplayTitle(post))}</div><div class="text-[11px] text-gray-400 mt-1">${escapeHtml(String(normalizeMetricNumber(post.impressions || post.views || 0)))} impressions</div></div>`).join("") || makeEmptyState("No performance data", "Metrics appear after history is imported or synced.", "ph-chart-line-up");
   }
   const renderComparison = (id, rows) => {
     const target = document.getElementById(id);
