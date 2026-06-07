@@ -83,6 +83,16 @@
     min-width: 0;
   }
 
+  .view-section.hidden,
+  .view-section[hidden] {
+    display: none !important;
+  }
+
+  .view-section.active {
+    min-height: 0;
+    min-width: 0;
+  }
+
   #desktop-sidebar-nav {
     position: relative;
     transition: width 180ms ease, flex-basis 180ms ease, padding 180ms ease;
@@ -4160,8 +4170,8 @@ const APP_CONFIG = {
   SHELL_LAYOUT_KEY: "stellarsync_shell_layout_v2"
 };
 
-const APP_FRONTEND_VERSION = "2026.06.06.02";
-const APP_SERVICE_WORKER_VERSION = "2026.06.06.02";
+const APP_FRONTEND_VERSION = "2026.06.07.01-runtime-ui";
+const APP_SERVICE_WORKER_VERSION = "2026.06.07.01-runtime-ui";
 const RIGHT_PANEL_COLLAPSED_KEY = "stellarsync_right_panel_collapsed_v1";
 const MAX_UPLOAD_IMAGE_BYTES = 10 * 1024 * 1024;
 const MAX_UPLOAD_VIDEO_BYTES = 50 * 1024 * 1024;
@@ -4788,6 +4798,7 @@ let deferredInstallPrompt = null;
 let backendDiagnostics = null;
 let backendReachable = false;
 let offlineMode = false;
+let lastSyncError = "";
 let currentModalSourceContext = { type: "manual", label: "Create Post from Calendar", detail: "This post starts as a manual draft.", sourceId: "" };
 let currentModalCarouselAssets = [];
 let pendingUploadFiles = [];
@@ -7045,6 +7056,18 @@ function setCalendarMode(nextMode) {
   renderCalendar();
 }
 
+function openCalendarDate(dateKey, forceDayView = false) {
+  const parsed = parsePostDate(dateKey) || new Date();
+  selectedCalendarDateKey = toDateKey(parsed);
+  calendarCursor = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+  if (forceDayView) {
+    calendarMode = "day";
+    updateCalendarModeButtons();
+  }
+  if (currentView !== "calendar") switchView("calendar");
+  else renderCalendar();
+}
+
 function updateCalendarModeButtons() {
   const monthBtn = document.getElementById("calendar-mode-month");
   const weekBtn = document.getElementById("calendar-mode-week");
@@ -7056,6 +7079,11 @@ function updateCalendarModeButtons() {
 }
 
 function renderCalendar() {
+  console.log("[render] renderCalendar start", {
+    calendarGridFound: !!document.getElementById("calendar-grid"),
+    mode: calendarMode,
+    data: getAppStateCounts()
+  });
   try {
     var monthNameEl = document.getElementById("calendar-month-name");
     var yearNameEl = document.getElementById("calendar-year-name");
@@ -7063,7 +7091,11 @@ function renderCalendar() {
     var weekdayRow = document.getElementById("calendar-weekday-row");
     var gridShell = document.getElementById("calendar-grid-shell");
     var dayView = document.getElementById("mobile-day-view");
-    if (!grid) return;
+    if (!grid) {
+      console.error("renderCalendar: #calendar-grid missing");
+      pushAppError("renderCalendar", new Error("#calendar-grid missing"));
+      return;
+    }
 
     selectedCalendarDateKey = selectedCalendarDateKey || toDateKey(calendarCursor || new Date());
     grid.classList.toggle("calendar-mode-month", calendarMode === "month");
@@ -7089,9 +7121,17 @@ function renderCalendar() {
   }
   } catch (err) {
     console.error("renderCalendar failed:", err);
+    pushAppError("renderCalendar", err);
     if (grid && !grid.innerHTML.trim()) {
       grid.innerHTML = '<div class="flex items-center justify-center h-48 text-gray-500 text-sm"><div class="text-center"><i class="ph-bold ph-warning text-2xl text-yellow-400 block mb-2"></i>Calendar failed to render<div class="text-[10px] text-gray-600 mt-1">' + escapeHtml(String(err && err.message || err)) + '</div></div></div>';
     }
+  } finally {
+    const grid = document.getElementById("calendar-grid");
+    console.log("[render] renderCalendar done", {
+      calendarGridFound: !!grid,
+      childCount: grid ? grid.children.length : 0,
+      htmlLength: grid ? String(grid.innerHTML || "").length : 0
+    });
   }
 }
 
@@ -7301,8 +7341,13 @@ function postMatchesCalendarViewFilters(post) {
 }
 
 function renderLedger() {
+  console.log("[render] renderLedger start", getAppStateCounts());
   const ledgerList = document.getElementById("ledger-list");
-  if (!ledgerList) return;
+  if (!ledgerList) {
+    console.error("renderLedger: #ledger-list missing");
+    pushAppError("renderLedger", new Error("#ledger-list missing"));
+    return;
+  }
 
   let posts = [...(appState.posts || [])];
 
@@ -7355,9 +7400,10 @@ function renderLedger() {
   if (!posts.length) {
     ledgerList.innerHTML = `
       <div class="glass-card p-8 text-center">
-        <p class="text-gray-400 text-sm">No posts match these filters.</p>
+        <p class="text-gray-400 text-sm">${offlineMode ? "Backend sync failed. Showing local empty state." : "No posts loaded yet."}</p>
       </div>
     `;
+    console.log("[render] renderLedger done", { childCount: ledgerList.children.length, htmlLength: ledgerList.innerHTML.length });
     return;
   }
 
@@ -7432,6 +7478,7 @@ function renderLedger() {
   }).join("");
 
   wireLedgerActions();
+  console.log("[render] renderLedger done", { childCount: ledgerList.children.length, htmlLength: ledgerList.innerHTML.length });
 }
 
 function wireLedgerActions() {
@@ -8026,6 +8073,11 @@ function selectConstellationPost(post, color, campaignName = "") {
 }
 
 function renderConstellation() {
+  console.log("[render] renderConstellation start", {
+    viewportFound: !!viewport,
+    canvasFound: !!canvas,
+    data: getAppStateCounts()
+  });
   window.__constellationHealth = window.__constellationHealth || {};
   window.__constellationHealth.lastError = null;
   window.__constellationHealth.dragEnabled = !!viewport;
@@ -8033,6 +8085,7 @@ function renderConstellation() {
   if (!canvas) {
     window.__constellationHealth.rendered = false;
     window.__constellationHealth.lastError = "starmap-canvas missing";
+    pushAppError("renderConstellation", new Error("starmap-canvas missing"));
     showToast("Constellation unavailable", "Starmap canvas is missing.", "ph-warning", "text-yellow-400");
     return;
   }
@@ -8047,6 +8100,14 @@ function renderConstellation() {
     canvas.dataset.worldWidth = String(worldWidth);
     canvas.dataset.worldHeight = String(minCanvasHeight);
     canvas.innerHTML = "";
+    if (!rows.length) {
+      canvas.innerHTML = `
+        <div class="absolute left-10 top-10 p-6 rounded-2xl bg-[#120c1d] border border-white/10 text-gray-300">
+          <div class="text-white font-bold mb-2">No campaigns loaded yet</div>
+          <div class="text-sm text-gray-400">Create a campaign or reconnect backend sync to populate the constellation.</div>
+        </div>
+      `;
+    }
     if (constellationSelectionCard) constellationSelectionCard.classList.add("hidden");
     selectedConstellationPostId = "";
 
@@ -8292,10 +8353,20 @@ function renderConstellation() {
     window.__constellationHealth.nodeCount = canvas.querySelectorAll("[data-constellation-post-id]").length;
     window.__constellationHealth.rendered = true;
     updateTransform();
+    console.log("[render] renderConstellation done", {
+      childCount: canvas.children.length,
+      nodeCount: window.__constellationHealth.nodeCount,
+      laneCount: window.__constellationHealth.laneCount,
+      htmlLength: canvas.innerHTML.length
+    });
   } catch (err) {
     window.__constellationHealth.rendered = false;
     window.__constellationHealth.lastError = err && err.message ? err.message : String(err);
     console.error("Constellation render failed", err);
+    pushAppError("renderConstellation", err);
+    if (canvas && !canvas.innerHTML.trim()) {
+      canvas.innerHTML = `<div class="absolute left-10 top-10 p-6 rounded-2xl bg-red-950/30 border border-red-400/20 text-red-200"><div class="font-bold mb-1">Constellation failed to render</div><div class="text-xs">${escapeHtml(window.__constellationHealth.lastError)}</div></div>`;
+    }
     showToast("Constellation Error", window.__constellationHealth.lastError, "ph-warning", "text-yellow-400");
   }
 }
@@ -9583,10 +9654,16 @@ function getConnectedAccountsMarkup(options = {}) {
 }
 
 function renderConnectedAccounts() {
+  console.log("[render] renderConnectedAccounts start", { loading: connectedAccountsStatusLoading, accountCount: (connectedAccounts || []).length });
   const accountsPanel = document.querySelector('[data-settings-panel="accounts"]');
   if (accountsPanel) accountsPanel.innerHTML = getConnectedAccountsMarkup();
   const inlineTarget = document.getElementById("settings-connected-accounts-inline");
   if (inlineTarget) inlineTarget.innerHTML = getConnectedAccountsMarkup({ compact: true });
+  console.log("[render] renderConnectedAccounts done", {
+    accountsPanelFound: !!accountsPanel,
+    accountsHtmlLength: accountsPanel ? accountsPanel.innerHTML.length : 0,
+    inlineFound: !!inlineTarget
+  });
 }
 
 // ===== AI PROVIDERS UI =====
@@ -9713,6 +9790,7 @@ function promptUser(message, defaultValue) {
 }
 
 function renderWorkspaceHub() {
+  console.log("[render] renderWorkspaceHub start", { tab: currentWorkspaceSettingsTab });
   document.querySelectorAll(".settings-tab-btn").forEach((btn) => {
     const active = (btn.dataset.workspaceTab || btn.dataset.settingsTab) === currentWorkspaceSettingsTab;
     btn.classList.toggle("active", active);
@@ -9751,6 +9829,7 @@ function renderWorkspaceHub() {
     btn.style.borderColor = mode === currentInstagramMode ? "rgba(199,125,255,0.4)" : "rgba(255,255,255,0.08)";
   });
   renderInstagramModeScopes(currentInstagramMode);
+  console.log("[render] renderWorkspaceHub done", { tab: currentWorkspaceSettingsTab });
 }
 
 function renderLinkedInRewriteRouteDiagnostics(report) {
@@ -11980,9 +12059,27 @@ function buildMediaVaultItems() {
   return items;
 }
 
+function handleBrokenMediaPreview(el) {
+  if (!el) return;
+  const parent = el.parentElement;
+  const label = el.getAttribute("alt") || "Media preview";
+  const replacement = document.createElement("div");
+  replacement.className = "w-full h-full min-h-[96px] flex flex-col items-center justify-center gap-2 bg-[#120c1d] text-gray-500 text-center p-3";
+  replacement.innerHTML = `
+    <i class="ph-bold ph-image-broken text-2xl text-gray-600"></i>
+    <span class="text-[10px] uppercase tracking-wider font-bold">${escapeHtml(label)} unavailable</span>
+  `;
+  if (parent) parent.replaceChild(replacement, el);
+}
+
 function renderMedia() {
+  console.log("[render] renderMedia start", getAppStateCounts());
   const grid = document.getElementById("media-grid");
-  if (!grid) return;
+  if (!grid) {
+    console.error("renderMedia: #media-grid missing");
+    pushAppError("renderMedia", new Error("#media-grid missing"));
+    return;
+  }
 
   let items = buildMediaVaultItems();
 
@@ -12010,6 +12107,7 @@ function renderMedia() {
 
   if (!items.length) {
     grid.innerHTML = makeEmptyState("No media", offlineMode ? "Offline or backend unavailable. Local media will appear here when available." : "No media found for this filter. Upload files, add links, or create a carousel post.", "ph-images");
+    console.log("[render] renderMedia done", { childCount: grid.children.length, htmlLength: grid.innerHTML.length });
     return;
   }
 
@@ -12083,6 +12181,7 @@ function renderMedia() {
       </button>
     `;
   }).join("");
+  console.log("[render] renderMedia done", { childCount: grid.children.length, htmlLength: grid.innerHTML.length });
 }
 
 function getMediaAssetDetailRows(item, linkedPost) {
@@ -13039,7 +13138,51 @@ async function duplicatePostById(postId) {
   }
 }
 
+function getViewDisplayMode(viewEl) {
+  if (!viewEl) return "block";
+  if (viewEl.classList.contains("flex-col") || viewEl.classList.contains("flex")) return "flex";
+  return "block";
+}
+
+function showView(viewEl) {
+  if (!viewEl) return;
+  viewEl.hidden = false;
+  viewEl.removeAttribute("hidden");
+  viewEl.setAttribute("aria-hidden", "false");
+  viewEl.classList.remove("hidden");
+  viewEl.classList.add("active");
+  viewEl.style.display = getViewDisplayMode(viewEl);
+  if (viewEl.classList.contains("flex-col") && !viewEl.classList.contains("flex")) {
+    viewEl.classList.add("flex");
+  }
+}
+
+function hideView(viewEl) {
+  if (!viewEl) return;
+  viewEl.classList.remove("active");
+  viewEl.classList.add("hidden");
+  viewEl.setAttribute("aria-hidden", "true");
+  viewEl.hidden = true;
+  viewEl.style.display = "none";
+}
+
+function logActiveViewDisplay(viewName, viewEl) {
+  if (!viewEl) return;
+  const computed = typeof getComputedStyle === "function" ? getComputedStyle(viewEl) : null;
+  console.log("[view]", viewName, {
+    className: viewEl.className,
+    display: computed?.display || "",
+    visibility: computed?.visibility || "",
+    opacity: computed?.opacity || "",
+    offsetWidth: viewEl.offsetWidth,
+    offsetHeight: viewEl.offsetHeight,
+    hidden: viewEl.hidden,
+    ariaHidden: viewEl.getAttribute("aria-hidden")
+  });
+}
+
 function switchView(viewName) {
+  console.log(`[boot] switchView ${viewName || "calendar"} start`);
   const registeredViews = getRegisteredViewNames();
   const requestedView = String(viewName || "calendar").trim();
   const routeFound = registeredViews.includes(requestedView);
@@ -13064,8 +13207,7 @@ function switchView(viewName) {
   }
   if (!targetView) {
     const calendarView = document.getElementById("view-calendar");
-    calendarView?.classList.remove("hidden");
-    calendarView?.classList.add("flex");
+    showView(calendarView);
     currentView = "calendar";
     return;
   }
@@ -13093,13 +13235,11 @@ function switchView(viewName) {
   });
 
   document.querySelectorAll(".view-section").forEach((section) => {
-    section.classList.add("hidden");
-    section.classList.remove("flex");
+    if (section === targetView) showView(section);
+    else hideView(section);
   });
-
-  targetView.classList.remove("hidden");
-  targetView.classList.add("flex");
   targetView.scrollTop = 0;
+  logActiveViewDisplay(targetName, targetView);
 
   if (mainShell) {
     mainShell.scrollTop = 0;
@@ -15057,9 +15197,13 @@ async function resetAppShellCacheOnly() {
   const keys = await caches.keys();
   const shellKeys = keys.filter((key) => /^stellarsync-shell-/.test(key));
   await Promise.all(shellKeys.map((key) => caches.delete(key)));
+  if ("serviceWorker" in navigator) {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(registrations.map((registration) => registration.unregister().catch(() => false)));
+  }
   serviceWorkerStatus.updateAvailable = false;
   updateAppStatusBanner();
-  showToast("Cache reset", "App shell cache cleared. Local post data was not deleted. Reloading app.", "ph-check", "text-[#00ffaa]");
+  showToast("Cache reset", "App shell cache and service worker were cleared. Local post data was not deleted. Reloading app.", "ph-check", "text-[#00ffaa]");
   setTimeout(() => window.location.reload(), 900);
 }
 
@@ -15111,8 +15255,13 @@ function inspoToPost(inspoIdOrTitle, type, description) {
 }
     
 function renderInspo() {
+  console.log("[render] renderInspo start", getAppStateCounts());
   const grid = document.getElementById("inspo-grid");
-  if (!grid) return;
+  if (!grid) {
+    console.error("renderInspo: #inspo-grid missing");
+    pushAppError("renderInspo", new Error("#inspo-grid missing"));
+    return;
+  }
 
   const filters = mobileFilterState.inspo || {};
   let items = [...(appState.inspo || [])].filter((item) => {
@@ -15129,6 +15278,7 @@ function renderInspo() {
 
   if (!items.length) {
     grid.innerHTML = makeEmptyState("No inspo", "Save links, references, videos, or visual cues here before turning them into posts.", "ph-lightbulb");
+    console.log("[render] renderInspo done", { childCount: grid.children.length, htmlLength: grid.innerHTML.length });
     return;
   }
 
@@ -15208,11 +15358,17 @@ function renderInspo() {
       </div>
     `;
   }).join("");
+  console.log("[render] renderInspo done", { childCount: grid.children.length, htmlLength: grid.innerHTML.length });
 }
 
 function renderNotes() {
+  console.log("[render] renderNotes start", getAppStateCounts());
   const grid = document.getElementById("notes-grid");
-  if (!grid) return;
+  if (!grid) {
+    console.error("renderNotes: #notes-grid missing");
+    pushAppError("renderNotes", new Error("#notes-grid missing"));
+    return;
+  }
 
   const filters = mobileFilterState.notes || {};
   let items = [...(appState.notes || [])].filter((item) => String(item.flowState || item.status || "active").trim().toLowerCase() !== "archived");
@@ -15228,6 +15384,7 @@ function renderNotes() {
   }
   if (!items.length) {
     grid.innerHTML = makeEmptyState("No notes", "Capture hooks, one-line insights, or bullet ideas here before drafting posts.", "ph-note-pencil");
+    console.log("[render] renderNotes done", { childCount: grid.children.length, htmlLength: grid.innerHTML.length });
     return;
   }
 
@@ -15269,6 +15426,7 @@ function renderNotes() {
       </div>
     `;
   }).join("");
+  console.log("[render] renderNotes done", { childCount: grid.children.length, htmlLength: grid.innerHTML.length });
 }
 
 function noteToPost(noteId) {
@@ -15302,9 +15460,12 @@ async function apiUpdateCampaign(campaign) {
 }
 
 async function syncRemoteIfConfigured() {
+  console.log("[boot] syncRemoteIfConfigured start");
   if (!APP_CONFIG.ENABLE_REMOTE_SYNC || !isRemoteConfigured()) {
     offlineMode = true;
     backendReachable = false;
+    lastSyncError = "Remote sync is disabled or APP_SCRIPT_URL is not configured.";
+    console.log("[data]", getAppStateCounts());
     rerenderAll();
     return;
   }
@@ -15368,13 +15529,17 @@ async function syncRemoteIfConfigured() {
     selectedCalendarDateKey = toDateKey(calendarCursor);
     offlineMode = false;
     backendReachable = true;
+    lastSyncError = "";
     persistLocalState();
+    console.log("[data]", getAppStateCounts());
     rerenderAll();
     showToast("Connected", "Google Sheets data loaded.", "ph-cloud-check", "text-[#00ffaa]");
   } catch (err) {
     console.error(err);
     offlineMode = true;
     backendReachable = false;
+    lastSyncError = err && err.message ? err.message : String(err);
+    console.log("[data]", getAppStateCounts());
     rerenderAll();
     showToast("Offline mode", "Using local data. Remote fetch failed.", "ph-warning", "text-yellow-400");
   }
@@ -18049,10 +18214,75 @@ function ensureViewHealth(viewName) {
   return window.__viewHealth[viewName];
 }
 
+function getAppStateCounts() {
+  return {
+    posts: (appState.posts || []).length,
+    campaigns: (appState.campaigns || []).length,
+    media: (appState.media || []).length,
+    inspo: (appState.inspo || []).length,
+    notes: (appState.notes || []).length,
+    offlineMode: !!offlineMode,
+    lastSyncError: lastSyncError || ""
+  };
+}
+
+function pushAppError(phase, error) {
+  window.__appErrors = window.__appErrors || [];
+  const message = error && error.message ? error.message : String(error || "Unknown error");
+  const entry = {
+    phase: phase || "runtime",
+    message,
+    stack: error && error.stack ? error.stack : "",
+    time: new Date().toISOString()
+  };
+  window.__appErrors.push(entry);
+  return entry;
+}
+
+function getRenderFallbackTarget(label) {
+  const key = getViewHealthKey(label);
+  const targetByKey = {
+    calendar: "calendar-grid",
+    ledger: "ledger-list",
+    constellation: "starmap-canvas",
+    media: "media-grid",
+    inspo: "inspo-grid",
+    notes: "notes-grid",
+    performance: "performance-kpis",
+    audit: "audit-system-health",
+    overview: "overview-top-post-card",
+    workspace: "workspace-diagnostics-panel",
+    accounts: "workspace-connected-accounts-panel"
+  };
+  const id = targetByKey[key] || "";
+  return id ? document.getElementById(id) : null;
+}
+
+function writeRenderFallback(label, error) {
+  const target = getRenderFallbackTarget(label);
+  if (!target || String(target.innerHTML || "").trim()) return;
+  const message = error && error.message ? error.message : String(error || "Unknown render error");
+  target.innerHTML = `
+    <div class="p-4 rounded-xl bg-red-950/30 border border-red-400/20 text-red-200 text-sm">
+      <div class="font-bold mb-1">Render failed: ${escapeHtml(label || "unknown")}</div>
+      <div class="text-xs text-red-100/80 wrap-safe">${escapeHtml(message)}</div>
+    </div>
+  `;
+}
+
+function logRenderStart(label) {
+  console.log(`[render] ${label || "unknown"} start`, getAppStateCounts());
+}
+
+function logRenderDone(label) {
+  console.log(`[render] ${label || "unknown"} done`);
+}
+
 function safeRender(fn, label) {
   var healthKey = getViewHealthKey(label);
   var health = ensureViewHealth(healthKey);
   var started = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+  logRenderStart(label);
   try {
     if (typeof fn === "function") {
       fn();
@@ -18060,15 +18290,20 @@ function safeRender(fn, label) {
       health.renderCount += 1;
       health.lastRenderTime = new Date().toISOString();
       health.lastRenderError = null;
+      logRenderDone(label);
     } else {
       health.ready = false;
       health.lastRenderError = "render function missing";
       console.warn("safeRender: not a function", label);
+      pushAppError(`safeRender/${label || "unknown"}`, new Error("render function missing"));
+      writeRenderFallback(label, new Error("render function missing"));
     }
   } catch (err) {
     health.ready = false;
     health.lastRenderError = err && err.message ? err.message : String(err);
     console.error("safeRender error in", label || "unknown", err);
+    pushAppError(`safeRender/${label || "unknown"}`, err);
+    writeRenderFallback(label, err);
   } finally {
     var ended = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
     health.lastRenderDuration = Math.round((ended - started) * 100) / 100;
@@ -18076,6 +18311,7 @@ function safeRender(fn, label) {
 }
 
 function renderOverviewPanel() {
+  console.log("[render] renderOverviewPanel start", getAppStateCounts());
   const topPost = (appState.posts || []).slice().sort((a, b) => normalizeMetricNumber(b.impressions || b.views || 0) - normalizeMetricNumber(a.impressions || a.views || 0))[0] || null;
   const topTarget = document.getElementById("overview-top-post-card");
   if (topTarget) {
@@ -18098,6 +18334,11 @@ function renderOverviewPanel() {
   }
   renderSemanticMemoryPanel();
   renderContextualGuidancePanel();
+  console.log("[render] renderOverviewPanel done", {
+    topPostFound: !!topTarget,
+    performanceFound: !!performanceTarget,
+    campaignFound: !!campaignTarget
+  });
 }
 
 function renderSemanticMemoryPanel() {
@@ -18126,6 +18367,7 @@ function renderModalPillarButtons(selectedPillar = "") {
 }
 
 function renderPerformanceView() {
+  console.log("[render] renderPerformanceView start", getAppStateCounts());
   const posts = (appState.posts || []).filter((post) => performanceFilters.platform === "all" || String(post.platform || "linkedin") === performanceFilters.platform);
   const kpis = document.getElementById("performance-kpis");
   if (kpis) {
@@ -18147,9 +18389,15 @@ function renderPerformanceView() {
   renderComparison("performance-campaign-comparison", countPostsBy(posts, (post) => post.campaignName || "Uncategorized"));
   renderComparison("performance-pillar-comparison", countPostsBy(posts, (post) => getPostContentPillar(post)));
   renderComparison("performance-platform-comparison", countPostsBy(posts, (post) => post.platform || "linkedin"));
+  console.log("[render] renderPerformanceView done", {
+    kpisFound: !!kpis,
+    kpiHtmlLength: kpis ? kpis.innerHTML.length : 0,
+    postCount: posts.length
+  });
 }
 
 function renderAuditView() {
+  console.log("[render] renderAuditView start", getAppStateCounts());
   const working = document.getElementById("audit-working-list");
   const attention = document.getElementById("audit-attention-list");
   const nextAction = document.getElementById("audit-next-action");
@@ -18171,6 +18419,11 @@ function renderAuditView() {
   renderPublishingReadiness({ platformTargets: appState.settings?.platforms || ["linkedin"], status: "draft" });
   renderDeployChecklist();
   renderDiagnosticsPanel();
+  console.log("[render] renderAuditView done", {
+    workingFound: !!working,
+    attentionFound: !!attention,
+    diagnosticsHtmlLength: document.getElementById("audit-system-health")?.innerHTML.length || 0
+  });
 }
 
 function renderAISemanticMemoryCards() {
@@ -18187,6 +18440,7 @@ function reportFrontendError(context, error) {
   try {
     var msg = "[" + context + "] " + (error && error.message || error || "Unknown error");
     bootErrors.push(msg);
+    pushAppError(context, error);
     console.error("Boot error:", msg, error);
     var detail = document.getElementById("boot-diag-error-detail");
     var errorsEl = document.getElementById("boot-diag-errors");
@@ -18235,13 +18489,123 @@ function guardedCall(fn, name) {
   }
 }
 
+function setupRuntimeAuditLogging() {
+  if (window.__runtimeAuditLoggingInstalled) return;
+  window.__runtimeAuditLoggingInstalled = true;
+  window.__runtimeAudit = window.__runtimeAudit || {
+    domContentLoaded: document.readyState !== "loading",
+    firstError: null,
+    firstUnhandledRejection: null,
+    firstFailedNetwork: null,
+    clicks: [],
+    overlays: []
+  };
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => {
+      window.__runtimeAudit.domContentLoaded = true;
+      console.log("[boot] DOMContentLoaded");
+    }, { once: true });
+  } else {
+    console.log("[boot] DOMContentLoaded already fired");
+  }
+  window.addEventListener("error", (event) => {
+    if (event.target && event.target !== window) {
+      const failed = {
+        tagName: event.target.tagName || "",
+        id: event.target.id || "",
+        src: event.target.src || event.target.href || "",
+        time: new Date().toISOString()
+      };
+      if (!window.__runtimeAudit.firstFailedNetwork) window.__runtimeAudit.firstFailedNetwork = failed;
+      console.error("[network] resource failed", failed);
+      pushAppError("resource/error", new Error(failed.src || failed.tagName || "resource failed"));
+      return;
+    }
+    const detail = {
+      message: event.message || "Unknown runtime error",
+      source: event.filename || "",
+      line: event.lineno || 0,
+      column: event.colno || 0,
+      time: new Date().toISOString()
+    };
+    if (!window.__runtimeAudit.firstError) window.__runtimeAudit.firstError = detail;
+    pushAppError("window/error", event.error || new Error(detail.message));
+    console.error("[runtime] first error candidate", detail, event.error);
+  }, true);
+  window.addEventListener("unhandledrejection", (event) => {
+    const reason = event.reason || {};
+    const detail = {
+      message: reason.message || String(reason || "Unhandled promise rejection"),
+      stack: reason.stack || "",
+      time: new Date().toISOString()
+    };
+    if (!window.__runtimeAudit.firstUnhandledRejection) window.__runtimeAudit.firstUnhandledRejection = detail;
+    pushAppError("window/unhandledrejection", reason instanceof Error ? reason : new Error(detail.message));
+    console.error("[runtime] unhandled promise rejection", reason);
+  });
+  document.addEventListener("click", (event) => {
+    const target = event.target;
+    const entry = {
+      id: target?.id || "",
+      tagName: target?.tagName || "",
+      className: String(target?.className || "").slice(0, 180),
+      time: new Date().toISOString()
+    };
+    window.__runtimeAudit.clicks.push(entry);
+    if (window.__runtimeAudit.clicks.length > 80) window.__runtimeAudit.clicks.shift();
+    console.log("[click]", target, entry.id, entry.className);
+  }, true);
+}
+
+function auditClickableOverlays() {
+  const selectors = [
+    "#app-background-overlay",
+    "#stars-container",
+    "#boot-diagnostics",
+    "#workspace-hub-modal",
+    "#scheduling-modal",
+    "#signal-overview-shell",
+    "#signal-overview-panel",
+    "#inspo-modal",
+    "#note-modal",
+    "#campaign-modal",
+    "#media-link-modal",
+    "#media-asset-modal",
+    "#upload-staging-modal",
+    "#connection-setup-modal",
+    "#confirm-action-modal",
+    "#ai-workspace-modal",
+    "#brand-framework-modal"
+  ];
+  window.__runtimeAudit = window.__runtimeAudit || {};
+  window.__runtimeAudit.overlays = selectors.map((selector) => {
+    const el = document.querySelector(selector);
+    if (!el) return { selector, found: false };
+    const computed = getComputedStyle(el);
+    return {
+      selector,
+      found: true,
+      className: String(el.className || ""),
+      pointerEvents: computed.pointerEvents,
+      zIndex: computed.zIndex,
+      opacity: computed.opacity,
+      display: computed.display,
+      visibility: computed.visibility,
+      hidden: el.hidden,
+      width: el.offsetWidth,
+      height: el.offsetHeight
+    };
+  });
+  console.table(window.__runtimeAudit.overlays);
+}
+
 function bootMinimalApp() {
   try {
+    console.log("[boot] bootMinimalApp start");
     // Ensure view-calendar is visible
     var cal = document.getElementById("view-calendar");
     if (cal) {
-      cal.classList.remove("hidden");
-      cal.classList.add("flex");
+      showView(cal);
     }
     // Ensure nav-calendar is active
     var navCal = document.getElementById("nav-calendar");
@@ -18281,32 +18645,49 @@ function bootMinimalApp() {
 }
 
 function initApp() {
+  setupRuntimeAuditLogging();
+  console.log("[boot] initApp start");
   window.__BOOT_STARTED = true;
   var domEl = document.getElementById("boot-diag-dom");
   domEl && (domEl.textContent = "yes");
   var startedEl = document.getElementById("boot-diag-started");
   startedEl && (startedEl.textContent = "yes");
   var versionEl = document.getElementById("boot-diag-version");
-  versionEl && (versionEl.textContent = "Frontend v1.0 · " + new Date().toISOString().slice(0, 10));
+  versionEl && (versionEl.textContent = "Frontend " + APP_FRONTEND_VERSION + " · SW " + APP_SERVICE_WORKER_VERSION);
 
   guardedCall(seedStars, "seedStars");
   guardedCall(cleanInvalidImportantToken, "cleanInvalidImportantToken");
 
   guardedCall(setupWorkspaceUI, "setupWorkspaceUI");
+  console.log("[boot] setupWorkspaceUI done");
+  guardedCall(auditClickableOverlays, "auditClickableOverlays");
   guardedCall(setupCalendarControls, "setupCalendarControls");
+  guardedCall(setupLedgerControls, "setupLedgerControls");
+  guardedCall(setupMediaFilters, "setupMediaFilters");
+  guardedCall(setupMediaAdvancedFilters, "setupMediaAdvancedFilters");
+  guardedCall(setupMediaUpload, "setupMediaUpload");
+  guardedCall(setupMediaLinkModal, "setupMediaLinkModal");
+  guardedCall(setupModalControls, "setupModalControls");
   guardedCall(setupInspoModal, "setupInspoModal");
   guardedCall(setupNoteModal, "setupNoteModal");
   guardedCall(setupCampaignControls, "setupCampaignControls");
+  guardedCall(setupConstellationInteractions, "setupConstellationInteractions");
   guardedCall(setupWriteIdeaWorkspace, "setupWriteIdeaWorkspace");
   guardedCall(setupAIAndBrandWorkspaces, "setupAIAndBrandWorkspaces");
+  guardedCall(setupPWAInstall, "setupPWAInstall");
+  guardedCall(registerServiceWorkerSafe, "registerServiceWorkerSafe");
 
   guardedCall(setupSplitPane, "setupSplitPane");
   guardedCall(applyShellLayout, "applyShellLayout");
 
+  console.log("[boot] rerenderAll start");
   guardedCall(rerenderAll, "rerenderAll");
+  console.log("[boot] rerenderAll done");
+  console.log("[boot] switchView calendar start");
   guardedCall(switchView, "switchView", "calendar");
 
   window.__BOOT_COMPLETED = true;
+  console.log("[boot] initApp complete");
   var completedEl = document.getElementById("boot-diag-completed");
   completedEl && (completedEl.textContent = "yes");
   var renderEl = document.getElementById("boot-diag-render");

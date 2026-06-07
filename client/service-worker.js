@@ -1,4 +1,4 @@
-const CACHE_VERSION = "2026.06.06.01";
+const CACHE_VERSION = "2026.06.07.01-runtime-ui";
 const STELLARSYNC_CACHE = `stellarsync-shell-${CACHE_VERSION}`;
 const STELLARSYNC_ASSETS = [
   "./",
@@ -14,6 +14,7 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(STELLARSYNC_CACHE).then((cache) => cache.addAll(STELLARSYNC_ASSETS)).catch(() => undefined)
   );
+  self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
