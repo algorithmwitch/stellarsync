@@ -229,6 +229,131 @@
     color: #fff;
   }
 
+    color: #fff;
+  }
+
+  /* ---- Generate cards ---- */
+  .write-idea-gen-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(24,17,37,0.92);
+    color: #d1d5db;
+    cursor: pointer;
+    transition: background 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
+    text-align: left;
+    width: 100%;
+    font-family: inherit;
+  }
+  .write-idea-gen-card:hover {
+    background: rgba(45,27,78,0.95);
+    color: #fff;
+    border-color: rgba(255,255,255,0.15);
+    transform: translateY(-1px);
+  }
+  .write-idea-gen-card.active {
+    background: linear-gradient(135deg, rgba(157,78,221,0.18), rgba(157,78,221,0.06));
+    border-color: var(--gen-color, #9d4edd);
+    color: #fff;
+    box-shadow: inset 0 0 0 1px var(--gen-color, #9d4edd);
+  }
+  .write-idea-gen-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .write-idea-gen-content {
+    min-width: 0;
+    flex: 1;
+  }
+  .write-idea-gen-title {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+  .write-idea-gen-desc {
+    font-size: 10px;
+    color: #94a3b8;
+    margin-top: 2px;
+    letter-spacing: 0.03em;
+  }
+  .write-idea-gen-card.active .write-idea-gen-desc {
+    color: #cbd5e1;
+  }
+
+  /* ---- Memory cards ---- */
+  .write-idea-memory-item {
+    background: rgba(24,17,37,0.92);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 12px;
+    text-align: center;
+    transition: background 160ms ease;
+  }
+  .write-idea-memory-item:hover {
+    background: rgba(45,27,78,0.95);
+  }
+  .write-idea-memory-icon {
+    font-size: 20px;
+    margin-bottom: 6px;
+  }
+  .write-idea-memory-label {
+    font-size: 9px;
+    color: #94a3b8;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .write-idea-memory-value {
+    font-size: 18px;
+    font-weight: 800;
+    color: #c77dff;
+  }
+
+  /* ---- Action buttons ---- */
+  .write-idea-action-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(24,17,37,0.92);
+    color: #d1d5db;
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+    text-align: left;
+    width: 100%;
+    font-family: inherit;
+  }
+  .write-idea-action-btn:hover {
+    background: rgba(45,27,78,0.95);
+    color: #fff;
+    border-color: rgba(255,255,255,0.15);
+  }
+  .write-idea-action-btn.active {
+    background: linear-gradient(135deg, rgba(157,78,221,0.18), rgba(157,78,221,0.06));
+    border-color: rgba(199,125,255,0.4);
+    color: #fff;
+  }
+  .write-idea-action-icon {
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
   .write-idea-mode-btn {
     border: 1px solid rgba(255,255,255,0.08);
     background: rgba(24,17,37,0.92);
@@ -2089,48 +2214,110 @@
             </div>
           </div>
 
+          <!-- ✨ Generate Zone -->
           <div class="write-idea-review-card">
-            <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3">Output Targets</div>
-            <div id="write-idea-output-targets" class="grid grid-cols-1 md:grid-cols-2 gap-2">
-              <button type="button" class="write-idea-output-btn" data-write-idea-output="create_one_post">Create one post</button>
-              <button type="button" class="write-idea-output-btn" data-write-idea-output="create_campaign">Create campaign</button>
-              <button type="button" class="write-idea-output-btn" data-write-idea-output="add_to_notes">Add to Notes</button>
-              <button type="button" class="write-idea-output-btn" data-write-idea-output="add_to_inspo">Add to Inspo</button>
-              <button type="button" class="write-idea-output-btn" data-write-idea-output="draft_carousel_outline">Carousel structure</button>
-              <button type="button" class="write-idea-output-btn" data-write-idea-output="draft_short_video_script">Draft short video script</button>
-              <button type="button" class="write-idea-output-btn" data-write-idea-output="populate_calendar_week">Generate campaign with posts</button>
-              <button type="button" class="write-idea-output-btn" data-write-idea-output="populate_campaign_queue">Generate campaign posts</button>
-            </div>
-	            <div id="write-idea-generation-modes" class="flex flex-wrap gap-2 mt-3 mb-4">
-	              <button type="button" class="write-idea-mode-btn active" data-write-idea-mode="generate_post">Generate Post</button>
-	              <button type="button" class="write-idea-mode-btn" data-write-idea-mode="generate_structure">Generate Structure</button>
-	              <button type="button" class="write-idea-mode-btn" data-write-idea-mode="generate_carousel">Generate Carousel</button>
-	              <button type="button" class="write-idea-mode-btn" data-write-idea-mode="generate_newsletter">Generate Newsletter Draft</button>
-	              <button type="button" class="write-idea-mode-btn" data-write-idea-mode="generate_linkedin_reflection">Generate LinkedIn Reflection</button>
-	            </div>
-	            <div class="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-3 mb-4 items-center">
-	              <label class="block text-[10px] uppercase tracking-widest text-gray-500 font-bold">Generation Engine</label>
-	              <select id="write-idea-generation-engine" class="form-input text-sm font-medium">
-	                <option value="auto">Auto</option>
-	                <option value="local">Local Creator Engine</option>
-	                <option value="provider">Provider AI</option>
-	              </select>
-	            </div>
-	            <div class="flex flex-wrap gap-3 mt-2">
-              <button id="write-idea-generate-post-btn" type="button" class="px-5 py-3 rounded-2xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs uppercase tracking-[0.2em] font-bold border border-white/10">Generate Post</button>
-              <button id="write-idea-generate-btn" type="button" class="px-5 py-3 rounded-2xl bg-[#231738] border border-white/5 text-white text-xs uppercase tracking-[0.2em] font-bold">Generate Structure</button>
-              <button id="write-idea-save-draft-btn" type="button" class="px-5 py-3 rounded-2xl bg-[#181125] border border-white/5 text-white text-xs uppercase tracking-[0.2em] font-bold">Save Draft</button>
-              <button id="write-idea-save-manual-btn" type="button" class="px-5 py-3 rounded-2xl bg-[#181125] border border-white/5 text-white text-xs uppercase tracking-[0.2em] font-bold">Create Manually</button>
+            <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3">✨ Generate</div>
+            <div id="write-idea-generation-modes" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <button type="button" class="write-idea-gen-card active" data-write-idea-mode="generate_post" style="--gen-color:#9d4edd">
+                <div class="write-idea-gen-icon" style="background:linear-gradient(135deg,rgba(157,78,221,0.3),rgba(157,78,221,0.1))">✨</div>
+                <div class="write-idea-gen-content">
+                  <div class="write-idea-gen-title">Generate Post</div>
+                  <div class="write-idea-gen-desc">Finished social media prose</div>
+                </div>
+              </button>
+              <button type="button" class="write-idea-gen-card" data-write-idea-mode="generate_structure" style="--gen-color:#0ea5e9">
+                <div class="write-idea-gen-icon" style="background:linear-gradient(135deg,rgba(14,165,233,0.3),rgba(14,165,233,0.1))">🧭</div>
+                <div class="write-idea-gen-content">
+                  <div class="write-idea-gen-title">Generate Structure</div>
+                  <div class="write-idea-gen-desc">Outline before writing</div>
+                </div>
+              </button>
+              <button type="button" class="write-idea-gen-card" data-write-idea-mode="generate_carousel" style="--gen-color:#f59e0b">
+                <div class="write-idea-gen-icon" style="background:linear-gradient(135deg,rgba(245,158,11,0.3),rgba(245,158,11,0.1))">🎠</div>
+                <div class="write-idea-gen-content">
+                  <div class="write-idea-gen-title">Generate Carousel</div>
+                  <div class="write-idea-gen-desc">Slide-by-slide content</div>
+                </div>
+              </button>
+              <button type="button" class="write-idea-gen-card" data-write-idea-mode="generate_newsletter" style="--gen-color:#10b981">
+                <div class="write-idea-gen-icon" style="background:linear-gradient(135deg,rgba(16,185,129,0.3),rgba(16,185,129,0.1))">📰</div>
+                <div class="write-idea-gen-content">
+                  <div class="write-idea-gen-title">Generate Newsletter</div>
+                  <div class="write-idea-gen-desc">Long-form article</div>
+                </div>
+              </button>
+              <button type="button" class="write-idea-gen-card" data-write-idea-mode="generate_linkedin_reflection" style="--gen-color:#f43f5e">
+                <div class="write-idea-gen-icon" style="background:linear-gradient(135deg,rgba(244,63,94,0.3),rgba(244,63,94,0.1))">💭</div>
+                <div class="write-idea-gen-content">
+                  <div class="write-idea-gen-title">Generate Reflection</div>
+                  <div class="write-idea-gen-desc">Personal story and insight</div>
+                </div>
+              </button>
             </div>
           </div>
 
+          <!-- 🧠 Creator Memory Zone -->
+          <div id="write-idea-memory-zone" class="write-idea-review-card hidden">
+            <div class="flex items-center justify-between gap-3 flex-wrap mb-4">
+              <div>
+                <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">🧠 Creator Memory</div>
+                <div id="write-idea-memory-subtitle" class="text-sm text-white mt-1">Memory used for this generation.</div>
+              </div>
+              <button id="write-idea-refresh-memory-btn" type="button" class="px-4 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white hover:bg-[#231738] transition-colors">Refresh Memory</button>
+            </div>
+            <div id="write-idea-memory-cards" class="grid grid-cols-1 md:grid-cols-5 gap-3">
+              <div class="write-idea-memory-item" data-memory="posts">
+                <div class="write-idea-memory-icon">📝</div>
+                <div class="write-idea-memory-label">Historical Posts</div>
+                <div class="write-idea-memory-value" id="memory-posts-count">0</div>
+              </div>
+              <div class="write-idea-memory-item" data-memory="themes">
+                <div class="write-idea-memory-icon">🌌</div>
+                <div class="write-idea-memory-label">Themes</div>
+                <div class="write-idea-memory-value" id="memory-themes-count">0</div>
+              </div>
+              <div class="write-idea-memory-item" data-memory="ideas">
+                <div class="write-idea-memory-icon">🔗</div>
+                <div class="write-idea-memory-label">Connected Ideas</div>
+                <div class="write-idea-memory-value" id="memory-ideas-count">0</div>
+              </div>
+              <div class="write-idea-memory-item" data-memory="frameworks">
+                <div class="write-idea-memory-icon">📚</div>
+                <div class="write-idea-memory-label">Frameworks</div>
+                <div class="write-idea-memory-value" id="memory-frameworks-count">0</div>
+              </div>
+              <div class="write-idea-memory-item" data-memory="campaigns">
+                <div class="write-idea-memory-icon">🎯</div>
+                <div class="write-idea-memory-label">Campaigns</div>
+                <div class="write-idea-memory-value" id="memory-campaigns-count">0</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ⚡ Actions Zone -->
+          <div class="write-idea-review-card">
+            <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3">⚡ Actions</div>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+              <button type="button" class="write-idea-action-btn" data-write-idea-output="create_one_post"><span class="write-idea-action-icon">➕</span> Create Post</button>
+              <button type="button" class="write-idea-action-btn" data-write-idea-output="populate_calendar_week"><span class="write-idea-action-icon">📅</span> Calendar Plan</button>
+              <button type="button" class="write-idea-action-btn" data-write-idea-output="create_campaign"><span class="write-idea-action-icon">🌌</span> Create Campaign</button>
+              <button type="button" class="write-idea-action-btn" data-write-idea-output="add_to_notes"><span class="write-idea-action-icon">📝</span> Save to Notes</button>
+              <button type="button" class="write-idea-action-btn" data-write-idea-output="add_to_inspo"><span class="write-idea-action-icon">💡</span> Save to Inspo</button>
+              <a id="write-idea-open-ai-settings-link" href="#" class="write-idea-action-btn" style="display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;text-decoration:none"><span class="write-idea-action-icon">⚙️</span> AI Providers</a>
+            </div>
+          </div>
+
+          <!-- 👀 Review Zone -->
           <div class="write-idea-review-card">
             <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
               <div>
-                <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Review Before Save</div>
-                <div id="write-idea-review-subtitle" class="text-sm text-white mt-1">Review generated content before saving to POSTS.</div>
+                <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">👀 Review</div>
+                <div id="write-idea-review-subtitle" class="text-sm text-white mt-1">Review generated content before saving.</div>
               </div>
-              <span id="write-idea-status-chip" class="diagnostic-chip">Ready</span>
+              <div class="flex flex-wrap gap-2">
+                <span id="write-idea-status-chip" class="diagnostic-chip">Ready</span>
+                <span id="write-idea-gen-engine-chip" class="hidden diagnostic-chip"></span>
+              </div>
             </div>
             <div id="write-idea-review-summary" class="text-sm text-gray-300 wrap-safe mb-4">Generate a post or structure to review here.</div>
             <div id="write-idea-warning-list" class="flex flex-wrap gap-2 mb-4"></div>
@@ -2144,17 +2331,11 @@
                 </div>
               </div>
             </div>
-            <div class="flex flex-wrap gap-3 mt-5">
-              <button id="write-idea-approve-btn" type="button" class="px-4 py-3 rounded-2xl bg-[#231738] border border-white/5 text-white text-xs uppercase tracking-[0.2em] font-bold">Approve Selected</button>
-              <button id="write-idea-save-drafts-btn" type="button" class="px-4 py-3 rounded-2xl bg-[#181125] border border-white/5 text-white text-xs uppercase tracking-[0.2em] font-bold">Save as Drafts</button>
-            </div>
-            <div id="write-idea-creator-memory" class="hidden mt-4 p-3 rounded-xl bg-[#0f0a18] border border-white/5">
-              <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Frameworks Used</div>
-              <div id="write-idea-creator-memory-body" class="text-xs text-gray-300 leading-relaxed"></div>
-            </div>
-            <div id="write-idea-historical-references" class="hidden mt-4">
-              <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Related Content</div>
-              <div id="write-idea-historical-references-body" class="grid grid-cols-1 md:grid-cols-3 gap-3"></div>
+            <div id="write-idea-review-actions" class="flex flex-wrap gap-3 mt-5">
+              <button id="write-idea-approve-btn" type="button" class="px-4 py-3 rounded-2xl bg-gradient-to-r from-[#10b981] to-[#34d399] text-white text-xs uppercase tracking-[0.2em] font-bold border border-white/10">✅ Approve</button>
+              <button id="write-idea-save-drafts-btn" type="button" class="px-4 py-3 rounded-2xl bg-[#181125] border border-white/5 text-white text-xs uppercase tracking-[0.2em] font-bold">💾 Save Draft</button>
+              <button id="write-idea-edit-post-btn" type="button" class="hidden px-4 py-3 rounded-2xl bg-[#231738] border border-white/5 text-white text-xs uppercase tracking-[0.2em] font-bold">✏️ Edit</button>
+              <button id="write-idea-regenerate-btn" type="button" class="hidden px-4 py-3 rounded-2xl bg-[#231738] border border-white/5 text-white text-xs uppercase tracking-[0.2em] font-bold">🔄 Regenerate</button>
             </div>
           </div>
         </div>
@@ -3926,7 +4107,7 @@
 </div>
 <script>
 const APP_CONFIG = {
-  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbwaETa85EQlt3tfQkjFcomzCnrxxgVQ3dBhDcyht95rD6YJF2k5M4t33mukLnub1Faw/exec",
+  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbwTmOozLo9pbl-93m5tbIiAzZaeyXBGdP3GV3PVkzCDMKvpX5LZuwYOsyOC8OKfYDVf/exec",
   ENABLE_REMOTE_SYNC: true,
   STORAGE_KEY: "stellarsync_local_state_v5",
   SHELL_LAYOUT_KEY: "stellarsync_shell_layout_v2"
@@ -4390,32 +4571,20 @@ const writeIdeaGenerationModesEl = document.getElementById("write-idea-generatio
 const writeIdeaGenerationEngineInput = document.getElementById("write-idea-generation-engine");
 const writeIdeaRelatedCampaigns = document.getElementById("write-idea-related-campaigns");
 const writeIdeaDraftList = document.getElementById("write-idea-draft-list");
-
-const viewport = document.getElementById("starmap-viewport");
-const canvas = document.getElementById("starmap-canvas");
-const constellationSelectionCard = document.getElementById("constellation-selection-card");
-const constellationSelectionTitle = document.getElementById("constellation-selection-title");
-const constellationSelectionMeta = document.getElementById("constellation-selection-meta");
-const constellationSelectionExcerpt = document.getElementById("constellation-selection-excerpt");
-const constellationSelectionOpenBtn = document.getElementById("constellation-selection-open");
-const constellationSelectionDayBtn = document.getElementById("constellation-selection-day");
-const constellationSelectionCloseBtn = document.getElementById("constellation-selection-close");
-
-const inspoModal = document.getElementById("inspo-modal");
-const inspoModalCard = document.getElementById("inspo-modal-card");
-const openInspoModalBtn = document.getElementById("open-inspo-modal-btn");
-const closeInspoModalBtn = document.getElementById("close-inspo-modal-btn");
-const cancelInspoBtn = document.getElementById("cancel-inspo-btn");
-const saveInspoBtn = document.getElementById("save-inspo-btn");
-
-const inspoTitleInput = document.getElementById("inspo-title");
-const inspoUrlInput = document.getElementById("inspo-url");
-const inspoNotesInput = document.getElementById("inspo-notes");
-const inspoTypeButtons = Array.from(document.querySelectorAll(".inspo-type-btn"));
-const existingPostImportModal = document.getElementById("existing-post-import-modal");
-const existingPostImportModalCard = document.getElementById("existing-post-import-modal-card");
-const closeExistingPostImportModalBtn = document.getElementById("close-existing-post-import-modal-btn");
 const writeIdeaImportExistingPostBtn = document.getElementById("write-idea-import-existing-post-btn");
+const writeIdeaMemoryZone = document.getElementById("write-idea-memory-zone");
+const writeIdeaMemoryCards = document.getElementById("write-idea-memory-cards");
+const writeIdeaMemorySubtitle = document.getElementById("write-idea-memory-subtitle");
+const writeIdeaRefreshMemoryBtn = document.getElementById("write-idea-refresh-memory-btn");
+const writeIdeaEditPostBtn = document.getElementById("write-idea-edit-post-btn");
+const writeIdeaRegenerateBtn = document.getElementById("write-idea-regenerate-btn");
+const writeIdeaReviewActions = document.getElementById("write-idea-review-actions");
+const writeIdeaGenEngineChip = document.getElementById("write-idea-gen-engine-chip");
+const writeIdeaMemoryPostsCount = document.getElementById("memory-posts-count");
+const writeIdeaMemoryThemesCount = document.getElementById("memory-themes-count");
+const writeIdeaMemoryIdeasCount = document.getElementById("memory-ideas-count");
+const writeIdeaMemoryFrameworksCount = document.getElementById("memory-frameworks-count");
+const writeIdeaMemoryCampaignsCount = document.getElementById("memory-campaigns-count");
 const existingPostImportUrlInput = document.getElementById("existing-post-import-url");
 const existingPostImportSourceUrlInput = document.getElementById("existing-post-import-source-url");
 const existingPostImportInput = document.getElementById("existing-post-import-input");
@@ -8435,11 +8604,15 @@ function setupWriteIdeaWorkspace() {
     else writeIdeaState.sourceTypes.push(source);
     renderWriteIdeaScaffold();
   });
-  writeIdeaOutputTargets?.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-write-idea-output]");
-    if (!button) return;
-    writeIdeaState.outputType = button.dataset.writeIdeaOutput || "create_one_post";
-    renderWriteIdeaScaffold();
+  var writeIdeaActionsContainer = document.querySelector("#view-write-idea [data-write-idea-output]")?.closest(".write-idea-review-card") || document.querySelector("#view-write-idea .write-idea-review-card:has([data-write-idea-output])");
+  document.querySelectorAll("#view-write-idea [data-write-idea-output]").forEach(function(btn) {
+    btn.addEventListener("click", function() {
+      writeIdeaState.outputType = this.dataset.writeIdeaOutput || "create_one_post";
+      document.querySelectorAll("#view-write-idea [data-write-idea-output]").forEach(function(b) {
+        b.classList.toggle("active", b.dataset.writeIdeaOutput === writeIdeaState.outputType);
+      });
+      renderWriteIdeaScaffold();
+    });
   });
   document.getElementById("write-idea-transformation-modes")?.addEventListener("click", (event) => {
     const button = event.target.closest("[data-write-idea-transform]");
@@ -8484,14 +8657,6 @@ function setupWriteIdeaWorkspace() {
       showToast("Local context", "Remote context is unavailable, so only local workspace context is shown.", "ph-warning", "text-yellow-400");
     }
   });
-  writeIdeaGenerateBtn?.addEventListener("click", () => generateWriteIdeaScaffold().catch((err) => {
-    console.error(err);
-    showToast("Scaffold failed", err.message || "Could not generate the idea scaffold.", "ph-warning", "text-yellow-400");
-  }));
-  writeIdeaGeneratePostBtn?.addEventListener("click", () => generateWriteIdeaPost().catch((err) => {
-    console.error(err);
-    showToast("Generation failed", err.message || "Could not generate the post.", "ph-warning", "text-yellow-400");
-  }));
   writeIdeaGenerationModesEl?.addEventListener("click", (e) => {
     var btn = e.target.closest("[data-write-idea-mode]");
     if (!btn) return;
@@ -8500,12 +8665,18 @@ function setupWriteIdeaWorkspace() {
     document.querySelectorAll("[data-write-idea-mode]").forEach(function(b) {
       b.classList.toggle("active", b.dataset.writeIdeaMode === mode);
     });
-    var label = mode === "generate_post" ? "Generate Post"
-      : mode === "generate_structure" ? "Generate Structure"
-      : mode === "generate_carousel" ? "Generate Carousel"
-      : mode === "generate_newsletter" ? "Generate Newsletter Draft"
-      : "Generate LinkedIn Reflection";
-    if (writeIdeaGeneratePostBtn) writeIdeaGeneratePostBtn.textContent = label;
+    renderWriteIdeaScaffold();
+    if (mode === "generate_structure") {
+      generateWriteIdeaScaffold().catch(function(err) {
+        console.error(err);
+        showToast("Generation failed", err.message || "Could not generate the scaffold.", "ph-warning", "text-yellow-400");
+      });
+    } else {
+      generateWriteIdeaPost().catch(function(err) {
+        console.error(err);
+        showToast("Generation failed", err.message || "Could not generate the post.", "ph-warning", "text-yellow-400");
+      });
+    }
   });
   writeIdeaSaveDraftBtn?.addEventListener("click", () => saveWriteIdeaDraft().catch((err) => {
     console.error(err);
@@ -8523,6 +8694,41 @@ function setupWriteIdeaWorkspace() {
     console.error(err);
     showToast("Save failed", err.message || "Could not save the selected idea drafts.", "ph-warning", "text-yellow-400");
   }));
+  writeIdeaEditPostBtn?.addEventListener("click", () => {
+    var scaffold = writeIdeaLastScaffold?.scaffold || writeIdeaLastScaffold;
+    if (!scaffold || !scaffold.proposedPosts || !scaffold.proposedPosts.length) return;
+    var post = scaffold.proposedPosts[0];
+    if (post && post.description) {
+      if (writeIdeaPromptInput) writeIdeaPromptInput.value = post.description;
+      writeIdeaState.prompt = post.description;
+      var composeModal = document.getElementById("ai-workspace-modal");
+      if (composeModal) {
+        var textarea = composeModal.querySelector("textarea");
+        if (textarea) textarea.value = post.description;
+        openModal("ai-workspace-modal");
+      } else {
+        showToast("Edit mode", "Post content loaded into prompt for editing.", "ph-pencil", "text-[#c77dff]");
+      }
+    }
+  });
+  writeIdeaRegenerateBtn?.addEventListener("click", () => {
+    var mode = writeIdeaState.generationMode || "generate_post";
+    if (mode === "generate_structure") {
+      generateWriteIdeaScaffold().catch(function(err) {
+        console.error(err);
+        showToast("Regeneration failed", err.message || "Could not regenerate.", "ph-warning", "text-yellow-400");
+      });
+    } else {
+      generateWriteIdeaPost().catch(function(err) {
+        console.error(err);
+        showToast("Regeneration failed", err.message || "Could not regenerate.", "ph-warning", "text-yellow-400");
+      });
+    }
+  });
+  writeIdeaRefreshMemoryBtn?.addEventListener("click", () => {
+    renderWriteIdeaMemoryZone();
+    showToast("Memory refreshed", "Creator memory counts updated.", "ph-check", "text-[#00ffaa]");
+  });
 }
 
 function populateCampaignDropdown() {
@@ -10708,6 +10914,46 @@ async function testConnectedAccountStatus(platform) {
   }
 }
 
+function getThreadsRedirectUri() {
+  return (backendDiagnostics?.providerDashboardUrls?.metaThreadsRedirectUri) ||
+    (backendDiagnostics?.oauthRouteHealth?.find(function(r) { return r.platform === "threads"; })?.derivedRedirectUri) ||
+    (APP_CONFIG.APP_SCRIPT_URL + "?action=threadsCallback");
+}
+
+window.copyThreadsRedirectUri = function() {
+  var uri = getThreadsRedirectUri();
+  if (!uri) { showToast("No Threads URI", "Threads redirect URI not available from diagnostics.", "ph-warning", "text-yellow-400"); return; }
+  navigator.clipboard.writeText(uri).then(function() {
+    showToast("Copied", "Threads redirect URI copied to clipboard.", "ph-check", "text-[#00ffaa]");
+  }).catch(function() {
+    showToast("Copy failed", "Could not copy to clipboard.", "ph-warning", "text-yellow-400");
+  });
+};
+
+window.setInstagramAuthMode = async function(mode) {
+  try {
+    var result = await apiPost("setInstagramAuthMode", { mode: mode });
+    if (result && result.ok) {
+      showToast("Mode updated", "Instagram auth mode set to " + mode, "ph-check", "text-[#00ffaa]");
+      refreshSocialImportContext();
+    } else {
+      showToast("Update failed", (result && result.error) || "Could not set Instagram auth mode.", "ph-warning", "text-yellow-400");
+    }
+  } catch (err) {
+    console.error(err);
+    showToast("Update failed", err.message || "Could not set Instagram auth mode.", "ph-warning", "text-yellow-400");
+  }
+};
+
+window.renderInstagramModeScopes = function(mode) {
+  var container = document.getElementById("instagram-mode-scopes");
+  if (!container) return;
+  var scopes = mode === "instagram_login"
+    ? ["instagram_business_basic", "instagram_business_content_publish", "instagram_business_manage_insights"]
+    : ["instagram_basic", "instagram_content_publish", "instagram_manage_insights", "pages_show_list", "pages_read_engagement"];
+  container.innerHTML = scopes.map(function(s) { return '<span class="diagnostic-chip" style="font-size:9px">' + escapeHtml(s) + '</span>'; }).join("");
+};
+
 async function testLinkedInHistoricalAccessAction() {
   const platform = "linkedin";
   setConnectedAccountActionLoading(platform, "history", true);
@@ -10917,6 +11163,17 @@ function openConnectionSetupModal(platform, auth = null) {
     if (auth?.statePlatform) diag.statePlatform = auth.statePlatform;
     if (auth?.hasState !== undefined) diag.hasState = auth.hasState;
     if (auth?.platform) diag.platform = auth.platform;
+    if (auth?.instagramAuthMode) diag.instagramAuthMode = auth.instagramAuthMode;
+    if (auth?.authEndpoint) diag.authEndpoint = auth.authEndpoint;
+    if (auth?.tokenEndpoint) diag.tokenEndpoint = auth.tokenEndpoint;
+    if (auth?.profileEndpoint) diag.profileEndpoint = auth.profileEndpoint;
+    if (auth?.requestedScopes) diag.requestedScopes = auth.requestedScopes;
+    if (auth?.invalidScopeWarnings) diag.invalidScopeWarnings = auth.invalidScopeWarnings;
+    if (auth?.invalidScopes) diag.invalidScopes = auth.invalidScopes;
+    if (auth?.expectedGraphHost) diag.expectedGraphHost = auth.expectedGraphHost;
+    if (auth?.threadsRedirectUri) diag.threadsRedirectUri = auth.threadsRedirectUri;
+    if (auth?.threadsMetaAppIdSource) diag.threadsMetaAppIdSource = auth.threadsMetaAppIdSource;
+    if (auth?.authEndpoint) diag.authEndpoint = auth.authEndpoint;
     var hasAuthDiagnostics = Object.keys(diag).length > 0;
     authDiagnosticsSection.style.display = hasAuthDiagnostics ? "" : "none";
     authDiagnosticsPre.textContent = hasAuthDiagnostics ? JSON.stringify(diag, null, 2) : "";
@@ -11042,6 +11299,33 @@ function getConnectedAccountsMarkup(options = {}) {
           <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Advanced / Debug</div>
           <button type="button" onclick="testLinkedInHistoricalAccessAction()" data-platform="linkedin" data-action="test-history" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors ${anyLoading ? "opacity-60" : ""}" ${historyLoading ? "disabled" : ""}>${historyLoading ? "Testing..." : "Test Historical Access"}</button>
         </div>` : ""}
+        ${platform === "instagram" ? `<div class="mt-4 p-3 rounded-xl bg-[#0f0a18] border border-white/5">
+          <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Advanced Setup</div>
+          <div class="flex flex-col gap-3">
+            <div id="instagram-advanced-mode-section-${escapeHtml(platform)}">
+              <div class="text-[11px] text-gray-400 mb-2">Auth Mode</div>
+              <div class="flex flex-wrap gap-2">
+                <button type="button" class="instagram-mode-btn" data-instagram-mode="instagram_login" onclick="setInstagramAuthMode('instagram_login')" style="padding:6px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.08);background:#181125;color:#e2e8f0;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;cursor:pointer">Instagram Login</button>
+                <button type="button" class="instagram-mode-btn" data-instagram-mode="facebook_graph" onclick="setInstagramAuthMode('facebook_graph')" style="padding:6px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.08);background:#181125;color:#e2e8f0;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;cursor:pointer">Facebook Graph / Business</button>
+              </div>
+              <div id="instagram-mode-description" class="text-xs text-gray-400 mt-2">
+                <strong>Instagram Login:</strong> connect and read basic profile via graph.instagram.com. No publishing/insights.<br>
+                <strong>Facebook Graph:</strong> requires professional IG account + Page. Publishing and insights need app review.
+              </div>
+              <div id="instagram-mode-scopes" class="flex flex-wrap gap-1 mt-2"></div>
+            </div>
+          </div>
+        </div>` : ""}
+        ${platform === "threads" ? `<div class="mt-4 p-3 rounded-xl bg-[#0f0a18] border border-white/5">
+          <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">OAuth Setup Diagnostics</div>
+          <div class="text-xs text-gray-400 space-y-2">
+            <div><strong>Redirect URI (add to Meta → Facebook Login → Settings → Valid OAuth Redirect URIs):</strong></div>
+            <div id="threads-redirect-uri-display" class="text-[11px] text-white font-mono wrap-safe bg-[#120c1d] p-2 rounded-lg border border-white/5">${escapeHtml(getThreadsRedirectUri())}</div>
+            <button type="button" onclick="copyThreadsRedirectUri()" class="px-3 py-1 rounded-lg bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors mt-1">Copy Redirect URI</button>
+            <div class="text-[10px] text-yellow-300/70 mt-2">Required: Client OAuth Login = ON, Web OAuth Login = ON, App Domains = script.google.com (and optionally script.googleusercontent.com)</div>
+            <div class="text-[10px] text-yellow-300/70">If Meta returns error_code 1349168, the redirect URI is not yet whitelisted in the Meta App dashboard.</div>
+          </div>
+        </div>` : ""}
       </div>
     `;
   }).join("");
@@ -11068,6 +11352,15 @@ function renderWorkspaceHub() {
   if (accountsPanel) accountsPanel.innerHTML = getConnectedAccountsMarkup();
   renderLinkedInRewriteRouteDiagnostics(backendDiagnostics?.linkedInRewriteRouteDiagnostics || null);
   renderWorkspaceDiagnosticsPanel();
+  var instagramRouteHealth = Array.isArray(backendDiagnostics?.oauthRouteHealth) ? backendDiagnostics.oauthRouteHealth.find(function(r) { return r.platform === "instagram"; }) : null;
+  var currentInstagramMode = instagramRouteHealth?.authMode || instagramRouteHealth?.instagramAuthMode || "";
+  document.querySelectorAll(".instagram-mode-btn").forEach(function(btn) {
+    var mode = btn.dataset.instagramMode;
+    btn.classList.toggle("active", mode === currentInstagramMode);
+    btn.style.background = mode === currentInstagramMode ? "#231738" : "#181125";
+    btn.style.borderColor = mode === currentInstagramMode ? "rgba(199,125,255,0.4)" : "rgba(255,255,255,0.08)";
+  });
+  renderInstagramModeScopes(currentInstagramMode);
 }
 
 function renderLinkedInRewriteRouteDiagnostics(report) {
@@ -12187,10 +12480,11 @@ function renderWriteIdeaDraftList() {
 function renderWriteIdeaScaffold() {
   renderWriteIdeaGuidance();
   renderWriteIdeaDraftList();
+  renderWriteIdeaMemoryZone();
   document.querySelectorAll("[data-write-idea-source]").forEach((btn) => {
     btn.classList.toggle("active", writeIdeaState.sourceTypes.includes(btn.dataset.writeIdeaSource));
   });
-  document.querySelectorAll("[data-write-idea-output]").forEach((btn) => {
+  document.querySelectorAll("#view-write-idea [data-write-idea-output]").forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.writeIdeaOutput === writeIdeaState.outputType);
   });
   document.querySelectorAll("[data-write-idea-chip]").forEach((btn) => {
@@ -12214,12 +12508,18 @@ function renderWriteIdeaScaffold() {
   renderWriteIdeaHistoryFilterStatus();
   renderWriteIdeaArtifactWorkspace();
   var mode = writeIdeaState.generationMode || "generate_post";
-  var subtitleText = mode === "generate_post" ? "Review generated post before saving to POSTS."
+  var subtitleText = mode === "generate_post" ? "Review generated post before saving."
     : mode === "generate_structure" ? "Review proposed posts and dates before saving."
     : mode === "generate_carousel" ? "Review carousel slides before saving."
     : mode === "generate_newsletter" ? "Review newsletter draft before saving."
     : "Review reflection before saving.";
   if (writeIdeaReviewSubtitle) writeIdeaReviewSubtitle.textContent = subtitleText;
+  if (writeIdeaGenEngineChip) {
+    var engine = writeIdeaState.generationEngine || "auto";
+    if (engine === "auto" && isRemoteConfigured()) engine = "provider";
+    writeIdeaGenEngineChip.textContent = engine === "local" ? "Local Creator Engine" : engine === "provider" ? "Provider AI" : "Auto";
+    writeIdeaGenEngineChip.classList.toggle("hidden", !writeIdeaLastScaffold || engine === "auto");
+  }
   if (!writeIdeaLastScaffold) {
     var emptyHint = mode === "generate_post" ? "Generate a post to review finished prose."
       : mode === "generate_structure" ? "Generate a structure to review proposed posts and dates."
@@ -12230,25 +12530,28 @@ function renderWriteIdeaScaffold() {
     if (writeIdeaStatusChip) writeIdeaStatusChip.textContent = mode === "generate_post" ? "Post draft" : mode === "generate_structure" ? "Structured draft" : mode === "generate_carousel" ? "Carousel" : mode === "generate_newsletter" ? "Newsletter" : "Reflection";
     if (writeIdeaWarningList) writeIdeaWarningList.innerHTML = "";
     if (writeIdeaProposedPosts) writeIdeaProposedPosts.innerHTML = makeEmptyState("No draft yet", emptyHint, "ph-sparkle");
+    if (writeIdeaEditPostBtn) writeIdeaEditPostBtn.classList.add("hidden");
+    if (writeIdeaRegenerateBtn) writeIdeaRegenerateBtn.classList.add("hidden");
     return;
   }
   const scaffold = writeIdeaLastScaffold.scaffold || writeIdeaLastScaffold;
   var modeLabel = mode;
+  var hasContent = (scaffold.proposedPosts || []).length > 0 && (scaffold.proposedPosts[0].description || "").length > 20;
   if (writeIdeaStatusChip) writeIdeaStatusChip.textContent = scaffold.draftStatus === "scaffold_only" ? "Structured draft" : modeLabel === "generate_post" ? "Post draft" : modeLabel === "generate_carousel" ? "Carousel" : modeLabel === "generate_newsletter" ? "Newsletter" : modeLabel === "generate_linkedin_reflection" ? "Reflection" : toTitleCase(scaffold.draftStatus || "draft");
-  if (writeIdeaReviewSummary) writeIdeaReviewSummary.textContent = scaffold.summaryText || "Idea draft ready for manual review.";
+  if (writeIdeaReviewSummary) writeIdeaReviewSummary.textContent = scaffold.summaryText || "Generated content ready for review.";
   if (writeIdeaWarningList) {
     writeIdeaWarningList.innerHTML = (scaffold.warnings || []).map((warning) => `<span class="diagnostic-chip">${escapeHtml(warning)}</span>`).join("");
   }
+  if (writeIdeaEditPostBtn) writeIdeaEditPostBtn.classList.toggle("hidden", !hasContent);
+  if (writeIdeaRegenerateBtn) writeIdeaRegenerateBtn.classList.toggle("hidden", !hasContent);
   if (writeIdeaProposedPosts) {
-    const relatedPosts = (appState.posts || []).slice(0, 4);
     writeIdeaProposedPosts.innerHTML = (scaffold.proposedPosts || []).map((post, index) => `
-      <div class="p-4 rounded-2xl bg-[#181125] border border-white/5">
-        <label class="flex items-center gap-3 mb-3 text-xs text-gray-300 uppercase tracking-widest font-bold">
-          <input type="checkbox" data-write-idea-select-index="${index}" ${writeIdeaState.selectedDraftIndexes.includes(index) ? "checked" : ""} />
-          Approve this draft
-        </label>
-        <input data-write-idea-post-title="${index}" class="form-input text-sm mb-3" value="${escapeHtml(post.title || "")}" />
-        <textarea data-write-idea-post-description="${index}" class="form-input min-h-[110px] text-sm mb-3">${escapeHtml(post.description || "")}</textarea>
+      <div class="p-5 rounded-2xl bg-[#181125] border border-white/5">
+        <div class="flex items-center justify-between gap-3 mb-3">
+          <div class="text-sm font-bold text-white">${escapeHtml(post.title || "Generated Post")}</div>
+          <span class="diagnostic-chip">${escapeHtml(toTitleCase(post.platform || "linkedin"))}</span>
+        </div>
+        <textarea data-write-idea-post-description="${index}" class="form-input min-h-[130px] text-sm mb-3">${escapeHtml(post.description || "")}</textarea>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
           <input data-write-idea-post-date="${index}" type="date" class="form-input text-sm" value="${escapeHtml(toInputDateValue(post.queueDateLabel || ""))}" />
           <select data-write-idea-post-platform="${index}" class="form-input text-sm">
@@ -12258,20 +12561,12 @@ function renderWriteIdeaScaffold() {
             ${["text", "carousel", "video", "article", "image"].map((value) => `<option value="${value}" ${value === (post.postType || "text") ? "selected" : ""}>${toTitleCase(value)}</option>`).join("")}
           </select>
         </div>
+        <label class="flex items-center gap-3 mt-3 text-xs text-gray-300 uppercase tracking-widest font-bold">
+          <input type="checkbox" data-write-idea-select-index="${index}" ${writeIdeaState.selectedDraftIndexes.includes(index) ? "checked" : ""} />
+          Approve this draft for posting
+        </label>
       </div>
-    `).join("") + `
-      <div class="p-4 rounded-2xl bg-[#181125] border border-white/5">
-        <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3">Related Posts</div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          ${relatedPosts.length ? relatedPosts.map((post) => `
-            <button type="button" class="text-left p-3 rounded-xl bg-[#120c1d] border border-white/5 hover:bg-[#231738] transition-colors" onclick="openModalById('${escapeHtml(post.id || "")}')">
-              <div class="text-xs font-bold text-white wrap-safe">${escapeHtml(post.title || "Untitled post")}</div>
-              <div class="text-[11px] text-gray-400 wrap-safe mt-1">${escapeHtml(getDisplayExcerpt(post.description || "", "No description yet."))}</div>
-            </button>
-          `).join("") : `<div class="text-sm text-gray-400">No related posts available yet.</div>`}
-        </div>
-      </div>
-    `;
+    `).join("");
   }
 }
 
@@ -12644,6 +12939,27 @@ function renderWriteIdeaGenerationSource(result) {
       ? "Generated with Local Creator Engine. Review generated prose before saving to POSTS."
       : "Generated with " + source + ". Review generated prose before saving to POSTS.";
   }
+}
+
+function renderWriteIdeaMemoryZone() {
+  if (!writeIdeaMemoryZone) return;
+  var posts = appState.posts || [];
+  var framedPosts = posts.filter(function(p) { return p.framework || p.frameworkName || p.campaignId; });
+  var themePosts = posts.filter(function(p) { return p.pillar || p.topic || p.theme; });
+  var connectedIdeas = (appState.aiDrafts || []).filter(function(d) { return d.generationMode === "write_an_idea" || d.ideaPrompt; });
+  var campaigns = (appState.campaigns || []).filter(Boolean);
+  var hasMemory = posts.length > 0 || framedPosts.length > 0 || connectedIdeas.length > 0 || campaigns.length > 0 || themePosts.length > 0;
+  writeIdeaMemoryZone.classList.toggle("hidden", !hasMemory);
+  if (!hasMemory) return;
+  if (writeIdeaMemorySubtitle) {
+    var mode = writeIdeaState.generationMode || "generate_post";
+    writeIdeaMemorySubtitle.textContent = "Memory used for " + mode.replace(/_/g, " ") + " generation.";
+  }
+  if (writeIdeaMemoryPostsCount) writeIdeaMemoryPostsCount.textContent = posts.length;
+  if (writeIdeaMemoryThemesCount) writeIdeaMemoryThemesCount.textContent = themePosts.length;
+  if (writeIdeaMemoryIdeasCount) writeIdeaMemoryIdeasCount.textContent = connectedIdeas.length;
+  if (writeIdeaMemoryFrameworksCount) writeIdeaMemoryFrameworksCount.textContent = framedPosts.length;
+  if (writeIdeaMemoryCampaignsCount) writeIdeaMemoryCampaignsCount.textContent = campaigns.length;
 }
 
 function renderWriteIdeaHistoricalReferences(titleHint, references = null) {
@@ -16053,8 +16369,7 @@ async function importLinkedInMediaManifest() {
   try {
     var result;
     if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
-      result = await apiCall({
-        action: "importMediaManifest",
+      result = await apiPost("importMediaManifest", {
         items: manifestItems,
         source_url: parsed.source_url || "",
         page_type: parsed.page_type || "",
@@ -16064,8 +16379,23 @@ async function importLinkedInMediaManifest() {
       result = { ok: true, local: true, total: totalMediaCount, importedCount: 0, failedCount: 0, skippedCount: 0, needsManualDownload: totalMediaCount, assets: [] };
     }
     if (result && result.ok) {
-      var msg = result.importedCount + " uploaded, " + result.needsManualDownload + " need manual download, " + result.skippedCount + " skipped.";
-      if (linkedInMediaManifestStatus) linkedInMediaManifestStatus.textContent = "Done. " + msg;
+      var reportParts = [];
+      reportParts.push(result.uploadedToDrive + " uploaded to Drive");
+      if (result.referenceOnly > 0) reportParts.push(result.referenceOnly + " reference-only");
+      if (result.failed > 0) reportParts.push(result.failed + " failed");
+      if (result.skipped > 0) reportParts.push(result.skipped + " skipped");
+      reportParts.push(result.mediaLinked + " linked to posts");
+      var msg = reportParts.join(", ");
+      var reportDetail = {
+        mediaDetected: result.mediaDetected,
+        mediaLinked: result.mediaLinked,
+        uploadedToDrive: result.uploadedToDrive,
+        referenceOnly: result.referenceOnly,
+        failed: result.failed,
+        skipped: result.skipped,
+        needsManualDownload: result.needsManualDownload
+      };
+      if (linkedInMediaManifestStatus) linkedInMediaManifestStatus.textContent = "Done. " + msg + "\n" + JSON.stringify(reportDetail, null, 2);
       showToast("Media imported", msg, result.needsManualDownload > 0 ? "ph-warning" : "ph-check", result.needsManualDownload > 0 ? "text-yellow-400" : "text-[#00ffaa]");
     } else {
       if (linkedInMediaManifestStatus) linkedInMediaManifestStatus.textContent = "Import returned: " + JSON.stringify(result);
