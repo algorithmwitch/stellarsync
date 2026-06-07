@@ -3915,6 +3915,15 @@
             <div class="platform-card">
               <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
                 <div>
+                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">AI Providers</div>
+                  <div class="text-sm text-white mt-1">Configure API keys for AI generation. Local Creator Engine is always available.</div>
+                </div>
+              </div>
+              <div id="settings-ai-providers-inline" class="space-y-3"></div>
+            </div>
+            <div class="platform-card">
+              <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
+                <div>
                   <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Import Tools</div>
                   <div class="text-sm text-white mt-1">Bring in your own visible LinkedIn posts from a local browser capture without using LinkedIn credentials.</div>
                 </div>
@@ -4210,6 +4219,8 @@ let diagnosticsRefreshing = false;
 let socialCardUpload = null;
 let socialImportCapabilities = null;
 let connectedAccounts = [];
+let aiProviders = [];
+let aiProvidersLoading = false;
 let connectedAccountsStatusLoading = true;
 let connectedAccountsHistoricalAccess = {};
 let connectedAccountsActionState = {};
@@ -4232,7 +4243,7 @@ let mobileFilterState = {
   notes: { platform: "all", pillar: "all", query: "" }
 };
 let activeConnectionSetupPlatform = "";
-const CONNECTED_ACCOUNT_PLATFORMS = ["linkedin", "instagram", "threads"];
+const CONNECTED_ACCOUNT_PLATFORMS = ["linkedin", "instagram", "threads", "bluesky", "tiktok"];
 let installContext = {
   isIos: /iphone|ipad|ipod/i.test(navigator.userAgent || ""),
   isStandalone: false
@@ -4891,2895 +4902,61 @@ function inferSemanticRelationships(corpus = getSemanticCorpus()) {
         toId: other.id,
         toType: other.type,
         relationshipType,
-        strength: Number(score.toFixed(3))
-      });
+      strength: Number(score.toFixed(3))
+    });
     }
   });
-  return edges.sort((a, b) => b.strength - a.strength);
+  return edges;
 }
 
-function getSemanticNeighbors(targetId, targetType, limit = 6) {
-  const corpus = getSemanticCorpus();
-  const edges = inferSemanticRelationships(corpus);
-  const neighbors = edges.filter((edge) => (edge.fromId === targetId && edge.fromType === targetType) || (edge.toId === targetId && edge.toType === targetType)).slice(0, limit);
-  return neighbors.map((edge) => {
-    const neighborId = edge.fromId === targetId && edge.fromType === targetType ? edge.toId : edge.fromId;
-    const neighborType = edge.fromId === targetId && edge.fromType === targetType ? edge.toType : edge.fromType;
-    const descriptor = corpus.find((item) => item.id === neighborId && item.type === neighborType);
-    return { ...edge, neighbor: descriptor || null };
-  });
-}
-
-function buildMemoryGraph() {
-  const corpus = getSemanticCorpus();
-  const nodes = corpus.map((item) => ({
-    id: item.id,
-    type: item.type,
-    title: item.title,
-    campaignId: item.campaignId,
-    campaignName: item.campaignName,
-    platform: item.platform,
-    tags: item.tags,
-    semanticSummary: item.semanticSummary,
-    createdAt: item.createdAt,
-    raw: item.raw
-  }));
-  const edges = [];
-  const nodeMap = {};
-  nodes.forEach((node) => { nodeMap[node.id + ":" + node.type] = node; });
-  for (let i = 0; i < nodes.length; i += 1) {
-    for (let j = i + 1; j < nodes.length; j += 1) {
-      const a = nodes[i];
-      const b = nodes[j];
-      if (a.campaignId && b.campaignId && a.campaignId === b.campaignId) {
-        edges.push({ from: a.id, fromType: a.type, to: b.id, toType: b.type, type: "same_campaign", strength: 1.0 });
-        continue;
-      }
-      if (a.platform && b.platform && a.platform === b.platform) {
-        edges.push({ from: a.id, fromType: a.type, to: b.id, toType: b.type, type: "same_platform", strength: 0.3 });
-      }
-      const sharedTags = (a.tags || []).filter((t) => (b.tags || []).includes(t)).length;
-      const union = new Set((a.tags || []).concat(b.tags || [])).size || 1;
-      if (sharedTags / union > 0.3) {
-        edges.push({ from: a.id, fromType: a.type, to: b.id, toType: b.type, type: "similar_tags", strength: sharedTags / union });
-      }
-      const aTopic = (a.tags || []).slice(0, 3).join("/");
-      const bTopic = (b.tags || []).slice(0, 3).join("/");
-      if (aTopic && aTopic === bTopic) {
-        edges.push({ from: a.id, fromType: a.type, to: b.id, toType: b.type, type: "same_topic", strength: 0.8 });
-      }
+document.addEventListener("keydown", function(ev) {
+  if (ev.key === "Escape") {
+    if (isSignalOverviewCollapsed !== true) {
+      var t0 = performance.now();
+      isSignalOverviewCollapsed = true;
+      safeStorageSet(RIGHT_PANEL_COLLAPSED_KEY, "true");
+      applyShellLayout();
+      flushPanelToggle();
+      panelTogglePending = function() { rerenderAll(); };
+      setTimeout(flushPanelToggle, 300);
+      window.__panelStats.lastAction = "escape-close";
+      window.__panelStats.lastDuration = Math.round(performance.now() - t0);
+      window.__panelStats.panelOpen = false;
     }
   }
-  nodes.forEach((node) => {
-    if (node.type === "post" && node.raw) {
-      const srcNoteId = String(node.raw.sourceNoteId || node.raw.createdFromNoteId || "").trim();
-      if (srcNoteId && nodeMap[srcNoteId + ":note"]) {
-        edges.push({ from: node.id, fromType: "post", to: srcNoteId, toType: "note", type: "created_from", strength: 1.0 });
-      }
-      const srcInspoId = String(node.raw.sourceInspoId || node.raw.createdFromInspoId || "").trim();
-      if (srcInspoId && nodeMap[srcInspoId + ":inspo"]) {
-        edges.push({ from: node.id, fromType: "post", to: srcInspoId, toType: "inspo", type: "created_from", strength: 1.0 });
-      }
-      const srcDraftId = String(node.raw.sourceAiDraftId || "").trim();
-      if (srcDraftId && nodeMap[srcDraftId + ":ai_draft"]) {
-        edges.push({ from: node.id, fromType: "post", to: srcDraftId, toType: "ai_draft", type: "created_from", strength: 1.0 });
-      }
-      if (String(node.raw.sourceImportJobId || node.raw.importJobId || "").trim()) {
-        edges.push({ from: node.id, fromType: "post", to: "", toType: "import_job", type: "imported_from", strength: 0.9 });
-      }
-    }
-  });
-  const relationshipTypes = {};
-  edges.forEach((e) => { relationshipTypes[e.type] = (relationshipTypes[e.type] || 0) + 1; });
-  const campaigns = {};
-  edges.filter((e) => e.type === "same_campaign").forEach((e) => {
-    const key = corpus.find((item) => item.id === e.from)?.campaignName || "unknown";
-    campaigns[key] = (campaigns[key] || 0) + 1;
-  });
-  const topCampaigns = Object.entries(campaigns).sort((a, b) => b[1] - a[1]).slice(0, 5);
-  const topics = {};
-  nodes.forEach((n) => {
-    const topic = (n.tags || []).slice(0, 3).join(" / ");
-    if (topic) topics[topic] = (topics[topic] || 0) + 1;
-  });
-  const topTopics = Object.entries(topics).sort((a, b) => b[1] - a[1]).slice(0, 5);
-  const postsByType = { post: 0, note: 0, inspo: 0, campaign: 0, ai_draft: 0, media: 0 };
-  nodes.forEach((n) => { if (postsByType[n.type] !== undefined) postsByType[n.type] += 1; });
-  const importedLinkedIn = nodes.filter((n) => n.type === "post" && String(n.raw?.sourceImportJobId || n.raw?.importJobId || "").trim());
-  const orphanNodes = nodes.filter((n) => {
-    return !edges.some((e) => (e.from === n.id && e.fromType === n.type) || (e.to === n.id && e.toType === n.type));
-  });
-  return {
-    mode: "memory-graph-v1",
-    totalNodes: nodes.length,
-    totalEdges: edges.length,
-    nodesByType: postsByType,
-    importedLinkedInCount: importedLinkedIn.length,
-    orphanCount: orphanNodes.length,
-    orphanSamples: orphanNodes.slice(0, 5).map((n) => ({ id: n.id, type: n.type, title: n.title })),
-    topTopics,
-    topCampaigns,
-    relationshipTypes,
-    edges,
-    nodes
-  };
+});
+
+
+function closeSidePanels() {
+  isSignalOverviewCollapsed = true;
+  safeStorageSet(RIGHT_PANEL_COLLAPSED_KEY, "true");
+  applyShellLayout();
+  window.__panelStats.lastAction = "closeSidePanels";
+  window.__panelStats.panelOpen = false;
 }
 
-function getMemoryGraphNeighbors(graph, targetId, targetType, limit = 6) {
-  const edges = graph.edges || [];
-  const neighbors = edges.filter((e) => (e.from === targetId && e.fromType === targetType) || (e.to === targetId && e.toType === targetType));
-  const corpus = getSemanticCorpus();
-  return neighbors.slice(0, limit).map((edge) => {
-    const neighborId = edge.from === targetId && edge.fromType === targetType ? edge.to : edge.from;
-    const neighborType = edge.from === targetId && edge.fromType === targetType ? edge.toType : edge.fromType;
-    const descriptor = corpus.find((item) => item.id === neighborId && item.type === neighborType);
-    return { ...edge, neighbor: descriptor || null };
-  });
-}
-
-function detectRecurringPatterns(corpus = getSemanticCorpus()) {
-  const map = new Map();
-  corpus.forEach((item) => {
-    const key = item.tags.slice(0, 3).join(" / ");
-    if (!key) return;
-    map.set(key, (map.get(key) || 0) + 1);
-  });
-  return Array.from(map.entries()).map(([pattern, count]) => ({ pattern, count })).filter((item) => item.count > 1).sort((a, b) => b.count - a.count);
-}
-
-function detectOverusedPatterns(corpus = getSemanticCorpus()) {
-  const recurring = detectRecurringPatterns(corpus);
-  return {
-    hooks: recurring.filter((item) => item.count >= 3).slice(0, 5),
-    structures: recurring.filter((item) => item.count >= 4).slice(0, 5),
-    ctas: recurring.filter((item) => item.pattern.includes("cta") || item.pattern.includes("comment") || item.pattern.includes("share")).slice(0, 5)
-  };
-}
-
-function detectCampaignClusters(corpus = getSemanticCorpus()) {
-  const campaigns = new Map();
-  corpus.forEach((item) => {
-    const key = item.campaignId || item.campaignName;
-    if (!key) return;
-    if (!campaigns.has(key)) campaigns.set(key, { campaignKey: key, count: 0, tags: [] });
-    const cluster = campaigns.get(key);
-    cluster.count += 1;
-    cluster.tags = cluster.tags.concat(item.tags);
-  });
-  return Array.from(campaigns.values()).map((cluster) => ({ ...cluster, tags: Array.from(new Set(cluster.tags)) }));
-}
-
-function detectPlatformClassificationSignals(corpus = getSemanticCorpus()) {
-  const platformMap = new Map();
-  corpus.forEach((item) => {
-    if (!item.platform) return;
-    if (!platformMap.has(item.platform)) platformMap.set(item.platform, {});
-    item.tags.forEach((tag) => {
-      platformMap.get(item.platform)[tag] = (platformMap.get(item.platform)[tag] || 0) + 1;
-    });
-  });
-  return Array.from(platformMap.entries()).map(([platform, tags]) => {
-    const ranked = Object.entries(tags).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([tag]) => tag);
-    return { platform, tags: ranked, weak: ranked.length < 2 };
-  });
-}
-
-function detectSemanticDrift(corpus = getSemanticCorpus()) {
-  const dated = corpus.filter((item) => item.createdAt).sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
-  if (dated.length < 4) return [];
-  const midpoint = Math.floor(dated.length / 2);
-  const olderTags = dated.slice(0, midpoint).flatMap((item) => item.tags);
-  const newerTags = dated.slice(midpoint).flatMap((item) => item.tags);
-  const overlap = olderTags.filter((tag) => newerTags.includes(tag)).length;
-  return overlap < Math.max(2, Math.floor(newerTags.length * 0.12))
-    ? [{ issue: "semantic drift over time", overlap }]
-    : [];
-}
-
-function calculateSemanticNovelty(item, corpus = getSemanticCorpus()) {
-  const descriptor = getSemanticDescriptor(item, item?.type || "");
-  const strongest = Math.max(0, ...corpus.filter((entry) => entry.id !== descriptor.id).map((entry) => semanticSimilarity(descriptor, entry)));
-  return Number((1 - Math.min(strongest, 1)).toFixed(3));
-}
-
-function calculateSemanticDensity(item) {
-  const descriptor = getSemanticDescriptor(item, item?.type || "");
-  return Number((((descriptor.tags || []).length + (descriptor.recurringPatternFlags || []).length) / 10).toFixed(3));
-}
-
-function buildSemanticConstellation(corpus = getSemanticCorpus()) {
-  const clusters = detectCampaignClusters(corpus);
-  const bridges = [];
-  for (let i = 0; i < clusters.length; i += 1) {
-    for (let j = i + 1; j < clusters.length; j += 1) {
-      const strength = semanticSimilarity({ tags: clusters[i].tags, campaignId: clusters[i].campaignKey }, { tags: clusters[j].tags, campaignId: clusters[j].campaignKey });
-      if (strength >= 0.18) bridges.push({ fromCampaign: clusters[i].campaignKey, toCampaign: clusters[j].campaignKey, strength: Number(strength.toFixed(3)) });
-    }
+function openSidePanel(name) {
+  if (name === "signals-overview") {
+    isSignalOverviewCollapsed = false;
+    safeStorageSet(RIGHT_PANEL_COLLAPSED_KEY, "false");
+    applyShellLayout();
   }
-  return { clusters, bridges };
-}
-
-function getRecordCollectionByType(type) {
-  if (type === "post") return appState.posts || [];
-  if (type === "note") return appState.notes || [];
-  if (type === "inspo") return appState.inspo || [];
-  if (type === "campaign") return appState.campaigns || [];
-  if (type === "ai_draft") return appState.aiDrafts || [];
-  if (type === "media") return appState.media || [];
-  return [];
-}
-
-function findSemanticSourceRecord(type, id) {
-  const recordId = String(id || "").trim();
-  if (!type || !recordId) return null;
-  const collection = getRecordCollectionByType(type);
-  return collection.find((item) => {
-    return String(item?.id || item?.postId || item?.noteId || item?.inspoId || item?.campaignId || item?.aiDraftId || item?.assetId || "").trim() === recordId;
-  }) || null;
-}
-
-function getCurrentSemanticFocus() {
-  if (currentEditingPostId) {
-    const post = (appState.posts || []).find((item) => item.id === currentEditingPostId);
-    if (post) return { type: "post", record: post };
-  }
-
-  if (aiWorkspaceModal && !aiWorkspaceModal.classList.contains("pointer-events-none")) {
-    const sourceType = String(aiSourceTypeInput?.value || "").trim();
-    const sourceId = String(aiSourceIdInput?.value || "").trim();
-    const sourceRecord = findSemanticSourceRecord(sourceType, sourceId);
-    if (sourceRecord) return { type: sourceType, record: sourceRecord };
-    if (currentAIDraftId) {
-      const draft = (appState.aiDrafts || []).find((item) => item.aiDraftId === currentAIDraftId);
-      if (draft) return { type: "ai_draft", record: draft };
-    }
-  }
-
-  if (currentView === "calendar" || currentView === "ledger" || currentView === "performance" || currentView === "audit") {
-    const datedPosts = (appState.posts || []).filter((post) => normalizePostCalendarDateKey(post) === selectedCalendarDateKey);
-    if (datedPosts[0]) return { type: "post", record: datedPosts[0] };
-    if ((appState.posts || [])[0]) return { type: "post", record: appState.posts[0] };
-  }
-
-  if (currentView === "notes" && (appState.notes || [])[0]) return { type: "note", record: appState.notes[0] };
-  if (currentView === "inspo" && (appState.inspo || [])[0]) return { type: "inspo", record: appState.inspo[0] };
-  if (currentView === "media" && (appState.media || [])[0]) return { type: "media", record: appState.media[0] };
-  if (currentView === "constellation" && (appState.campaigns || [])[0]) return { type: "campaign", record: appState.campaigns[0] };
-
-  return null;
-}
-
-function getSemanticThemeBuckets(descriptor) {
-  const tags = descriptor?.tags || [];
-  const contains = (token) => tags.some((tag) => tag.includes(token));
-  return {
-    geographic: tags.filter((tag) => ["chicago", "transit", "energy", "climate", "neighborhood", "local", "geographic", "spatial", "infrastructure", "proximity", "public"].some((token) => tag.includes(token))),
-    participation: tags.filter((tag) => ["participation", "barrier", "visibility", "access", "recognition", "translation", "orientation", "legibility", "community", "onboarding"].some((token) => tag.includes(token))),
-    emotional: tags.filter((tag) => ["friction", "recognition", "surprise", "trust", "care", "proximity", "clarity", "urgency", "grief", "joy"].some((token) => tag.includes(token))),
-    classification: tags.filter((tag) => ["classification", "signal", "platform", "taxonomy", "distribution", "systems", "semantic", "structure"].some((token) => tag.includes(token))),
-    hasOrientation: contains("orientation") || contains("legibility") || contains("recognition")
-  };
-}
-
-const CREATOR_STYLE_VERSION = "creator-memory-v1";
-
-const KNOWN_CREATOR_FRAMEWORKS = [
-  "watershed communication", "participation pathways", "attention systems",
-  "community entry points", "climate as infrastructure", "infrastructure thinking",
-  "prioritization as visibility", "community-led growth", "community-led systems",
-  "participation architecture", "classification before distribution",
-  "digital communications as public infrastructure",
-  "embedded builder/analyzer perspective", "interpreter of systems",
-  "alternate realities", "solarpunk", "orientation", "legibility"
-];
-
-const KNOWN_CREATOR_METAPHORS = [
-  "river", "watershed", "tributary", "ecosystem", "infrastructure",
-  "pathway", "doorway", "bridge", "map", "territory",
-  "architecture", "landscape", "orbit", "constellation", "gravity",
-  "signal", "territory", "boundary", "current", "stream"
-];
-
-const KNOWN_CREATOR_STRUCTURES = [
-  "observation → explanation → implication",
-  "system → examples → recommendation",
-  "personal story → framework",
-  "framework → examples → takeaway",
-  "problem → diagnosis → solution",
-  "question → exploration → insight",
-  "pattern → mechanism → application",
-  "hook → context → insight → cta",
-  "definition → anatomy → application"
-];
-
-const KNOWN_CREATOR_VOICE_TRAITS = [
-  "analytical", "systems-oriented", "explanatory", "community-focused",
-  "non-hyperbolic", "avoids buzzwords", "avoids heavy antithesis",
-  "builder perspective", "spatial/geographic thinking", "classification-first",
-  "infrastructure-minded", "legibility-focused"
-];
-
-function buildCreatorStyleProfile() {
-  const corpus = getSemanticCorpus();
-  const posts = appState.posts || [];
-  const aiDrafts = appState.aiDrafts || [];
-  const notes = appState.notes || [];
-  const inspo = appState.inspo || [];
-
-  const allTexts = corpus.map(function(item) {
-    var raw = item.raw || {};
-    return [item.title, raw.description, raw.body, raw.notes, raw.draftText, raw.prompt, raw.summary, raw.semanticSummary].filter(Boolean).join(" ").toLowerCase();
-  }).filter(Boolean);
-  var combined = allTexts.join(" ");
-
-  var frameworkCounts = {};
-  KNOWN_CREATOR_FRAMEWORKS.forEach(function(fw) {
-    var re = new RegExp(fw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
-    var m = combined.match(re);
-    if (m) frameworkCounts[fw] = m.length;
-  });
-
-  var metaphorCounts = {};
-  KNOWN_CREATOR_METAPHORS.forEach(function(meta) {
-    var re = new RegExp("\\b" + meta.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "gi");
-    var m = combined.match(re);
-    if (m) metaphorCounts[meta] = m.length;
-  });
-
-  var structureCounts = {};
-  KNOWN_CREATOR_STRUCTURES.forEach(function(s) { structureCounts[s] = 0; });
-  corpus.forEach(function(item) {
-    var flags = normalizeStringList(item.recurringPatternFlags);
-    flags.forEach(function(f) {
-      var norm = f.toLowerCase().trim();
-      KNOWN_CREATOR_STRUCTURES.forEach(function(s) {
-        if (norm === s || s.indexOf(norm) !== -1 || norm.indexOf(s) !== -1) structureCounts[s] = (structureCounts[s] || 0) + 1;
-      });
-      if (norm && !KNOWN_CREATOR_STRUCTURES.some(function(s) { return s.indexOf(norm) !== -1 || norm.indexOf(s) !== -1; })) {
-        structureCounts[norm] = (structureCounts[norm] || 0) + 1;
-      }
-    });
-  });
-
-  var formatCounts = {};
-  posts.forEach(function(p) { var f = p.postType || "text"; formatCounts[f] = (formatCounts[f] || 0) + 1; });
-  aiDrafts.forEach(function(d) {
-    var mode = d.generationMode || "ai_draft";
-    formatCounts["ai_" + mode] = (formatCounts["ai_" + mode] || 0) + 1;
-  });
-
-  var voiceScores = {};
-  var lower = combined.toLowerCase();
-  if (/system|structure|pattern|framework|architecture|infrastructure/.test(lower)) voiceScores["systems-oriented"] = (lower.match(/system|structure|pattern|framework|architecture|infrastructure/g) || []).length;
-  if (/community|participation|recognition|visibility|access|onboarding/.test(lower)) voiceScores["community-focused"] = (lower.match(/community|participation|recognition|visibility|access|onboarding/g) || []).length;
-  if (/because|therefore|since|implies|meaning|this is why|this matters because/.test(lower)) voiceScores["explanatory"] = (lower.match(/because|therefore|since|implies/g) || []).length;
-  if (/classif|taxonomy|signal|semantic|category|bucket/.test(lower)) voiceScores["classification-first"] = (lower.match(/classif|taxonomy|signal|semantic|category/g) || []).length;
-  if (/map|territory|spatial|geographic|landscape|boundar|current|stream/.test(lower)) voiceScores["spatial/geographic thinking"] = (lower.match(/map|territory|spatial|geographic|landscape/g) || []).length;
-  if (/infrastructure|public|utility|bridge|pathway/.test(lower)) voiceScores["infrastructure-minded"] = (lower.match(/infrastructure|public|utility|bridge/g) || []).length;
-  if (/buzzword|hype|trending|viral|disrupt/.test(lower)) voiceScores["avoids buzzwords"] = -10;
-  if (/however|but|yet|although|on the other hand/.test(lower)) voiceScores["avoids heavy antithesis"] = -5;
-  if (/analyz|examin|break.?down|deconstruct/.test(lower)) voiceScores["analytical"] = (lower.match(/analyz|examin|break.?down|deconstruct/g) || []).length;
-  if (/builder|maker|build|create|design/.test(lower)) voiceScores["builder perspective"] = (lower.match(/builder|maker|build/g) || []).length;
-
-  var hookCandidates = {};
-  posts.forEach(function(p) {
-    var text = String(p.description || p.body || "").trim();
-    var first = text.split(/[.?!\n]/)[0];
-    if (first && first.length > 10 && first.length < 200) {
-      var key = first.slice(0, 60);
-      hookCandidates[key] = (hookCandidates[key] || 0) + 1;
-    }
-  });
-
-  var ctaCandidates = {};
-  posts.forEach(function(p) {
-    var text = String(p.description || p.body || "").trim();
-    var sentences = text.split(/[.?!]/);
-    var last = (sentences[sentences.length - 1] || "").trim().toLowerCase();
-    if (last && (last.indexOf("follow") !== -1 || last.indexOf("share") !== -1 || last.indexOf("comment") !== -1 || last.indexOf("subscribe") !== -1 || last.indexOf("join") !== -1 || last.indexOf("let me know") !== -1 || last.indexOf("tag") !== -1 || last.indexOf("repost") !== -1)) {
-      var key = last.slice(0, 60);
-      ctaCandidates[key] = (ctaCandidates[key] || 0) + 1;
-    }
-  });
-
-  var importedLinkedIn = posts.filter(function(p) { return String(p.sourceImportJobId || p.importJobId || "").trim(); });
-
-  var campaignCounts = {};
-  posts.forEach(function(p) {
-    var cn = p.campaignName || p.campaign || "";
-    if (cn) campaignCounts[cn] = (campaignCounts[cn] || 0) + 1;
-  });
-  aiDrafts.forEach(function(d) {
-    var cn = d.campaignName || d.campaign || "";
-    if (cn) campaignCounts[cn] = (campaignCounts[cn] || 0) + 1;
-  });
-
-  var frameworks = Object.entries(frameworkCounts).filter(function(e) { return e[1] > 0; }).sort(function(a, b) { return b[1] - a[1]; }).map(function(e) { return { name: e[0], count: e[1] }; });
-  var metaphors = Object.entries(metaphorCounts).filter(function(e) { return e[1] > 0; }).sort(function(a, b) { return b[1] - a[1]; }).map(function(e) { return { name: e[0], count: e[1] }; });
-  var structures = Object.entries(structureCounts).filter(function(e) { return e[1] > 0; }).sort(function(a, b) { return b[1] - a[1]; }).map(function(e) { return { name: e[0], count: e[1] }; });
-  var formats = Object.entries(formatCounts).sort(function(a, b) { return b[1] - a[1]; }).map(function(e) { return { name: e[0], count: e[1] }; });
-  var hooks = Object.entries(hookCandidates).filter(function(e) { return e[1] > 1; }).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 10).map(function(e) { return { text: e[0].slice(0, 80), count: e[1] }; });
-  var ctas = Object.entries(ctaCandidates).filter(function(e) { return e[1] > 1; }).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 5).map(function(e) { return { text: e[0].slice(0, 60), count: e[1] }; });
-  var topCampaigns = Object.entries(campaignCounts).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 5).map(function(e) { return { name: e[0], count: e[1] }; });
-
-  var voiceTraits = Object.entries(voiceScores).filter(function(e) { return e[1] > 2; }).sort(function(a, b) { return b[1] - a[1]; }).map(function(e) { return { trait: e[0], score: e[1] }; });
-  if (voiceTraits.length === 0) voiceTraits = [{ trait: "analytical", score: 1 }];
-
-  return {
-    version: CREATOR_STYLE_VERSION,
-    profile: {
-      totalPostsAnalyzed: posts.length,
-      importedLinkedInAnalyzed: importedLinkedIn.length,
-      notesAnalyzed: notes.length,
-      inspoAnalyzed: inspo.length,
-      aiDraftsAnalyzed: aiDrafts.length,
-      frameworks: frameworks,
-      metaphors: metaphors,
-      structures: structures,
-      formatTypes: formats,
-      voiceTraits: voiceTraits,
-      topCampaigns: topCampaigns,
-      recurringHooks: hooks,
-      recurringCTAs: ctas
-    },
-    generatedAt: new Date().toISOString(),
-    corpusLength: corpus.length,
-    memoryGraph: buildMemoryGraph()
-  };
-}
-
-function getStyleAwareContext(targetId, targetType, styleProfile) {
-  if (!styleProfile) styleProfile = appState._creatorStyleProfile || buildCreatorStyleProfile();
-  var profile = styleProfile.profile || styleProfile;
-  var corpus = getSemanticCorpus();
-  var memoryGraph = styleProfile.memoryGraph || buildMemoryGraph();
-  var targetNeighbors = [];
-  if (targetId && targetType) {
-    targetNeighbors = getMemoryGraphNeighbors(memoryGraph, targetId, targetType, 8);
-  }
-
-  var topFrameworks = (profile.frameworks || []).slice(0, 5).map(function(f) { return f.name; });
-  var topMetaphors = (profile.metaphors || []).slice(0, 5).map(function(m) { return m.name; });
-  var topStructures = (profile.structures || []).slice(0, 3).map(function(s) { return s.name; });
-  var topFormats = (profile.formatTypes || []).slice(0, 4).map(function(f) { return f.name; });
-  var topVoice = (profile.voiceTraits || []).slice(0, 4).map(function(v) { return v.trait; });
-  var recentHooks = (profile.recurringHooks || []).slice(0, 3).map(function(h) { return { text: h.text, count: h.count }; });
-  var recentCTAs = (profile.recurringCTAs || []).slice(0, 2).map(function(c) { return { text: c.text, count: c.count }; });
-
-  var strongestNeighbor = targetNeighbors[0] || null;
-
-  return {
-    styleProfile: {
-      frameworksDetected: profile.frameworks.length,
-      metaphorsDetected: profile.metaphors.length,
-      structuresDetected: profile.structures.length,
-      totalPostsAnalyzed: profile.totalPostsAnalyzed,
-      voiceTraits: topVoice
-    },
-    nearestContent: targetNeighbors.slice(0, 5).map(function(n) {
-      return { title: n.neighbor?.title || "Untitled", type: n.relationshipType, strength: n.strength };
-    }),
-    nearestFrameworks: topFrameworks,
-    recurringMetaphors: topMetaphors,
-    preferredStructures: topStructures,
-    topFormatTypes: topFormats,
-    recentHooks: recentHooks,
-    recentCTAs: recentCTAs,
-    strongestNeighbor: strongestNeighbor ? { title: strongestNeighbor.neighbor?.title, type: strongestNeighbor.neighbor?.type, relationshipType: strongestNeighbor.relationshipType } : null,
-    memoryGraph: { totalNodes: memoryGraph.totalNodes, totalEdges: memoryGraph.totalEdges, topCampaigns: memoryGraph.topCampaigns, topTopics: memoryGraph.topTopics }
-  };
-}
-
-function renderCreatorMemoryDiagnostics(styleContext, container) {
-  if (!container) return;
-  if (!styleContext) {
-    container.innerHTML = '<div class="text-sm text-gray-400">Build creator memory to see style-aware generation context.</div>';
-    return;
-  }
-  var sp = styleContext.styleProfile || {};
-  var html = [
-    '<div class="space-y-3">',
-    '<div class="p-3 rounded-xl bg-[#181125] border border-white/5">',
-    '<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Creator Memory v1</div>',
-    '<div class="text-xs text-gray-300">' + escapeHtml(sp.totalPostsAnalyzed || 0) + ' posts analyzed</div>',
-    '<div class="text-xs text-gray-300">' + escapeHtml((sp.frameworksDetected || 0)) + ' unique frameworks detected</div>',
-    '<div class="text-xs text-gray-300">' + escapeHtml((sp.metaphorsDetected || 0)) + ' recurring metaphors</div>',
-    '<div class="text-xs text-gray-300">' + escapeHtml((sp.structuresDetected || 0)) + ' recurring structures</div>',
-    '</div>'
-  ];
-
-  if (styleContext.nearestFrameworks && styleContext.nearestFrameworks.length) {
-    html.push('<div class="p-3 rounded-xl bg-[#181125] border border-white/5">');
-    html.push('<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Frameworks Used</div>');
-    html.push(styleContext.nearestFrameworks.map(function(f) { return '<div class="text-xs text-gray-300">• ' + escapeHtml(f) + '</div>'; }).join(""));
-    html.push('</div>');
-  }
-
-  if (styleContext.preferredStructures && styleContext.preferredStructures.length) {
-    html.push('<div class="p-3 rounded-xl bg-[#181125] border border-white/5">');
-    html.push('<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Structure Selected</div>');
-    html.push(styleContext.preferredStructures.map(function(s) { return '<div class="text-xs text-gray-300">• ' + escapeHtml(s) + '</div>'; }).join(""));
-    html.push('</div>');
-  }
-
-  if (styleContext.recurringMetaphors && styleContext.recurringMetaphors.length) {
-    html.push('<div class="p-3 rounded-xl bg-[#181125] border border-white/5">');
-    html.push('<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Metaphors Reused</div>');
-    html.push(styleContext.recurringMetaphors.map(function(m) { return '<div class="text-xs text-gray-300">• ' + escapeHtml(m) + '</div>'; }).join(""));
-    html.push('</div>');
-  }
-
-  if (sp.voiceTraits && sp.voiceTraits.length) {
-    html.push('<div class="p-3 rounded-xl bg-[#181125] border border-white/5">');
-    html.push('<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Voice Profile</div>');
-    html.push(sp.voiceTraits.map(function(v) { return '<div class="text-xs text-gray-300">• ' + escapeHtml(v) + '</div>'; }).join(""));
-    html.push('</div>');
-  }
-
-  if (styleContext.nearestContent && styleContext.nearestContent.length) {
-    html.push('<div class="p-3 rounded-xl bg-[#181125] border border-white/5">');
-    html.push('<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Historical Posts Referenced</div>');
-    html.push(styleContext.nearestContent.map(function(n) { return '<div class="text-xs text-gray-300">• ' + escapeHtml(n.title) + ' (' + escapeHtml(n.type) + ', ' + Math.round((n.strength || 0) * 100) + '%)</div>'; }).join(""));
-    html.push('</div>');
-  }
-
-  if (styleContext.recentHooks && styleContext.recentHooks.length) {
-    html.push('<div class="p-3 rounded-xl bg-[#181125] border border-white/5">');
-    html.push('<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Style Confidence</div>');
-    html.push(styleContext.recentHooks.map(function(h) { return '<div class="text-xs text-gray-300">Hook pattern repeated ' + escapeHtml(String(h.count)) + 'x: "' + escapeHtml(h.text) + '..."</div>'; }).join(""));
-    html.push('</div>');
-  }
-
-  html.push('</div>');
-  container.innerHTML = html.join("\n");
-}
-
-function buildCreatorMemoryDiagnosticsPanel() {
-  var profile = appState._creatorStyleProfile || buildCreatorStyleProfile();
-  appState._creatorStyleProfile = profile;
-  var p = profile.profile || profile;
-  return {
-    totalPostsAnalyzed: p.totalPostsAnalyzed || 0,
-    importedLinkedInAnalyzed: p.importedLinkedInAnalyzed || 0,
-    notesAnalyzed: p.notesAnalyzed || 0,
-    inspoAnalyzed: p.inspoAnalyzed || 0,
-    aiDraftsAnalyzed: p.aiDraftsAnalyzed || 0,
-    frameworksDetected: (p.frameworks || []).length,
-    recurringMetaphors: (p.metaphors || []).slice(0, 8),
-    recurringStructures: (p.structures || []).slice(0, 6),
-    topCampaigns: (p.topCampaigns || []).slice(0, 5),
-    voiceSummary: (p.voiceTraits || []).slice(0, 6).map(function(v) { return v.trait; }).join(", "),
-    recurringHooks: (p.recurringHooks || []).slice(0, 3),
-    formatTypes: (p.formatTypes || []).slice(0, 5)
-  };
-}
-
-function renderCreatorMemoryDashboard(container) {
-  if (!container) return;
-  var data = buildCreatorMemoryDiagnosticsPanel();
-  var html = [
-    '<div class="p-4 rounded-2xl bg-[#0f0a18] border border-white/5 space-y-4">',
-    '<div class="flex items-center justify-between">',
-    '<p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Creator Memory Dashboard</p>',
-    '<button type="button" onclick="appState._creatorStyleProfile = null; renderCreatorMemoryDashboard(document.getElementById(\'creator-memory-dashboard\')); showToast(\"Refreshed\", \"Creator profile rebuilt from corpus.\", \"ph-arrows-clockwise\", \"text-[#00ffaa]\");" class="text-[10px] text-[#c77dff] hover:underline">Refresh</button>',
-    '</div>',
-    '<div class="grid grid-cols-2 md:grid-cols-4 gap-3">',
-    '<div class="p-3 rounded-xl bg-[#181125] border border-white/5 text-center"><div class="text-lg font-bold text-white">' + data.totalPostsAnalyzed + '</div><div class="text-[10px] text-gray-400">Posts Analyzed</div></div>',
-    '<div class="p-3 rounded-xl bg-[#181125] border border-white/5 text-center"><div class="text-lg font-bold text-white">' + data.importedLinkedInAnalyzed + '</div><div class="text-[10px] text-gray-400">LinkedIn Imported</div></div>',
-    '<div class="p-3 rounded-xl bg-[#181125] border border-white/5 text-center"><div class="text-lg font-bold text-white">' + data.frameworksDetected + '</div><div class="text-[10px] text-gray-400">Frameworks Detected</div></div>',
-    '<div class="p-3 rounded-xl bg-[#181125] border border-white/5 text-center"><div class="text-lg font-bold text-white">' + (data.notesAnalyzed + data.inspoAnalyzed + data.aiDraftsAnalyzed) + '</div><div class="text-[10px] text-gray-400">Notes + Inspo + Drafts</div></div>',
-    '</div>'
-  ].join("\n");
-
-  if (data.recurringMetaphors.length) {
-    html += '<div class="p-3 rounded-xl bg-[#181125] border border-white/5">';
-    html += '<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Recurring Metaphors</div>';
-    html += '<div class="flex flex-wrap gap-2">';
-    html += data.recurringMetaphors.map(function(m) { return '<span class="px-2 py-1 rounded-lg bg-[#120c1d] border border-white/5 text-xs text-gray-300">' + escapeHtml(m.name) + ' (' + m.count + ')</span>'; }).join("");
-    html += '</div></div>';
-  }
-
-  if (data.recurringStructures.length) {
-    html += '<div class="p-3 rounded-xl bg-[#181125] border border-white/5">';
-    html += '<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Recurring Structures</div>';
-    html += data.recurringStructures.map(function(s) { return '<div class="text-xs text-gray-300">• ' + escapeHtml(s.name) + '</div>'; }).join("");
-    html += '</div>';
-  }
-
-  if (data.topCampaigns.length) {
-    html += '<div class="p-3 rounded-xl bg-[#181125] border border-white/5">';
-    html += '<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Top Campaigns</div>';
-    html += data.topCampaigns.map(function(c) { return '<div class="text-xs text-gray-300">• ' + escapeHtml(c.name) + ' (' + c.count + ' posts)</div>'; }).join("");
-    html += '</div>';
-  }
-
-  if (data.voiceSummary) {
-    html += '<div class="p-3 rounded-xl bg-[#181125] border border-white/5">';
-    html += '<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Style Profile Summary</div>';
-    html += '<div class="text-xs text-gray-300 wrap-safe">' + escapeHtml(data.voiceSummary) + '</div>';
-    html += '</div>';
-  }
-
-  if (data.recurringHooks.length) {
-    html += '<div class="p-3 rounded-xl bg-[#181125] border border-white/5">';
-    html += '<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Recurring Hooks</div>';
-    html += data.recurringHooks.map(function(h) { return '<div class="text-xs text-gray-300">• "' + escapeHtml(h.text) + '" (' + h.count + 'x)</div>'; }).join("");
-    html += '</div>';
-  }
-
-  html += '</div>';
-  container.innerHTML = html;
-}
-
-function renderBrandingDiagnostics(container) {
-  if (!container) return;
-  var base = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, "");
-  var icons = {
-    favicon: base + "/icons/stellarsync-192.png",
-    shortcutIcon: base + "/icons/stellarsync-192.png",
-    navIcon: base + "/icons/stellarsync-192.png",
-    appleTouchIcon: base + "/icons/stellarsync-apple-touch-icon.png",
-    manifest192: base + "/icons/stellarsync-192.png",
-    manifest512: base + "/icons/stellarsync-512.png"
-  };
-  var statuses = {};
-  var allOk = true;
-  Object.keys(icons).forEach(function(key) {
-    statuses[key] = { path: icons[key], ok: true };
-  });
-  var html = [
-    '<div class="p-4 rounded-2xl bg-[#0f0a18] border border-white/5 space-y-4">',
-    '<div class="flex items-center justify-between">',
-    '<p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Branding Diagnostics</p>',
-    '<span class="px-2 py-1 rounded-lg text-[10px] font-bold ' + (allOk ? 'bg-[#0a2016] text-[#00ffaa] border border-[#0d4029]' : 'bg-[#2b2311] text-yellow-400 border border-yellow-400/20') + '">' + (allOk ? 'All icons resolved' : 'Issues found') + '</span>',
-    '</div>',
-    '<div class="grid grid-cols-1 md:grid-cols-2 gap-3">'
-  ].join("\n");
-
-  Object.entries(statuses).forEach(function(entry) {
-    var label = entry[0].replace(/([A-Z])/g, " $1").replace(/^./, function(s) { return s.toUpperCase(); });
-    html += [
-      '<div class="p-3 rounded-xl bg-[#181125] border border-white/5">',
-      '<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">' + label + '</div>',
-      '<div class="text-xs text-gray-300 wrap-safe break-all">' + entry[1].path + '</div>',
-      '<div class="text-[10px] mt-1 ' + (entry[1].ok ? 'text-[#00ffaa]' : 'text-yellow-400') + '">' + (entry[1].ok ? 'OK' : 'Not found') + '</div>',
-      '</div>'
-    ].join("\n");
-  });
-
-  html += '</div>';
-
-  html += '<div class="p-3 rounded-xl bg-[#181125] border border-white/5">';
-  html += '<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Icon Asset Paths</div>';
-  html += '<div class="text-xs text-gray-300 wrap-safe">Icons directory: ./icons/</div>';
-  html += '<div class="text-xs text-gray-300 wrap-safe">stellarsync-192.png (192x192)</div>';
-  html += '<div class="text-xs text-gray-300 wrap-safe">stellarsync-512.png (512x512)</div>';
-  html += '<div class="text-xs text-gray-300 wrap-safe">stellarsync-apple-touch-icon.png (180x180)</div>';
-  html += '</div>';
-
-  html += '</div>';
-  container.innerHTML = html;
-}
-
-function buildSemanticAIDraftPayload() {
-  const sourceType = String(aiSourceTypeInput?.value || "manual").trim();
-  const sourceId = String(aiSourceIdInput?.value || "").trim();
-  const sourceRecord = findSemanticSourceRecord(sourceType, sourceId);
-  const draftText = String(aiDraftPreviewInput?.value || "").trim();
-  const prompt = String(aiWorkspacePrompt?.value || "").trim();
-  const title = String(aiDraftTitleInput?.value || "").trim();
-  const sourceTags = normalizeStringList(sourceRecord?.semanticTags);
-  const inferredTags = extractSemanticTokens([title, draftText, prompt, sourceRecord?.title, sourceRecord?.description, sourceRecord?.body].join(" "));
-  const tags = normalizeStringList(sourceTags.concat(inferredTags)).slice(0, 18);
-  const recurring = detectRecurringPatterns(getSemanticCorpus())
-    .filter((item) => {
-      const patternTags = normalizeStringList(String(item.pattern || "").split("/"));
-      return patternTags.some((tag) => tags.includes(tag));
-    })
-    .slice(0, 4)
-    .map((item) => item.pattern);
-  return {
-    semanticTags: tags,
-    semanticClusters: tags.slice(0, 5),
-    semanticOrigin: sourceType || "manual",
-    semanticSummary: draftText.split(/\n+/).find(Boolean) || prompt || title || "",
-    recurringPatternFlags: recurring,
-    semanticEmbeddingVersion: "heuristic-overlap-v1",
-    semanticNoveltyScore: calculateSemanticNovelty({ id: sourceId || title || "draft", type: "ai_draft", title, draftText, prompt, semanticTags: tags }, getSemanticCorpus()),
-    semanticDensityScore: Number((tags.length / 10).toFixed(3))
-  };
-}
-
-function renderSemanticMemoryPanel() {
-  const target = document.getElementById("semantic-memory-panel");
-  if (!target) return;
-
-  const corpus = getSemanticCorpus();
-  if (!corpus.length) {
-    target.innerHTML = makeEmptyState("Semantic memory is quiet", "Add posts, notes, inspo, media, campaigns, or AI drafts to start mapping recurring territory and communication structures.", "ph-orbit");
-    return;
-  }
-
-  const focus = getCurrentSemanticFocus();
-  const focusDescriptor = focus ? getSemanticDescriptor(focus.record, focus.type) : null;
-  const neighbors = focusDescriptor ? getSemanticNeighbors(focusDescriptor.id, focusDescriptor.type, 8) : [];
-  const recurring = detectRecurringPatterns(corpus).slice(0, 3);
-  const overused = detectOverusedPatterns(corpus);
-  const platformSignals = detectPlatformClassificationSignals(corpus).slice(0, 3);
-  const drift = detectSemanticDrift(corpus);
-  const themeBuckets = getSemanticThemeBuckets(focusDescriptor || {});
-
-  const filterNeighborsByType = (type) => neighbors.filter((edge) => edge.neighbor?.type === type).slice(0, 3);
-  const toNeighborText = (edge) => `${edge.neighbor?.title || edge.neighbor?.campaignName || "Untitled"} • ${edge.relationshipType.replace(/_/g, " ")} • ${Math.round((edge.strength || 0) * 100)}%`;
-
-  const cards = [
-    {
-      title: "Semantic Territory",
-      detail: focusDescriptor
-        ? `Focus: ${focusDescriptor.title || "Untitled"}`
-        : "Cross-record overview",
-      items: focusDescriptor?.tags?.slice(0, 6) || recurring.map((item) => `${item.pattern} (${item.count})`),
-      icon: "ph-orbit"
-    },
-    { title: "Related Posts", detail: "Nearby posts in the current semantic territory.", items: filterNeighborsByType("post").map(toNeighborText), icon: "ph-article" },
-    { title: "Related Notes", detail: "Ideas and fragments connected to this territory.", items: filterNeighborsByType("note").map(toNeighborText), icon: "ph-note-pencil" },
-    { title: "Related Inspo", detail: "References that overlap with the same structures.", items: filterNeighborsByType("inspo").map(toNeighborText), icon: "ph-bookmarks" },
-    { title: "Related Campaigns", detail: "Campaign memory and continuity signals.", items: filterNeighborsByType("campaign").map(toNeighborText), icon: "ph-shooting-star" },
-    { title: "Repeated Structures", detail: "Patterns showing up repeatedly across the corpus.", items: recurring.map((item) => `${item.pattern} • ${item.count} repeats`), icon: "ph-repeat" },
-    { title: "Classification Signals", detail: "Platform and structure signals the corpus keeps reinforcing.", items: platformSignals.map((item) => `${toTitleCase(item.platform)}: ${(item.tags || []).slice(0, 3).join(", ") || "weak signal"}`), icon: "ph-funnel-simple" },
-    { title: "Emotional Entry Points", detail: "Recognizable emotional openings already in the memory layer.", items: themeBuckets.emotional.slice(0, 4), icon: "ph-heartbeat" },
-    { title: "Platform Patterns", detail: "Recurring platform-specific framing and classification cues.", items: overused.hooks.slice(0, 3).map((item) => `${item.pattern} • ${item.count}`), icon: "ph-linkedin-logo" },
-    { title: "Geographic / Spatial Themes", detail: "Place-based systems and orientation topics in circulation.", items: themeBuckets.geographic.slice(0, 4), icon: "ph-map-trifold" },
-    { title: "Participation Themes", detail: "Participation architecture, recognition, and access signals.", items: themeBuckets.participation.slice(0, 4), icon: "ph-users-three" }
-  ].filter((card) => card.items && card.items.length);
-
-  const statusLine = focusDescriptor
-    ? `${toTitleCase(focusDescriptor.type.replace(/_/g, " "))} focus • ${neighbors.length} semantic neighbors • novelty ${Math.round(calculateSemanticNovelty(focus.record, corpus) * 100)}%`
-    : `${corpus.length} semantic records • ${drift.length ? "drift detected" : "territory stable"}`;
-
-  target.innerHTML = `
-    <div class="p-3 rounded-xl bg-[#181125] border border-white/5">
-      <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Semantic Observatory</div>
-      <div class="text-sm font-bold text-white wrap-safe mb-1">${escapeHtml(statusLine)}</div>
-      <div class="text-[11px] text-gray-400 wrap-safe">${escapeHtml(focusDescriptor?.semanticSummary || "This layer tracks recurring concepts, campaign continuity, semantic bridges, and classification signals across StellarSync.")}</div>
-    </div>
-    ${cards.map((card) => `
-      <div class="p-3 rounded-xl bg-[#181125] border border-white/5">
-        <div class="flex items-start gap-3 mb-2">
-          <div class="w-8 h-8 rounded-lg bg-[#120c1d] border border-white/5 flex items-center justify-center text-[#c77dff] shrink-0">
-            <i class="ph-bold ${card.icon}"></i>
-          </div>
-          <div class="min-w-0">
-            <div class="text-sm font-bold text-white wrap-safe">${escapeHtml(card.title)}</div>
-            <div class="text-[11px] text-gray-400 wrap-safe">${escapeHtml(card.detail)}</div>
-          </div>
-        </div>
-        <div class="space-y-1">
-          ${card.items.slice(0, 4).map((item) => `<div class="text-[11px] text-gray-300 wrap-safe">• ${escapeHtml(item)}</div>`).join("")}
-        </div>
-      </div>
-    `).join("")}
-  `;
-}
-
-function renderAISemanticMemoryCards() {
-  if (!aiSemanticMemoryCards) return;
-
-  const sourceType = String(aiSourceTypeInput?.value || "manual").trim();
-  const sourceId = String(aiSourceIdInput?.value || "").trim();
-  const sourceRecord = findSemanticSourceRecord(sourceType, sourceId);
-  const corpus = getSemanticCorpus();
-  const semanticPayload = buildSemanticAIDraftPayload();
-  const draftDescriptor = getSemanticDescriptor({
-    id: currentAIDraftId || sourceId || `draft-${Date.now()}`,
-    title: aiDraftTitleInput?.value || sourceRecord?.title || "AI Draft",
-    draftText: aiDraftPreviewInput?.value || "",
-    prompt: aiWorkspacePrompt?.value || "",
-    platform: aiPlatformInput?.value || "",
-    semanticTags: semanticPayload.semanticTags,
-    semanticSummary: semanticPayload.semanticSummary,
-    recurringPatternFlags: semanticPayload.recurringPatternFlags
-  }, "ai_draft");
-  const neighbors = sourceRecord ? getSemanticNeighbors(String(sourceId || sourceRecord.id || "").trim(), sourceType, 6) : [];
-  const memoryGraph = buildMemoryGraph();
-  const graphNeighbors = sourceRecord ? getMemoryGraphNeighbors(memoryGraph, String(sourceId || sourceRecord.id || "").trim(), sourceType, 6) : [];
-  const strongestNeighbor = neighbors[0]?.neighbor || null;
-  const strongestSimilarity = neighbors[0]?.strength || Math.max(0, ...corpus.map((entry) => semanticSimilarity(draftDescriptor, entry)));
-  const overused = detectOverusedPatterns(corpus);
-  const matchingHook = overused.hooks.find((item) => normalizeStringList(String(item.pattern || "").split("/")).some((tag) => semanticPayload.semanticTags.includes(tag)));
-  const platformSignal = detectPlatformClassificationSignals(corpus).find((item) => item.platform === (aiPlatformInput?.value || "linkedin"));
-  const novelty = calculateSemanticNovelty({
-    id: draftDescriptor.id,
-    type: "ai_draft",
-    title: draftDescriptor.title,
-    draftText: aiDraftPreviewInput?.value || "",
-    semanticTags: semanticPayload.semanticTags
-  }, corpus);
-  const importedLinkedInPosts = corpus.filter((item) => item.type === "post" && String(item.raw?.sourceImportJobId || item.raw?.importJobId || "").trim());
-  const recurringTopics = detectRecurringPatterns(corpus).slice(0, 5);
-  const cards = [];
-
-  if (graphNeighbors.length) {
-    cards.push({
-      title: `Memory graph shows ${graphNeighbors.length} nearby records`,
-      detail: graphNeighbors.slice(0, 3).map((n) => `${n.neighbor?.title || "Untitled"} (${n.relationshipType})`).join(", ") + ".",
-      tone: "repeat"
-    });
-  }
-  if (importedLinkedInPosts.length) {
-    cards.push({
-      title: `${importedLinkedInPosts.length} imported LinkedIn posts in memory`,
-      detail: "Imported archive posts are indexed and available for AI context. Originals are preferred over reposts.",
-      tone: "signal"
-    });
-  }
-  if (recurringTopics.length) {
-    cards.push({
-      title: "Recurring themes: " + recurringTopics.map((t) => t.pattern).join(", "),
-      detail: "Top recurring tag combinations across all indexed records.",
-      tone: "campaign"
-    });
-  }
-
-  if (strongestNeighbor) {
-    cards.push({
-      title: "You've explored this theme before",
-      detail: `${strongestNeighbor.title || "Untitled"} sits nearby in semantic memory.`,
-      tone: "repeat"
-    });
-  }
-  if (sourceRecord?.campaignId || sourceRecord?.campaignName) {
-    cards.push({
-      title: `This relates to ${formatCampaignDisplayName(sourceRecord.campaignName || "a campaign")}`,
-      detail: "Keep continuity signals visible so the draft strengthens campaign memory rather than floating free.",
-      tone: "campaign"
-    });
-  }
-  if (matchingHook) {
-    cards.push({
-      title: "This repeats a recent hook structure",
-      detail: `${matchingHook.pattern} has already appeared ${matchingHook.count} times. Consider a different opening move.`,
-      tone: "warning"
-    });
-  }
-  if (platformSignal && platformSignal.tags.length) {
-    cards.push({
-      title: "This strengthens platform classification",
-      detail: `${toTitleCase(platformSignal.platform)} already clusters around ${platformSignal.tags.slice(0, 3).join(", ")}.`,
-      tone: "signal"
-    });
-  }
-  if (strongestSimilarity >= 0.6) {
-    cards.push({
-      title: "This overlaps heavily with a recent post",
-      detail: "Push the structure, hook, or emotional entry point further apart before saving.",
-      tone: "warning"
-    });
-  }
-  if (novelty >= 0.62) {
-    cards.push({
-      title: "This introduces a new semantic territory",
-      detail: "You have room to explore a less repeated concept while still anchoring it in campaign context.",
-      tone: "new"
-    });
-  }
-  if (!cards.length) {
-    cards.push({
-      title: "Semantic memory is ready",
-      detail: "Select a source or generate a draft preview to compare it against existing campaigns, hooks, and territory.",
-      tone: "quiet"
-    });
-  }
-
-  const toneStyles = {
-    repeat: "border-[#c77dff]/25 bg-[#231738]",
-    campaign: "border-cyan-400/20 bg-[#12212d]",
-    warning: "border-yellow-400/20 bg-[#2b2311]",
-    signal: "border-emerald-400/20 bg-[#13261f]",
-    new: "border-fuchsia-400/20 bg-[#251329]",
-    quiet: "border-white/5 bg-[#181125]"
-  };
-
-  aiSemanticMemoryCards.innerHTML = cards.map((card) => `
-    <div class="p-3 rounded-xl border ${toneStyles[card.tone] || toneStyles.quiet}">
-      <div class="text-sm font-bold text-white wrap-safe mb-1">${escapeHtml(card.title)}</div>
-      <div class="text-[11px] text-gray-300 wrap-safe">${escapeHtml(card.detail)}</div>
-    </div>
-  `).join("");
-}
-
-const PILLAR_SHAPES = {
-  authority: "triangle",
-  distribution: "circle",
-  identity: "diamond",
-  application: "square"
-};
-
-const FALLBACK_CAMPAIGN_COLORS = {
-  "Alternate Realities": "#c77dff",
-  "Job Posts": "#00ffaa",
-  "Community Shout Outs": "#ffd700",
-  "Algorithm Best Practices": "#00f0ff",
-  "Offerings": "#b25fff",
-  "Long-Form Content Loop": "#f472b6",
-  "Messaging": "#fb923c"
-};
-
-function getPillarShape(pillar) {
-  const canonical = normalizePillar(pillar);
-  return PILLAR_SHAPES[canonical] || "circle";
-}
-
-function renderPillarShape(pillar, extraClass = "", color = "#c4b5fd") {
-  const canonical = normalizePillar(pillar);
-  const shape = getPillarShape(canonical);
-  const className = ["pillar-shape", `pillar-shape-${canonical}`, extraClass].filter(Boolean).join(" ");
-  return `<span class="${className}" style="color:${escapeHtml(color)}" aria-hidden="true"></span>`;
-}
-
-function makeEmptyState(title, detail, icon = "ph-shooting-star") {
-  return `
-    <div class="glass-card p-8 text-center">
-      <div class="w-14 h-14 rounded-2xl bg-[#181125] border border-white/5 flex items-center justify-center mx-auto mb-4 text-[#c77dff]">
-        <i class="ph-bold ${icon} text-2xl"></i>
-      </div>
-      <p class="text-white text-sm font-bold mb-2">${escapeHtml(title)}</p>
-      <p class="text-gray-400 text-sm leading-relaxed">${escapeHtml(detail)}</p>
-    </div>
-  `;
-}
-
-function setModalSourceContext(type = "manual", label = "Create Post", detail = "Manual draft", sourceId = "") {
-  currentModalSourceContext = { type, label, detail, sourceId: sourceId || "" };
-  if (modalSourceContextLabel) modalSourceContextLabel.textContent = label;
-  if (modalSourceContextDetail) modalSourceContextDetail.textContent = detail;
-  if (modalSourceContextChip) {
-    modalSourceContextChip.textContent = type === "manual" ? "Manual" : toTitleCase(String(type || "manual").replace(/_/g, " "));
-  }
-}
-
-function handleBrokenMediaPreview(element) {
-  if (!element) return;
-  const parent = element.parentElement;
-  if (!parent) return;
-  parent.innerHTML = `<div class="w-full h-full flex items-center justify-center rounded-xl bg-[#181125] border border-white/5 text-gray-500"><i class="ph-bold ph-image-broken text-3xl"></i></div>`;
-}
-
-function getUploadByteLimit(file) {
-  const mime = String(file?.type || "").toLowerCase();
-  if (mime.startsWith("video/")) return MAX_UPLOAD_VIDEO_BYTES;
-  if (mime.startsWith("image/")) return MAX_UPLOAD_IMAGE_BYTES;
-  return MAX_UPLOAD_DOCUMENT_BYTES;
-}
-
-function validateUploadFile(file, mode = "vault") {
-  const mime = String(file?.type || "").toLowerCase();
-  const isDocument = mime === "application/pdf" || /officedocument|msword|presentation|spreadsheet|text\//.test(mime);
-  if (!mime.startsWith("image/") && !mime.startsWith("video/") && !isDocument) {
-    return "Only image, video, and common document files are supported.";
-  }
-  if (file.size > getUploadByteLimit(file)) {
-    return `${file.name} exceeds the upload size limit for ${mime.startsWith("video/") ? "video" : mime.startsWith("image/") ? "image" : "document"} files.`;
-  }
-  if (mode === "post" && postTypeSelect?.value === "carousel" && mime.startsWith("video/")) {
-    return "Carousel uploads currently support images only.";
-  }
-  return "";
-}
-
-function fileToPreview(file) {
-  return {
-    id: `${file.name}-${file.size}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-    file,
-    name: file.name,
-    size: file.size,
-    type: String(file.type || "").toLowerCase(),
-    previewUrl: URL.createObjectURL(file),
-    error: ""
-  };
-}
-
-function describeUploadTarget() {
-  return uploadStagingTarget === "post"
-    ? "Review files before linking them to the current post."
-    : "Review files before adding them to the Media Vault.";
-}
-
-function getCampaignColorMap() {
-  const settingsMap = appState.settings?.campaignColors || {};
-  const colorMap = { ...FALLBACK_CAMPAIGN_COLORS };
-  Object.entries(settingsMap).forEach(([name, color]) => {
-    const normalizedName = normalizeCampaignName(name);
-    const normalizedColor = String(color || "").trim();
-    if (normalizedName && normalizedColor) colorMap[normalizedName] = normalizedColor;
-  });
-  return colorMap;
-}
-
-function getCampaignColor(campaignOrName, fallbackPillar = "") {
-  const campaignName = typeof campaignOrName === "string"
-    ? normalizeCampaignName(campaignOrName)
-    : normalizeCampaignName(campaignOrName?.campaignName || campaignOrName?.campaign_name || "");
-  const explicitColor = typeof campaignOrName === "object"
-    ? String(campaignOrName?.color || "").trim()
-    : "";
-  if (explicitColor) return explicitColor;
-  const colorMap = getCampaignColorMap();
-  if (campaignName && colorMap[campaignName]) return colorMap[campaignName];
-  return getPillarTheme(fallbackPillar || (typeof campaignOrName === "object" ? campaignOrName?.pillar : ""));
-}
-
-function getCampaignById(id, campaigns = appState.campaigns || []) {
-  const target = String(id || "").trim();
-  if (!target) return null;
-  return campaigns.find((campaign) => String(campaign.campaignId || "").trim() === target) || null;
-}
-
-function getCampaignByName(name, campaigns = appState.campaigns || []) {
-  const target = normalizeLookupValue(normalizeCampaignName(name));
-  if (!target) return null;
-  return campaigns.find((campaign) => normalizeLookupValue(normalizeCampaignName(campaign.campaignName)) === target) || null;
-}
-
-function hydratePostCampaign(post, campaigns = appState.campaigns || []) {
-  const matchedCampaign = getCampaignById(post?.campaignId, campaigns) || getCampaignByName(post?.campaignName, campaigns);
-  const pillar = normalizePillar(post?.pillar || matchedCampaign?.pillar || post?.hubPillarLabel || (appState.settings?.pillars || [])[0] || "authority");
-  return {
-    ...post,
-    pillar,
-    hubPillarLabel: formatContentPillarLabel(pillar),
-    campaignId: String(post?.campaignId || matchedCampaign?.campaignId || "").trim(),
-    campaignName: normalizeCampaignName(post?.campaignName || matchedCampaign?.campaignName || ""),
-    campaignColor: getCampaignColor(matchedCampaign || post?.campaignName || "", pillar),
-    hubTitle: String(post?.hubTitle || matchedCampaign?.campaignName || post?.title || "").trim()
-  };
-}
-
-function renderCampaignOptions(campaigns = [], selectedCampaignId = "") {
-  const activeCampaignId = String(selectedCampaignId || "").trim();
-  const allowedCampaigns = appState.settings?.campaigns || [];
-  const options = ['<option value="">No campaign</option>']
-    .concat((allowedCampaigns || [])
-      .map((campaignName) => {
-        const matchedCampaign = getCampaignByName(campaignName, campaigns || []);
-        const value = String(matchedCampaign?.campaignId || "").trim() || normalizeCampaignName(campaignName);
-        return `<option value="${escapeHtml(value)}">${escapeHtml(formatCampaignDisplayName(campaignName))}</option>`;
-      }));
-
-  return {
-    html: options.join(""),
-    selectedCampaignId: activeCampaignId
-  };
-}
-
-function getAvailableCampaignRecords() {
-  const records = [];
-  const seen = new Set();
-  const pillarTokens = new Set((appState.settings?.pillars || []).map((value) => normalizePillarToken(value)));
-  const pushRecord = (campaignName, matchedCampaign = null, index = records.length) => {
-    const normalizedName = normalizeCampaignName(campaignName);
-    const key = normalizeLookupValue(normalizedName);
-    if (!normalizedName || seen.has(key) || pillarTokens.has(normalizePillarToken(normalizedName))) return;
-    seen.add(key);
-    const fallbackCampaignId = `CMP-${normalizeLookupValue(normalizedName).replace(/[^a-z0-9]+/g, "").slice(0, 8).toUpperCase() || "MANUAL"}`;
-    records.push({
-      campaignId: String(matchedCampaign?.campaignId || fallbackCampaignId).trim(),
-      campaignName: normalizedName,
-      pillar: normalizePillar(matchedCampaign?.pillar || ""),
-      color: getCampaignColor(matchedCampaign || normalizedName, matchedCampaign?.pillar || ""),
-      sortOrder: Number(matchedCampaign?.sortOrder ?? index) || index,
-      isArchived: !!matchedCampaign?.isArchived,
-      x: Number(matchedCampaign?.x || 0) || 0,
-      y: Number(matchedCampaign?.y || 0) || 0
-    });
-  };
-
-  (appState.settings?.campaigns || []).forEach((campaignName, index) => {
-    pushRecord(campaignName, getCampaignByName(campaignName, appState.campaigns || []), index);
-  });
-
-  (appState.posts || []).forEach((post) => {
-    const hydrated = hydratePostCampaign(post, appState.campaigns || []);
-    pushRecord(hydrated.campaignName, getCampaignByName(hydrated.campaignName, appState.campaigns || []));
-  });
-
-  return records;
-}
-
-function updateModalCampaignPreview() {
-  const preview = document.getElementById("modal-campaign-preview");
-  if (!preview) return;
-  const selectedCampaignId = campaignSelect?.value || "";
-  const selectedCampaign = getCampaignById(selectedCampaignId, getAvailableCampaignRecords()) || getCampaignByName(selectedCampaignId, getAvailableCampaignRecords());
-  if (!selectedCampaign) {
-    preview.hidden = true;
-    preview.innerHTML = "";
-    return;
-  }
-  preview.hidden = false;
-  preview.innerHTML = `<span class="campaign-color-dot" style="background:${escapeHtml(getCampaignColor(selectedCampaign, selectedCampaign.pillar))}"></span><span>${escapeHtml(formatCampaignDisplayName(selectedCampaign.campaignName))}</span>`;
-}
-
-const CANONICAL_PILLAR_MAP = {
-  iden: "identity",
-  ident: "identity",
-  identity: "identity",
-  authority: "authority",
-  distribution: "distribution",
-  application: "application"
-};
-
-function getCanonicalPillarValue(value, fallback = "") {
-  const cleaned = normalizeDisplayText(value);
-  if (!cleaned) return fallback ? getCanonicalPillarValue(fallback, "") : "";
-  const normalized = normalizeLookupValue(cleaned);
-  if (CANONICAL_PILLAR_MAP[normalized]) return CANONICAL_PILLAR_MAP[normalized];
-  if (normalized.includes("identity")) return "identity";
-  if (normalized.includes("author")) return "authority";
-  if (normalized.includes("distribut")) return "distribution";
-  if (normalized.includes("applic")) return "application";
-  return fallback ? getCanonicalPillarValue(fallback, "") : "";
-}
-
-function normalizePillarToken(value) {
-  return normalizeLookupValue(getCanonicalPillarValue(value));
-}
-
-function normalizePillarLabel(value) {
-  return normalizeDisplayText(getCanonicalPillarValue(value));
-}
-
-function toTitleCase(value) {
-  const smallWords = new Set(["a", "an", "and", "as", "at", "by", "for", "in", "of", "on", "or", "the", "to", "vs", "via"]);
-  return normalizeDisplayText(value)
-    .split(" ")
-    .filter(Boolean)
-    .map((word, index) => {
-      if (/^[A-Z0-9]{2,}$/.test(word)) return word;
-      const lower = word.toLowerCase();
-      if (index > 0 && smallWords.has(lower)) return lower;
-      return lower.charAt(0).toUpperCase() + lower.slice(1);
-    })
-    .join(" ");
-}
-
-function formatCampaignDisplayName(value) {
-  const cleaned = normalizeDisplayText(value);
-  if (!cleaned) return "Untitled Campaign";
-  if (/[a-z]/.test(cleaned) && /[A-Z]/.test(cleaned)) return cleaned;
-  if (/[A-Z]{2,}/.test(cleaned) && /[a-z]/.test(cleaned)) return cleaned;
-  return toTitleCase(cleaned);
-}
-
-function formatContentPillarLabel(value) {
-  return toTitleCase(normalizePillarLabel(value));
-}
-
-function getDisplayPostContentPillar(post) {
-  return getCanonicalPillarValue(getPostContentPillar(post));
-}
-
-function getDisplayCampaignContentPillar(campaign) {
-  return getCanonicalPillarValue(getCampaignContentPillar(campaign));
-}
-
-function getDisplayTitle(value, fallback = "Untitled", maxWords = 5) {
-  const cleaned = normalizeDisplayText(value);
-  if (!cleaned) return fallback;
-  const preferred = cleaned.split(/[.:;!?]/)[0].trim() || cleaned;
-  const words = preferred.split(/\s+/).filter(Boolean);
-  return toTitleCase(words.slice(0, Math.min(maxWords, words.length)).join(" "));
-}
-
-function getConstellationLabel(value, fallback = "Untitled") {
-  const cleaned = normalizeDisplayText(value);
-  if (!cleaned) return fallback;
-  const preferred = cleaned.split(/[.:;!?]/)[0].trim() || cleaned;
-  const words = preferred.split(/\s+/).filter(Boolean);
-  const clipped = words.slice(0, Math.min(6, words.length)).join(" ");
-  if (/[a-z]/.test(clipped) && /[A-Z]/.test(clipped)) return clipped;
-  return toTitleCase(clipped);
-}
-
-function getConstellationCampaignLaneKey(campaign = {}) {
-  const campaignId = String(campaign.campaignId || campaign.campaign_id || "").trim();
-  if (campaignId) return `campaign_id:${campaignId}`;
-  const normalizedName = normalizeLookupValue(campaign.campaignName || campaign.campaign_name || "");
-  return normalizedName ? `campaign_name:${normalizedName}` : "";
-}
-
-function getDisplayExcerpt(value, fallback = "") {
-  const cleaned = normalizeDisplayText(value);
-  if (!cleaned) return fallback;
-  const preferred = cleaned.split(/[.!?]/)[0].trim() || cleaned;
-  const words = preferred.split(/\s+/).filter(Boolean);
-  return words.slice(0, Math.min(12, words.length)).join(" ");
-}
-
-function getPostContentPillar(post) {
-  return String(post?.hubPillarLabel || post?.pillar || "").trim();
-}
-
-function getCampaignContentPillar(campaign) {
-  return String(campaign?.pillar || "").trim();
-}
-
-function getAvailableContentPillars() {
-  return (appState.settings?.pillars || [])
-    .map((pillar) => getCanonicalPillarValue(pillar))
-    .filter(Boolean);
-}
-
-function getPillarTheme(pillarValue) {
-  const normalized = normalizePillarToken(pillarValue);
-  if (!normalized) return "#6b7280";
-
-  const pillars = getAvailableContentPillars();
-  const index = Math.max(0, pillars.findIndex(item => normalizePillarToken(item) === normalized));
-  return PILLAR_FALLBACK_COLORS[index % PILLAR_FALLBACK_COLORS.length];
-}
-
-function legacyPillarForDisplayValue(value) {
-  return normalizePillar(value);
-}
-
-const INSIGHT_METRICS = [
-  { key: "clicks", label: "Clicks", weight: 5 },
-  { key: "shares", label: "Shares", weight: 4 },
-  { key: "comments", label: "Comments", weight: 3 },
-  { key: "saves", label: "Saves", weight: 3 },
-  { key: "likes", label: "Likes", weight: 1.5 },
-  { key: "engagementRate", label: "Engagement Rate", weight: 120, formatter: value => `${Number(value || 0).toFixed(1)}%` },
-  { key: "impressions", label: "Impressions", weight: 0.01 },
-  { key: "reach", label: "Reach", weight: 0.012 }
-];
-
-function normalizeMetricNumber(value) {
-  const num = Number(value);
-  return Number.isFinite(num) ? num : 0;
-}
-
-function getPostInsightMetrics(post) {
-  return {
-    impressions: normalizeMetricNumber(post?.impressions),
-    reach: normalizeMetricNumber(post?.reach),
-    likes: normalizeMetricNumber(post?.likes),
-    comments: normalizeMetricNumber(post?.comments),
-    shares: normalizeMetricNumber(post?.shares),
-    saves: normalizeMetricNumber(post?.saves),
-    clicks: normalizeMetricNumber(post?.clicks),
-    engagementRate: normalizeMetricNumber(post?.engagementRate)
-  };
-}
-
-function hasInsightMetrics(post) {
-  const metrics = getPostInsightMetrics(post);
-  return Object.values(metrics).some(value => value > 0);
-}
-
-function getPrimaryInsightMetricConfig(posts = []) {
-  return INSIGHT_METRICS.find(metric => posts.some(post => normalizeMetricNumber(post?.[metric.key]) > 0)) || null;
-}
-
-function getInsightScore(post) {
-  const metrics = getPostInsightMetrics(post);
-  return INSIGHT_METRICS.reduce((sum, metric) => {
-    return sum + (normalizeMetricNumber(metrics[metric.key]) * metric.weight);
-  }, 0);
-}
-
-function findLinkedAssetForPost(post, mediaItems = appState.media || []) {
-  if (!post) return null;
-
-  const carouselIds = Array.isArray(post.carouselAssetIds) ? post.carouselAssetIds : [];
-  if (carouselIds.length) {
-    const firstCarouselAsset = mediaItems.find(asset => carouselIds.includes(String(asset.id || asset.assetId || "").trim()));
-    if (firstCarouselAsset) return firstCarouselAsset;
-  }
-
-  const directId = String(post.assetId || "").trim();
-  if (directId) {
-    const byId = mediaItems.find(asset => String(asset.id || "").trim() === directId);
-    if (byId) return byId;
-  }
-
-  const textCandidates = [post.assetId, post.mediaLabel]
-    .map(normalizeLookupValue)
-    .filter(Boolean);
-
-  if (textCandidates.length) {
-    const byName = mediaItems.find((asset) => {
-      const assetName = normalizeLookupValue(asset.title);
-      return textCandidates.includes(assetName);
-    });
-    if (byName) return byName;
-  }
-
-  return mediaItems.find(asset => String(asset.postId || "").trim() === String(post.id || "").trim()) || null;
-}
-
-function getPostAssets(post, mediaItems = appState.media || []) {
-  if (!post) return [];
-  const assetIds = Array.isArray(post.carouselAssetIds) ? post.carouselAssetIds.filter(Boolean) : [];
-  const assets = assetIds.map(assetId => mediaItems.find(asset => String(asset.id || asset.assetId || "").trim() === String(assetId || "").trim())).filter(Boolean);
-  if (assets.length) return assets;
-  const primary = findLinkedAssetForPost(post, mediaItems);
-  return primary ? [primary] : [];
-}
-
-function getPostMediaKind(post) {
-  const assets = getPostAssets(post);
-  const postType = String(post?.postType || "").toLowerCase();
-  if ((post.carouselAssetIds || []).length > 1 || assets.length > 1 || String(post.postType || "").toLowerCase() === "carousel") return "carousel";
-  const asset = assets[0] || null;
-  if (String(post.postType || "").toLowerCase() === "video" || asset?.type === "video") return "video";
-  if (asset?.type === "document" || /pdf|officedocument|msword|presentation|spreadsheet|text/i.test(String(asset?.mimeType || ""))) return "document";
-  if (asset) return "image";
-  if (["text", "poll", "article"].includes(postType)) return "text";
-  return "missing";
-}
-
-function getPublishingBadge(post) {
-  const status = String(post.publishStatus || "draft").trim().toLowerCase();
-  if (status === "published") return { label: "Published", color: "#00ffaa", icon: "ph-check-circle" };
-  if (status === "failed" || status === "failed_validation") return { label: "Failed", color: "#fb7185", icon: "ph-warning-circle" };
-  if (post.requiresManualReview) return { label: "Manual Review", color: "#ffd700", icon: "ph-warning-diamond" };
-  if (!appState._linkedinSelectedAuthorUrn && post.platformTargets?.includes("linkedin")) return { label: "Choose Author", color: "#fb7185", icon: "ph-user-circle" };
-  if (post.platformTargets?.length && getPostMediaKind(post) !== "missing" && String(post.description || "").trim()) return { label: "Ready", color: "#38bdf8", icon: "ph-rocket-launch" };
-  return { label: "Draft", color: "#94a3b8", icon: "ph-clock" };
-}
-
-function renderStackedAssetPreview(post) {
-  const kind = getPostMediaKind(post);
-  if (kind !== "carousel") return "";
-  return `
-    <div class="stacked-preview" aria-hidden="true">
-      <span></span>
-      <span></span>
-      <span></span>
-    </div>
-  `;
-}
-
-function renderPublishingReadiness(post = {}) {
-  if (!publishReadinessEl) return;
-  const assets = getPostAssets(post);
-  const mediaKind = getPostMediaKind(post);
-  const publishBadge = getPublishingBadge(post);
-  const targets = Array.isArray(post.platformTargets) && post.platformTargets.length
-    ? post.platformTargets
-    : String(post.platform || "").trim() === "both"
-    ? ["linkedin", "instagram"]
-    : [post.platform || "linkedin"];
-  const linkedinAuthorLabel = appState._linkedinAuthorDisplayName || appState._linkedinSelectedAuthorType || "not set";
-  const authorColor = appState._linkedinSelectedAuthorUrn ? "#00f0ff" : "#fb7185";
-  const cards = [
-    { label: "Media", value: mediaKind === "missing" ? "Missing media" : mediaKind === "carousel" ? `${assets.length || (post.carouselAssetIds || []).length} linked assets` : toTitleCase(mediaKind), color: mediaKind === "missing" ? "#fb7185" : "#00f0ff" },
-    { label: "Targets", value: targets.map(target => toTitleCase(target)).join(", "), color: "#c77dff" },
-    { label: "Caption", value: `${String(post.platformCaptionOverride || post.description || "").trim().length} chars`, color: "#ffd700" },
-    { label: "Author", value: linkedinAuthorLabel, color: authorColor },
-    { label: "Status", value: publishBadge.label, color: publishBadge.color }
-  ];
-  publishReadinessEl.innerHTML = cards.map(card => `
-    <div class="p-3 rounded-xl bg-[#181125] border border-white/5">
-      <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">${escapeHtml(card.label)}</div>
-      <div class="text-sm font-bold wrap-safe" style="color:${card.color}">${escapeHtml(card.value)}</div>
-    </div>
-  `).join("");
-  if (linkedInPublishOutputEl) {
-    const assets = getPostAssets(post);
-    const primaryDocument = assets.find((asset) => /pdf|officedocument|msword|presentation|spreadsheet/i.test(String(asset?.mimeType || "")));
-    linkedInPublishOutputEl.textContent = primaryDocument
-      ? `LinkedIn document preparation is available for review. Primary document: ${primaryDocument.assetName || primaryDocument.title || "document"}.`
-      : "LinkedIn validation and payload preparation results will appear here.";
-  }
-}
-
-async function validateCurrentPostForLinkedIn() {
-  if (!currentEditingPostId) return;
-  try {
-    const result = await apiPost("validatePostForPublishing", { postId: currentEditingPostId, platform: "linkedin" });
-    const validation = result?.validation || result;
-    const ctxResult = await apiPost("getLinkedInAuthorContext", {});
-    const ctx = ctxResult || {};
-    if (linkedInPublishOutputEl) {
-      var lines = [];
-      lines.push(`Valid: ${validation?.valid ? "yes" : "no"}`);
-      lines.push(`Author: ${ctx.selectedAuthorUrn || "none (publish blocked)"}`);
-      lines.push(`Publish-ready: ${ctx.publishReady ? "yes" : "no"}`);
-      if (!ctx.publishReady) {
-        if (!ctx.hasToken) lines.push(`-> Reconnect LinkedIn: token missing`);
-        else if (!ctx.hasPersonUrn) lines.push(`-> Reconnect LinkedIn: person URN missing`);
-        else if (!ctx.hasWMemberSocial) lines.push(`-> Reconnect LinkedIn: missing w_member_social scope`);
-        else if (!ctx.selectedAuthorUrn) lines.push(`-> Choose author: Publish as me or as organization`);
-      }
-      if (validation?.issues?.length) lines.push(`Issues: ${validation.issues.join(" | ")}`);
-      else lines.push("Issues: none");
-      if (validation?.warnings?.length) lines.push(`Warnings: ${validation.warnings.join(" | ")}`);
-      else lines.push("Warnings: none");
-      linkedInPublishOutputEl.textContent = lines.join("\n");
-    }
-  } catch (err) {
-    console.error(err);
-    if (linkedInPublishOutputEl) linkedInPublishOutputEl.textContent = err?.message || "Could not validate the LinkedIn post.";
-  }
-}
-
-async function prepareCurrentLinkedInPayload() {
-  if (!currentEditingPostId) return;
-  try {
-    const result = await apiPost("preparePublishPayload", { postId: currentEditingPostId, platform: "linkedin" });
-    const payload = result?.payload || result;
-    const ctxResult = await apiPost("getLinkedInAuthorContext", {});
-    const ctx = ctxResult || {};
-    if (linkedInPublishOutputEl) {
-      linkedInPublishOutputEl.textContent = JSON.stringify({
-        valid: payload?.valid,
-        issues: payload?.issues || [],
-        warnings: payload?.warnings || [],
-        authorUrn: ctx.selectedAuthorUrn || "none",
-        publishReady: ctx.publishReady || false,
-        noAuthorBlock: !ctx.selectedAuthorUrn ? "Reconnect LinkedIn or choose author" : undefined,
-        adapterPayload: payload?.adapterPayload || payload?.payload?.adapterPayload || {}
-      }, null, 2);
-    }
-  } catch (err) {
-    console.error(err);
-    if (linkedInPublishOutputEl) linkedInPublishOutputEl.textContent = err?.message || "Could not prepare the LinkedIn payload.";
-  }
-}
-
-async function loadLinkedInAuthorContext() {
-  try {
-    const result = await apiPost("getLinkedInAuthorContext", {});
-    const ctx = result || {};
-    appState._linkedinSelectedAuthorUrn = ctx.selectedAuthorUrn || "";
-    appState._linkedinAuthorDisplayName = ctx.displayName || "Me";
-    appState._linkedinSelectedAuthorType = ctx.selectedAuthorUrn && ctx.selectedAuthorUrn.indexOf("urn:li:organization:") === 0 ? "Organization" : ctx.selectedAuthorUrn ? "Person" : "not set";
-    if (ctx.orgUrns && ctx.orgUrns.length) {
-      appState._linkedinOrgUrns = ctx.orgUrns;
-    }
-  } catch (e) {
-    appState._linkedinSelectedAuthorUrn = "";
-    appState._linkedinAuthorDisplayName = "not set";
-    appState._linkedinSelectedAuthorType = "not set";
-  }
-}
-
-async function testLinkedInAuthorContext() {
-  if (!linkedInAuthorContextPanel) return;
-  try {
-    linkedInAuthorContextPanel.classList.remove("hidden");
-    if (linkedInAuthorContextBody) linkedInAuthorContextBody.textContent = "Loading LinkedIn author context...";
-    if (linkedInAuthorSelector) linkedInAuthorSelector.classList.add("hidden");
-    const result = await apiPost("getLinkedInAuthorContext", {});
-    const ctx = result || {};
-    const lines = [];
-    lines.push(`Token present: ${ctx.hasToken ? "yes" : "no"}`);
-    lines.push(`Person ID present: ${ctx.hasPersonUrn ? "yes" : "no"}`);
-    lines.push(`Person URN: ${ctx.personUrn || "none"}`);
-    lines.push(`Display name: ${ctx.displayName || "none"}`);
-    lines.push(`Organization IDs: ${ctx.orgCount || 0}`);
-    lines.push(`w_member_social scope: ${ctx.hasWMemberSocial ? "yes" : "no"}`);
-    lines.push(`Selected author URN: ${ctx.selectedAuthorUrn || "none"}`);
-    lines.push(`Publish-ready: ${ctx.publishReady ? "yes" : "no"}`);
-    if (!ctx.publishReady) lines.push(`  reason: ${ctx.publishReadyReason || "unknown"}`);
-    if (Array.isArray(ctx.orgUrns) && ctx.orgUrns.length) {
-      lines.push(`Org URNs:`);
-      ctx.orgUrns.forEach(function(urn) {
-        lines.push(`  ${urn}`);
-      });
-    }
-    if (linkedInAuthorContextBody) linkedInAuthorContextBody.textContent = lines.join("\n");
-    renderLinkedInAuthorSelector(ctx);
-  } catch (err) {
-    console.error(err);
-    if (linkedInAuthorContextBody) linkedInAuthorContextBody.textContent = "Error: " + (err?.message || "Could not load LinkedIn author context.");
-  }
-}
-
-function renderLinkedInAuthorSelector(ctx) {
-  if (!linkedInAuthorSelector) return;
-  ctx = ctx || {};
-  var personUrn = ctx.personUrn || "";
-  var orgUrns = Array.isArray(ctx.orgUrns) ? ctx.orgUrns : [];
-  var displayName = ctx.displayName || "Me";
-  var selectedUrn = ctx.selectedAuthorUrn || "";
-  var hasToken = !!ctx.hasToken;
-  var hasPerson = !!ctx.hasPersonUrn;
-
-  if (!hasToken || !hasPerson) {
-    linkedInAuthorSelector.classList.add("hidden");
-    return;
-  }
-
-  var html = '<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mt-2">Publish as:</div>';
-  html += '<div class="space-y-1 mt-1">';
-
-  var personChecked = selectedUrn === personUrn || !selectedUrn ? "checked" : "";
-  html += '<label class="flex items-center gap-2 text-xs text-gray-300 cursor-pointer hover:text-white">';
-  html += '<input type="radio" name="linkedin-author" value="' + escapeHtml(personUrn) + '" ' + personChecked + ' onchange="setLinkedInAuthorUrn(\'' + escapeHtml(personUrn) + '\')">';
-  html += 'Publish as me <span class="text-gray-500">(' + escapeHtml(displayName) + ')</span>';
-  html += '</label>';
-
-  orgUrns.forEach(function(urn) {
-    var orgChecked = selectedUrn === urn ? "checked" : "";
-    var orgLabel = urn.replace("urn:li:organization:", "Org ");
-    html += '<label class="flex items-center gap-2 text-xs text-gray-300 cursor-pointer hover:text-white">';
-    html += '<input type="radio" name="linkedin-author" value="' + escapeHtml(urn) + '" ' + orgChecked + ' onchange="setLinkedInAuthorUrn(\'' + escapeHtml(urn) + '\')">';
-    html += 'Publish as organization <span class="text-gray-500">(' + escapeHtml(orgLabel) + ')</span>';
-    html += '</label>';
-  });
-
-  html += '</div>';
-  linkedInAuthorSelector.innerHTML = html;
-  linkedInAuthorSelector.classList.remove("hidden");
-}
-
-async function setLinkedInAuthorUrn(urn) {
-  if (!urn) return;
-  try {
-    const result = await apiPost("setLinkedInAuthorUrn", { authorUrn: urn });
-    if (result && result.ok) {
-      showToast("Author set", "LinkedIn author URN saved: " + urn, "ph-check", "text-emerald-300");
-      testLinkedInAuthorContext();
-    }
-  } catch (err) {
-    console.error(err);
-    showToast("Author failed", err?.message || "Could not set LinkedIn author URN.", "ph-warning", "text-yellow-400");
-  }
-}
-
-function renderSignalsOverview() {
-  const grid = document.getElementById("signal-pillar-grid");
-  if (!grid) return;
-
-  const counts = new Map();
-  (appState.posts || []).forEach((post) => {
-    const pillar = getDisplayPostContentPillar(post);
-    if (!pillar) return;
-    counts.set(pillar, (counts.get(pillar) || 0) + 1);
-  });
-
-  const pillars = getAvailableContentPillars();
-  if (!pillars.length) {
-    grid.innerHTML = `<div class="col-span-2 pillar-empty-state">No content pillars found in the live sheet data.</div>`;
-    return;
-  }
-
-  grid.innerHTML = pillars.map((pillar) => {
-    const color = getPillarTheme(pillar);
-    const count = counts.get(pillar) || 0;
-    return `
-      <div class="bg-[#181125] border border-white/5 rounded-lg px-3 py-2.5 flex items-center justify-between gap-3 min-w-0">
-        <div class="min-w-0 flex items-center gap-2">
-          ${renderPillarShape(pillar, "", color)}
-          <span class="text-gray-300 font-medium signal-label-fit min-w-0" title="${escapeHtml(pillar)}">${escapeHtml(formatContentPillarLabel(pillar))}</span>
-        </div>
-        <span class="text-[10px] font-bold text-gray-500 shrink-0">${count}</span>
-      </div>
-    `;
-  }).join("");
-}
-
-function renderOverviewPanel() {
-  safeRender(renderSignalsOverview, "renderSignalsOverview");
-
-  const topPostCard = document.getElementById("overview-top-post-card");
-  const topPostRank = document.getElementById("overview-top-post-rank");
-  const perfSnapshot = document.getElementById("overview-performance-snapshot");
-  const campaignSnapshot = document.getElementById("overview-campaign-snapshot");
-  const recommendationCards = document.getElementById("overview-recommendation-cards");
-
-  const filteredPosts = getFilteredPosts(overviewFilters);
-  const topPost = getTopRankedPosts(overviewFilters, 1)[0] || null;
-  const publishedCount = filteredPosts.filter(post => post.status === "published").length;
-  const scheduledCount = filteredPosts.filter(post => post.status === "scheduled").length;
-  const topCampaign = countPostsBy(filteredPosts, post => post.campaignName || "").slice(0, 1)[0];
-  const topPillar = countPostsBy(filteredPosts, post => getDisplayPostContentPillar(post)).slice(0, 1)[0];
-  const audit = buildAuditSummary();
-  const rankingMeta = topPost ? getPostRankingMeta(topPost, filteredPosts) : null;
-
-  if (topPostCard) {
-    if (!topPost) {
-      topPostCard.innerHTML = `<div class="pillar-empty-state">No post matches the current overview filters.</div>`;
-      if (topPostRank) topPostRank.textContent = "No match";
+  appState.ui = appState.ui || {};
+  appState.ui.activeSidePanel = name;
+  appState.ui.sidePanelOpen = true;
+  window.__panelStats.lastAction = "openSidePanel:" + name;
+  window.__panelStats.panelOpen = true;
+}
+
+function toggleSidePanel(name) {
+  if (name === "signals-overview" || !name) {
+    if (isSignalOverviewCollapsed) {
+      openSidePanel("signals-overview");
     } else {
-      const linkedAsset = findLinkedAssetForPost(topPost);
-      const topPostPillar = getDisplayPostContentPillar(topPost) || "";
-      const topPostPillarColor = getPillarTheme(topPostPillar);
-      const topPostCampaignColor = getCampaignColor(topPost, topPostPillar);
-      topPostCard.innerHTML = `
-        <button type="button" class="w-full text-left" onclick="openModalById('${escapeHtml(topPost.id)}')">
-          <div class="p-4 rounded-xl bg-[#181125] border border-white/5 hover:border-white/10 transition-colors">
-            <div class="flex items-center justify-between gap-3 mb-3">
-              <span class="text-[9px] font-bold uppercase tracking-widest text-[#c77dff]">${escapeHtml(formatStatusLabel(topPost.status))}</span>
-              <span class="text-[9px] text-gray-500">${escapeHtml(formatLedgerDate(topPost))}</span>
-            </div>
-            <h4 class="text-sm font-bold text-white wrap-safe mb-2" title="${escapeHtml(topPost.title || "")}">${escapeHtml(getDisplayTitle(topPost.title))}</h4>
-            <p class="text-[11px] text-gray-400 wrap-safe mb-3" title="${escapeHtml(topPost.description || "")}">${escapeHtml(getDisplayExcerpt(topPost.description, topPost.ledgerExcerpt || ""))}</p>
-            <div class="grid grid-cols-2 gap-2 text-[10px]">
-              <div class="px-2 py-2 rounded-lg bg-[#120c1d] border border-white/5">
-                <div class="text-gray-500 uppercase tracking-widest mb-1">Campaign</div>
-                <div class="text-gray-200 wrap-safe campaign-inline-meta">
-                  <span class="campaign-color-dot" style="background:${escapeHtml(topPostCampaignColor)}"></span>
-                  <span>${escapeHtml(formatCampaignDisplayName(topPost.campaignName || "Unassigned"))}</span>
-                </div>
-              </div>
-              <div class="px-2 py-2 rounded-lg bg-[#120c1d] border border-white/5">
-                <div class="text-gray-500 uppercase tracking-widest mb-1">Pillar</div>
-                <div class="text-gray-200 signal-label-fit pillar-inline-meta">
-                  ${renderPillarShape(topPostPillar, "", topPostPillarColor)}
-                  <span>${escapeHtml(formatContentPillarLabel(topPostPillar || "Missing"))}</span>
-                </div>
-              </div>
-              <div class="px-2 py-2 rounded-lg bg-[#120c1d] border border-white/5">
-                <div class="text-gray-500 uppercase tracking-widest mb-1">Platform</div>
-                <div class="text-gray-200">${escapeHtml(toTitleCase(topPost.platform || ""))}</div>
-              </div>
-              <div class="px-2 py-2 rounded-lg bg-[#120c1d] border border-white/5">
-                <div class="text-gray-500 uppercase tracking-widest mb-1">Media</div>
-                <div class="text-gray-200">${linkedAsset ? "Linked" : "Not linked"}</div>
-              </div>
-            </div>
-            <div class="mt-3 text-[10px] text-gray-500">${escapeHtml(getInsightSummaryLine(topPost, filteredPosts))} • ${escapeHtml(getRangeLabel(overviewFilters.range))}</div>
-          </div>
-        </button>
-      `;
-      if (topPostRank) {
-        topPostRank.textContent = rankingMeta.mode === "insight"
-          ? `${rankingMeta.label} ${rankingMeta.formatter(rankingMeta.value)}`
-          : `Score ${rankingMeta.formatter(rankingMeta.value)}`;
-      }
-    }
-  }
-
-  if (perfSnapshot) {
-    perfSnapshot.innerHTML = `
-      <div class="flex items-center justify-between gap-3"><span class="text-[11px] text-gray-500">Posts in range</span><span class="text-sm font-bold text-white">${filteredPosts.length}</span></div>
-      <div class="flex items-center justify-between gap-3"><span class="text-[11px] text-gray-500">Published</span><span class="text-sm font-bold text-[#00ffaa]">${publishedCount}</span></div>
-      <div class="flex items-center justify-between gap-3"><span class="text-[11px] text-gray-500">Scheduled</span><span class="text-sm font-bold text-[#ffd700]">${scheduledCount}</span></div>
-      <div class="flex items-center justify-between gap-3"><span class="text-[11px] text-gray-500">Platform</span><span class="text-sm font-bold text-white">${escapeHtml(overviewFilters.platform === "all" ? "All" : toTitleCase(overviewFilters.platform))}</span></div>
-    `;
-  }
-
-  if (campaignSnapshot) {
-    const topPillarColor = getPillarTheme(topPillar ? topPillar[0] : "");
-    campaignSnapshot.innerHTML = `
-      <div class="flex items-center justify-between gap-3"><span class="text-[11px] text-gray-500">Active campaigns</span><span class="text-sm font-bold text-white">${countPostsBy(filteredPosts, post => post.campaignName || "").length}</span></div>
-      <div class="flex items-center justify-between gap-3"><span class="text-[11px] text-gray-500">Top campaign</span><span class="text-sm font-bold text-white campaign-title-safe text-right campaign-inline-meta"><span class="campaign-color-dot" style="background:${escapeHtml(getCampaignColor(topCampaign ? topCampaign[0] : "", ""))}"></span><span>${escapeHtml(topCampaign ? formatCampaignDisplayName(topCampaign[0]) : "None")}</span></span></div>
-      <div class="flex items-center justify-between gap-3"><span class="text-[11px] text-gray-500">Top pillar</span><span class="text-sm font-bold text-white signal-label-fit text-right pillar-inline-meta">${topPillar ? renderPillarShape(topPillar[0], "", topPillarColor) : ""}<span>${escapeHtml(topPillar ? formatContentPillarLabel(topPillar[0]) : "None")}</span></span></div>
-      <div class="flex items-center justify-between gap-3"><span class="text-[11px] text-gray-500">Pillar values</span><span class="text-sm font-bold text-white">${countPostsBy(filteredPosts, post => getDisplayPostContentPillar(post)).length}</span></div>
-    `;
-  }
-
-  if (recommendationCards) {
-    const cards = [
-      audit.attention[0] ? { title: "Needs Attention", detail: audit.attention[0], color: "#ffd700", icon: "ph-warning-circle" } : null,
-      topCampaign ? { title: "Keep Leaning In", detail: `${formatCampaignDisplayName(topCampaign[0])} leads the current range with ${topCampaign[1]} posts.`, color: "#00f0ff", icon: "ph-chart-bar" } : null
-    ].filter(Boolean);
-
-    recommendationCards.innerHTML = cards.length
-      ? cards.map(card => `
-        <div class="p-3 rounded-xl bg-[#181125] border border-white/5">
-          <div class="flex items-start gap-3">
-            <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style="background:${card.color}14;color:${card.color};">
-              <i class="ph-bold ${card.icon}"></i>
-            </div>
-            <div class="min-w-0">
-              <div class="text-xs font-bold text-white mb-1">${escapeHtml(card.title)}</div>
-              <div class="text-[11px] text-gray-400 wrap-safe">${escapeHtml(card.detail)}</div>
-            </div>
-          </div>
-        </div>
-      `).join("")
-      : `<div class="pillar-empty-state">No recommendation cards yet.</div>`;
-  }
-}
-
-function renderPerformanceView() {
-  syncPerformanceControls();
-  const filteredPosts = getFilteredPerformancePosts();
-  const kpis = document.getElementById("performance-kpis");
-  const trendSummary = document.getElementById("performance-trend-summary");
-  const timeChart = document.getElementById("performance-time-chart");
-  const impressionsSummary = document.getElementById("performance-impressions-summary");
-  const impressionsChart = document.getElementById("performance-impressions-chart");
-  const primaryInsightMetric = getPrimaryInsightMetricConfig(filteredPosts);
-
-  const buckets = buildTimeBuckets(filteredPosts, performanceFilters.range);
-  const published = filteredPosts.filter(post => post.status === "published").length;
-  const scheduled = filteredPosts.filter(post => post.status === "scheduled").length;
-  const withCampaign = filteredPosts.filter(post => post.campaignId).length;
-  const withPillar = filteredPosts.filter(post => getDisplayPostContentPillar(post)).length;
-  const primaryInsightTotal = primaryInsightMetric
-    ? filteredPosts.reduce((sum, post) => sum + normalizeMetricNumber(post[primaryInsightMetric.key]), 0)
-    : 0;
-
-  if (kpis) {
-    const cards = [
-      { label: "Posts", value: filteredPosts.length, accent: "#c77dff" },
-      { label: "Published", value: published, accent: "#00ffaa" },
-      { label: "Scheduled", value: scheduled, accent: "#ffd700" },
-      { label: "Mapped", value: `${withCampaign}/${withPillar}`, accent: "#00f0ff" }
-    ];
-    if (primaryInsightMetric) {
-      cards.splice(1, 0, {
-        label: primaryInsightMetric.label,
-        value: primaryInsightMetric.formatter
-          ? primaryInsightMetric.formatter(primaryInsightTotal)
-          : String(Math.round(primaryInsightTotal)),
-        accent: "#fb7185"
-      });
-    }
-    kpis.innerHTML = cards.map(card => `
-      <div class="mini-kpi min-w-0">
-        <div class="text-[10px] text-gray-500 uppercase tracking-widest mb-2">${escapeHtml(card.label)}</div>
-        <div class="text-2xl font-bold text-white">${escapeHtml(String(card.value))}</div>
-        <div class="text-[11px] mt-2" style="color:${card.accent};">${escapeHtml(getRangeLabel(performanceFilters.range))}</div>
-      </div>
-    `).join("");
-  }
-
-  if (trendSummary) {
-    trendSummary.textContent = !filteredPosts.length
-      ? `No posts match ${getRangeLabel(performanceFilters.range)}`
-      : primaryInsightMetric
-      ? `${primaryInsightMetric.label} over time • ${performanceFilters.platform === "all" ? "All platforms" : toTitleCase(performanceFilters.platform)}`
-      : `${filteredPosts.length} posts • ${performanceFilters.platform === "all" ? "All platforms" : toTitleCase(performanceFilters.platform)}`;
-  }
-
-  if (timeChart) {
-    const chartValues = buckets.map(bucket => {
-      if (!primaryInsightMetric) return bucket.total;
-      return filteredPosts
-        .filter((post) => {
-          const date = parsePostDate(normalizePostCalendarDateKey(post) || post.date);
-          return date && date >= bucket.start && date <= bucket.end;
-        })
-        .reduce((sum, post) => sum + normalizeMetricNumber(post[primaryInsightMetric.key]), 0);
-    });
-    renderTimeBarChart(timeChart, buckets, chartValues, {
-      color: "linear-gradient(180deg,#c77dff 0%, #2d1b4e 100%)",
-      emptyMessage: "No performance trend data is available for the current filters.",
-      titleFormatter: (bucket, value) => (
-        primaryInsightMetric
-          ? `${bucket.label}: ${Math.round(value).toLocaleString()} ${primaryInsightMetric.label.toLowerCase()}`
-          : `${bucket.label}: ${bucket.total} posts, ${bucket.published} published`
-      )
-    });
-  }
-
-  if (impressionsSummary) {
-    const totalImpressions = filteredPosts.reduce((sum, post) => sum + normalizeMetricNumber(post?.impressions), 0);
-    impressionsSummary.textContent = totalImpressions > 0
-      ? `${totalImpressions.toLocaleString()} total • ${performanceFilters.platform === "all" ? "All platforms" : toTitleCase(performanceFilters.platform)}`
-      : "Waiting for impressions data";
-  }
-
-  if (impressionsChart) {
-    const impressionValues = getBucketMetricTotals(filteredPosts, buckets, "impressions");
-    renderTimeBarChart(impressionsChart, buckets, impressionValues, {
-      color: "linear-gradient(180deg,#00f0ff 0%, #0f223d 100%)",
-      emptyMessage: "No impressions data is available for the current filters.",
-      titleFormatter: (bucket, value) => `${bucket.label}: ${Math.round(value).toLocaleString()} impressions`
-    });
-  }
-
-  renderComparisonRows(
-    "performance-campaign-comparison",
-    countPostsBy(filteredPosts, post => post.campaignName || "")
-      .slice(0, 5)
-      .map(([key, value]) => ({ key, value, label: formatCampaignDisplayName(key) })),
-    value => `${value} posts`,
-    key => getPillarTheme((appState.campaigns || []).find(campaign => normalizeLookupValue(campaign.campaignName) === normalizeLookupValue(key))?.pillar || "")
-  );
-
-  renderComparisonRows(
-    "performance-pillar-comparison",
-    countPostsBy(filteredPosts, post => getDisplayPostContentPillar(post))
-      .slice(0, 5)
-      .map(([key, value]) => ({ key, value, label: formatContentPillarLabel(key) })),
-    value => `${value}`,
-    key => getPillarTheme(key)
-  );
-
-  renderComparisonRows(
-    "performance-platform-comparison",
-    countPostsBy(filteredPosts, post => post.platform || "")
-      .slice(0, 5)
-      .map(([key, value]) => ({ key, value, label: toTitleCase(key) })),
-    value => `${value}`,
-    key => key === "instagram" ? "#b25fff" : key === "both" ? "#ffd700" : "#00f0ff"
-  );
-
-  const topPostsTarget = document.getElementById("performance-top-posts");
-  if (topPostsTarget) {
-    const topPosts = filteredPosts
-      .slice()
-      .sort((a, b) => {
-        const scoreDiff = getPostRankingMeta(b, filteredPosts).score - getPostRankingMeta(a, filteredPosts).score;
-        if (scoreDiff !== 0) return scoreDiff;
-        return (parsePostDate(normalizePostCalendarDateKey(b) || b.date)?.getTime() || 0) - (parsePostDate(normalizePostCalendarDateKey(a) || a.date)?.getTime() || 0);
-      })
-      .slice(0, 4);
-    topPostsTarget.innerHTML = topPosts.length
-      ? topPosts.map((post, index) => {
-        const hydrated = hydratePostCampaign(post);
-        const postPillar = getDisplayPostContentPillar(hydrated) || "";
-        return `
-        <button type="button" onclick="openModalById('${escapeHtml(post.id)}')" class="w-full text-left p-3 rounded-xl bg-[#181125] border border-white/5 hover:border-white/10 transition-colors">
-          <div class="flex items-center justify-between gap-3 mb-2">
-            <span class="text-[10px] font-bold text-[#c77dff]">#${index + 1}</span>
-            <span class="text-[10px] text-gray-500">${escapeHtml(formatStatusLabel(post.status))}</span>
-          </div>
-          <div class="text-sm font-bold text-white wrap-safe mb-1" title="${escapeHtml(post.title || "")}">${escapeHtml(getDisplayTitle(post.title))}</div>
-          <div class="text-[11px] text-gray-400 wrap-safe">${escapeHtml(getDisplayExcerpt(post.description, post.ledgerExcerpt || ""))}</div>
-          <div class="mt-2 text-[10px] text-gray-500 flex items-center gap-2 flex-wrap">
-            <span class="campaign-inline-meta"><span class="campaign-color-dot" style="background:${escapeHtml(getCampaignColor(hydrated, hydrated.pillar))}"></span><span>${escapeHtml(formatCampaignDisplayName(hydrated.campaignName || "Unassigned"))}</span></span>
-            <span>•</span>
-            <span class="pillar-inline-meta">${renderPillarShape(postPillar, "", getPillarTheme(postPillar))}<span>${escapeHtml(formatContentPillarLabel(postPillar || "Missing"))}</span></span>
-          </div>
-          <div class="mt-1 text-[10px] text-gray-500">${escapeHtml(getInsightSummaryLine(post, filteredPosts))}</div>
-        </button>
-      `;
-      }).join("")
-      : `<div class="pillar-empty-state">No posts available for ${escapeHtml(getRangeLabel(performanceFilters.range))} on ${escapeHtml(performanceFilters.platform === "all" ? "all platforms" : toTitleCase(performanceFilters.platform))}.</div>`;
-  }
-}
-
-function renderAuditView() {
-  const summary = buildAuditSummary();
-  const workingList = document.getElementById("audit-working-list");
-  const attentionList = document.getElementById("audit-attention-list");
-  const nextAction = document.getElementById("audit-next-action");
-  const gapCards = document.getElementById("audit-gap-cards");
-  const health = document.getElementById("audit-data-health");
-  const publishing = document.getElementById("audit-publishing-readiness");
-
-  if (workingList) {
-    workingList.innerHTML = (summary.working.length ? summary.working : ["No strong signals yet. Publish and map a few more posts."])
-      .map(item => `<li class="wrap-safe">${escapeHtml(item)}</li>`)
-      .join("");
-  }
-
-  if (attentionList) {
-    attentionList.innerHTML = (summary.attention.length ? summary.attention : ["No critical attention items detected from current scheduler data."])
-      .map(item => `<li class="wrap-safe">${escapeHtml(item)}</li>`)
-      .join("");
-  }
-
-  if (nextAction) {
-    nextAction.textContent = summary.nextAction;
-  }
-
-  if (gapCards) {
-    const items = [
-      { label: "Missing Campaign", value: summary.gaps.missingCampaign, color: "#ffd700" },
-      { label: "Missing Pillar", value: summary.gaps.missingPillar, color: "#fb7185" },
-      { label: "Missing Media", value: summary.gaps.missingMedia, color: "#c77dff" },
-      { label: "Unresolved Asset Link", value: summary.gaps.unresolvedAssets, color: "#00f0ff" },
-      { label: "Campaign/Pillar Mismatch", value: summary.gaps.campaignMismatch, color: "#f97316" },
-      { label: "Semantic Repetition Risk", value: summary.gaps.semanticRepetitionRisk, color: "#f59e0b" },
-      { label: "Orphaned Memory", value: summary.gaps.orphanedMemory, color: "#38bdf8" },
-      { label: "Isolated Campaigns", value: summary.gaps.isolatedCampaigns, color: "#a78bfa" }
-    ];
-    gapCards.innerHTML = items.map(item => `
-      <div class="p-3 rounded-xl bg-[#181125] border border-white/5 flex items-center justify-between gap-3">
-        <span class="text-sm text-gray-300 wrap-safe">${escapeHtml(item.label)}</span>
-        <span class="text-sm font-bold shrink-0" style="color:${item.color};">${item.value}</span>
-      </div>
-    `).join("");
-  }
-
-  if (health) {
-    const posts = appState.posts || [];
-    const mediaItems = appState.media || [];
-    const campaigns = appState.campaigns || [];
-    const rows = [
-      { label: "Posts loaded", value: posts.length },
-      { label: "Campaigns loaded", value: campaigns.length },
-      { label: "Media assets loaded", value: mediaItems.length },
-      { label: "Published posts", value: posts.filter(post => post.status === "published").length },
-      { label: "Dated posts", value: posts.filter(post => normalizePostCalendarDateKey(post)).length }
-    ];
-
-    health.innerHTML = rows.map(row => `
-      <div class="p-3 rounded-xl bg-[#181125] border border-white/5 flex items-center justify-between gap-3">
-        <span class="text-sm text-gray-400">${escapeHtml(row.label)}</span>
-        <span class="text-sm font-bold text-white">${escapeHtml(String(row.value))}</span>
-      </div>
-    `).join("");
-  }
-
-  if (publishing) {
-    const rows = [
-      { label: "Missing scheduled_at", value: summary.gaps.missingScheduledAt, color: "#ffd700" },
-      { label: "Invalid platform targets", value: summary.gaps.invalidPlatformTargets, color: "#fb7185" },
-      { label: "Carousel assets missing", value: summary.gaps.missingCarouselMedia, color: "#f97316" },
-      { label: "Ready but incomplete", value: summary.gaps.readyButMissingRequired, color: "#38bdf8" },
-      { label: "Published without URL", value: summary.gaps.publishedMissingUrl, color: "#00ffaa" },
-      { label: "Failed without API error", value: summary.gaps.failedMissingError, color: "#fb7185" },
-      { label: "Date key mismatch", value: summary.gaps.dateMismatch, color: "#c77dff" },
-      { label: "Import failures", value: summary.gaps.importFailures, color: "#f59e0b" }
-    ];
-    publishing.innerHTML = rows.map(row => `
-      <div class="p-3 rounded-xl bg-[#181125] border border-white/5 flex items-center justify-between gap-3">
-        <span class="text-sm text-gray-300 wrap-safe">${escapeHtml(row.label)}</span>
-        <span class="text-sm font-bold shrink-0" style="color:${row.color};">${escapeHtml(String(row.value))}</span>
-      </div>
-    `).join("");
-  }
-
-  renderDiagnosticsPanel();
-}
-
-function setupOverviewControls() {
-  const platform = document.getElementById("overview-platform-filter");
-  const range = document.getElementById("overview-range-filter");
-  if (platform) {
-    platform.value = overviewFilters.platform;
-    platform.addEventListener("change", () => {
-      overviewFilters.platform = platform.value || "all";
-      renderOverviewPanel();
-    });
-  }
-  if (range) {
-    range.value = overviewFilters.range;
-    range.addEventListener("change", () => {
-      overviewFilters.range = range.value || "30";
-      renderOverviewPanel();
-    });
-  }
-}
-
-function setupPerformanceControls() {
-  const platform = document.getElementById("performance-platform-filter");
-  const range = document.getElementById("performance-range-filter");
-  if (platform) {
-    platform.value = performanceFilters.platform;
-    if (!platform.dataset.bound) {
-      platform.addEventListener("change", () => {
-        performanceFilters.platform = platform.value || "all";
-        renderPerformanceView();
-      });
-      platform.dataset.bound = "true";
-    }
-  }
-  if (range) {
-    range.value = performanceFilters.range;
-    if (!range.dataset.bound) {
-      range.addEventListener("change", () => {
-        performanceFilters.range = range.value || "30";
-        renderPerformanceView();
-      });
-      range.dataset.bound = "true";
+      closeSidePanels();
     }
   }
 }
-
-function syncPerformanceControls() {
-  const platform = document.getElementById("performance-platform-filter");
-  const range = document.getElementById("performance-range-filter");
-  if (platform && platform.value !== performanceFilters.platform) {
-    platform.value = performanceFilters.platform;
-  }
-  if (range && range.value !== performanceFilters.range) {
-    range.value = performanceFilters.range;
-  }
-}
-
-function renderModalPillarButtons(activePillar = "") {
-  const container = document.getElementById("modal-pillar-buttons");
-  if (!container) return;
-
-  const pillars = getAvailableContentPillars();
-  if (!pillars.length) {
-    container.innerHTML = `<div class="col-span-2 pillar-empty-state">No pillar value is available for this row.</div>`;
-    return;
-  }
-
-  const nextActive = activePillar || getActivePillar() || pillars[0];
-  container.innerHTML = pillars.map((pillar) => {
-    return `
-      <button
-        type="button"
-        class="pillar-btn px-3 py-2 text-[10px] font-bold uppercase tracking-wider wrap-safe flex items-center justify-center gap-2"
-        data-pillar="${escapeHtml(pillar)}"
-        title="${escapeHtml(pillar)}"
-      >${renderPillarShape(pillar, "", getPillarTheme(pillar))}<span>${escapeHtml(formatContentPillarLabel(pillar))}</span></button>
-    `;
-  }).join("");
-
-  container.querySelectorAll(".pillar-btn").forEach((btn) => {
-    btn.addEventListener("click", () => setPillar(btn.dataset.pillar || ""));
-  });
-
-  setPillar(nextActive);
-}
-
-function parseLocalDate(value) {
-  if (!value && value !== 0) return null;
-  if (value instanceof Date && !Number.isNaN(value.getTime())) return new Date(value);
-  var text = String(value).trim();
-  if (!text) return null;
-  var dateTimeMatch = text.match(/^(\d{4})-(\d{2})-(\d{2})(?:T| )/);
-  if (dateTimeMatch) return new Date(Number(dateTimeMatch[1]), Number(dateTimeMatch[2]) - 1, Number(dateTimeMatch[3]));
-  var ymdMatch = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (ymdMatch) return new Date(Number(ymdMatch[1]), Number(ymdMatch[2]) - 1, Number(ymdMatch[3]));
-  var mdyMatch = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (mdyMatch) return new Date(Number(mdyMatch[3]), Number(mdyMatch[1]) - 1, Number(mdyMatch[2]));
-  var fallback = new Date(text);
-  return !Number.isNaN(fallback.getTime()) ? fallback : null;
-}
-
-function parsePostDate(value) {
-  if (!value) return null;
-  if (value instanceof Date && !Number.isNaN(value.getTime())) return new Date(value);
-
-  const serialDate = parseGoogleSheetsSerialDate(value);
-  if (serialDate) return serialDate;
-
-  const text = String(value).trim();
-  if (!text) return null;
-
-  const localMatch = text.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2}))?)?$/);
-  if (localMatch) {
-    return new Date(
-      Number(localMatch[1]),
-      Number(localMatch[2]) - 1,
-      Number(localMatch[3]),
-      Number(localMatch[4] || 0),
-      Number(localMatch[5] || 0),
-      Number(localMatch[6] || 0),
-      0
-    );
-  }
-
-  if (/^\d{4}-\d{2}-\d{2}$/.test(text) || /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(text)) {
-    const planningDate = parsePlanningDateLocal(text);
-    if (planningDate) return planningDate;
-  }
-
-  if (/^\d+(?:\.\d+)?$/.test(text)) return null;
-
-  var localParsed = parseLocalDate(text);
-  if (localParsed) return localParsed;
-
-  const parsed = new Date(text);
-  return !Number.isNaN(parsed.getTime()) ? parsed : null;
-}
-
-function parseGoogleSheetsSerialDate(value) {
-  if (value instanceof Date && !Number.isNaN(value.getTime())) return new Date(value);
-  const serial = Number(value);
-  if (!Number.isFinite(serial) || serial < 25000) return null;
-
-  const wholeDays = Math.floor(serial);
-  const fractionalDay = serial - wholeDays;
-  const epoch = new Date(1899, 11, 30);
-  const date = new Date(epoch.getFullYear(), epoch.getMonth(), epoch.getDate() + wholeDays);
-  const totalSeconds = Math.round(fractionalDay * 24 * 60 * 60);
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  date.setHours(hours, minutes, seconds, 0);
-  return date;
-}
-
-function parsePlanningDateLocal(value) {
-  if (!value) return null;
-  if (value instanceof Date && !Number.isNaN(value.getTime())) return new Date(value);
-
-  const serialDate = parseGoogleSheetsSerialDate(value);
-  if (serialDate) return serialDate;
-
-  const raw = String(value).trim();
-  if (!raw) return null;
-
-  const localDateTimeMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2}))?)?$/);
-  if (localDateTimeMatch) {
-    return new Date(
-      Number(localDateTimeMatch[1]),
-      Number(localDateTimeMatch[2]) - 1,
-      Number(localDateTimeMatch[3]),
-      Number(localDateTimeMatch[4] || 0),
-      Number(localDateTimeMatch[5] || 0),
-      Number(localDateTimeMatch[6] || 0),
-      0
-    );
-  }
-
-  const datePart = raw.includes("T")
-    ? raw.split("T")[0]
-    : raw.split(" ")[0];
-
-  const match = datePart.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (match) {
-    return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
-  }
-
-  const slash = datePart.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (slash) {
-    return new Date(Number(slash[3]), Number(slash[1]) - 1, Number(slash[2]));
-  }
-  return null;
-}
-
-function parseDisplayDateKey(value) {
-  const text = String(value || "").trim();
-  if (!text) return "";
-  const isoMatch = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
-  const mdyMatch = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (mdyMatch) {
-    return `${mdyMatch[3]}-${String(Number(mdyMatch[1])).padStart(2, "0")}-${String(Number(mdyMatch[2])).padStart(2, "0")}`;
-  }
-  return "";
-}
-
-function normalizeQueueDateLabel(value) {
-  const directKey = parseDisplayDateKey(value);
-  if (directKey) {
-    const [year, month, day] = directKey.split("-");
-    return `${Number(month)}/${Number(day)}/${year}`;
-  }
-  const parsed = parsePlanningDateLocal(value) || parsePostDate(value);
-  if (!parsed || Number.isNaN(parsed.getTime())) return "";
-  return `${parsed.getMonth() + 1}/${parsed.getDate()}/${parsed.getFullYear()}`;
-}
-
-function formatQueueDateLabel(dateOrValue) {
-  return normalizeQueueDateLabel(dateOrValue);
-}
-
-function normalizeQueueTimeLabel(value) {
-  const text = String(value || "").trim();
-  if (!text) return "";
-  const match = text.match(/^(\d{1,2}):(\d{2})(?:\s*([AP]M))?$/i);
-  if (match) {
-    let hours = Number(match[1]);
-    const minutes = String(match[2]).padStart(2, "0");
-    let meridiem = String(match[3] || "").toUpperCase();
-    if (!meridiem) {
-      meridiem = hours >= 12 ? "PM" : "AM";
-      hours = hours % 24;
-      hours = hours === 0 ? 12 : (hours > 12 ? hours - 12 : hours);
-    }
-    return `${hours}:${minutes} ${meridiem}`;
-  }
-  const parsed = parsePostDate(value);
-  if (!parsed || Number.isNaN(parsed.getTime())) return "";
-  return parsed.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-}
-
-function hasUserSelectedTime(post = {}) {
-  if (typeof post.hasUserSelectedTime === "boolean") return post.hasUserSelectedTime;
-  if (typeof post.has_user_selected_time === "boolean") return post.has_user_selected_time;
-  return !!String(post.queueTimeLabel || post.queue_time_label || "").trim();
-}
-
-function buildScheduledAtFromPlanningFields(queueDateLabel, queueTimeLabel) {
-  const normalizedDate = normalizeQueueDateLabel(queueDateLabel);
-  const dateKey = parseDisplayDateKey(normalizedDate);
-  if (!dateKey) return "";
-  const timeLabel = normalizeQueueTimeLabel(queueTimeLabel) || "9:15 AM";
-  const match = timeLabel.match(/^(\d{1,2}):(\d{2})\s*([AP]M)$/i);
-  if (!match) return `${dateKey}T09:15`;
-  let hours = Number(match[1]) % 12;
-  if (String(match[3]).toUpperCase() === "PM") hours += 12;
-  return `${dateKey}T${String(hours).padStart(2, "0")}:${String(Number(match[2])).padStart(2, "0")}`;
-}
-
-function normalizeScheduledAt(value, queueDateLabel, queueTimeLabel) {
-  const normalizedDate = normalizeQueueDateLabel(queueDateLabel);
-  const normalizedTime = normalizeQueueTimeLabel(queueTimeLabel);
-  const fallback = buildScheduledAtFromPlanningFields(normalizedDate, normalizedTime);
-  const parsed = parsePostDate(value);
-  if (!parsed || Number.isNaN(parsed.getTime())) return fallback;
-  const dateKey = parseDisplayDateKey(normalizedDate) || getPlanningDateKeyFromValue(value) || toDateKey(parsed);
-  return buildScheduledAtFromPlanningFields(dateKey, normalizedTime || parsed.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }));
-}
-
-function getPostPlanningDateKey(post = {}) {
-  return (
-    getPlanningDateKeyFromValue(post.scheduledAt || post.scheduled_at || post.date || "") ||
-    parseDisplayDateKey(post.queueDateLabel) ||
-    parseDisplayDateKey(post.queue_date_label) ||
-    parseDisplayDateKey(post.scheduledDateKey) ||
-    parseDisplayDateKey(formatQueueDateLabel(post.scheduledAt || post.scheduled_at || post.date || "")) ||
-    getPlanningDateKeyFromValue(post.createdAt || post.created_at) ||
-    toDateKey(post.scheduledAt || post.scheduled_at || post.date || post.createdAt || post.created_at)
-  );
-}
-
-function getPlanningCalendarParts(post = {}) {
-  const dateKey = getPostPlanningDateKey(post);
-  if (!dateKey) return { calendarMonth: "", calendarYear: "", calendarDay: "" };
-  const [year, month, day] = dateKey.split("-");
-  return {
-    calendarMonth: String(Number(month)),
-    calendarYear: year,
-    calendarDay: String(Number(day))
-  };
-}
-
-function normalizePostPlanningFields(post = {}, existing = {}) {
-  const queueDateLabel = normalizeQueueDateLabel(post.scheduledAt || post.scheduled_at || post.date || existing.scheduledAt || existing.scheduled_at || existing.date || post.queueDateLabel || post.queue_date_label || existing.queueDateLabel || existing.queue_date_label || "");
-  const sourceHasExplicitTimeSelection = Object.prototype.hasOwnProperty.call(post, "hasUserSelectedTime")
-    || Object.prototype.hasOwnProperty.call(post, "has_user_selected_time")
-    || Object.prototype.hasOwnProperty.call(post, "queueTimeLabel")
-    || Object.prototype.hasOwnProperty.call(post, "queue_time_label");
-  const selectedTime = sourceHasExplicitTimeSelection ? hasUserSelectedTime(post) : (hasUserSelectedTime(post) || hasUserSelectedTime(existing));
-  const queueTimeLabel = selectedTime
-    ? normalizeQueueTimeLabel(post.queueTimeLabel || post.queue_time_label || existing.queueTimeLabel || existing.queue_time_label || "")
-    : "";
-  const scheduledAt = normalizeScheduledAt(post.scheduledAt || post.scheduled_at || post.date || existing.scheduledAt || existing.scheduled_at || existing.date || "", queueDateLabel, queueTimeLabel);
-  const planningShape = { queueDateLabel, scheduledAt };
-  const parts = getPlanningCalendarParts(planningShape);
-  return {
-    queueDateLabel,
-    queueTimeLabel,
-    scheduledAt,
-    calendarMonth: String(post.calendarMonth || post.calendar_month || existing.calendarMonth || existing.calendar_month || parts.calendarMonth || "").trim(),
-    calendarYear: String(post.calendarYear || post.calendar_year || existing.calendarYear || existing.calendar_year || parts.calendarYear || "").trim(),
-    calendarDay: String(post.calendarDay || post.calendar_day || existing.calendarDay || existing.calendar_day || parts.calendarDay || "").trim(),
-    hasUserSelectedTime: !!selectedTime
-  };
-}
-
-function getPostCalendarDateKey(post) {
-  if (!post || typeof post !== "object") return "";
-  var label = parseDisplayDateKey(post.queueDateLabel || post.queue_date_label || "");
-  if (label) return label;
-  var schedKey = parseDisplayDateKey(post.scheduledDateKey || "");
-  if (schedKey) return schedKey;
-  var fromSchedAt = parseDisplayDateKey(String(post.scheduledAt || post.scheduled_at || post.date || "").slice(0, 10));
-  if (fromSchedAt) return fromSchedAt;
-  var fromCreated = parseDisplayDateKey(String(post.createdAt || post.created_at || "").slice(0, 10));
-  if (fromCreated) return fromCreated;
-  var fromValue = getPlanningDateKeyFromValue(post.scheduledAt || post.scheduled_at || post.date || post.createdAt || post.created_at);
-  if (fromValue) return fromValue;
-  return toDateKey(post.scheduledAt || post.scheduled_at || post.date || post.createdAt || post.created_at);
-}
-
-function normalizePostCalendarDateKey(post) {
-  if (!post || typeof post !== "object") return getPostDateKey(post);
-  return getPostCalendarDateKey(post) || getPostPlanningDateKey(post) || parseDisplayDateKey(post.scheduledDateKey) || parseDisplayDateKey(String(post.scheduledAt || post.scheduled_at || post.date || "").slice(0, 10)) || parseDisplayDateKey(String(post.createdAt || post.created_at || "").slice(0, 10)) || getPlanningDateKeyFromValue(post.scheduledAt || post.scheduled_at || post.date || post.createdAt || post.created_at) || toDateKey(post.scheduledAt || post.scheduled_at || post.date || post.createdAt || post.created_at);
-}
-
-function getPostDateKey(postOrValue) {
-  const rawValue = typeof postOrValue === "object" && postOrValue !== null
-    ? normalizePostCalendarDateKey(postOrValue) || postOrValue.scheduledDateKey || postOrValue.date || postOrValue.scheduledAt
-    : postOrValue;
-  return getPlanningDateKeyFromValue(rawValue) || toDateKey(rawValue);
-}
-
-function getRangeStart(range) {
-  const now = new Date();
-  const days = Number(range);
-  if (!days || range === "all") return null;
-  const start = new Date(now);
-  start.setHours(0, 0, 0, 0);
-  start.setDate(start.getDate() - days + 1);
-  return start;
-}
-
-function postMatchesFilters(post, filters = {}) {
-  const platform = filters.platform || "all";
-  const status = filters.status || "all";
-  const range = filters.range || "all";
-
-  if (platform !== "all" && String(post.platform || "") !== platform) return false;
-  if (status !== "all" && String(post.status || "") !== status) return false;
-
-  const start = getRangeStart(range);
-  if (start) {
-    const postDate = parsePostDate(normalizePostCalendarDateKey(post) || post.date);
-    if (!postDate || postDate < start) return false;
-  }
-
-  return true;
-}
-
-function getFilteredPosts(filters = {}) {
-  return (appState.posts || []).filter(post => postMatchesFilters(post, filters));
-}
-
-function getFilteredPerformancePosts() {
-  return (appState.posts || []).filter((post) => {
-    const platformOk =
-      performanceFilters.platform === "all" ||
-      String(post.platform || "").toLowerCase() === String(performanceFilters.platform || "").toLowerCase();
-
-    if (!platformOk) return false;
-
-    const dateValue = parsePostDate(normalizePostCalendarDateKey(post) || post.scheduledAt || post.date);
-    if (!dateValue) return false;
-
-    if (performanceFilters.range === "all") return true;
-
-    const rangeDays = Number(performanceFilters.range || 30);
-    if (!Number.isFinite(rangeDays) || rangeDays <= 0) return true;
-
-    const now = new Date();
-    const cutoff = new Date(now);
-    cutoff.setHours(0, 0, 0, 0);
-    cutoff.setDate(now.getDate() - rangeDays + 1);
-
-    return dateValue >= cutoff && dateValue <= now;
-  });
-}
-
-function countPostsBy(items, getter) {
-  const counts = new Map();
-  items.forEach((item) => {
-    const raw = getter(item);
-    const value = String(raw || "").trim();
-    if (!value) return;
-    counts.set(value, (counts.get(value) || 0) + 1);
-  });
-  return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
-}
-
-function getPostOperationalScore(post) {
-  const statusWeight = post.status === "published" ? 5 : post.status === "scheduled" ? 3 : 1;
-  const hasMedia = findLinkedAssetForPost(post) ? 1 : 0;
-  const hasCampaign = post.campaignId ? 1 : 0;
-  const hasPillar = getPostContentPillar(post) ? 1 : 0;
-  const postDate = parsePostDate(normalizePostCalendarDateKey(post) || post.date);
-  const recencyDays = postDate ? Math.max(0, 30 - Math.floor((Date.now() - postDate.getTime()) / 86400000)) : 0;
-  return statusWeight + hasMedia + hasCampaign + hasPillar + (recencyDays / 30);
-}
-
-function getPostRankingMeta(post, posts = []) {
-  const primaryInsightMetric = getPrimaryInsightMetricConfig(posts);
-  if (primaryInsightMetric && hasInsightMetrics(post)) {
-    return {
-      mode: "insight",
-      score: getInsightScore(post),
-      label: primaryInsightMetric.label,
-      value: normalizeMetricNumber(post[primaryInsightMetric.key]),
-      formatter: primaryInsightMetric.formatter || (value => String(Math.round(value)))
-    };
-  }
-
-  return {
-    mode: "scheduler",
-    score: getPostOperationalScore(post),
-    label: "Scheduler Score",
-    value: getPostOperationalScore(post),
-    formatter: value => Number(value || 0).toFixed(1)
-  };
-}
-
-function getInsightSummaryLine(post, posts = []) {
-  const meta = getPostRankingMeta(post, posts);
-  return meta.mode === "insight"
-    ? `${meta.label} ${meta.formatter(meta.value)}`
-    : `Scheduler score ${meta.formatter(meta.value)}`;
-}
-
-function getTopRankedPosts(filters = {}, limit = 5) {
-  const filteredPosts = getFilteredPosts(filters);
-  return filteredPosts
-    .slice()
-    .sort((a, b) => {
-      const scoreDiff = getPostRankingMeta(b, filteredPosts).score - getPostRankingMeta(a, filteredPosts).score;
-      if (scoreDiff !== 0) return scoreDiff;
-      return (parsePostDate(normalizePostCalendarDateKey(b) || b.date)?.getTime() || 0) - (parsePostDate(normalizePostCalendarDateKey(a) || a.date)?.getTime() || 0);
-    })
-    .slice(0, limit);
-}
-
-function getRangeLabel(range) {
-  return range === "all" ? "All time" : `Last ${range} days`;
-}
-
-function formatStatusLabel(status) {
-  return toTitleCase(status || "draft");
-}
-
-function buildTimeBuckets(posts, range = "30") {
-  const bucketCount = range === "all" ? 8 : 6;
-  const daySpan = range === "all" ? 30 : Math.max(5, Math.round(Number(range || 30) / bucketCount));
-  const now = new Date();
-  const buckets = Array.from({ length: bucketCount }, (_, index) => {
-    const start = new Date(now);
-    start.setHours(0, 0, 0, 0);
-    start.setDate(start.getDate() - ((bucketCount - index) * daySpan) + 1);
-    const end = new Date(start);
-    end.setDate(end.getDate() + daySpan - 1);
-    end.setHours(23, 59, 59, 999);
-    return {
-      label: start.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-      shortLabel: start.toLocaleDateString("en-US", { month: "short" }),
-      start,
-      end,
-      total: 0,
-      published: 0
-    };
-  });
-
-  posts.forEach((post) => {
-    const date = parsePostDate(normalizePostCalendarDateKey(post) || post.date);
-    if (!date) return;
-    const bucket = buckets.find(item => date >= item.start && date <= item.end);
-    if (!bucket) return;
-    bucket.total += 1;
-    if (post.status === "published") bucket.published += 1;
-  });
-
-  return buckets;
-}
-
-function getBucketMetricTotals(posts, buckets, metricKey) {
-  return buckets.map((bucket) => {
-    return posts
-      .filter((post) => {
-        const date = parsePostDate(normalizePostCalendarDateKey(post) || post.date);
-        return date && date >= bucket.start && date <= bucket.end;
-      })
-      .reduce((sum, post) => sum + normalizeMetricNumber(post?.[metricKey]), 0);
-  });
-}
-
-function renderTimeBarChart(target, buckets, values, options = {}) {
-  if (!target) return;
-
-  const {
-    color = "linear-gradient(180deg,#c77dff 0%, #2d1b4e 100%)",
-    emptyMessage = "No time-series data is available.",
-    titleFormatter = (bucket, value) => `${bucket.label}: ${Math.round(value)}`,
-    minHeight = 6
-  } = options;
-
-  if (!buckets.length || !values.length || values.every((value) => normalizeMetricNumber(value) <= 0)) {
-    target.innerHTML = `<div class="pillar-empty-state w-full">${escapeHtml(emptyMessage)}</div>`;
-    return;
-  }
-
-  const max = Math.max(...values.map(value => normalizeMetricNumber(value)), 1);
-  target.innerHTML = buckets.map((bucket, index) => {
-    const value = normalizeMetricNumber(values[index]);
-    return `
-      <div class="chart-bar" title="${escapeHtml(titleFormatter(bucket, value))}">
-        <div class="chart-bar-fill" style="height:${Math.max(minHeight, (value / max) * 140)}px;background:${color}"></div>
-        <div class="chart-bar-label">${escapeHtml(bucket.shortLabel)}</div>
-      </div>
-    `;
-  }).join("");
-}
-
-function renderComparisonRows(targetId, rows, formatter = (value) => String(value), colorResolver = () => "#c77dff") {
-  const target = document.getElementById(targetId);
-  if (!target) return;
-
-  if (!rows.length) {
-    target.innerHTML = `<p class="text-sm text-gray-500">No matching data.</p>`;
-    return;
-  }
-
-  const max = Math.max(...rows.map(item => item.value), 1);
-  target.innerHTML = rows.map((item) => {
-    const color = colorResolver(item.key);
-    const width = Math.max(8, (item.value / max) * 100);
-    return `
-      <div class="comparison-row">
-        <div class="min-w-0">
-          <div class="flex justify-between gap-3 mb-1">
-            <span class="text-sm text-gray-200 font-medium signal-label-fit">${escapeHtml(item.label)}</span>
-            <span class="text-xs text-gray-500 shrink-0">${escapeHtml(formatter(item.value))}</span>
-          </div>
-          <div class="comparison-track">
-            <div class="comparison-fill" style="width:${width}%;background:${escapeHtml(color)}"></div>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join("");
-}
-
-function buildAuditSummary() {
-  const posts = appState.posts || [];
-  const campaigns = appState.campaigns || [];
-  const notes = appState.notes || [];
-  const inspo = appState.inspo || [];
-  const datedPosts = posts.filter(post => parsePostDate(normalizePostCalendarDateKey(post) || post.date));
-  const publishedPosts = posts.filter(post => post.status === "published");
-  const missingCampaign = posts.filter(post => !post.campaignId);
-  const missingPillar = posts.filter(post => !getDisplayPostContentPillar(post));
-  const missingMedia = posts.filter(post => post.postType !== "text" && !findLinkedAssetForPost(post));
-  const unresolvedAssets = posts.filter(post => post.assetId && !findLinkedAssetForPost(post));
-  const missingScheduledAt = posts.filter(post => !post.date);
-  const invalidPlatformTargets = posts.filter((post) => {
-    const targets = Array.isArray(post.platformTargets) ? post.platformTargets : [];
-    return targets.some(target => !["instagram", "linkedin", "threads", "bluesky"].includes(String(target || "").toLowerCase()));
-  });
-  const missingCarouselMedia = posts.filter((post) => getPostMediaKind(post) === "carousel" && getPostAssets(post).length < Math.max(2, (post.carouselAssetIds || []).length));
-  const readyButMissingRequired = posts.filter((post) => {
-    return String(post.publishStatus || "").toLowerCase() === "ready"
-      && (!String(post.description || "").trim() || getPostMediaKind(post) === "missing");
-  });
-  const publishedMissingUrl = posts.filter(post => String(post.publishStatus || "").toLowerCase() === "published" && !String(post.publishedUrl || "").trim());
-  const failedMissingError = posts.filter(post => String(post.publishStatus || "").toLowerCase().includes("failed") && !String(post.apiError || "").trim());
-  const dateMismatch = posts.filter(post => Array.isArray(post.dateDiagnostics) && post.dateDiagnostics.length);
-  const importFailures = posts.filter(post => ["failed", "limited"].includes(String(post.sourceImportStatus || "").toLowerCase()));
-  const semanticOverused = detectOverusedPatterns();
-  const semanticDrift = detectSemanticDrift();
-  const weakClassificationSignals = detectPlatformClassificationSignals().filter((item) => item.weak);
-  const isolatedCampaigns = detectCampaignClusters().filter((cluster) => cluster.count <= 1);
-  const orphanedMemory = notes.filter((note) => !note.convertedPostId && !note.sourceUrl && !normalizeStringList(note.semanticTags).length)
-    .concat(inspo.filter((item) => !item.convertedPostId && !item.sourceLabel && !normalizeStringList(item.semanticTags).length));
-  const campaignMismatch = posts.filter((post) => {
-    if (!post.campaignId) return false;
-    const campaign = campaigns.find(item => String(item.campaignId || "") === String(post.campaignId || ""));
-    return !!campaign && normalizePillarToken(getDisplayPostContentPillar(post)) !== normalizePillarToken(getDisplayCampaignContentPillar(campaign));
-  });
-
-  const working = [];
-  if (publishedPosts.length) working.push(`${publishedPosts.length} posts are marked published.`);
-  if (campaigns.length && campaigns.every(item => item.campaignName)) working.push(`${campaigns.length} campaigns are available for planning.`);
-  if (posts.length && missingPillar.length === 0) working.push("Content pillar mapping is complete on current rows.");
-  if (posts.length && missingCampaign.length < Math.max(2, Math.ceil(posts.length * 0.2))) working.push("Most posts are attached to campaigns.");
-  if (!semanticDrift.length && posts.length > 4) working.push("Semantic territory looks stable across the current memory layer.");
-
-  const attention = [];
-  if (missingCampaign.length) attention.push(`${missingCampaign.length} posts are missing campaign mapping.`);
-  if (missingPillar.length) attention.push(`${missingPillar.length} posts are missing content pillar values.`);
-  if (campaignMismatch.length) attention.push(`${campaignMismatch.length} posts disagree with their campaign pillar value.`);
-  if (missingMedia.length) attention.push(`${missingMedia.length} non-text posts do not currently resolve a linked image/video asset.`);
-  if (unresolvedAssets.length) attention.push(`${unresolvedAssets.length} posts store an asset reference that does not hydrate back cleanly.`);
-  if (missingScheduledAt.length) attention.push(`${missingScheduledAt.length} posts are missing scheduled_at.`);
-  if (missingCarouselMedia.length) attention.push(`${missingCarouselMedia.length} carousel posts are missing one or more linked media assets.`);
-  if (publishedMissingUrl.length) attention.push(`${publishedMissingUrl.length} published posts are missing published URLs.`);
-  if (failedMissingError.length) attention.push(`${failedMissingError.length} failed publish rows are missing api_error details.`);
-  if (dateMismatch.length) attention.push(`${dateMismatch.length} posts show a local date-key mismatch between stored datetime and rendered day.`);
-  if (semanticOverused.hooks.length || semanticOverused.structures.length) attention.push("Recurring semantic patterns are starting to repeat too often.");
-  if (isolatedCampaigns.length) attention.push(`${isolatedCampaigns.length} campaigns are semantically isolated from the rest of the map.`);
-  if (weakClassificationSignals.length) attention.push(`${weakClassificationSignals.length} platforms have weak classification signals.`);
-  if (orphanedMemory.length) attention.push(`${orphanedMemory.length} notes or inspo records are currently orphaned from the memory layer.`);
-  if (!datedPosts.length) attention.push("No dated posts are available for trend analysis.");
-
-  const nextAction =
-    attention[0] ||
-    (publishedPosts.length ? "Keep publishing cadence steady and review the top campaign mix in Performance." : "Publish a small batch of posts so scheduler trends and top-post snapshots have enough signal.");
-
-  return {
-    working,
-    attention,
-    nextAction,
-    gaps: {
-      missingCampaign: missingCampaign.length,
-      missingPillar: missingPillar.length,
-      missingMedia: missingMedia.length,
-      unresolvedAssets: unresolvedAssets.length,
-      campaignMismatch: campaignMismatch.length,
-      missingScheduledAt: missingScheduledAt.length,
-      invalidPlatformTargets: invalidPlatformTargets.length,
-      missingCarouselMedia: missingCarouselMedia.length,
-      readyButMissingRequired: readyButMissingRequired.length,
-      publishedMissingUrl: publishedMissingUrl.length,
-      failedMissingError: failedMissingError.length,
-      dateMismatch: dateMismatch.length,
-      importFailures: importFailures.length,
-      semanticRepetitionRisk: semanticOverused.hooks.length + semanticOverused.structures.length,
-      isolatedCampaigns: isolatedCampaigns.length,
-      orphanedMemory: orphanedMemory.length,
-      weakClassificationSignals: weakClassificationSignals.length
-    }
-  };
-}
-
-function initApp() {
-  performance.mark("init-start");
-  window.__appErrors = [];
-  window.__viewRenderStats = {};
-  window.onerror = function (msg, url, line, col, err) {
-    const errInfo = { msg, url, line, col, stack: err?.stack, time: Date.now() };
-    window.__appErrors.push(errInfo);
-    console.error("[App Error]", errInfo);
-    showToast("App Error", `${msg || "Unknown"} at line ${line || "?"}`, "ph-warning-circle", "text-red-400");
-    return true;
-  };
-  window.onunhandledrejection = function (e) {
-    const errInfo = { msg: String(e.reason), stack: e.reason?.stack, time: Date.now() };
-    window.__appErrors.push(errInfo);
-    console.error("[Unhandled Rejection]", errInfo);
-    e.preventDefault();
-  };
-  safeRender(() => {
-    appState.settings = normalizeRemoteSettings(appState.settings || {});
-    appState.campaigns = (appState.campaigns || []).map((campaign) => normalizeRemoteCampaign(campaign));
-    appState.posts = (appState.posts || []).map((post) => hydratePostCampaign({
-      ...post,
-      pillar: normalizePillar(post?.pillar || post?.hubPillarLabel || (appState.settings?.pillars || [])[0] || "authority")
-    }, appState.campaigns || []));
-    appState.notes = (appState.notes || []).map((note) => normalizeRemoteNote(note));
-    appState.aiDrafts = (appState.aiDrafts || []).map((draft) => normalizeRemoteAIDraft(draft));
-    appState.brandFramework = (appState.brandFramework || []).map((item) => normalizeRemoteBrandFrameworkItem(item));
-  }, "initApp/normalizeState");
-
-  safeRender(seedStars, "seedStars");
-  safeRender(cleanInvalidImportantToken, "cleanInvalidImportantToken");
-  safeRender(setupPWAInstall, "setupPWAInstall");
-  safeRender(registerServiceWorkerSafe, "registerServiceWorkerSafe");
-
-  safeRender(() => {
-    renderModalPillarButtons();
-    setupModalControls();
-    setupSaveHandler();
-    loadLinkedInAuthorContext();
-    workspaceOpenLinkedInCaptureBtn?.addEventListener("click", () => {
-      closeWorkspaceHub();
-      openLinkedInCaptureImporter();
-    });
-  }, "initApp/generalSetup");
-
-  safeSetup("existing-post-import-modal", function() {
-    writeIdeaImportExistingPostBtn?.addEventListener("click", openExistingPostImportModal);
-    existingPostImportPreviewBtn?.addEventListener("click", previewExistingPostImport);
-    existingPostImportSaveBtn?.addEventListener("click", saveExistingPostImportAsIdea);
-    closeExistingPostImportModalBtn?.addEventListener("click", closeExistingPostImportModal);
-    existingPostImportModal?.addEventListener("click", function(event) {
-      if (event.target === existingPostImportModal) closeExistingPostImportModal();
-    });
-    closeLinkedInBulkImportModalBtn?.addEventListener("click", closeLinkedInBulkImportModal);
-    linkedInBulkImportModal?.addEventListener("click", function(event) {
-      if (event.target === linkedInBulkImportModal) closeLinkedInBulkImportModal();
-    });
-  });
-  safeRender(function() {
-    linkedInImportModeTextBtn?.addEventListener("click", () => setLinkedInImportMode("text"));
-    linkedInImportModeJsonBtn?.addEventListener("click", () => setLinkedInImportMode("json"));
-    linkedInImportModeUrlsBtn?.addEventListener("click", () => setLinkedInImportMode("urls"));
-    linkedInImportModeMediaBtn?.addEventListener("click", () => setLinkedInImportMode("media"));
-    linkedInImportMediaManifestBtn?.addEventListener("click", () => importLinkedInMediaManifest().catch((err) => {
-      console.error(err);
-      showToast("Media import failed", err.message || "Could not import media manifest.", "ph-warning", "text-yellow-400");
-    }));
-    linkedInPasteMediaManifestBtn?.addEventListener("click", () => {
-      if (linkedInMediaManifestInput) {
-        linkedInMediaManifestInput.value = "";
-        linkedInMediaManifestInput.focus();
-      }
-      navigator.clipboard.readText().then((text) => {
-        if (text && linkedInMediaManifestInput) {
-          linkedInMediaManifestInput.value = text;
-          if (linkedInMediaManifestStatus) linkedInMediaManifestStatus.textContent = "Media manifest pasted. Click Parse & Import to process.";
-        }
-      }).catch(() => {
-        if (linkedInMediaManifestStatus) linkedInMediaManifestStatus.textContent = "Could not read clipboard. Paste the manifest manually into the textarea.";
-      });
-    });
-    linkedInParseJsonBtn?.addEventListener("click", () => {
-      setLinkedInImportMode("json");
-      previewLinkedInBrowserCaptureImport();
-    });
-    linkedInImportCapturedJsonBtn?.addEventListener("click", () => {
-      setLinkedInImportMode("json");
-      if (linkedInCaptureFileInput) linkedInCaptureFileInput.click();
-      else linkedInCaptureInput?.focus();
-      showToast("JSON mode", "Upload JSON from Export Helper or paste JSON from Export Helper, then click Parse JSON.", "ph-file-json", "text-[#00ffaa]");
-    });
-    linkedInImportExportBtn?.addEventListener("click", () => {
-      setLinkedInImportMode("json");
-      importSelectedLinkedInCaptureItems();
-    });
-    linkedInTestBackendRouteBtn?.addEventListener("click", testLinkedInBackendImportRoute);
-    linkedInDownloadHelperBtn?.addEventListener("click", downloadLinkedInCaptureHelper);
-    linkedInDownloadHelperZipBtn?.addEventListener("click", () => {
-      showToast("ZIP ready", "Download the packaged helper ZIP, then load it unpacked in Chrome extensions.", "ph-download-simple", "text-[#00ffaa]");
-    });
-    linkedInOpenHelperReadmeBtn?.addEventListener("click", () => {
-      showToast("README opened", "The helper README opens in a new tab.", "ph-book-open", "text-[#00ffaa]");
-    });
-    linkedInCopyHelperInstallBtn?.addEventListener("click", () => {
-      copyTextToClipboardWithToast(
-        LINKEDIN_EXPORT_HELPER_INSTALL_STEPS,
-        "Install steps copied",
-        "Chrome extension install steps copied to clipboard.",
-        "Copy failed",
-        "Could not copy the install steps."
-      );
-    });
-    linkedInCopyHelperJsonFormatBtn?.addEventListener("click", () => {
-      copyTextToClipboardWithToast(
-        LINKEDIN_EXPORT_HELPER_JSON_FORMAT,
-        "JSON format copied",
-        "Supported Export Helper JSON envelope copied to clipboard.",
-        "Copy failed",
-        "Could not copy the JSON format."
-      );
-    });
-    linkedInValidateHelperBtn?.addEventListener("click", () => {
-      renderLinkedInHelperValidation(validateLinkedInCaptureHelperScript(String(linkedInUserscriptOutput?.value || "")));
-    });
-    linkedInSelectScriptBtn?.addEventListener("click", selectLinkedInCaptureScript);
-    linkedInCapturePreviewBtn?.addEventListener("click", previewLinkedInBrowserCaptureImport);
-    linkedInCaptureImportBtn?.addEventListener("click", importSelectedLinkedInCaptureItems);
-    linkedInCaptureFileInput?.addEventListener("change", () => {
-      setLinkedInImportMode("json");
-      previewLinkedInBrowserCaptureImport();
-    });
-    linkedInCaptureSelectAllBtn?.addEventListener("click", () => setLinkedInCaptureSelection(true));
-    linkedInCaptureDeselectAllBtn?.addEventListener("click", () => setLinkedInCaptureSelection(false));
-    linkedInCopyScriptBtn?.addEventListener("click", copyLinkedInCaptureSnippet);
-    linkedInDownloadReportBtn?.addEventListener("click", downloadLinkedInImportReport);
-    validateLinkedInBtn?.addEventListener("click", validateCurrentPostForLinkedIn);
-    prepareLinkedInPayloadBtn?.addEventListener("click", prepareCurrentLinkedInPayload);
-    testLinkedInAuthorBtn?.addEventListener("click", testLinkedInAuthorContext);
-    importTaskTrayRefreshBtn?.addEventListener("click", () => {
-      refreshImportJobsFromBackend().catch((err) => {
-        console.error(err);
-        showToast("Import jobs failed", err?.message || "Could not refresh resumable import jobs.", "ph-warning", "text-yellow-400");
-      });
-    });
-    ensureLinkedInCaptureSnippets();
-    setLinkedInRewriteApplyEnabled(false);
-    updateLinkedInImportActionState();
-
-    setupCalendarControls();
-    setupMediaFilters();
-    setupMediaUpload();
-    setupMediaLinkModal();
-    setupUploadStagingModal();
-    setupModalMediaUpload();
-  }, "initApp/viewSetup");
-
-  safeSetup("side-panels", function() {
-    setupOverviewControls();
-    setupPerformanceControls();
-    setupSplitPane();
-  });
-
-  safeSetup("modals", function() {
-    setupInspoModal();
-    setupNoteModal();
-    setupCampaignControls();
-    setupWorkspaceReturnButtons();
-  });
-
-  safeSetup("workspace-hub", function() {
-    setupWorkspaceUI();
-    setupAIAndBrandWorkspaces();
-    setupWriteIdeaWorkspace();
-  });
-
-  safeSetup("constellation-drag", function() {
-    setupConstellationInteractions();
-  });
-
-  safeRender(function() {
-    setupLedgerControls();
-    setupMediaAdvancedFilters();
-    document.getElementById("audit-refresh-diagnostics-btn")?.addEventListener("click", function() {
-      refreshBackendDiagnostics().then(function(result) {
-        if (result) showToast("Diagnostics updated", "Backend diagnostics refreshed.", "ph-shield-check", "text-[#00ffaa]");
-      }).catch(function() {});
-    });
-    auditCopyDiagnosticsBtn?.addEventListener("click", async function() {
-      try {
-        await navigator.clipboard.writeText(getDiagnosticsSummaryText(backendDiagnostics || {}));
-        showToast("Copied", "Diagnostics summary copied.", "ph-copy", "text-[#00ffaa]");
-      } catch (err) {
-        console.error(err);
-        showToast("Copy failed", "Could not copy diagnostics summary.", "ph-warning", "text-yellow-400");
-      }
-    });
-  }, "initApp/remainingSetup");
-
-  safeRender(() => {
-    switchView("calendar");
-    renderImportTaskTray();
-  }, "initApp/switchView");
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      safeRender(renderCalendar, "initApp/renderCalendar");
-      safeRender(renderOverviewPanel, "initApp/renderOverviewPanel");
-      safeRender(rerenderAll, "initApp/rerenderAll");
-    });
-  });
-
-  syncRemoteIfConfigured().then(() => {
-    refreshBackendDiagnostics({ silent: true }).catch(() => undefined);
-    refreshSocialImportContext().catch(() => undefined);
-    refreshImportJobsFromBackend().then((jobs) => {
-      (jobs || []).filter((job) => String(job.status || "") === "running").forEach((job) => resumeImportJob(job.jobId));
-    }).catch(() => undefined);
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        safeRender(() => {
-          if (currentView === "calendar") {
-            renderCalendar();
-            renderOverviewPanel();
-          }
-        }, "initApp/syncComplete");
-      });
-    });
-  }).catch((err) => {
-    console.error("Remote sync failed during init:", err);
-    window.__appErrors = window.__appErrors || [];
-    window.__appErrors.push({ msg: String(err), stack: err?.stack, phase: "initApp/syncRemote", time: Date.now() });
-    refreshSocialImportContext().catch(() => undefined);
-    refreshBackendDiagnostics({ silent: true }).catch(() => undefined);
-  });
-  performance.mark("init-end");
-  performance.measure("initApp", "init-start", "init-end");
-}
-    
-function safeRender(fn, name) {
-  const start = performance.now();
-  const viewName = name || "unnamed";
-  try {
-    const result = fn();
-    if (result instanceof Promise) {
-      result.then(() => {
-        window.__viewRenderStats = window.__viewRenderStats || {};
-        window.__viewRenderStats[viewName] = window.__viewRenderStats[viewName] || {};
-        window.__viewRenderStats[viewName].lastRenderTime = new Date().toLocaleTimeString();
-        window.__viewRenderStats[viewName].lastRenderDuration = Math.round(performance.now() - start);
-        window.__viewRenderStats[viewName].lastRenderError = null;
-        window.__viewRenderStats[viewName].renderCount = (window.__viewRenderStats[viewName].renderCount || 0) + 1;
-        window.__viewRenderStats[viewName].ready = true;
-      }).catch((err) => {
-        console.error(`[safeRender] async error in ${viewName}:`, err);
-        window.__appErrors = window.__appErrors || [];
-        window.__appErrors.push({ msg: String(err), stack: err?.stack, render: viewName, time: Date.now() });
-        window.__viewRenderStats = window.__viewRenderStats || {};
-        window.__viewRenderStats[viewName] = window.__viewRenderStats[viewName] || {};
-        window.__viewRenderStats[viewName].lastRenderTime = new Date().toLocaleTimeString();
-        window.__viewRenderStats[viewName].lastRenderDuration = Math.round(performance.now() - start);
-        window.__viewRenderStats[viewName].lastRenderError = String(err);
-        window.__viewRenderStats[viewName].renderCount = (window.__viewRenderStats[viewName].renderCount || 0) + 1;
-      });
-    } else {
-      window.__viewRenderStats = window.__viewRenderStats || {};
-      window.__viewRenderStats[viewName] = window.__viewRenderStats[viewName] || {};
-      window.__viewRenderStats[viewName].lastRenderTime = new Date().toLocaleTimeString();
-      window.__viewRenderStats[viewName].lastRenderDuration = Math.round(performance.now() - start);
-      window.__viewRenderStats[viewName].lastRenderError = null;
-      window.__viewRenderStats[viewName].renderCount = (window.__viewRenderStats[viewName].renderCount || 0) + 1;
-      window.__viewRenderStats[viewName].ready = true;
-    }
-    return result;
-  } catch (err) {
-    console.error(`[safeRender] error in ${viewName}:`, err);
-    window.__appErrors = window.__appErrors || [];
-    window.__appErrors.push({ msg: String(err), stack: err?.stack, render: viewName, time: Date.now() });
-    window.__viewRenderStats = window.__viewRenderStats || {};
-    window.__viewRenderStats[viewName] = window.__viewRenderStats[viewName] || {};
-    window.__viewRenderStats[viewName].lastRenderTime = new Date().toLocaleTimeString();
-    window.__viewRenderStats[viewName].lastRenderDuration = Math.round(performance.now() - start);
-    window.__viewRenderStats[viewName].lastRenderError = String(err);
-    window.__viewRenderStats[viewName].renderCount = (window.__viewRenderStats[viewName].renderCount || 0) + 1;
-    showToast("Render Error", `${viewName} — ${err.message || err}`, "ph-bug", "text-yellow-400");
-    return undefined;
-  }
-}
-
-function safeSetup(name, fn) {
-  window.__setupErrors = window.__setupErrors || [];
-  try {
-    var result = fn();
-    if (result instanceof Promise) {
-      result.catch(function(err) {
-        console.error("[safeSetup] async error in " + name + ":", err);
-        window.__setupErrors.push({ msg: String(err), stack: err && err.stack, section: name, time: Date.now() });
-      });
-    }
-    return result;
-  } catch (err) {
-    console.error("[safeSetup] error in " + name + ":", err);
-    window.__setupErrors.push({ msg: String(err), stack: err && err.stack, section: name, time: Date.now() });
-    window.__appErrors = window.__appErrors || [];
-    window.__appErrors.push({ msg: String(err), stack: err && err.stack, phase: "setup/" + name, time: Date.now() });
-    showToast("Setup Error", name + " — " + (err.message || err), "ph-bug", "text-yellow-400");
-    return undefined;
-  }
-}
-
-var __constellationDragStats = { dragStarts: 0, dragMoves: 0, dragEnds: 0, lastPanX: 0, lastPanY: 0, lastScale: 0 };
 
 function rerenderAll() {
   safeRender(() => {
@@ -8165,6 +5342,7 @@ function detectSourcePlatform(value) {
   if (text.includes("linkedin")) return "linkedin";
   if (text.includes("threads")) return "threads";
   if (text.includes("bsky") || text.includes("bluesky")) return "bluesky";
+  if (text.includes("tiktok")) return "tiktok";
   return "";
 }
 
@@ -8613,23 +5791,35 @@ function setupWorkspaceUI() {
     });
   });
   mobileAiNavBtn?.addEventListener("click", () => switchView("write-idea"));
-  desktopSidebarToggle?.addEventListener("click", () => {
+  var panelTogglePending = null;
+  function flushPanelToggle() {
+    if (panelTogglePending) { panelTogglePending(); panelTogglePending = null; }
+  }
+  desktopSidebarToggle?.addEventListener("click", function() {
     shellLayout.sidebarCollapsed = !shellLayout.sidebarCollapsed;
     persistShellLayout();
     applyShellLayout();
-    rerenderAll();
-    requestAnimationFrame(() => {
-      if (currentView === "constellation") fitConstellation({ preserveUserView: true });
-    });
+    flushPanelToggle();
+    panelTogglePending = function() {
+      rerenderAll();
+      requestAnimationFrame(function() {
+        if (currentView === "constellation") fitConstellation({ preserveUserView: true });
+      });
+    };
+    setTimeout(flushPanelToggle, 300);
   });
-  signalOverviewToggle?.addEventListener("click", () => {
+  signalOverviewToggle?.addEventListener("click", function() {
     isSignalOverviewCollapsed = !isSignalOverviewCollapsed;
     safeStorageSet(RIGHT_PANEL_COLLAPSED_KEY, String(isSignalOverviewCollapsed));
     applyShellLayout();
-    rerenderAll();
-    requestAnimationFrame(() => {
-      if (currentView === "constellation") fitConstellation({ preserveUserView: true });
-    });
+    flushPanelToggle();
+    panelTogglePending = function() {
+      rerenderAll();
+      requestAnimationFrame(function() {
+        if (currentView === "constellation") fitConstellation({ preserveUserView: true });
+      });
+    };
+    setTimeout(flushPanelToggle, 300);
   });
 }
 
@@ -10984,8 +8174,129 @@ function getConnectedAccountMissingSetupKeys(platform) {
   return filterLegacyRedirectKeys(Array.isArray(account.missingSetupKeys) ? account.missingSetupKeys : []);
 }
 
-function filterLegacyRedirectKeys(keys = []) {
-  return (Array.isArray(keys) ? keys : []).filter((key) => !["LINKEDIN_REDIRECT_URI", "INSTAGRAM_REDIRECT_URI", "THREADS_REDIRECT_URI"].includes(String(key || "").trim()));
+function filterLegacyRedirectKeys(keys) {
+  return (keys || []).filter(key => !["LINKEDIN_REDIRECT_URI", "INSTAGRAM_REDIRECT_URI", "THREADS_REDIRECT_URI", "TIKTOK_REDIRECT_URI"].includes(key));
+}
+
+// ===== BLUESKY FRONTEND =====
+
+let blueskyConnectState = { step: "idle", handle: "", serviceUrl: "https://bsky.social", diagnostics: [] };
+
+async function blueskyConnect(handle, password, serviceUrl) {
+  var key = "bluesky:connect";
+  setConnectedAccountActionLoading("bluesky", "connect", true);
+  try {
+    var result = await apiPost("blueskyConnect", { handle: handle, password: password, serviceUrl: serviceUrl || "https://bsky.social" });
+    if (result.ok) {
+      blueskyConnectState = { step: "connected", handle: handle, serviceUrl: serviceUrl, diagnostics: result.diagnostics || [] };
+      showToast("Bluesky connected as @" + handle, "success");
+    }
+    await refreshSocialImportContext();
+    return result;
+  } catch (err) {
+    showToast("Bluesky connect failed: " + err.message, "error");
+    throw err;
+  } finally {
+    setConnectedAccountActionLoading("bluesky", "connect", false);
+  }
+}
+
+async function testBlueskyConnection() {
+  var key = "bluesky:test";
+  setConnectedAccountActionLoading("bluesky", "test", true);
+  try {
+    var result = await apiGet("testBlueskyConnection");
+    var diag = (result.diagnostics || []).join(" | ");
+    showToast(result.connected ? "Bluesky: connected - " + diag : "Bluesky: " + diag, result.connected ? "success" : "warning");
+    await refreshSocialImportContext();
+    return result;
+  } catch (err) {
+    showToast("Bluesky test failed: " + err.message, "error");
+  } finally {
+    setConnectedAccountActionLoading("bluesky", "test", false);
+  }
+}
+
+async function disconnectBlueskyAccount() {
+  var key = "bluesky:disconnect";
+  setConnectedAccountActionLoading("bluesky", "disconnect", true);
+  try {
+    var result = await apiGet("disconnectBluesky");
+    blueskyConnectState = { step: "idle", handle: "", serviceUrl: "https://bsky.social", diagnostics: [] };
+    showToast("Bluesky disconnected", "info");
+    await refreshSocialImportContext();
+    return result;
+  } catch (err) {
+    showToast("Bluesky disconnect failed: " + err.message, "error");
+  } finally {
+    setConnectedAccountActionLoading("bluesky", "disconnect", false);
+  }
+}
+
+async function blueskySyncRecentPosts(limit) {
+  try {
+    var result = await apiGet("blueskySyncRecentPosts", { limit: limit || 10 });
+    if (result.ok) {
+      showToast("Synced " + (result.count || 0) + " Bluesky posts", "success");
+    }
+    return result;
+  } catch (err) {
+    showToast("Bluesky sync failed: " + err.message, "error");
+  }
+}
+
+async function prepareBlueskyPayload(text, url, image, title) {
+  try {
+    var result = await apiPost("prepareBlueskyPayload", { text: text, url: url, image: image, title: title });
+    return result;
+  } catch (err) {
+    showToast("Bluesky payload prep failed: " + err.message, "error");
+  }
+}
+
+// ===== TIKTOK FRONTEND =====
+
+async function startTikTokAuth() {
+  var key = "tiktok:connect";
+  setConnectedAccountActionLoading("tiktok", "connect", true);
+  try {
+    return await connectSocialAccount("tiktok");
+  } catch (err) {
+    showToast("TikTok auth failed: " + err.message, "error");
+  } finally {
+    setConnectedAccountActionLoading("tiktok", "connect", false);
+  }
+}
+
+async function testTikTokConnection() {
+  var key = "tiktok:test";
+  setConnectedAccountActionLoading("tiktok", "test", true);
+  try {
+    var result = await apiGet("testTikTokConnection");
+    var diag = (result.diagnostics || []).join(" | ");
+    showToast(result.connected ? "TikTok: connected - " + diag : "TikTok: " + diag, result.connected ? "success" : "warning");
+    await refreshSocialImportContext();
+    return result;
+  } catch (err) {
+    showToast("TikTok test failed: " + err.message, "error");
+  } finally {
+    setConnectedAccountActionLoading("tiktok", "test", false);
+  }
+}
+
+async function disconnectTikTokAccount() {
+  var key = "tiktok:disconnect";
+  setConnectedAccountActionLoading("tiktok", "disconnect", true);
+  try {
+    var result = await apiDisconnectPlatform("tiktok");
+    showToast("TikTok disconnected", "info");
+    await refreshSocialImportContext();
+    return result;
+  } catch (err) {
+    showToast("TikTok disconnect failed: " + err.message, "error");
+  } finally {
+    setConnectedAccountActionLoading("tiktok", "disconnect", false);
+  }
 }
 
 function getHistoricalAccessMeaning(classification) {
@@ -11243,7 +8554,7 @@ function renderConnectedAccountActions(state) {
   const account = getConnectedAccount(platform);
   const mode = inferSocialImportMode(state);
   const buttons = [];
-  if (["linkedin", "instagram", "threads", "bluesky"].includes(platform)) {
+  if (["linkedin", "instagram", "threads", "bluesky", "tiktok"].includes(platform)) {
     if (account?.accessStatus === "connected") {
       buttons.push(`
         <button type="button" onclick="importConnectedSocialPost()" class="px-3 py-2 rounded-xl bg-[#120c1d] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">
@@ -11515,6 +8826,11 @@ function getConnectedAccountsMarkup(options = {}) {
             </div>
           </div>
         </div>` : ""}
+        ${platform === "instagram" && account.connected ? `
+        <div class="mt-2 flex flex-wrap gap-2">
+          <button type="button" class="px-3 py-1.5 text-[11px] rounded-lg bg-emerald-900/40 text-emerald-300 hover:bg-emerald-900/60 transition-colors" onclick="testConnectedAccountStatus('instagram')">${isConnectedAccountActionLoading("instagram", "test") ? 'Testing...' : 'Test Instagram Token'}</button>
+          <button type="button" class="px-3 py-1.5 text-[11px] rounded-lg bg-yellow-900/40 text-yellow-300 hover:bg-yellow-900/60 transition-colors" onclick="reconnectSocialAccount('instagram')">Reconnect Instagram</button>
+        </div>` : ""}
         ${platform === "threads" ? `<div class="mt-4 p-3 rounded-xl bg-[#0f0a18] border border-white/5">
           <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">OAuth Setup Diagnostics</div>
           <div class="text-xs text-gray-400 space-y-2">
@@ -11525,9 +8841,186 @@ function getConnectedAccountsMarkup(options = {}) {
             <div class="text-[10px] text-yellow-300/70">If Meta returns error_code 1349168, the redirect URI is not yet whitelisted in the Meta App dashboard.</div>
           </div>
         </div>` : ""}
+        ${platform === "threads" ? `
+        <div class="mt-4 p-3 rounded-xl bg-[#0f0a18] border border-white/5">
+          <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Threads Redirect URI</div>
+          <div class="text-[11px] text-gray-400 mb-1">Add this exact URI to Meta Client OAuth Settings:</div>
+          <div class="flex items-center gap-2 bg-[#06030a] rounded-lg p-2 mb-2 font-mono text-[11px] text-sky-300 break-all select-all">${escapeHtml(account.callbackUrl || "")}</div>
+          <button type="button" class="text-[11px] px-3 py-1.5 rounded-lg bg-sky-900/40 text-sky-300 hover:bg-sky-900/60 transition-colors mb-2" onclick="navigator.clipboard.writeText('${escapeHtml(account.callbackUrl || "")}').then(() => showToast('Threads redirect URI copied', 'success')).catch(() => showToast('Copy failed', 'error'))">Copy Redirect URI</button>
+          <div class="text-[10px] text-gray-500 space-y-0.5 mt-1">
+            <div>• Ensure <strong class="text-white">Client OAuth Login</strong> is enabled in Meta App settings.</div>
+            <div>• Ensure <strong class="text-white">Web OAuth Login</strong> is enabled for Threads.</div>
+            <div>• App Domains must include: <code class="text-sky-300">script.google.com</code>, <code class="text-sky-300">script.googleusercontent.com</code></div>
+          </div>
+        </div>` : ""}
+        ${platform === "bluesky" ? `
+        <div class="mt-4 p-3 rounded-xl bg-[#0f0a18] border border-white/5">
+          <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Bluesky Connection</div>
+          ${account.connected ? `
+          <div class="text-[11px] text-emerald-300 mb-2">Connected as @${escapeHtml(account.username || "")}</div>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" class="px-3 py-1.5 text-[11px] rounded-lg bg-emerald-900/40 text-emerald-300 hover:bg-emerald-900/60 transition-colors" onclick="testBlueskyConnection()">${isConnectedAccountActionLoading("bluesky", "test") ? 'Testing...' : 'Test Status'}</button>
+            <button type="button" class="px-3 py-1.5 text-[11px] rounded-lg bg-indigo-900/40 text-indigo-300 hover:bg-indigo-900/60 transition-colors" onclick="blueskySyncRecentPosts(10)">Sync Recent Posts</button>
+            <button type="button" class="px-3 py-1.5 text-[11px] rounded-lg bg-red-900/40 text-red-300 hover:bg-red-900/60 transition-colors" onclick="disconnectBlueskyAccount()">${isConnectedAccountActionLoading("bluesky", "disconnect") ? 'Disconnecting...' : 'Disconnect'}</button>
+          </div>` : `
+          <div class="text-[11px] text-gray-400 mb-2">Not connected. Enter your handle and App Password.</div>
+          <div class="space-y-2">
+            <input type="text" id="bluesky-handle-input" placeholder="user.bsky.social" class="w-full px-3 py-2 bg-[#06030a] border border-white/10 rounded-lg text-[13px] text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50" value="${escapeHtml(blueskyConnectState.handle)}" oninput="blueskyConnectState.handle=this.value"/>
+            <input type="password" id="bluesky-password-input" placeholder="App Password (from bsky.app/settings/app-passwords)" class="w-full px-3 py-2 bg-[#06030a] border border-white/10 rounded-lg text-[13px] text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"/>
+            <input type="text" id="bluesky-service-input" placeholder="Service URL (default: https://bsky.social)" class="w-full px-3 py-2 bg-[#06030a] border border-white/10 rounded-lg text-[13px] text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50" value="${escapeHtml(blueskyConnectState.serviceUrl)}" oninput="blueskyConnectState.serviceUrl=this.value"/>
+            <button type="button" class="w-full px-3 py-2 text-[12px] rounded-lg bg-purple-600 hover:bg-purple-500 text-white transition-colors font-bold" onclick="blueskyConnect(document.getElementById('bluesky-handle-input').value, document.getElementById('bluesky-password-input').value, document.getElementById('bluesky-service-input').value)">${isConnectedAccountActionLoading("bluesky", "connect") ? 'Connecting...' : 'Connect Bluesky'}</button>
+          </div>
+          <div class="text-[10px] text-gray-500 mt-2">Use an App Password from bsky.app/settings/app-passwords. Your password is never stored — only session JWTs.</div>`}
+          <div class="mt-2 text-[10px] text-gray-500">
+            <div>Handle: ${escapeHtml(account.username || "—")}</div>
+            <div>Status: ${escapeHtml(account.connectionStatusLabel || "Not connected")}</div>
+          </div>
+        </div>` : ""}
+        ${platform === "tiktok" ? `
+        <div class="mt-4 p-3 rounded-xl bg-[#0f0a18] border border-white/5">
+          <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">TikTok Setup</div>
+          <div class="text-[11px] text-gray-400 mb-2">Client Key: ${account.hasClientId ? '<span class="text-emerald-300">Configured</span>' : '<span class="text-yellow-300">Missing</span>'} &middot; Client Secret: ${account.hasClientSecret ? '<span class="text-emerald-300">Configured</span>' : '<span class="text-yellow-300">Missing</span>'}</div>
+          <div class="text-[11px] text-gray-400 mb-1">Redirect URI:</div>
+          <div class="bg-[#06030a] rounded-lg p-2 mb-2 font-mono text-[11px] text-sky-300 break-all">${escapeHtml(account.callbackUrl || "—")}</div>
+          <div class="text-[11px] text-gray-400 mb-1">Scopes: <span class="text-gray-300">user.info.basic, video.publish, video.upload</span></div>
+          <div class="text-[11px] text-yellow-300 mb-2">Publishing requires TikTok Content Posting API approval.</div>
+          <div class="flex flex-wrap gap-2 mt-2">
+            <button type="button" class="px-3 py-1.5 text-[11px] rounded-lg bg-sky-900/40 text-sky-300 hover:bg-sky-900/60 transition-colors" onclick="connectSocialAccount('tiktok')">${isConnectedAccountActionLoading("tiktok", "connect") ? 'Connecting...' : 'Authorize TikTok'}</button>
+            <button type="button" class="px-3 py-1.5 text-[11px] rounded-lg bg-emerald-900/40 text-emerald-300 hover:bg-emerald-900/60 transition-colors" onclick="testTikTokConnection()">${isConnectedAccountActionLoading("tiktok", "test") ? 'Testing...' : 'Test Token'}</button>
+            <button type="button" class="px-3 py-1.5 text-[11px] rounded-lg bg-red-900/40 text-red-300 hover:bg-red-900/60 transition-colors" onclick="disconnectTikTokAccount()">${isConnectedAccountActionLoading("tiktok", "disconnect") ? 'Disconnecting...' : 'Disconnect'}</button>
+          </div>
+          <div class="mt-3 p-2 rounded-lg bg-[#06030a] border border-white/5">
+            <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">TikTok Tools (Draft / Export)</div>
+            <div class="flex flex-wrap gap-1.5 mt-1">
+              <button type="button" class="px-2 py-1 text-[10px] rounded-md bg-white/5 text-gray-300 hover:bg-white/10 transition-colors" onclick="showToast('TikTok caption prep: open the post editor to write a caption.', 'info')">Prepare TikTok Caption</button>
+              <button type="button" class="px-2 py-1 text-[10px] rounded-md bg-white/5 text-gray-300 hover:bg-white/10 transition-colors" onclick="showToast('TikTok script prep: write your script in the post editor.', 'info')">Prepare TikTok Script</button>
+              <button type="button" class="px-2 py-1 text-[10px] rounded-md bg-white/5 text-gray-300 hover:bg-white/10 transition-colors" onclick="showToast('Manual publish: export your video, caption, and hashtags.', 'info')">Manual Publish Checklist</button>
+            </div>
+          </div>
+        </div>` : ""}
+        ${platform === "bluesky" && account.connected ? `
+        <div class="mt-3 p-3 rounded-xl bg-[#0f0a18] border border-white/5">
+          <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Bluesky Post Prep</div>
+          <div class="text-[11px] text-gray-400 mb-1">300 character limit per post. Images/links experimental.</div>
+          <textarea id="bluesky-post-text" placeholder="Write your post text..." class="w-full px-3 py-2 bg-[#06030a] border border-white/10 rounded-lg text-[13px] text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 mb-2" rows="3"></textarea>
+          <div class="flex gap-2">
+            <button type="button" class="px-3 py-1.5 text-[11px] rounded-lg bg-purple-600 hover:bg-purple-500 text-white transition-colors" onclick="prepareBlueskyPayload(document.getElementById('bluesky-post-text').value).then(r => { if(r?.ok) showToast('Bluesky payload ready: ' + r.textLength + ' chars', 'success'); })">Prepare Bluesky Payload</button>
+          </div>
+        </div>` : ""}
       </div>
     `;
   }).join("");
+}
+
+// ===== AI PROVIDERS UI =====
+
+async function loadAIProviders() {
+  aiProvidersLoading = true;
+  try {
+    var result = await apiGetAIProviderConfig();
+    if (result && result.providers) aiProviders = result.providers;
+  } catch (err) {
+    console.error("Failed to load AI providers:", err);
+  } finally {
+    aiProvidersLoading = false;
+  }
+}
+
+function renderAIProviderCards() {
+  if (aiProviders.length === 0) {
+    return '<div class="text-sm text-gray-400">No AI providers available.</div>';
+  }
+  return aiProviders.map(function(p) {
+    var statusColor = p.keyConfigured ? "text-emerald-300" : "text-gray-400";
+    var statusText = p.keyConfigured ? "Key configured" : "Not configured";
+    var actions = [];
+    if (p.id === "local_creator_engine") {
+      actions.push('<span class="text-[11px] text-gray-400">Always available</span>');
+    } else {
+      actions.push(
+        '<button type="button" class="px-3 py-1.5 text-[11px] rounded-lg ' + (p.keyConfigured ? 'bg-yellow-900/40 text-yellow-300 hover:bg-yellow-900/60' : 'bg-sky-900/40 text-sky-300 hover:bg-sky-900/60') + ' transition-colors" onclick="configureAIProvider(\'' + p.id + '\')">' + (p.keyConfigured ? 'Reconfigure' : 'Configure') + '</button>'
+      );
+      if (p.keyConfigured) {
+        actions.push(
+          '<button type="button" class="px-3 py-1.5 text-[11px] rounded-lg bg-emerald-900/40 text-emerald-300 hover:bg-emerald-900/60 transition-colors" onclick="testAIProvider(\'' + p.id + '\')">Test Connection</button>'
+        );
+        actions.push(
+          '<button type="button" class="px-3 py-1.5 text-[11px] rounded-lg bg-red-900/40 text-red-300 hover:bg-red-900/60 transition-colors" onclick="disconnectAIProviderKey(\'' + p.id + '\')">Disconnect</button>'
+        );
+      }
+    }
+    return (
+      '<div class="platform-card">' +
+        '<div class="flex items-center justify-between gap-3 mb-2">' +
+          '<div>' +
+            '<div class="text-sm font-bold text-white">' + escapeHtml(p.label) + '</div>' +
+            '<div class="text-[10px] uppercase tracking-widest font-bold ' + statusColor + '">' + statusText + '</div>' +
+          '</div>' +
+        '</div>' +
+        (p.defaultApiUrl ? '<div class="text-[10px] text-gray-500 mb-2">Default API: <code class="text-gray-400">' + escapeHtml(p.defaultApiUrl) + '</code></div>' : '') +
+        '<div class="flex flex-wrap gap-2 mt-2">' + actions.join("") + '</div>' +
+      '</div>'
+    );
+  }).join("");
+}
+
+async function configureAIProvider(providerId) {
+  var config = aiProviders.find(function(p) { return p.id === providerId; });
+  if (!config) { showToast("Unknown provider", "error"); return; }
+  
+  var apiKey = await promptUser("Enter API key for " + config.label + (config.defaultApiUrl ? ":" : " (optional custom API URL in next step):"), "");
+  if (apiKey === null) return;
+  
+  var apiUrl = "";
+  if (!config.defaultApiUrl) {
+    apiUrl = await promptUser("Enter API URL for " + config.label + " (or leave blank):", "");
+    if (apiUrl === null) return;
+  }
+  
+  try {
+    var result = await apiSaveAIProviderConfig(providerId, apiKey, apiUrl);
+    if (result && result.ok) {
+      showToast(config.label + " configured", "success");
+      await loadAIProviders();
+      renderWorkspaceHub();
+    }
+  } catch (err) {
+    showToast("Failed to configure " + config.label + ": " + err.message, "error");
+  }
+}
+
+async function testAIProvider(providerId) {
+  var config = aiProviders.find(function(p) { return p.id === providerId; });
+  if (!config) return;
+  try {
+    var result = await apiTestAIProviderConnection(providerId);
+    var diag = (result.diagnostics || []).join(" | ");
+    showToast(config.label + ": " + (result.connected ? "Connected - " + diag : diag), result.connected ? "success" : "warning");
+  } catch (err) {
+    showToast("Test failed: " + err.message, "error");
+  }
+}
+
+async function disconnectAIProviderKey(providerId) {
+  var config = aiProviders.find(function(p) { return p.id === providerId; });
+  if (!config) return;
+  try {
+    var result = await apiDisconnectAIProvider(providerId);
+    if (result && result.ok) {
+      showToast(config.label + " disconnected", "info");
+      await loadAIProviders();
+      renderWorkspaceHub();
+    }
+  } catch (err) {
+    showToast("Disconnect failed: " + err.message, "error");
+  }
+}
+
+function promptUser(message, defaultValue) {
+  return new Promise(function(resolve) {
+    var value = window.prompt(message, defaultValue);
+    resolve(value !== null ? value : null);
+  });
 }
 
 function renderWorkspaceHub() {
@@ -11547,6 +9040,10 @@ function renderWorkspaceHub() {
   document.getElementById("settings-queue-summary").textContent = settings.queueLimit || "No queue limit";
   const inlineTarget = document.getElementById("settings-connected-accounts-inline");
   if (inlineTarget) inlineTarget.innerHTML = getConnectedAccountsMarkup({ compact: true });
+  try {
+    var aiInlineContainer = document.getElementById("settings-ai-providers-inline");
+    if (aiInlineContainer) aiInlineContainer.innerHTML = renderAIProviderCards();
+  } catch (err) { /* silent */ }
   const accountsPanel = document.querySelector('[data-settings-panel="accounts"]');
   if (accountsPanel) accountsPanel.innerHTML = getConnectedAccountsMarkup();
   renderLinkedInRewriteRouteDiagnostics(backendDiagnostics?.linkedInRewriteRouteDiagnostics || null);
@@ -15411,7 +12908,11 @@ function parseImportedDateDetails(value, generatedAt = "") {
   };
   if (!text) return result;
   var direct = parseLocalDate(text);
-  if (!direct && !Number.isNaN(new Date(text).getTime())) direct = new Date(text);
+  if (!direct && !Number.isNaN(new Date(text).getTime())) {
+    direct = text.includes("T") || text.includes(":") || text.includes(" ") || /[a-z]/i.test(text)
+      ? new Date(text)
+      : new Date(text.slice(0, 10) + "T12:00:00");
+  }
   if (direct && !Number.isNaN(direct.getTime())) {
     var iso = direct.toISOString();
     result.originalPostDate = iso;
@@ -17086,6 +14587,8 @@ async function syncRemoteIfConfigured() {
     socialImportCapabilities = socialCapabilitiesResult.status === "fulfilled" ? (socialCapabilitiesResult.value?.capabilities || socialCapabilitiesResult.value) : socialImportCapabilities;
     connectedAccounts = connectedAccountsResult.status === "fulfilled" ? (connectedAccountsResult.value?.accounts || connectedAccountsResult.value || []) : connectedAccounts;
 
+    try { await loadAIProviders(); } catch (err) { /* silent */ }
+
     appState.settings = normalizeRemoteSettings(settings);
 
     if (Array.isArray(campaigns)) {
@@ -17236,6 +14739,8 @@ async function apiStartPlatformAuth(platform) {
   if (platform === "linkedin") return apiGet("startLinkedInAuth");
   if (platform === "instagram") return apiGet("startInstagramAuth");
   if (platform === "threads") return apiGet("startThreadsAuth");
+  if (platform === "bluesky") return apiGet("startBlueskyAuth");
+  if (platform === "tiktok") return apiGet("startTikTokAuth");
   throw new Error(`Unsupported platform: ${platform}`);
 }
 
@@ -17245,6 +14750,22 @@ async function apiDisconnectPlatform(platform) {
 
 async function apiTestPlatformConnection(platform) {
   return apiGet("testPlatformConnection", { platform });
+}
+
+async function apiGetAIProviderConfig(provider) {
+  return apiGet("getAIProviderConfig", provider ? { provider: provider } : {});
+}
+
+async function apiSaveAIProviderConfig(provider, apiKey, apiUrl) {
+  return apiPost("saveAIProviderConfig", { provider: provider, apiKey: apiKey, apiUrl: apiUrl });
+}
+
+async function apiTestAIProviderConnection(provider) {
+  return apiGet("testAIProviderConnection", { provider: provider });
+}
+
+async function apiDisconnectAIProvider(provider) {
+  return apiGet("disconnectAIProvider", { provider: provider });
 }
 
 async function apiTestLinkedInHistoricalAccess() {
@@ -17444,6 +14965,7 @@ function renderViewHealthCard() {
       </div>
       ${rows}
       <div class="text-[10px] text-gray-500">Workspace Hub tabs (Settings, Connected Accounts, Diagnostics) use openWorkspaceHub() — not switchView — and are tracked separately.</div>
+      <div class="text-[10px] text-gray-500">Panel: ${window.__panelStats.panelOpen ? "open" : "closed"} • last: ${window.__panelStats.lastAction || "none"} • ${window.__panelStats.lastDuration ? window.__panelStats.lastDuration + "ms" : ""}</div>
     </div>`;
 }
 
@@ -19507,6 +17029,50 @@ function toDateKey(date) {
   const parsed = parsePlanningDateLocal(date) || parsePostDate(date) || (date instanceof Date ? new Date(date) : null);
   if (!parsed || Number.isNaN(parsed.getTime())) return "";
   return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, "0")}-${String(parsed.getDate()).padStart(2, "0")}`;
+}
+
+function getPostCalendarDateKey(post) {
+  if (!post || typeof post !== "object") return "";
+  var label = parseDisplayDateKey(post.queueDateLabel || post.queue_date_label || post.dateLabel || "");
+  if (label) return label;
+  var queueDate = parseDisplayDateKey(post.queueDate || post.queue_date || "");
+  if (queueDate) return queueDate;
+  var plannedDate = parseDisplayDateKey(post.plannedDate || post.planned_date || "");
+  if (plannedDate) return plannedDate;
+  var origDate = parseDisplayDateKey(post.originalPostDate || post.original_post_date || "");
+  if (origDate) return origDate;
+  var schedKey = parseDisplayDateKey(post.scheduledDateKey || "");
+  if (schedKey) return schedKey;
+  var fromSchedAt = parseDisplayDateKey(String(post.scheduledAt || post.scheduled_at || post.date || "").slice(0, 10));
+  if (fromSchedAt) return fromSchedAt;
+  var fromCreated = parseDisplayDateKey(String(post.createdAt || post.created_at || "").slice(0, 10));
+  if (fromCreated) return fromCreated;
+  var fromValue = getPlanningDateKeyFromValue(post.scheduledAt || post.scheduled_at || post.date || post.createdAt || post.created_at);
+  if (fromValue) return fromValue;
+  return toDateKey(post.scheduledAt || post.scheduled_at || post.date || post.createdAt || post.created_at);
+}
+
+function getCalendarPlacementKey(post) {
+  return getPostCalendarDateKey(post);
+}
+
+function normalizePostCalendarDateKey(post) {
+  if (!post || typeof post !== "object") return toDateKey(post);
+  var label = parseDisplayDateKey(post.queueDateLabel || post.queue_date_label || post.dateLabel || "");
+  if (label) return label;
+  var planned = parseDisplayDateKey(post.plannedDate || post.planned_date || post.queueDate || post.queue_date || "");
+  if (planned) return planned;
+  var origDate = parseDisplayDateKey(post.originalPostDate || post.original_post_date || "");
+  if (origDate) return origDate;
+  var schedKey = parseDisplayDateKey(post.scheduledDateKey || "");
+  if (schedKey) return schedKey;
+  var fromSchedAt = parseDisplayDateKey(String(post.scheduledAt || post.scheduled_at || post.date || "").slice(0, 10));
+  if (fromSchedAt) return fromSchedAt;
+  var fromCreated = parseDisplayDateKey(String(post.createdAt || post.created_at || "").slice(0, 10));
+  if (fromCreated) return fromCreated;
+  var fromValue = getPlanningDateKeyFromValue(post.scheduledAt || post.scheduled_at || post.date || post.createdAt || post.created_at);
+  if (fromValue) return fromValue;
+  return toDateKey(post.scheduledAt || post.scheduled_at || post.date || post.createdAt || post.created_at);
 }
 
 function getPlanningDateKeyFromValue(value) {
