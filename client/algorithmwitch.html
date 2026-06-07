@@ -6447,18 +6447,19 @@ function updateCalendarModeButtons() {
 }
 
 function renderCalendar() {
-  const monthNameEl = document.getElementById("calendar-month-name");
-  const yearNameEl = document.getElementById("calendar-year-name");
-  const grid = document.getElementById("calendar-grid");
-  const weekdayRow = document.getElementById("calendar-weekday-row");
-  const gridShell = document.getElementById("calendar-grid-shell");
-  const dayView = document.getElementById("mobile-day-view");
-  if (!grid) return;
+  try {
+    var monthNameEl = document.getElementById("calendar-month-name");
+    var yearNameEl = document.getElementById("calendar-year-name");
+    var grid = document.getElementById("calendar-grid");
+    var weekdayRow = document.getElementById("calendar-weekday-row");
+    var gridShell = document.getElementById("calendar-grid-shell");
+    var dayView = document.getElementById("mobile-day-view");
+    if (!grid) return;
 
-  selectedCalendarDateKey = selectedCalendarDateKey || toDateKey(calendarCursor || new Date());
-  grid.classList.toggle("calendar-mode-month", calendarMode === "month");
-  grid.classList.toggle("calendar-mode-week", calendarMode === "week");
-  grid.classList.toggle("calendar-mode-day", calendarMode === "day");
+    selectedCalendarDateKey = selectedCalendarDateKey || toDateKey(calendarCursor || new Date());
+    grid.classList.toggle("calendar-mode-month", calendarMode === "month");
+    grid.classList.toggle("calendar-mode-week", calendarMode === "week");
+    grid.classList.toggle("calendar-mode-day", calendarMode === "day");
   if (weekdayRow) {
     const hideWeekdayRow = calendarMode === "day" || (window.innerWidth <= 768 && calendarMode === "week");
     weekdayRow.classList.toggle("hidden", hideWeekdayRow);
@@ -6476,6 +6477,12 @@ function renderCalendar() {
     renderDayCalendar(monthNameEl, yearNameEl, grid);
   } else {
     renderWeekCalendar(monthNameEl, yearNameEl, grid);
+  }
+  } catch (err) {
+    console.error("renderCalendar failed:", err);
+    if (grid && !grid.innerHTML.trim()) {
+      grid.innerHTML = '<div class="flex items-center justify-center h-48 text-gray-500 text-sm"><div class="text-center"><i class="ph-bold ph-warning text-2xl text-yellow-400 block mb-2"></i>Calendar failed to render<div class="text-[10px] text-gray-600 mt-1">' + escapeHtml(String(err && err.message || err)) + '</div></div></div>';
+    }
   }
 }
 
@@ -6671,16 +6678,6 @@ function renderCalendarPill(post, isWeekMode = false) {
   `;
 }
 
-function openCalendarDate(dateKey, switchToDay = false) {
-  const nextDate = parsePostDate(dateKey) || parsePostDate(selectedCalendarDateKey) || new Date();
-  calendarCursor = nextDate;
-  selectedCalendarDateKey = toDateKey(nextDate);
-  if (switchToDay) {
-    calendarMode = "day";
-    updateCalendarModeButtons();
-  }
-  renderCalendar();
-}
 
 function postMatchesCalendarViewFilters(post) {
   const filters = mobileFilterState.calendar || {};
@@ -17256,7 +17253,25 @@ window.openModal = function(
 };
 
 var bootErrors = [];
+var __setupErrors = [];
 window.__SHOW_BOOT_DIAGNOSTICS = false;
+
+function safeRender(fn, label) {
+  try {
+    if (typeof fn === "function") { fn(); }
+    else { console.warn("safeRender: not a function", label); }
+  } catch (err) {
+    console.error("safeRender error in", label || "unknown", err);
+  }
+}
+
+// Stubs for render functions that may not exist yet
+function renderOverviewPanel() { /* stub */ }
+function renderSemanticMemoryPanel() { /* stub */ }
+function renderModalPillarButtons() { /* stub */ }
+function renderPerformanceView() { /* stub */ }
+function renderAuditView() { /* stub */ }
+function renderAISemanticMemoryCards() { /* stub */ }
 
 function reportFrontendError(context, error) {
   try {
@@ -17294,6 +17309,74 @@ function showBootFailurePanel(error) {
   }
 }
 
+function logMissingSetup(name) {
+  __setupErrors.push(name);
+  console.warn("initApp guard: " + name + " is not a function");
+}
+
+function guardedCall(fn, name) {
+  if (typeof fn === "function") {
+    try {
+      var args = Array.prototype.slice.call(arguments, 2);
+      fn.apply(null, args);
+    } catch (err) { reportFrontendError("initApp/" + name, err); }
+  } else {
+    logMissingSetup(name);
+  }
+}
+
+function bootMinimalApp() {
+  try {
+    // Ensure view-calendar is visible
+    var cal = document.getElementById("view-calendar");
+    if (cal) {
+      cal.classList.remove("hidden");
+      cal.classList.add("flex");
+    }
+    // Ensure nav-calendar is active
+    var navCal = document.getElementById("nav-calendar");
+    if (navCal) {
+      navCal.classList.add("bg-[#2d1b4e]", "text-white", "active");
+      navCal.classList.remove("text-gray-500", "hover:text-white", "hover:bg-[#1a1128]");
+    }
+    // Bind nav buttons via delegation
+    document.addEventListener("click", function(ev) {
+      var btn = ev.target.closest("[data-view-target]");
+      if (btn) { switchView(btn.dataset.viewTarget); }
+    });
+    // Bind settings gear
+    var gear = document.getElementById("workspace-settings-btn");
+    if (gear) {
+      gear.addEventListener("click", function() {
+        if (typeof openWorkspaceHub === "function") openWorkspaceHub("settings");
+      });
+    }
+    // Bind profile menu trigger
+    var profile = document.getElementById("profile-menu-trigger");
+    if (profile) {
+      profile.addEventListener("click", function(ev) {
+        ev.stopPropagation();
+        if (typeof toggleProfileMenu === "function") toggleProfileMenu();
+      });
+    }
+    // Show calendar
+    if (typeof renderCalendar === "function") {
+      try { renderCalendar(); } catch (err) { reportFrontendError("bootMinimalApp/renderCalendar", err); }
+    }
+    // Bind topbar new post
+    var newPost = document.getElementById("topbar-new-post-btn");
+    if (newPost) {
+      newPost.addEventListener("click", function() {
+        if (typeof openModal === "function") openModal();
+      });
+    }
+    // Remove old onclick to avoid double-fire
+    newPost && newPost.removeAttribute("onclick");
+  } catch (err) {
+    reportFrontendError("bootMinimalApp", err);
+  }
+}
+
 function initApp() {
   window.__BOOT_STARTED = true;
   var domEl = document.getElementById("boot-diag-dom");
@@ -17303,22 +17386,22 @@ function initApp() {
   var versionEl = document.getElementById("boot-diag-version");
   versionEl && (versionEl.textContent = "Frontend v1.0 · " + new Date().toISOString().slice(0, 10));
 
-  try { seedStars(); } catch (err) { reportFrontendError("initApp/seedStars", err); }
-  try { cleanInvalidImportantToken(); } catch (err) { reportFrontendError("initApp/cleanInvalidImportantToken", err); }
+  guardedCall(seedStars, "seedStars");
+  guardedCall(cleanInvalidImportantToken, "cleanInvalidImportantToken");
 
-  try { setupWorkspaceUI(); } catch (err) { reportFrontendError("initApp/setupWorkspaceUI", err); }
-  try { setupCalendarControls(); } catch (err) { reportFrontendError("initApp/setupCalendarControls", err); }
-  try { setupInspoModal(); } catch (err) { reportFrontendError("initApp/setupInspoModal", err); }
-  try { setupNoteModal(); } catch (err) { reportFrontendError("initApp/setupNoteModal", err); }
-  try { setupCampaignControls(); } catch (err) { reportFrontendError("initApp/setupCampaignControls", err); }
-  try { setupWriteIdeaWorkspace(); } catch (err) { reportFrontendError("initApp/setupWriteIdeaWorkspace", err); }
-  try { setupAIAndBrandWorkspaces(); } catch (err) { reportFrontendError("initApp/setupAIAndBrandWorkspaces", err); }
+  guardedCall(setupWorkspaceUI, "setupWorkspaceUI");
+  guardedCall(setupCalendarControls, "setupCalendarControls");
+  guardedCall(setupInspoModal, "setupInspoModal");
+  guardedCall(setupNoteModal, "setupNoteModal");
+  guardedCall(setupCampaignControls, "setupCampaignControls");
+  guardedCall(setupWriteIdeaWorkspace, "setupWriteIdeaWorkspace");
+  guardedCall(setupAIAndBrandWorkspaces, "setupAIAndBrandWorkspaces");
 
-  try { setupSplitPane(); } catch (err) { reportFrontendError("initApp/setupSplitPane", err); }
-  try { applyShellLayout(); } catch (err) { reportFrontendError("initApp/applyShellLayout", err); }
+  guardedCall(setupSplitPane, "setupSplitPane");
+  guardedCall(applyShellLayout, "applyShellLayout");
 
-  try { rerenderAll(); } catch (err) { reportFrontendError("initApp/rerenderAll", err); }
-  try { switchView("calendar"); } catch (err) { reportFrontendError("initApp/switchView", err); }
+  guardedCall(rerenderAll, "rerenderAll");
+  guardedCall(switchView, "switchView", "calendar");
 
   window.__BOOT_COMPLETED = true;
   var completedEl = document.getElementById("boot-diag-completed");
@@ -17326,13 +17409,11 @@ function initApp() {
   var renderEl = document.getElementById("boot-diag-render");
   renderEl && (renderEl.textContent = "scheduled");
 
-  // Hide boot diagnostics if no errors
   var panel = document.getElementById("boot-diagnostics");
-  if (panel && bootErrors.length === 0 && !window.__SHOW_BOOT_DIAGNOSTICS) {
+  if (panel && bootErrors.length === 0 && __setupErrors.length === 0 && !window.__SHOW_BOOT_DIAGNOSTICS) {
     panel.classList.add("hidden");
   }
 
-  // Async boot: load remote data in background
   if (typeof syncRemoteIfConfigured === "function") {
     syncRemoteIfConfigured().catch(function(err) {
       reportFrontendError("initApp/syncRemoteIfConfigured", err);
@@ -17342,7 +17423,6 @@ function initApp() {
       }
     });
   }
-  // Load AI providers in background
   if (typeof loadAIProviders === "function") {
     loadAIProviders().catch(function(err) {
       reportFrontendError("initApp/loadAIProviders", err);
@@ -17355,6 +17435,17 @@ try {
 } catch (error) {
   showBootFailurePanel(error);
   reportFrontendError("boot/call", error);
+  bootMinimalApp();
+  reportFrontendError("boot/fallback", "initApp threw — bootMinimalApp activated");
+}
+
+// If initApp completed but setup errors occurred, still ensure the app is visible
+if (window.__BOOT_STARTED && typeof document !== "undefined") {
+  var calView = document.getElementById("view-calendar");
+  if (calView && calView.classList.contains("hidden")) {
+    bootMinimalApp();
+    reportFrontendError("boot/fallback", "calendar hidden after initApp — bootMinimalApp activated");
+  }
 }
 
 </script>
