@@ -4164,7 +4164,7 @@
 </div>
 <script>
 const APP_CONFIG = {
-  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbxYwTaRCSTnCBdSS5egDzSM8d4zlFe5WcA07IfcUBk1XznUwj34IBbVdu4J1jx4D_Bu/exec",
+  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbyihnXRc05T-ZemZZfJOCEYxLjHf3gKj_L6tYI7yRtxaKyGLYEnoK7Z9VrWy5mFX_Md/exec",
   ENABLE_REMOTE_SYNC: true,
   STORAGE_KEY: "stellarsync_local_state_v5",
   SHELL_LAYOUT_KEY: "stellarsync_shell_layout_v2"
@@ -4453,7 +4453,8 @@ function getMetricValue(item, aliases, fallback = 0) {
   for (var i = 0; i < aliases.length; i += 1) {
     var key = aliases[i];
     var camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-    var value = item[key] !== undefined ? item[key] : item[camelKey];
+    var normalizedKey = String(key || "").trim().toLowerCase().replace(/\s+/g, "_").replace(/[^\w]/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, "");
+    var value = item[key] !== undefined ? item[key] : item[camelKey] !== undefined ? item[camelKey] : item[normalizedKey];
     if (key && value !== undefined && value !== null && String(value).trim() !== "") {
       var num = normalizeMetricNumber(value);
       if (!Number.isNaN(num)) return num;
@@ -4462,17 +4463,21 @@ function getMetricValue(item, aliases, fallback = 0) {
   return fallback;
 }
 
+function getPostImpressions(post) {
+  return getMetricValue(post, ["impressions", "impression_count", "views", "view_count", "reach"]);
+}
+
 function getEngagementTotal(post) {
   if (!post) return 0;
-  if (post.engagementTotal !== undefined || post.engagement_total !== undefined || post.total_engagement !== undefined) {
-    var val = normalizeMetricNumber(post.engagementTotal ?? post.engagement_total ?? post.total_engagement);
+  if (post.engagementTotal !== undefined || post.engagement_total !== undefined || post.total_engagement !== undefined || post.engagements !== undefined) {
+    var val = normalizeMetricNumber(post.engagementTotal ?? post.engagement_total ?? post.total_engagement ?? post.engagements);
     if (!Number.isNaN(val) && val > 0) return val;
   }
-  return getMetricValue(post, ["likes", "reactions"]) +
+  return getMetricValue(post, ["likes", "like_count", "reactions", "reaction_count"]) +
          getMetricValue(post, ["comments", "comment_count"]) +
-         getMetricValue(post, ["shares", "reposts"]) +
+         getMetricValue(post, ["shares", "share_count", "reposts", "repost_count"]) +
          getMetricValue(post, ["saves", "save_count"]) +
-         getMetricValue(post, ["clicks", "link_clicks"]);
+         getMetricValue(post, ["clicks", "click_count", "link_clicks"]);
 }
 
 function getEngagementRate(post) {
@@ -4481,11 +4486,16 @@ function getEngagementRate(post) {
     var val = normalizeMetricNumber(post.engagementRate ?? post.engagement_rate);
     if (!Number.isNaN(val) && val > 0) return val;
   }
-  var impressions = getMetricValue(post, ["impressions", "views", "reach"]);
+  var impressions = getPostImpressions(post);
   if (impressions > 0) {
     return getEngagementTotal(post) / impressions;
   }
   return 0;
+}
+
+function getPostDate(post) {
+  if (!post) return null;
+  return parsePostDate(post.scheduled_at || post.scheduledAt || post.publish_date || post.publishDate || post.posted_at || post.postedAt || post.created_at || post.createdAt || post.date || "");
 }
 
 function getDisplayTitle(item, fallback = "Untitled", maxLength = 0) {
@@ -4547,10 +4557,13 @@ function getDisplayExcerpt(value, fallback = "") {
 }
 
 function normalizeMetricNumber(value) {
-  const text = String(value ?? "").trim().toLowerCase().replace(/,/g, "");
+  let text = String(value ?? "").trim().toLowerCase().replace(/,/g, "");
   if (!text) return 0;
+  const isPercent = text.endsWith("%");
+  if (isPercent) text = text.slice(0, -1);
   const multiplier = text.endsWith("k") ? 1000 : text.endsWith("m") ? 1000000 : 1;
   const number = Number(text.replace(/[km]$/, ""));
+  if (isPercent) return Number.isFinite(number) ? number / 100 : 0;
   return Number.isFinite(number) ? Math.round(number * multiplier) : 0;
 }
 
@@ -17303,6 +17316,8 @@ function normalizeRemotePost(post, campaigns = [], mediaItems = []) {
   const rawDescription = String(pickRemoteValue(post?.description, post?.caption, post?.body, post?.content, post?.copy, "")).trim();
   const title = getPostDisplayTitle({ ...post, description: rawDescription }, "");
   const scheduledAt = String(pickRemoteValue(post?.scheduledAt, post?.scheduled_at, post?.date, "")).trim();
+  const publishDate = String(pickRemoteValue(post?.publishDate, post?.publish_date, "")).trim();
+  const postedAt = String(pickRemoteValue(post?.postedAt, post?.posted_at, post?.publishedAt, post?.published_at, "")).trim();
   const planning = normalizePostPlanningFields({
     scheduledAt,
     queueDateLabel: String(pickRemoteValue(post?.queueDateLabel, post?.queue_date_label, "")).trim(),
@@ -17323,6 +17338,12 @@ function normalizeRemotePost(post, campaigns = [], mediaItems = []) {
     platform: String(pickRemoteValue(post?.platform, "linkedin")).trim() || "linkedin",
     pillar: getCanonicalPillarValue(pickRemoteValue(post?.pillar, post?.hubPillarLabel, post?.hub_pillar_label, matchedCampaign?.pillar), (appState.settings?.pillars || [])[0] || "authority") || ((appState.settings?.pillars || [])[0] || "authority"),
     date: planning.scheduledAt || scheduledAt,
+    publish_date: publishDate,
+    publishDate,
+    scheduled_at: planning.scheduledAt || scheduledAt,
+    scheduledAt: planning.scheduledAt || scheduledAt,
+    posted_at: postedAt,
+    postedAt,
     status: String(pickRemoteValue(post?.status, "draft")).trim() || "draft",
     postType: String(pickRemoteValue(post?.postType, post?.post_type, post?.format, "text")).trim() || "text",
     description: rawDescription,
@@ -17352,24 +17373,36 @@ function normalizeRemotePost(post, campaigns = [], mediaItems = []) {
     flowState: String(pickRemoteValue(post?.flowState, post?.flow_state, post?.status, "draft")).trim(),
     campaignId: String(campaignId || matchedCampaign?.campaignId || "").trim(),
     campaignName: normalizeCampaignName(pickRemoteValue(post?.campaignName, post?.campaign_name, matchedCampaign?.campaignName, "")),
-    impressions: normalizeMetricNumber(pickRemoteValue(post?.impressions, post?.views, post?.reach, 0)),
-    views: normalizeMetricNumber(pickRemoteValue(post?.views, post?.impressions, post?.reach, 0)),
+    impressions: normalizeMetricNumber(pickRemoteValue(post?.impressions, post?.impression_count, post?.impressionCount, post?.views, post?.view_count, post?.viewCount, post?.reach, 0)),
+    impression_count: normalizeMetricNumber(pickRemoteValue(post?.impression_count, post?.impressionCount, post?.impressions, post?.views, post?.reach, 0)),
+    views: normalizeMetricNumber(pickRemoteValue(post?.views, post?.view_count, post?.viewCount, post?.impressions, post?.reach, 0)),
+    view_count: normalizeMetricNumber(pickRemoteValue(post?.view_count, post?.viewCount, post?.views, post?.impressions, post?.reach, 0)),
     reach: normalizeMetricNumber(pickRemoteValue(post?.reach, post?.impressions, post?.views, 0)),
-    likes: normalizeMetricNumber(pickRemoteValue(post?.likes, post?.reactions, 0)),
-    reactions: normalizeMetricNumber(pickRemoteValue(post?.reactions, post?.likes, 0)),
+    likes: normalizeMetricNumber(pickRemoteValue(post?.likes, post?.like_count, post?.likeCount, post?.reactions, post?.reaction_count, post?.reactionCount, 0)),
+    like_count: normalizeMetricNumber(pickRemoteValue(post?.like_count, post?.likeCount, post?.likes, post?.reactions, 0)),
+    reactions: normalizeMetricNumber(pickRemoteValue(post?.reactions, post?.reaction_count, post?.reactionCount, post?.likes, 0)),
+    reaction_count: normalizeMetricNumber(pickRemoteValue(post?.reaction_count, post?.reactionCount, post?.reactions, post?.likes, 0)),
     comments: normalizeMetricNumber(pickRemoteValue(post?.comments, post?.comment_count, post?.commentCount, 0)),
     comment_count: normalizeMetricNumber(pickRemoteValue(post?.comment_count, post?.commentCount, post?.comments, 0)),
-    shares: normalizeMetricNumber(pickRemoteValue(post?.shares, post?.reposts, 0)),
-    reposts: normalizeMetricNumber(pickRemoteValue(post?.reposts, post?.shares, 0)),
+    shares: normalizeMetricNumber(pickRemoteValue(post?.shares, post?.share_count, post?.shareCount, post?.reposts, post?.repost_count, post?.repostCount, 0)),
+    share_count: normalizeMetricNumber(pickRemoteValue(post?.share_count, post?.shareCount, post?.shares, post?.reposts, 0)),
+    reposts: normalizeMetricNumber(pickRemoteValue(post?.reposts, post?.repost_count, post?.repostCount, post?.shares, 0)),
+    repost_count: normalizeMetricNumber(pickRemoteValue(post?.repost_count, post?.repostCount, post?.reposts, post?.shares, 0)),
     saves: normalizeMetricNumber(pickRemoteValue(post?.saves, post?.save_count, post?.saveCount, 0)),
     save_count: normalizeMetricNumber(pickRemoteValue(post?.save_count, post?.saveCount, post?.saves, 0)),
-    clicks: normalizeMetricNumber(pickRemoteValue(post?.clicks, post?.link_clicks, post?.linkClicks, 0)),
+    clicks: normalizeMetricNumber(pickRemoteValue(post?.clicks, post?.click_count, post?.clickCount, post?.link_clicks, post?.linkClicks, 0)),
+    click_count: normalizeMetricNumber(pickRemoteValue(post?.click_count, post?.clickCount, post?.clicks, post?.link_clicks, post?.linkClicks, 0)),
     link_clicks: normalizeMetricNumber(pickRemoteValue(post?.link_clicks, post?.linkClicks, post?.clicks, 0)),
-    engagementTotal: normalizeMetricNumber(pickRemoteValue(post?.engagementTotal, post?.engagement_total, post?.total_engagement, 0)),
-    engagement_total: normalizeMetricNumber(pickRemoteValue(post?.engagement_total, post?.engagementTotal, post?.total_engagement, 0)),
-    total_engagement: normalizeMetricNumber(pickRemoteValue(post?.total_engagement, post?.engagement_total, post?.engagementTotal, 0)),
+    engagementTotal: normalizeMetricNumber(pickRemoteValue(post?.engagementTotal, post?.engagement_total, post?.total_engagement, post?.engagements, 0)),
+    engagement_total: normalizeMetricNumber(pickRemoteValue(post?.engagement_total, post?.engagementTotal, post?.total_engagement, post?.engagements, 0)),
+    total_engagement: normalizeMetricNumber(pickRemoteValue(post?.total_engagement, post?.engagement_total, post?.engagementTotal, post?.engagements, 0)),
+    engagements: normalizeMetricNumber(pickRemoteValue(post?.engagements, post?.engagement_total, post?.total_engagement, post?.engagementTotal, 0)),
     engagementRate: normalizeMetricNumber(pickRemoteValue(post?.engagementRate, post?.engagement_rate, 0)),
     engagement_rate: normalizeMetricNumber(pickRemoteValue(post?.engagement_rate, post?.engagementRate, 0)),
+    saveRate: normalizeMetricNumber(pickRemoteValue(post?.saveRate, post?.save_rate, 0)),
+    save_rate: normalizeMetricNumber(pickRemoteValue(post?.save_rate, post?.saveRate, 0)),
+    clickRate: normalizeMetricNumber(pickRemoteValue(post?.clickRate, post?.click_rate, 0)),
+    click_rate: normalizeMetricNumber(pickRemoteValue(post?.click_rate, post?.clickRate, 0)),
     sourceUrl: String(pickRemoteValue(post?.sourceUrl, post?.source_url, "")).trim(),
     sourcePlatform: String(pickRemoteValue(post?.sourcePlatform, post?.source_platform, "")).trim(),
     sourceTitle: String(pickRemoteValue(post?.sourceTitle, post?.source_title, "")).trim(),
@@ -17416,6 +17449,7 @@ function normalizeRemotePost(post, campaigns = [], mediaItems = []) {
     normalizedPost.engagementTotal = normalizedPost.likes + normalizedPost.comments + normalizedPost.shares + normalizedPost.saves + normalizedPost.clicks;
     normalizedPost.engagement_total = normalizedPost.engagementTotal;
     normalizedPost.total_engagement = normalizedPost.engagementTotal;
+    normalizedPost.engagements = normalizedPost.engagementTotal;
   }
   if (!normalizedPost.engagementRate && !normalizedPost.engagement_rate && normalizedPost.impressions > 0) {
     normalizedPost.engagementRate = normalizedPost.engagementTotal / normalizedPost.impressions;
@@ -18620,7 +18654,7 @@ function safeRender(fn, label) {
 
 function renderOverviewPanel() {
   console.log("[render] renderOverviewPanel start", getAppStateCounts());
-  const topPost = (appState.posts || []).slice().sort((a, b) => getMetricValue(b, ["impressions", "views", "reach"]) - getMetricValue(a, ["impressions", "views", "reach"]))[0] || null;
+  const topPost = (appState.posts || []).slice().sort((a, b) => getPostImpressions(b) - getPostImpressions(a))[0] || null;
   const topTarget = document.getElementById("overview-top-post-card");
   if (topTarget) {
     topTarget.innerHTML = topPost
@@ -18674,27 +18708,134 @@ function renderModalPillarButtons(selectedPillar = "") {
   target.querySelectorAll(".pillar-btn").forEach((btn) => btn.addEventListener("click", () => setPillar(btn.dataset.pillar || "")));
 }
 
+function normalizePerformanceFilterKey(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function postMatchesPerformancePlatform(post, selectedPlatform) {
+  const selected = normalizePerformanceFilterKey(selectedPlatform || "all");
+  if (!selected || selected === "all") return true;
+  const values = [
+    post?.platform,
+    post?.sourcePlatform,
+    post?.source_platform,
+    ...(Array.isArray(post?.platformTargets) ? post.platformTargets : [])
+  ].map(normalizePerformanceFilterKey).filter(Boolean);
+  if (selected === "both") return values.includes("both") || (values.includes("linkedin") && values.includes("instagram"));
+  return values.includes(selected);
+}
+
+function getPerformanceFilteredPosts() {
+  const range = String(performanceFilters.range || "30").trim().toLowerCase();
+  const days = range === "all" ? 0 : Number(range) || 30;
+  const cutoff = days ? new Date(Date.now() - (days * 24 * 60 * 60 * 1000)) : null;
+  if (cutoff) cutoff.setHours(0, 0, 0, 0);
+  return (appState.posts || []).filter((post) => {
+    if (!postMatchesPerformancePlatform(post, performanceFilters.platform)) return false;
+    if (!cutoff) return true;
+    const date = getPostDate(post);
+    return !!date && date >= cutoff;
+  });
+}
+
+function renderPerformanceBarChart(targetId, summaryId, posts, metricGetter, emptyTitle) {
+  const target = document.getElementById(targetId);
+  const summary = document.getElementById(summaryId);
+  if (!target) return;
+  const buckets = new Map();
+  posts.forEach((post) => {
+    const date = getPostDate(post);
+    if (!date) return;
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    const current = buckets.get(key) || { date, value: 0, posts: 0 };
+    const metric = normalizeMetricNumber(metricGetter(post));
+    current.value += metric > 0 ? metric : 1;
+    current.posts += 1;
+    buckets.set(key, current);
+  });
+  const rows = Array.from(buckets.values()).sort((a, b) => a.date - b.date).slice(-14);
+  const max = Math.max(...rows.map((row) => row.value), 0);
+  if (summary) summary.textContent = rows.length ? `${rows.length} days` : "";
+  target.innerHTML = rows.length
+    ? rows.map((row) => {
+        const height = max ? Math.max(8, Math.round((row.value / max) * 150)) : 8;
+        const label = `${row.date.getMonth() + 1}/${row.date.getDate()}`;
+        return `<div class="chart-bar" title="${escapeHtml(label + ": " + row.value)}"><div class="chart-bar-fill bg-cyan-400/80" style="height:${height}px"></div><div class="chart-bar-label">${escapeHtml(label)}</div></div>`;
+      }).join("")
+    : makeEmptyState(emptyTitle, "Add dated posts with performance metrics to populate this chart.", "ph-chart-bar");
+}
+
+function renderPerformanceTimeChart(posts) {
+  renderPerformanceBarChart("performance-time-chart", "performance-trend-summary", posts, (post) => getEngagementTotal(post) || 1, "No dated performance yet");
+}
+
+function renderPerformanceImpressionsChart(posts) {
+  renderPerformanceBarChart("performance-impressions-chart", "performance-impressions-summary", posts, getPostImpressions, "No impression data yet");
+}
+
+function renderPerformanceMetrics(posts) {
+  const kpis = document.getElementById("performance-kpis");
+  if (!kpis) return;
+  const scheduled = posts.filter((post) => normalizePerformanceFilterKey(post.status) === "scheduled").length;
+  const published = posts.filter((post) => normalizePerformanceFilterKey(post.status) === "published").length;
+  const impressions = posts.reduce((sum, post) => sum + getPostImpressions(post), 0);
+  const engagement = posts.reduce((sum, post) => sum + getEngagementTotal(post), 0);
+  const avgRate = impressions > 0 ? engagement / impressions : 0;
+  kpis.innerHTML = [
+    ["Posts", posts.length],
+    ["Scheduled", scheduled],
+    ["Published", published],
+    ["Impressions", impressions],
+    ["Engagement", engagement],
+    ["Engagement Rate", `${(avgRate * 100).toFixed(1)}%`]
+  ].map(([label, value]) => `<div class="mini-card p-4"><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${escapeHtml(label)}</div><div class="text-2xl font-bold text-white mt-1">${escapeHtml(String(value))}</div></div>`).join("");
+}
+
+function renderPerformanceTopPosts(posts) {
+  const topPosts = document.getElementById("performance-top-posts");
+  if (!topPosts) return;
+  topPosts.innerHTML = posts.slice().sort((a, b) => {
+    return Math.max(getPostImpressions(b), getEngagementTotal(b)) - Math.max(getPostImpressions(a), getEngagementTotal(a));
+  }).slice(0, 5)
+    .map((post) => {
+      const impressions = getPostImpressions(post);
+      const engagement = getEngagementTotal(post);
+      const rate = getEngagementRate(post);
+      return `<div class="p-3 rounded-xl bg-[#181125] border border-white/5"><div class="text-sm font-bold text-white wrap-safe">${escapeHtml(getPostDisplayTitle(post))}</div><div class="text-[11px] text-gray-400 mt-1">${escapeHtml(String(impressions))} impressions &bull; ${escapeHtml(String(engagement))} engagement &bull; ${(rate * 100).toFixed(1)}%</div></div>`;
+    }).join("") || makeEmptyState("No performance data", "Metrics appear after history is imported or synced.", "ph-chart-line-up");
+}
+
+function renderSignalOverview(posts = getPerformanceFilteredPosts()) {
+  renderPerformanceMetrics(posts);
+  renderPerformanceTimeChart(posts);
+  renderPerformanceImpressionsChart(posts);
+}
+
+function setupPerformanceFilters() {
+  if (window.__performanceFiltersBound) return;
+  window.__performanceFiltersBound = true;
+  const range = document.getElementById("performance-range-filter");
+  const platform = document.getElementById("performance-platform-filter");
+  range?.addEventListener("change", () => {
+    performanceFilters.range = range.value || "30";
+    renderPerformanceView();
+  });
+  platform?.addEventListener("change", () => {
+    performanceFilters.platform = platform.value || "all";
+    renderPerformanceView();
+  });
+}
+
 function renderPerformanceView() {
   console.log("[render] renderPerformanceView start", getAppStateCounts());
-  const posts = (appState.posts || []).filter((post) => performanceFilters.platform === "all" || String(post.platform || "linkedin") === performanceFilters.platform);
-  const kpis = document.getElementById("performance-kpis");
-  if (kpis) {
-    const scheduled = posts.filter((post) => post.status === "scheduled").length;
-    const published = posts.filter((post) => post.status === "published").length;
-    const impressions = posts.reduce((sum, post) => sum + getMetricValue(post, ["impressions", "views", "reach"]), 0);
-    const engagement = posts.reduce((sum, post) => sum + getEngagementTotal(post), 0);
-    kpis.innerHTML = [["Posts", posts.length], ["Scheduled", scheduled], ["Published", published], ["Impressions", impressions], ["Engagement", engagement]].map(([label, value]) => `<div class="mini-card p-4"><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${label}</div><div class="text-2xl font-bold text-white mt-1">${value}</div></div>`).join("");
-  }
-  const topPosts = document.getElementById("performance-top-posts");
-  if (topPosts) {
-    topPosts.innerHTML = posts.slice().sort((a, b) => getMetricValue(b, ["impressions", "views", "reach"]) - getMetricValue(a, ["impressions", "views", "reach"])).slice(0, 5)
-      .map((post) => {
-        const impressions = getMetricValue(post, ["impressions", "views", "reach"]);
-        const engagement = getEngagementTotal(post);
-        const rate = getEngagementRate(post);
-        return `<div class="p-3 rounded-xl bg-[#181125] border border-white/5"><div class="text-sm font-bold text-white wrap-safe">${escapeHtml(getPostDisplayTitle(post))}</div><div class="text-[11px] text-gray-400 mt-1">${escapeHtml(String(impressions))} impressions • ${escapeHtml(String(engagement))} engagement • ${(rate * 100).toFixed(1)}%</div></div>`;
-      }).join("") || makeEmptyState("No performance data", "Metrics appear after history is imported or synced.", "ph-chart-line-up");
-  }
+  setupPerformanceFilters();
+  const rangeInput = document.getElementById("performance-range-filter");
+  const platformInput = document.getElementById("performance-platform-filter");
+  if (rangeInput) rangeInput.value = performanceFilters.range || "30";
+  if (platformInput) platformInput.value = performanceFilters.platform || "all";
+  const posts = getPerformanceFilteredPosts();
+  renderSignalOverview(posts);
+  renderPerformanceTopPosts(posts);
   const renderComparison = (id, rows) => {
     const target = document.getElementById(id);
     if (!target) return;
@@ -18704,8 +18845,8 @@ function renderPerformanceView() {
   renderComparison("performance-pillar-comparison", countPostsBy(posts, (post) => getPostContentPillar(post)));
   renderComparison("performance-platform-comparison", countPostsBy(posts, (post) => post.platform || "linkedin"));
   console.log("[render] renderPerformanceView done", {
-    kpisFound: !!kpis,
-    kpiHtmlLength: kpis ? kpis.innerHTML.length : 0,
+    kpisFound: !!document.getElementById("performance-kpis"),
+    kpiHtmlLength: document.getElementById("performance-kpis")?.innerHTML.length || 0,
     postCount: posts.length
   });
 }
