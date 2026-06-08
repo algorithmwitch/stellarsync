@@ -4164,7 +4164,7 @@
 </div>
 <script>
 const APP_CONFIG = {
-  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbxuCe8f8wBdNCKMg4lzaknpMXo3zcbC0hDRP42ziItPxPYOqmONjPRphb1S77Cd8lgw/exec",
+  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbxYwTaRCSTnCBdSS5egDzSM8d4zlFe5WcA07IfcUBk1XznUwj34IBbVdu4J1jx4D_Bu/exec",
   ENABLE_REMOTE_SYNC: true,
   STORAGE_KEY: "stellarsync_local_state_v5",
   SHELL_LAYOUT_KEY: "stellarsync_shell_layout_v2"
@@ -4356,7 +4356,19 @@ function getAvailableContentPillars() {
 }
 
 function getAvailableCampaignRecords() {
-  return Array.isArray(appState?.campaigns) ? appState.campaigns : [];
+  const allowed = Array.isArray(appState?.settings?.campaigns) ? appState.settings.campaigns : [];
+  const sourceRecords = Array.isArray(appState?.campaigns) ? appState.campaigns : [];
+  if (!allowed.length) return [];
+  return allowed.map((campaignName, index) => {
+    const matched = sourceRecords.find((campaign) => normalizeLookupValue(campaign.campaignName || campaign.name || "") === normalizeLookupValue(campaignName));
+    return {
+      ...(matched || {}),
+      campaignId: matched?.campaignId || `CMP-${normalizeLookupValue(campaignName).replace(/[^a-z0-9]+/g, "").toUpperCase().slice(0, 8) || index}`,
+      campaignName,
+      sortOrder: Number(matched?.sortOrder ?? index) || index,
+      isArchived: Boolean(matched?.isArchived)
+    };
+  }).filter((campaign) => !campaign.isArchived);
 }
 
 function getCampaignById(campaignId, campaigns = getAvailableCampaignRecords()) {
@@ -4366,9 +4378,9 @@ function getCampaignById(campaignId, campaigns = getAvailableCampaignRecords()) 
 }
 
 function getCampaignByName(campaignName, campaigns = getAvailableCampaignRecords()) {
-  const name = String(campaignName || "").trim().toLowerCase();
+  const name = normalizeLookupValue(campaignName || "");
   if (!name) return null;
-  return campaigns.find((campaign) => String(campaign.campaignName || campaign.name || "").trim().toLowerCase() === name) || null;
+  return campaigns.find((campaign) => normalizeLookupValue(campaign.campaignName || campaign.name || "") === name) || null;
 }
 
 function getCampaignContentPillar(campaign) {
@@ -5493,7 +5505,12 @@ function normalizeDisplayText(value) {
 }
 
 function normalizeCampaignName(value) {
-  return normalizeDisplayText(value);
+  const raw = normalizeDisplayText(value);
+  if (!raw) return "";
+  const allowed = Array.isArray(appState?.settings?.campaigns) ? appState.settings.campaigns : [];
+  if (!allowed.length) return "";
+  const found = allowed.find((name) => normalizeLookupValue(name) === normalizeLookupValue(raw));
+  return found || "";
 }
 
 function getDefaultSettings() {
@@ -6218,7 +6235,7 @@ function setupCampaignControls() {
 function renderCampaignMergeOptions(sourceCampaignId = "") {
   if (!campaignMergeTargetInput) return;
   const options = ['<option value="">Select target campaign</option>']
-    .concat((appState.campaigns || [])
+    .concat(getAvailableCampaignRecords()
       .filter((item) => !item.isArchived && String(item.campaignId || "") !== String(sourceCampaignId || ""))
       .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0))
       .map((item) => `<option value="${escapeHtml(item.campaignId)}">${escapeHtml(formatCampaignDisplayName(item.campaignName || item.campaignId || "Campaign"))}</option>`));
@@ -7640,17 +7657,10 @@ function buildConstellationRows() {
   const campaignRecords = [...getAvailableCampaignRecords()]
     .filter(campaign => !campaign.isArchived)
     .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0));
-  const uncategorizedPosts = [...(appState.posts || [])]
-    .map((post) => hydratePostCampaign(post, campaignRecords))
-    .filter((post) => !String(post.campaignId || "").trim() && !normalizeLookupValue(post.campaignName || ""));
-
-  const knownCampaigns = campaignRecords
-    .filter((campaign) => !!normalizeCampaignLaneKey(campaign.campaignName || "") && !isInvalidComboCampaignName(campaign.campaignName || ""))
-    .sort((a, b) => getCampaignLaneRowIndex(a) - getCampaignLaneRowIndex(b));
-  const customCampaigns = campaignRecords
-    .filter((campaign) => !knownCampaigns.some((known) => String(known.campaignId || "") === String(campaign.campaignId || "")))
-    .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0));
-  const campaigns = knownCampaigns.concat([{
+  const allowedCampaignKeys = new Set(campaignRecords.map((campaign) => normalizeLookupValue(campaign.campaignName || "")));
+  const hydratedPosts = [...(appState.posts || [])].map((post) => hydratePostCampaign(post, campaignRecords));
+  const uncategorizedPosts = hydratedPosts.filter((post) => !allowedCampaignKeys.has(normalizeLookupValue(post.campaignName || "")));
+  const campaigns = campaignRecords.concat([{
     campaignId: "",
     campaignName: "Uncategorized",
     pillar: "",
@@ -7658,16 +7668,14 @@ function buildConstellationRows() {
     sortOrder: Number.MAX_SAFE_INTEGER - 1,
     isArchived: false,
     _uncategorizedIndex: 0
-  }]).concat(customCampaigns);
+  }]);
 
   campaignLaneMap = new Map();
   const mapped = campaigns.map((campaign, laneIndex) => {
     const posts = ((String(campaign.campaignName || "").trim() === "Uncategorized")
       ? uncategorizedPosts.slice()
-      : [...(appState.posts || [])]
-        .map((post) => hydratePostCampaign(post, campaignRecords))
+      : hydratedPosts
         .filter((post) => {
-          if (String(post.campaignId || "") === String(campaign.campaignId || "")) return true;
           return normalizeLookupValue(post.campaignName || "") === normalizeLookupValue(campaign.campaignName || "");
         }))
       .sort((a, b) => {
@@ -7676,7 +7684,7 @@ function buildConstellationRows() {
         return aTime - bTime;
       });
 
-    const derivedPillar = normalizePillar(campaign.pillar || posts[0]?.pillar || (appState.settings?.pillars || [])[0] || "authority");
+    const derivedPillar = normalizePillar(campaign.pillar || (appState.settings?.pillars || [])[0] || "authority");
     const laneKey = getConstellationCampaignLaneKey(campaign) || `__uncategorized__${Number(campaign._uncategorizedIndex || 0)}`;
     const rowIndex = laneIndex;
     if (campaignLaneMap.has(laneKey)) {
@@ -7958,7 +7966,7 @@ function buildConstellationLaneDiagnostics() {
     campaignName: post.campaignName || ""
   }));
   const normalizedNameGroups = {};
-  (appState.campaigns || []).forEach((campaign) => {
+  getAvailableCampaignRecords().forEach((campaign) => {
     const key = normalizeLookupValue(campaign.campaignName || "");
     if (!key) return;
     if (!normalizedNameGroups[key]) normalizedNameGroups[key] = [];
@@ -10050,7 +10058,7 @@ function getCampaignByNameOrId(value = "") {
   const target = String(value || "").trim();
   if (!target) return null;
   const normalized = normalizeLookupValue(target);
-  return (appState.campaigns || []).find((campaign) => {
+  return getAvailableCampaignRecords().find((campaign) => {
     return String(campaign.campaignId || "").trim() === target
       || normalizeLookupValue(campaign.campaignName || "") === normalized;
   }) || null;
@@ -10425,7 +10433,7 @@ function renderMobileFilterSheet() {
     mobileFilterContent.innerHTML = `
       <div class="space-y-4">
         <select id="mobile-ledger-filter-pillar" class="form-input text-sm">${['<option value="all">All Pillars</option>'].concat(getAvailableContentPillars().map((pillar) => `<option value="${escapeHtml(pillar)}">${escapeHtml(formatContentPillarLabel(pillar))}</option>`)).join("")}</select>
-        <select id="mobile-ledger-filter-campaign" class="form-input text-sm">${['<option value="all">All Campaigns</option>'].concat((appState.campaigns || []).filter((item) => !item.isArchived).map((item) => `<option value="${escapeHtml(item.campaignId)}">${escapeHtml(formatCampaignDisplayName(item.campaignName))}</option>`)).join("")}</select>
+        <select id="mobile-ledger-filter-campaign" class="form-input text-sm">${['<option value="all">All Campaigns</option>'].concat(getAvailableCampaignRecords().filter((item) => !item.isArchived).map((item) => `<option value="${escapeHtml(item.campaignId)}">${escapeHtml(formatCampaignDisplayName(item.campaignName))}</option>`)).join("")}</select>
         <select id="mobile-ledger-filter-type" class="form-input text-sm">${['all', 'image', 'carousel', 'video', 'article', 'text', 'poll'].map((value) => `<option value="${value}">${value === 'all' ? 'All Types' : toTitleCase(value)}</option>`).join("")}</select>
         <select id="mobile-ledger-filter-status" class="form-input text-sm">${['all', 'draft', 'scheduled', 'published'].map((value) => `<option value="${value}">${value === 'all' ? 'All Statuses' : toTitleCase(value)}</option>`).join("")}</select>
         <div class="flex gap-2">
@@ -10465,7 +10473,7 @@ function renderMobileFilterSheet() {
           <option value="carousel">Carousel</option>
           <option value="article">Article</option>
         </select>
-        <select id="mobile-media-filter-campaign" class="form-input text-sm">${['<option value="all">All Campaigns</option>'].concat((appState.campaigns || []).filter((item) => !item.isArchived).map((item) => `<option value="${escapeHtml(item.campaignId)}">${escapeHtml(formatCampaignDisplayName(item.campaignName))}</option>`)).join("")}</select>
+        <select id="mobile-media-filter-campaign" class="form-input text-sm">${['<option value="all">All Campaigns</option>'].concat(getAvailableCampaignRecords().filter((item) => !item.isArchived).map((item) => `<option value="${escapeHtml(item.campaignId)}">${escapeHtml(formatCampaignDisplayName(item.campaignName))}</option>`)).join("")}</select>
         <div class="flex gap-2">
           <button type="button" id="mobile-media-filter-apply" class="flex-1 px-4 py-3 rounded-xl bg-[#2d1b4e] text-white text-xs uppercase tracking-wider font-bold">Apply</button>
           <button type="button" id="mobile-media-filter-reset" class="flex-1 px-4 py-3 rounded-xl bg-[#181125] text-gray-300 text-xs uppercase tracking-wider font-bold border border-white/5">Reset</button>
@@ -10683,7 +10691,7 @@ function getArtifactRecordById(type, id) {
   if (type === "note") return (appState.notes || []).find((item) => String(item.noteId || item.id || "") === recordId) || null;
   if (type === "inspo") return (appState.inspo || []).find((item) => String(item.id || "") === recordId) || null;
   if (type === "draft") return (appState.aiDrafts || []).find((item) => String(item.aiDraftId || "") === recordId) || null;
-  if (type === "campaign") return (appState.campaigns || []).find((item) => String(item.campaignId || "") === recordId) || null;
+  if (type === "campaign") return getAvailableCampaignRecords().find((item) => String(item.campaignId || "") === recordId) || null;
   if (type === "post") return (appState.posts || []).find((item) => String(item.id || item.postId || "") === recordId) || null;
   if (type === "media") return buildMediaVaultItems().find((item) => String(item.id || item.assetId || "") === recordId) || null;
   return null;
@@ -10941,7 +10949,7 @@ function renderAIHistoryControls() {
   if (aiHistoryCampaignInput) {
     const previousValue = aiHistoryCampaignInput.value;
     const options = ['<option value="">All campaigns</option>'].concat(
-      (appState.campaigns || [])
+      getAvailableCampaignRecords()
         .filter((campaign) => !campaign?.isArchived && String(campaign?.campaignName || "").trim())
         .map((campaign) => `<option value="${escapeHtml(campaign.campaignId || campaign.campaignName)}">${escapeHtml(formatCampaignDisplayName(campaign.campaignName))}</option>`)
     );
@@ -11034,7 +11042,7 @@ function renderWriteIdeaGuidance() {
       : makeEmptyState("Brand guidance unavailable", "Save Brand OS rules to populate writing guidance here.", "ph-book-open-text");
   }
   if (writeIdeaRelatedCampaigns) {
-    const campaigns = (appState.campaigns || []).filter((item) => !item.isArchived).slice(0, 4);
+    const campaigns = getAvailableCampaignRecords().filter((item) => !item.isArchived).slice(0, 4);
     writeIdeaRelatedCampaigns.innerHTML = campaigns.length
       ? campaigns.map((campaign) => `
         <div class="p-3 rounded-xl bg-[#181125] border border-white/5">
@@ -11544,7 +11552,7 @@ function renderWriteIdeaMemoryZone() {
   var framedPosts = posts.filter(function(p) { return p.framework || p.frameworkName || p.campaignId; });
   var themePosts = posts.filter(function(p) { return p.pillar || p.topic || p.theme; });
   var connectedIdeas = (appState.aiDrafts || []).filter(function(d) { return d.generationMode === "write_an_idea" || d.ideaPrompt; });
-  var campaigns = (appState.campaigns || []).filter(Boolean);
+  var campaigns = getAvailableCampaignRecords().filter(Boolean);
   var hasMemory = posts.length > 0 || framedPosts.length > 0 || connectedIdeas.length > 0 || campaigns.length > 0 || themePosts.length > 0;
   writeIdeaMemoryZone.classList.toggle("hidden", !hasMemory);
   if (!hasMemory) return;
@@ -12118,7 +12126,7 @@ function setupUploadStagingModal() {
 }
 
 async function editCampaignById(campaignId) {
-  const campaign = (appState.campaigns || []).find(c => String(c.campaignId || "") === String(campaignId || ""));
+  const campaign = getAvailableCampaignRecords().find(c => String(c.campaignId || "") === String(campaignId || ""));
   if (!campaign) return;
   campaignModalTargetSelect = null;
   openCampaignModal({ campaignId: campaign.campaignId });
@@ -12140,7 +12148,7 @@ function setupModalMediaUpload() {
 
 function getCurrentModalCampaignLabel() {
   const campaignId = campaignSelect?.value || "";
-  const campaign = (appState.campaigns || []).find(item => String(item.campaignId || "") === String(campaignId || ""));
+  const campaign = getAvailableCampaignRecords().find(item => String(item.campaignId || "") === String(campaignId || ""));
   return campaign?.campaignName || "";
 }
 
@@ -12222,7 +12230,7 @@ function renderMedia() {
       const campaignId = String(item.campaignId || "");
       const campaignName = normalizeLookupValue(item.campaign || "");
       const linkedPost = (appState.posts || []).find(post => post.id === item.postId);
-      const selectedCampaign = (appState.campaigns || []).find(c => String(c.campaignId) === String(mediaFilters.campaign));
+      const selectedCampaign = getAvailableCampaignRecords().find(c => String(c.campaignId) === String(mediaFilters.campaign));
       return (
         campaignId === mediaFilters.campaign ||
         String(linkedPost?.campaignId || "") === mediaFilters.campaign ||
@@ -12805,7 +12813,7 @@ function populateMediaCampaignFilter() {
   if (!select) return;
 
   const options = ['<option value="all">All Campaigns</option>']
-    .concat((appState.campaigns || [])
+    .concat(getAvailableCampaignRecords()
       .filter(c => !c.isArchived)
       .map(c => `<option value="${escapeHtml(c.campaignId)}">${escapeHtml(formatCampaignDisplayName(c.campaignName))}</option>`));
 
@@ -12918,7 +12926,7 @@ function populateLedgerCampaignMenu() {
   const submenu = document.getElementById("ledger-campaign-submenu");
   if (!submenu) return;
 
-  const campaigns = (appState.campaigns || []).filter(c => !c.isArchived);
+  const campaigns = getAvailableCampaignRecords().filter(c => !c.isArchived);
 
   submenu.innerHTML = `
     <div class="p-2">
@@ -12955,7 +12963,7 @@ function populateLedgerCampaignMenu() {
         campaignLabel.textContent =
           value === "all"
             ? "All"
-            : formatCampaignDisplayName((appState.campaigns || []).find(c => String(c.campaignId || "") === String(value || ""))?.campaignName || "All");
+            : formatCampaignDisplayName(getAvailableCampaignRecords().find(c => String(c.campaignId || "") === String(value || ""))?.campaignName || "All");
       }
 
       renderLedger();
@@ -14823,7 +14831,7 @@ async function refreshPostsAfterImportBatch(jobId = "") {
   if (!APP_CONFIG.ENABLE_REMOTE_SYNC || !isRemoteConfigured()) return;
   const posts = await apiGetPosts();
   if (Array.isArray(posts) && posts.length) {
-    appState.posts = posts.map((post) => normalizeRemotePost(post, appState.campaigns || [], appState.media || []));
+    appState.posts = posts.map((post) => normalizeRemotePost(post, getAvailableCampaignRecords(), appState.media || []));
     persistLocalState();
   }
   if (jobId) {
@@ -15642,7 +15650,7 @@ async function syncRemoteIfConfigured() {
     }
 
     if (Array.isArray(posts)) {
-      appState.posts = posts.map(post => normalizeRemotePost(post, appState.campaigns || [], appState.media || []));
+      appState.posts = posts.map(post => normalizeRemotePost(post, getAvailableCampaignRecords(), appState.media || []));
       console.log("[sync] normalized posts first 5", appState.posts.slice(0, 5).map(post => ({
         postId: post.id || "",
         title: post.title || "",
@@ -16200,6 +16208,9 @@ function renderDiagnosticsPanel() {
     { label: "Media not linked to post/draft", severity: "warning", value: (schemaDiagnostics.orphanMedia || []).length, detail: formatDetailedDiagnostics(schemaDiagnostics.orphanMedia || [], (item) => `${item.assetId || "unknown"}: ${item.title || "Untitled media"}`), guidance: "Warnings are okay for library-only assets." },
     { label: "Notes not linked to drafts/posts", severity: "warning", value: (schemaDiagnostics.notesNotLinkedToDraftsOrPosts || []).length, detail: formatDetailedDiagnostics(schemaDiagnostics.notesNotLinkedToDraftsOrPosts || [], (item) => `${item.noteId || "unknown"}: ${item.title || "Untitled note"}`), guidance: "Warnings are okay for raw notes; converted notes should carry lineage." },
     { label: "Hard-coded index risks detected", severity: "warning", value: frontendHardCodedRisks.reduce((sum, item) => sum + item.count, 0) + (schemaDiagnostics.hardCodedIndexRisks || []).length, detail: frontendHardCodedRisks.map((item) => `${item.label}: ${item.count}`).concat((schemaDiagnostics.hardCodedIndexRisks || []).map((item) => item.detail || item.label || String(item))).join(" | ") || "None", guidance: "Review any fixed indexes near sheet or render mapping code." },
+    { label: "Unknown campaign values", severity: "error", value: (schemaDiagnostics.postsWithUnknownCampaign || []).length, detail: formatDetailedDiagnostics(schemaDiagnostics.postsWithUnknownCampaign || [], (item) => `${item.postId || "unknown"}: ${item.campaignName || "missing"}`), guidance: "Campaigns must match SETTINGS!L:L or fall into Uncategorized." },
+    { label: "Pillars used as campaign lanes", severity: "error", value: (schemaDiagnostics.pillarValuesIncorrectlyUsedAsCampaigns || []).length, detail: (schemaDiagnostics.pillarValuesIncorrectlyUsedAsCampaigns || []).join(", ") || "None", guidance: "Constellation lanes must be SETTINGS campaigns plus Uncategorized only." },
+    { label: "Constellation lane source", severity: "warning", value: (schemaDiagnostics.constellationLaneNames || []).length, detail: (schemaDiagnostics.constellationLaneNames || []).join(", ") || "Unavailable", guidance: `Campaign dropdown source: ${schemaDiagnostics.campaignDropdownSource || "SETTINGS!L:L"}; pillar dropdown source: ${schemaDiagnostics.pillarDropdownSource || "pillar settings"}.` },
     { label: "Malformed scheduled_at rows", severity: "error", value: (diagnostics.malformedScheduledRows || []).length, detail: formatDiagnosticIds(diagnostics.malformedScheduledRows, "postId"), guidance: "Errors need action." },
     { label: "Invalid queue_date_label rows", severity: "error", value: (diagnostics.invalidQueueDateLabelRows || []).length, detail: formatDetailedDiagnostics(diagnostics.invalidQueueDateLabelRows, (item) => `${item.postId || "unknown"}: ${item.queueDateLabel || "missing"}${item.scheduledAt ? ` • normalized display ${formatQueueDateLabel(item.scheduledAt)}` : ""}`), guidance: "Repair or normalize queue_date_label to M/D/YYYY." },
     { label: "Date mismatch rows", severity: "warning", value: (diagnostics.dateMismatchRows || []).length, detail: formatDetailedDiagnostics(diagnostics.dateMismatchRows, (item) => `${item.postId || "unknown"}: ${Array.isArray(item.diagnostics) ? item.diagnostics.join(", ") : "date warning"}${item.normalizedDisplayDate ? ` • display ${item.normalizedDisplayDate}` : ""}`), guidance: "Warnings are okay when queue_date_label is the intended calendar day." },
@@ -16803,7 +16814,7 @@ function populateAISourceOptions() {
   else if (sourceType === "inspo") items = (appState.inspo || []).map(item => ({ value: item.id, label: item.title || "Untitled inspo" }));
   else if (sourceType === "media") items = buildMediaVaultItems().map(item => ({ value: item.id, label: item.title || item.assetName || "Untitled media" }));
   else if (sourceType === "post") items = (appState.posts || []).map(item => ({ value: item.id, label: getPostDisplayTitle(item, "Untitled post") }));
-  else if (sourceType === "campaign") items = (appState.campaigns || []).map(item => ({ value: item.campaignId, label: item.campaignName || "Untitled campaign" }));
+  else if (sourceType === "campaign") items = getAvailableCampaignRecords().map(item => ({ value: item.campaignId, label: item.campaignName || "Untitled campaign" }));
   aiSourceIdInput.innerHTML = ['<option value="">Select source</option>'].concat(items.map((item) => `<option value="${escapeHtml(item.value)}">${escapeHtml(getDisplayTitle(item.label, item.label, 6))}</option>`)).join("");
 }
 
@@ -16972,7 +16983,7 @@ function openAIWorkspaceModal() {
   populateCampaignDropdown();
   renderAIHistoryControls();
   if (aiCampaignSelect) {
-    aiCampaignSelect.innerHTML = ['<option value="">Attach to campaign</option>'].concat((appState.campaigns || []).map((campaign) => `<option value="${escapeHtml(campaign.campaignId)}">${escapeHtml(formatCampaignDisplayName(campaign.campaignName))}</option>`)).join("");
+    aiCampaignSelect.innerHTML = ['<option value="">Attach to campaign</option>'].concat(getAvailableCampaignRecords().map((campaign) => `<option value="${escapeHtml(campaign.campaignId)}">${escapeHtml(formatCampaignDisplayName(campaign.campaignName))}</option>`)).join("");
   }
   renderAIWorkspaceControls();
   renderAIDraftList();
@@ -17130,7 +17141,7 @@ async function saveCurrentAIDraft() {
     sourceType: aiSourceTypeInput?.value || "manual",
     sourceId: aiSourceIdInput?.value || "",
     campaignId: aiCampaignSelect?.value || "",
-    campaignName: (appState.campaigns || []).find((item) => item.campaignId === (aiCampaignSelect?.value || ""))?.campaignName || "",
+    campaignName: getAvailableCampaignRecords().find((item) => item.campaignId === (aiCampaignSelect?.value || ""))?.campaignName || "",
     prompt: String(aiWorkspacePrompt?.value || "").trim(),
     draftText: String(aiDraftPreviewInput?.value || "").trim(),
     hookText: String(currentAIGenerationResult?.hookText || "").trim(),
@@ -17274,7 +17285,7 @@ function normalizeRemoteSettings(settings) {
     pillars: normalizeList(settings?.pillars, defaults.pillars, (value) => normalizePillar(value)),
     statuses: normalizeList(settings?.statuses, defaults.statuses, (value) => String(value || "").trim().toLowerCase()),
     postTypes: normalizeList(settings?.postTypes || settings?.post_types, defaults.postTypes, (value) => String(value || "").trim().toLowerCase()),
-    campaigns: normalizeList(settings?.campaigns, defaults.campaigns, (value) => normalizeCampaignName(value)),
+    campaigns: normalizeList(settings?.campaigns, [], (value) => normalizeDisplayText(value)),
     campaignColors: { ...(defaults.campaignColors || {}), ...(settings?.campaignColors || settings?.campaign_colors || {}) },
     months: Array.isArray(settings?.months) ? settings.months.map((value) => String(value || "").trim()).filter(Boolean) : defaults.months.slice(),
     queueLimit: settings?.queueLimit || settings?.queue_limit || defaults.queueLimit,
@@ -18514,7 +18525,7 @@ function ensureViewHealth(viewName) {
 function getAppStateCounts() {
   return {
     posts: (appState.posts || []).length,
-    campaigns: (appState.campaigns || []).length,
+    campaigns: getAvailableCampaignRecords().length,
     media: (appState.media || []).length,
     inspo: (appState.inspo || []).length,
     notes: (appState.notes || []).length,
@@ -18620,7 +18631,7 @@ function renderOverviewPanel() {
   if (performanceTarget) {
     performanceTarget.innerHTML = [
       ["Posts", (appState.posts || []).length],
-      ["Campaigns", (appState.campaigns || []).filter((item) => !item.isArchived).length],
+      ["Campaigns", getAvailableCampaignRecords().filter((item) => !item.isArchived).length],
       ["Media", (appState.media || []).length]
     ].map(([label, value]) => `<div class="flex justify-between text-sm"><span class="text-gray-400">${escapeHtml(label)}</span><span class="text-white font-bold">${escapeHtml(String(value))}</span></div>`).join("");
   }
@@ -18707,14 +18718,14 @@ function renderAuditView() {
   if (working) {
     working.innerHTML = [
       `${(appState.posts || []).length} posts loaded`,
-      `${(appState.campaigns || []).filter((item) => !item.isArchived).length} active campaigns`,
+      `${getAvailableCampaignRecords().filter((item) => !item.isArchived).length} active campaigns`,
       `${(appState.media || []).length} media records`
     ].map((item) => `<li>${escapeHtml(item)}</li>`).join("");
   }
   if (attention) {
     const gaps = [];
     if (!(appState.posts || []).length) gaps.push("No posts loaded");
-    if (!(appState.campaigns || []).length) gaps.push("No campaigns loaded");
+    if (!getAvailableCampaignRecords().length) gaps.push("No campaigns loaded");
     if (offlineMode) gaps.push("Backend currently offline or unreachable");
     attention.innerHTML = (gaps.length ? gaps : ["No local blocking issues detected"]).map((item) => `<li>${escapeHtml(item)}</li>`).join("");
   }
