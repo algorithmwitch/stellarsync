@@ -1115,6 +1115,35 @@
             display: none !important;
         }
 
+        #view-media {
+            display: flex !important;
+            flex-direction: column !important;
+            min-height: 0 !important;
+            overflow: hidden !important;
+        }
+
+        .media-grid-scroll {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            padding-bottom: 48px;
+        }
+
+        #media-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 24px;
+            align-content: start;
+            overflow: visible;
+        }
+
+        @media (max-width: 1200px) {
+            #view-media #media-grid,
+            #media-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            }
+        }
+
         @media (max-width: 768px) {
             html,
             body {
@@ -1605,28 +1634,6 @@
                 min-height: 0 !important;
                 height: auto !important;
                 overflow: hidden !important;
-            }
-
-            #view-media {
-                display: flex !important;
-                flex-direction: column !important;
-                min-height: 0 !important;
-                overflow: hidden !important;
-            }
-
-            .media-grid-scroll {
-                flex: 1;
-                min-height: 0;
-                overflow-y: auto;
-                padding-bottom: 48px;
-            }
-
-            #media-grid {
-                display: grid;
-                grid-template-columns: repeat(3, minmax(0, 1fr));
-                gap: 24px;
-                align-content: start;
-                overflow: visible;
             }
 
             #view-inspo .inspo-card-body {
