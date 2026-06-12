@@ -2254,48 +2254,6 @@
             </div>
           </div>
 
-          <!-- ✨ Generate Zone -->
-          <div class="write-idea-review-card">
-            <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3">✨ Generate</div>
-            <div id="write-idea-generation-modes" class="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <button type="button" class="write-idea-gen-card active" data-write-idea-mode="generate_post" style="--gen-color:#9d4edd">
-                <div class="write-idea-gen-icon" style="background:linear-gradient(135deg,rgba(157,78,221,0.3),rgba(157,78,221,0.1))">✨</div>
-                <div class="write-idea-gen-content">
-                  <div class="write-idea-gen-title">Generate Post</div>
-                  <div class="write-idea-gen-desc">Finished social media prose</div>
-                </div>
-              </button>
-              <button type="button" class="write-idea-gen-card" data-write-idea-mode="generate_structure" style="--gen-color:#0ea5e9">
-                <div class="write-idea-gen-icon" style="background:linear-gradient(135deg,rgba(14,165,233,0.3),rgba(14,165,233,0.1))">🧭</div>
-                <div class="write-idea-gen-content">
-                  <div class="write-idea-gen-title">Generate Structure</div>
-                  <div class="write-idea-gen-desc">Outline before writing</div>
-                </div>
-              </button>
-              <button type="button" class="write-idea-gen-card" data-write-idea-mode="generate_carousel" style="--gen-color:#f59e0b">
-                <div class="write-idea-gen-icon" style="background:linear-gradient(135deg,rgba(245,158,11,0.3),rgba(245,158,11,0.1))">🎠</div>
-                <div class="write-idea-gen-content">
-                  <div class="write-idea-gen-title">Generate Carousel</div>
-                  <div class="write-idea-gen-desc">Slide-by-slide content</div>
-                </div>
-              </button>
-              <button type="button" class="write-idea-gen-card" data-write-idea-mode="generate_newsletter" style="--gen-color:#10b981">
-                <div class="write-idea-gen-icon" style="background:linear-gradient(135deg,rgba(16,185,129,0.3),rgba(16,185,129,0.1))">📰</div>
-                <div class="write-idea-gen-content">
-                  <div class="write-idea-gen-title">Generate Newsletter</div>
-                  <div class="write-idea-gen-desc">Long-form article</div>
-                </div>
-              </button>
-              <button type="button" class="write-idea-gen-card" data-write-idea-mode="generate_linkedin_reflection" style="--gen-color:#f43f5e">
-                <div class="write-idea-gen-icon" style="background:linear-gradient(135deg,rgba(244,63,94,0.3),rgba(244,63,94,0.1))">💭</div>
-                <div class="write-idea-gen-content">
-                  <div class="write-idea-gen-title">Generate Reflection</div>
-                  <div class="write-idea-gen-desc">Personal story and insight</div>
-                </div>
-              </button>
-            </div>
-          </div>
-
           <!-- 🧠 Creator Memory Zone -->
           <div id="write-idea-memory-zone" class="write-idea-review-card hidden">
             <div class="flex items-center justify-between gap-3 flex-wrap mb-4">
@@ -2344,6 +2302,49 @@
               <button type="button" class="write-idea-action-btn" data-write-idea-output="add_to_notes"><span class="write-idea-action-icon">📝</span> Save to Notes</button>
               <button type="button" class="write-idea-action-btn" data-write-idea-output="add_to_inspo"><span class="write-idea-action-icon">💡</span> Save to Inspo</button>
               <a id="write-idea-open-ai-settings-link" href="#" class="write-idea-action-btn" style="display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;text-decoration:none"><span class="write-idea-action-icon">⚙️</span> AI Providers</a>
+            </div>
+          </div>
+
+          <!-- ✨ Generate Zone -->
+          <div class="write-idea-review-card">
+            <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">✨ Generate Final Post</div>
+            <div class="text-sm text-white mb-3">Click here to generate the final post from this draft context.</div>
+            <div id="write-idea-generation-modes" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <button type="button" class="write-idea-gen-card active" data-write-idea-mode="generate_post" style="--gen-color:#9d4edd">
+                <div class="write-idea-gen-icon" style="background:linear-gradient(135deg,rgba(157,78,221,0.3),rgba(157,78,221,0.1))">✨</div>
+                <div class="write-idea-gen-content">
+                  <div class="write-idea-gen-title">Generate Final Post</div>
+                  <div class="write-idea-gen-desc">Finished social media prose</div>
+                </div>
+              </button>
+              <button type="button" class="write-idea-gen-card" data-write-idea-mode="generate_structure" style="--gen-color:#0ea5e9">
+                <div class="write-idea-gen-icon" style="background:linear-gradient(135deg,rgba(14,165,233,0.3),rgba(14,165,233,0.1))">🧭</div>
+                <div class="write-idea-gen-content">
+                  <div class="write-idea-gen-title">Generate Structure</div>
+                  <div class="write-idea-gen-desc">Outline before writing</div>
+                </div>
+              </button>
+              <button type="button" class="write-idea-gen-card" data-write-idea-mode="generate_carousel" style="--gen-color:#f59e0b">
+                <div class="write-idea-gen-icon" style="background:linear-gradient(135deg,rgba(245,158,11,0.3),rgba(245,158,11,0.1))">🎠</div>
+                <div class="write-idea-gen-content">
+                  <div class="write-idea-gen-title">Generate Carousel</div>
+                  <div class="write-idea-gen-desc">Slide-by-slide content</div>
+                </div>
+              </button>
+              <button type="button" class="write-idea-gen-card" data-write-idea-mode="generate_newsletter" style="--gen-color:#10b981">
+                <div class="write-idea-gen-icon" style="background:linear-gradient(135deg,rgba(16,185,129,0.3),rgba(16,185,129,0.1))">📰</div>
+                <div class="write-idea-gen-content">
+                  <div class="write-idea-gen-title">Generate Newsletter</div>
+                  <div class="write-idea-gen-desc">Long-form article</div>
+                </div>
+              </button>
+              <button type="button" class="write-idea-gen-card" data-write-idea-mode="generate_linkedin_reflection" style="--gen-color:#f43f5e">
+                <div class="write-idea-gen-icon" style="background:linear-gradient(135deg,rgba(244,63,94,0.3),rgba(244,63,94,0.1))">💭</div>
+                <div class="write-idea-gen-content">
+                  <div class="write-idea-gen-title">Generate Reflection</div>
+                  <div class="write-idea-gen-desc">Personal story and insight</div>
+                </div>
+              </button>
             </div>
           </div>
 
@@ -3827,8 +3828,17 @@
                 <input id="ai-outline-mode" type="checkbox" class="accent-[#c77dff]">
                 Outline mode
               </label>
-              <button id="ai-generate-draft-btn" type="button" class="px-4 py-2 bg-gradient-to-r from-[#9d4edd] to-[#c77dff] hover:opacity-90 text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all border border-white/10">Generate</button>
+              <button id="ai-generate-draft-btn" type="button" class="px-4 py-2 bg-gradient-to-r from-[#9d4edd] to-[#c77dff] hover:opacity-90 text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all border border-white/10">Generate Final Post</button>
               <button id="ai-regenerate-draft-btn" type="button" class="px-4 py-2 bg-[#181125] hover:bg-[#231738] text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all border border-white/10">Regenerate</button>
+            </div>
+          </div>
+          <div id="ai-draft-loading" class="hidden p-4 rounded-2xl bg-[#0f0a18] border border-white/5 space-y-3">
+            <div class="flex items-center justify-between gap-3">
+              <div id="ai-draft-loading-message" class="text-xs font-bold uppercase tracking-[0.16em] text-white">Generating final post...</div>
+              <div id="ai-draft-loading-percent" class="text-xs text-gray-400">0%</div>
+            </div>
+            <div class="h-2 rounded-full bg-[#1f1530] overflow-hidden">
+              <div id="ai-draft-loading-bar" class="h-full w-0 bg-gradient-to-r from-[#9d4edd] to-[#00ffaa] transition-all duration-300"></div>
             </div>
           </div>
           <input id="ai-draft-title" class="form-input text-sm font-medium" placeholder="Draft title">
@@ -3845,7 +3855,8 @@
           <div id="ai-draft-list" class="space-y-3"></div>
           <div class="flex justify-end gap-3">
             <button id="ai-save-draft-btn" type="button" class="px-4 py-2 bg-[#181125] hover:bg-[#231738] text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all border border-white/10">Save Draft</button>
-            <button id="ai-create-post-btn" type="button" class="px-4 py-2 bg-gradient-to-r from-[#9d4edd] to-[#c77dff] hover:opacity-90 text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all border border-white/10">Create Post from Draft</button>
+            <button id="ai-send-draft-btn" type="button" class="px-4 py-2 bg-[#231738] hover:bg-[#2d1b4e] text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all border border-white/10">Send Draft</button>
+            <button id="ai-approve-draft-btn" type="button" class="px-4 py-2 bg-gradient-to-r from-[#10b981] to-[#34d399] hover:opacity-90 text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all border border-white/10">Approve</button>
           </div>
         </div>
       </div>
@@ -4164,7 +4175,7 @@
 </div>
 <script>
 const APP_CONFIG = {
-  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbw_hRzgah5_umbpJpqrlj3aP78M39G7EXh9xInqlw31vyjyDrigez0ACPUZdAFNBEJh/exec",
+  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbyihnXRc05T-ZemZZfJOCEYxLjHf3gKj_L6tYI7yRtxaKyGLYEnoK7Z9VrWy5mFX_Md/exec",
   ENABLE_REMOTE_SYNC: true,
   STORAGE_KEY: "stellarsync_local_state_v5",
   SHELL_LAYOUT_KEY: "stellarsync_shell_layout_v2"
@@ -5530,6 +5541,12 @@ const aiContextDiagnostics = document.getElementById("ai-context-diagnostics");
 const aiDraftList = document.getElementById("ai-draft-list");
 const aiSaveDraftBtn = document.getElementById("ai-save-draft-btn");
 const aiCreatePostBtn = document.getElementById("ai-create-post-btn");
+const aiApproveDraftBtn = document.getElementById("ai-approve-draft-btn");
+const aiSendDraftBtn = document.getElementById("ai-send-draft-btn");
+const aiDraftLoading = document.getElementById("ai-draft-loading");
+const aiDraftLoadingMessage = document.getElementById("ai-draft-loading-message");
+const aiDraftLoadingPercent = document.getElementById("ai-draft-loading-percent");
+const aiDraftLoadingBar = document.getElementById("ai-draft-loading-bar");
 const openBrandFrameworkBtn = document.getElementById("open-brand-framework-btn");
 const brandFrameworkModal = document.getElementById("brand-framework-modal");
 const brandFrameworkModalCard = document.getElementById("brand-framework-modal-card");
@@ -6725,6 +6742,14 @@ function setupAIAndBrandWorkspaces() {
   aiCreatePostBtn?.addEventListener("click", () => createPostFromCurrentAIDraft().catch((err) => {
     console.error(err);
     showToast("Post creation failed", err.message || "Could not create a post from the AI draft.", "ph-warning", "text-yellow-400");
+  }));
+  aiApproveDraftBtn?.addEventListener("click", () => promoteCurrentAIDraftToPosts("Scheduled").catch((err) => {
+    console.error(err);
+    showToast("Approve failed", err.message || "Could not approve this AI draft.", "ph-warning", "text-yellow-400");
+  }));
+  aiSendDraftBtn?.addEventListener("click", () => promoteCurrentAIDraftToPosts("Draft").catch((err) => {
+    console.error(err);
+    showToast("Send draft failed", err.message || "Could not send this AI draft to POSTS.", "ph-warning", "text-yellow-400");
   }));
 
   openBrandFrameworkBtn?.addEventListener("click", openBrandFrameworkModal);
@@ -16004,6 +16029,14 @@ async function apiCreatePostFromAIDraft(aiDraftId, post = {}) {
   return apiPost("createPostFromAIDraft", { aiDraftId, post });
 }
 
+async function apiApproveAIDraft(aiDraftId, payload = {}) {
+  return apiPost("approveAiDraft", { ...payload, aiDraftId, targetStatus: "Scheduled" });
+}
+
+async function apiSendAIDraftToLedger(aiDraftId, payload = {}) {
+  return apiPost("sendAiDraftToLedger", { ...payload, aiDraftId, targetStatus: "Draft" });
+}
+
 async function apiSaveBrandFramework(items) {
   return apiPost("saveBrandFramework", { items });
 }
@@ -17078,7 +17111,40 @@ function closeBrandFrameworkModal() {
   brandFrameworkModalCard?.classList.add("scale-95");
 }
 
+function setAiDraftLoading(state, message = "", progress = 0) {
+  const active = !!state;
+  aiDraftLoading?.classList.toggle("hidden", !active);
+  const percent = Math.max(0, Math.min(100, Number(progress || 0)));
+  if (aiDraftLoadingMessage) aiDraftLoadingMessage.textContent = message || "Working...";
+  if (aiDraftLoadingPercent) aiDraftLoadingPercent.textContent = `${percent}%`;
+  if (aiDraftLoadingBar) aiDraftLoadingBar.style.width = `${percent}%`;
+  [aiGenerateDraftBtn, aiRegenerateDraftBtn, aiSaveDraftBtn, aiApproveDraftBtn, aiSendDraftBtn, aiCreatePostBtn].forEach((button) => {
+    if (!button) return;
+    button.disabled = active;
+    button.classList.toggle("opacity-50", active);
+    button.classList.toggle("cursor-not-allowed", active);
+  });
+}
+
+function clearAiDraftLoading() {
+  setAiDraftLoading(false, "", 0);
+}
+
+async function withAiDraftLoading(message, asyncFn) {
+  setAiDraftLoading(true, message, 12);
+  try {
+    const result = await asyncFn((nextMessage, progress) => setAiDraftLoading(true, nextMessage, progress));
+    setAiDraftLoading(true, "Done", 100);
+    setTimeout(clearAiDraftLoading, 700);
+    return result;
+  } catch (err) {
+    clearAiDraftLoading();
+    throw err;
+  }
+}
+
 async function generateAIDraftPreview() {
+  return withAiDraftLoading("Generating final post...", async (setProgress) => {
   const sourceType = aiSourceTypeInput?.value || "manual";
   const sourceId = aiSourceIdInput?.value || "";
   const mode = aiGenerationModeInput?.value || "LinkedIn draft";
@@ -17110,6 +17176,7 @@ async function generateAIDraftPreview() {
   let context = null;
   if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
     try {
+      setProgress("Generating final post...", 20);
       context = await apiPrepareAIGenerationContext(payload);
       renderAIContextDiagnostics(context, historyFilters);
     } catch (err) {
@@ -17123,6 +17190,7 @@ async function generateAIDraftPreview() {
   let result = null;
   if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
     try {
+      setProgress("Generating final post...", 45);
       result = await apiGenerateAIDraft(payload);
     } catch (err) {
       renderAIContextDiagnostics(context, historyFilters, err.message || "AI provider request failed.");
@@ -17138,8 +17206,14 @@ async function generateAIDraftPreview() {
     });
   }
   currentAIGenerationResult = result;
+  const fullOutput = String(pickRemoteValue(result.generatedOutput, result.generated_output, result.output, result.response, result.message, result.content, result.fullText, result.full_text, result.draftText, result.captionVariant, "")).trim();
+  const finalText = String(pickRemoteValue(result.draftText, result.draft_text, result.finalText, result.final_text, result.captionVariant, result.caption, fullOutput, "")).trim();
+  currentAIGenerationResult.generated_output = fullOutput;
+  currentAIGenerationResult.generatedOutput = fullOutput;
+  currentAIGenerationResult.draft_text = finalText;
+  currentAIGenerationResult.draftText = finalText;
   if (aiDraftTitleInput) aiDraftTitleInput.value = result.title || aiDraftTitleInput.value || "";
-  if (aiDraftPreviewInput) aiDraftPreviewInput.value = result.draftText || result.captionVariant || "";
+  if (aiDraftPreviewInput) aiDraftPreviewInput.value = finalText || "";
   if (aiDraftCarouselOutlineInput) aiDraftCarouselOutlineInput.value = result.carouselOutline || "";
   if (aiDraftStatusInput) aiDraftStatusInput.value = result.outlineMode ? "reviewed" : "needs_review";
   if (aiReviewNotesInput && !String(aiReviewNotesInput.value || "").trim()) aiReviewNotesInput.value = result.reviewNotes || "";
@@ -17164,8 +17238,12 @@ async function generateAIDraftPreview() {
   }
   renderAISemanticMemoryCards();
 	  renderCreatorMemoryDiagnostics(styleContext, creatorMemoryDiagnostics);
+    setProgress("Saving draft...", 72);
+    await saveCurrentAIDraft({ silent: true, loadingHandled: true });
+    setProgress("Done", 100);
 	  showToast("Draft ready", (result.provider || "") === "Local Creator Engine" ? "Generated with Local Creator Engine." : "AI draft generated.", "ph-check", "text-[#00ffaa]");
-	}
+	});
+}
 
 function loadAIDraftIntoWorkspace(aiDraftId) {
   const draft = (appState.aiDrafts || []).find((item) => item.aiDraftId === aiDraftId);
@@ -17173,7 +17251,7 @@ function loadAIDraftIntoWorkspace(aiDraftId) {
   currentAIDraftId = aiDraftId;
   currentAIGenerationResult = draft;
   if (aiDraftTitleInput) aiDraftTitleInput.value = draft.title || "";
-  if (aiDraftPreviewInput) aiDraftPreviewInput.value = draft.draftText || "";
+  if (aiDraftPreviewInput) aiDraftPreviewInput.value = draft.draftText || draft.generatedOutput || "";
   if (aiDraftCarouselOutlineInput) aiDraftCarouselOutlineInput.value = draft.carouselOutline || "";
   if (aiPlatformInput) aiPlatformInput.value = draft.platform || "linkedin";
   if (aiPostTypeInput) aiPostTypeInput.value = draft.postType || "text";
@@ -17184,8 +17262,21 @@ function loadAIDraftIntoWorkspace(aiDraftId) {
   renderAISemanticMemoryCards();
 }
 
-async function saveCurrentAIDraft() {
+function buildCurrentAIDraftPayload() {
   const semanticPayload = buildSemanticAIDraftPayload();
+  const fullOutput = String(pickRemoteValue(
+    currentAIGenerationResult?.generatedOutput,
+    currentAIGenerationResult?.generated_output,
+    currentAIGenerationResult?.output,
+    currentAIGenerationResult?.response,
+    currentAIGenerationResult?.message,
+    currentAIGenerationResult?.content,
+    currentAIGenerationResult?.fullText,
+    currentAIGenerationResult?.full_text,
+    aiDraftPreviewInput?.value,
+    ""
+  )).trim();
+  const finalText = String(aiDraftPreviewInput?.value || currentAIGenerationResult?.draftText || currentAIGenerationResult?.draft_text || fullOutput || "").trim();
   const payload = {
     aiDraftId: currentAIDraftId || "",
     title: String(aiDraftTitleInput?.value || "").trim() || "AI Draft",
@@ -17197,7 +17288,12 @@ async function saveCurrentAIDraft() {
     campaignId: aiCampaignSelect?.value || "",
     campaignName: getAvailableCampaignRecords().find((item) => item.campaignId === (aiCampaignSelect?.value || ""))?.campaignName || "",
     prompt: String(aiWorkspacePrompt?.value || "").trim(),
-    draftText: String(aiDraftPreviewInput?.value || "").trim(),
+    generated_output: fullOutput,
+    generatedOutput: fullOutput,
+    output: fullOutput,
+    content: fullOutput,
+    draftText: finalText,
+    draft_text: finalText,
     hookText: String(currentAIGenerationResult?.hookText || "").trim(),
     ctaText: String(currentAIGenerationResult?.ctaText || "").trim(),
     carouselOutline: String(aiDraftCarouselOutlineInput?.value || "").trim(),
@@ -17208,6 +17304,11 @@ async function saveCurrentAIDraft() {
     alignmentScore: 78,
     ...semanticPayload
   };
+  return payload;
+}
+
+async function saveCurrentAIDraft(options = {}) {
+  const payload = buildCurrentAIDraftPayload();
   const localDraft = normalizeRemoteAIDraft(payload);
   currentAIDraftId = localDraft.aiDraftId || currentAIDraftId || `local-${Date.now()}`;
   localDraft.aiDraftId = currentAIDraftId;
@@ -17216,99 +17317,142 @@ async function saveCurrentAIDraft() {
   else appState.aiDrafts.unshift(localDraft);
   persistLocalState();
   renderAIDraftList();
-  if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
-    try {
-      const result = await apiSaveAIDraft(payload);
+  const runSave = async () => {
+    if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
+      const result = await apiSaveAIDraft({ ...payload, aiDraftId: currentAIDraftId });
       currentAIDraftId = result?.draft?.aiDraftId || currentAIDraftId;
       await syncRemoteIfConfigured();
+      return result;
+    }
+    return { draft: localDraft };
+  };
+  if (options.loadingHandled) {
+    const result = await runSave();
+    if (!options.silent) showToast("Draft saved", "AI draft saved for later review or post creation.", "ph-check", "text-[#00ffaa]");
+    return result;
+  }
+  await withAiDraftLoading("Saving draft...", async (setProgress) => {
+    try {
+      setProgress("Saving draft...", 45);
+      const result = await runSave();
+      setProgress("Done", 100);
+      return result;
     } catch (err) {
       console.error(err);
+      showToast("Draft save failed", err.message || "Could not save the AI draft.", "ph-warning", "text-yellow-400");
+      throw err;
     }
-  }
-  showToast("Draft saved", "AI draft saved for later review or post creation.", "ph-check", "text-[#00ffaa]");
+  });
+  if (!options.silent) showToast("Draft saved", "AI draft saved for later review or post creation.", "ph-check", "text-[#00ffaa]");
 }
 
-async function createPostFromCurrentAIDraft() {
+async function refreshAfterAIDraftPromotion(createdPostId = "") {
+  if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
+    await syncRemoteIfConfigured();
+  }
+  rerenderAll();
+  renderAIDraftList();
+  if (currentView === "calendar") renderCalendar();
+  if (currentView === "constellation") renderConstellation();
+  const createdPost = (appState.posts || []).find((post) => String(post.id || post.postId || post.post_id || "") === String(createdPostId || ""));
+  return createdPost || null;
+}
+
+async function promoteCurrentAIDraftToPosts(targetStatus = "Draft") {
   if (!currentAIDraftId) {
-    await saveCurrentAIDraft();
+    await saveCurrentAIDraft({ silent: true });
   }
   const aiDraftId = currentAIDraftId || (appState.aiDrafts || [])[0]?.aiDraftId;
   if (!aiDraftId) return;
-  const generatedCarouselText = String(aiDraftCarouselOutlineInput?.value || currentAIGenerationResult?.carouselOutline || "").trim();
-  const generatedDraftText = String(aiDraftPreviewInput?.value || "").trim();
-  const postPayload = {
-    title: String(aiDraftTitleInput?.value || "").trim(),
-    platform: aiPlatformInput?.value || "linkedin",
-    postType: aiPostTypeInput?.value || "text",
-    description: aiPostTypeInput?.value === "carousel" && generatedCarouselText
+  const isScheduled = String(targetStatus || "").toLowerCase() === "scheduled";
+  return withAiDraftLoading("Sending to Posts...", async (setProgress) => {
+    setProgress("Saving draft...", 20);
+    await saveCurrentAIDraft({ silent: true, loadingHandled: true });
+    const generatedCarouselText = String(aiDraftCarouselOutlineInput?.value || currentAIGenerationResult?.carouselOutline || "").trim();
+    const generatedDraftText = String(aiDraftPreviewInput?.value || "").trim();
+    const description = aiPostTypeInput?.value === "carousel" && generatedCarouselText
       ? [generatedDraftText, generatedCarouselText].filter(Boolean).join("\n\n")
-      : generatedDraftText,
-    campaignId: aiCampaignSelect?.value || "",
-    aiSourceType: aiSourceTypeInput?.value || "manual",
-    aiSourceId: aiSourceIdInput?.value || aiDraftId,
-    aiPrompt: String(aiWorkspacePrompt?.value || "").trim(),
-    aiGenerationMode: aiGenerationModeInput?.value || "",
-    aiBrandFrameworkVersion: "brand-os-2026.05.09",
-    aiDraftStatus: aiDraftStatusInput?.value || "needs_review",
-    aiReviewNotes: String(aiReviewNotesInput?.value || "").trim(),
-    ...buildSemanticAIDraftPayload()
-  };
-  let createdPostId = "";
-  if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
-    try {
-      const result = await apiCreatePostFromAIDraft(aiDraftId, postPayload);
-      createdPostId = String(result?.post?.postId || result?.postId || "").trim();
-      await syncRemoteIfConfigured();
-    } catch (err) {
-      console.error(err);
-      throw err;
-    }
-  } else {
-    const localPost = {
-      ...postPayload,
-      id: generateId("post"),
-      date: "",
-      queueDateLabel: "",
-      queueTimeLabel: "",
-      calendarMonth: "",
-      calendarYear: "",
-      calendarDay: "",
-      hasUserSelectedTime: false,
-      status: "draft",
-      pillar: "authority",
-      platformTargets: postPayload.platform === "both" ? ["linkedin", "instagram"] : [postPayload.platform]
+      : generatedDraftText;
+    const promotionPayload = {
+      ...buildCurrentAIDraftPayload(),
+      post: {
+        title: String(aiDraftTitleInput?.value || "").trim(),
+        platform: aiPlatformInput?.value || "linkedin",
+        postType: aiPostTypeInput?.value || "text",
+        description,
+        campaignId: aiCampaignSelect?.value || "",
+        aiSourceType: aiSourceTypeInput?.value || "manual",
+        aiSourceId: aiDraftId,
+        aiPrompt: String(aiWorkspacePrompt?.value || "").trim(),
+        aiGenerationMode: aiGenerationModeInput?.value || "",
+        aiBrandFrameworkVersion: "brand-os-2026.05.09",
+        aiDraftStatus: isScheduled ? "approved" : "sent_to_draft",
+        aiReviewNotes: String(aiReviewNotesInput?.value || "").trim(),
+        ...buildSemanticAIDraftPayload()
+      }
     };
-    createdPostId = localPost.id;
-    appState.posts.unshift(localPost);
-    appState.aiDrafts = (appState.aiDrafts || []).map((draft) => {
-      if (draft.aiDraftId !== aiDraftId) return draft;
-      return {
-        ...draft,
-        draftStatus: "converted",
-        createdPostId: localPost.id,
-        reviewNotes: `Converted to post ${localPost.id}.`
+    let createdPostId = "";
+    if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
+      setProgress("Sending to Posts...", 55);
+      const result = isScheduled
+        ? await apiApproveAIDraft(aiDraftId, promotionPayload)
+        : await apiSendAIDraftToLedger(aiDraftId, promotionPayload);
+      createdPostId = String(result?.post?.postId || result?.postId || "").trim();
+    } else {
+      const localPost = {
+        ...promotionPayload.post,
+        id: generateId("post"),
+        date: "",
+        queueDateLabel: "",
+        queueTimeLabel: "",
+        calendarMonth: "",
+        calendarYear: "",
+        calendarDay: "",
+        hasUserSelectedTime: false,
+        status: isScheduled ? "scheduled" : "draft",
+        pillar: "authority",
+        platformTargets: promotionPayload.post.platform === "both" ? ["linkedin", "instagram"] : [promotionPayload.post.platform],
+        sourceAiDraftId: aiDraftId
       };
-    });
-    persistLocalState();
-    rerenderAll();
-  }
-  closeAIWorkspaceModal();
-  const createdPost = (appState.posts || []).find((post) => String(post.id || post.postId || post.post_id || "") === createdPostId);
-  if (createdPost) {
-    openPostModal(
-      createdPost.title || postPayload.title,
-      createdPost.platform || postPayload.platform,
-      createdPost.pillar || "authority",
-      createdPost.date || "",
-      createdPost.status || "draft",
-      createdPost.description || postPayload.description,
-      createdPost.postType || postPayload.postType,
-      createdPost.id || createdPost.postId || createdPost.post_id || null
-    );
-  } else {
-    openPostModal(postPayload.title, postPayload.platform, "authority", "", "draft", postPayload.description, postPayload.postType, null);
-  }
-  setModalSourceContext("ai_draft", "Create Post from AI Draft", "This draft was routed through the AI Drafting Workspace.", aiDraftId);
+      createdPostId = localPost.id;
+      appState.posts.unshift(localPost);
+      appState.aiDrafts = (appState.aiDrafts || []).map((draft) => {
+        if (draft.aiDraftId !== aiDraftId) return draft;
+        return {
+          ...draft,
+          draftStatus: isScheduled ? "approved" : "sent_to_draft",
+          createdPostId: localPost.id,
+          generatedOutput: promotionPayload.generatedOutput,
+          generated_output: promotionPayload.generated_output,
+          draftText: promotionPayload.draftText,
+          draft_text: promotionPayload.draft_text
+        };
+      });
+      persistLocalState();
+    }
+    setProgress("Refreshing ledger...", 82);
+    const createdPost = await refreshAfterAIDraftPromotion(createdPostId);
+    setProgress("Done", 100);
+    showToast(isScheduled ? "Draft approved" : "Draft sent", isScheduled ? "AI draft sent to POSTS as scheduled." : "AI draft sent to POSTS as draft.", "ph-check", "text-[#00ffaa]");
+    if (createdPost) {
+      openPostModal(
+        createdPost.title || promotionPayload.post.title,
+        createdPost.platform || promotionPayload.post.platform,
+        createdPost.pillar || "authority",
+        createdPost.date || "",
+        createdPost.status || (isScheduled ? "scheduled" : "draft"),
+        createdPost.description || promotionPayload.post.description,
+        createdPost.postType || promotionPayload.post.postType,
+        createdPost.id || createdPost.postId || createdPost.post_id || null
+      );
+      setModalSourceContext("ai_draft", isScheduled ? "Approved AI Draft" : "Sent AI Draft", "This post was promoted from the AI Drafting Workspace.", aiDraftId);
+    }
+    return { postId: createdPostId };
+  });
+}
+
+async function createPostFromCurrentAIDraft() {
+  return promoteCurrentAIDraftToPosts("Draft");
 }
 
 function pickRemoteValue(...values) {
@@ -17707,7 +17851,8 @@ function removeCompletedImportJobsFromState() {
 
 function normalizeRemoteAIDraft(draft) {
   const aiDraftId = String(pickRemoteValue(draft?.aiDraftId, draft?.ai_draft_id, "")).trim();
-  const draftText = String(pickRemoteValue(draft?.draftText, draft?.draft_text, "")).trim();
+  const generatedOutput = String(pickRemoteValue(draft?.generatedOutput, draft?.generated_output, draft?.generatedOutputs, draft?.generated_outputs, draft?.output, draft?.response, draft?.message, draft?.content, draft?.fullText, draft?.full_text, "")).trim();
+  const draftText = String(pickRemoteValue(draft?.draftText, draft?.draft_text, draft?.finalText, draft?.final_text, draft?.caption, generatedOutput, "")).trim();
   const prompt = String(pickRemoteValue(draft?.prompt, "")).trim();
   const title = String(pickRemoteValue(draft?.title, draft?.draft_title, draft?.draftTitle, "")).trim() || firstNonEmptyLine(draftText || prompt).slice(0, 80) || "Untitled draft";
   const sourceId = String(pickRemoteValue(draft?.sourceId, draft?.source_id, draft?.sourceArtifactIds, draft?.source_artifact_ids, "")).trim();
@@ -17766,6 +17911,8 @@ function normalizeRemoteAIDraft(draft) {
     campaignName: String(pickRemoteValue(draft?.campaignName, draft?.campaign_name, "")).trim(),
     campaign_name: String(pickRemoteValue(draft?.campaign_name, draft?.campaignName, "")).trim(),
     prompt,
+    generatedOutput,
+    generated_output: generatedOutput,
     draftText,
     draft_text: draftText,
     hookText: String(pickRemoteValue(draft?.hookText, draft?.hook_text, "")).trim(),
