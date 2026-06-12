@@ -1591,19 +1591,28 @@
 
             #view-media .media-vault-card .aspect-square {
                 aspect-ratio: 16 / 10 !important;
+                flex: 0 0 auto !important;
             }
 
             #view-media .media-vault-card .p-4,
             #view-inspo .inspo-card .p-5,
             #view-notes .notes-card {
                 padding: 0.9rem !important;
+                overflow: visible !important;
             }
 
             #view-inspo .inspo-card-body,
             #view-notes .notes-card-body,
             #view-media .media-vault-card {
-                min-height: 0 !important;
-                height: auto !important;
+                display: flex !important;
+                flex-direction: column !important;
+                min-height: 520px !important;
+                overflow: hidden !important;
+            }
+
+            #view-media #media-grid {
+                align-items: start !important;
+                grid-auto-rows: minmax(520px, auto) !important;
             }
 
             #view-inspo .inspo-card-body {
