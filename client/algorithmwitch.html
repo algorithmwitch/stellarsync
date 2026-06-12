@@ -1120,26 +1120,28 @@
             flex-direction: column !important;
             min-height: 0 !important;
             overflow: hidden !important;
+            position: relative;
         }
 
-        .media-grid-scroll {
+        #view-media .media-grid-scroll {
             flex: 1;
             min-height: 0;
             overflow-y: auto;
             padding-bottom: 48px;
+            position: relative;
         }
 
-        #media-grid {
+        #view-media #media-grid {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 24px;
             align-content: start;
             overflow: visible;
+            position: relative;
         }
 
         @media (max-width: 1200px) {
-            #view-media #media-grid,
-            #media-grid {
+            #view-media #media-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
             }
         }
@@ -13480,9 +13482,17 @@ function switchView(viewName) {
   });
 
   document.querySelectorAll(".view-section").forEach((section) => {
-    if (section === targetView) showView(section);
-    else hideView(section);
+    section.classList.add("hidden");
+    section.classList.remove("active", "flex");
+    section.style.display = "none";
   });
+  targetView.classList.remove("hidden");
+  targetView.classList.add("active");
+  if (targetView.classList.contains("flex-col")) targetView.classList.add("flex");
+  targetView.style.display = targetView.dataset.display || "flex";
+  targetView.hidden = false;
+  targetView.removeAttribute("hidden");
+  targetView.setAttribute("aria-hidden", "false");
   targetView.scrollTop = 0;
   logActiveViewDisplay(targetName, targetView);
 
