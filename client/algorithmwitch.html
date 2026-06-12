@@ -1116,7 +1116,6 @@
         }
 
         #view-media {
-            display: flex !important;
             flex-direction: column !important;
             min-height: 0 !important;
             overflow: hidden !important;
@@ -13482,17 +13481,9 @@ function switchView(viewName) {
   });
 
   document.querySelectorAll(".view-section").forEach((section) => {
-    section.classList.add("hidden");
-    section.classList.remove("active", "flex");
-    section.style.display = "none";
+    if (section === targetView) showView(section);
+    else hideView(section);
   });
-  targetView.classList.remove("hidden");
-  targetView.classList.add("active");
-  if (targetView.classList.contains("flex-col")) targetView.classList.add("flex");
-  targetView.style.display = targetView.dataset.display || "flex";
-  targetView.hidden = false;
-  targetView.removeAttribute("hidden");
-  targetView.setAttribute("aria-hidden", "false");
   targetView.scrollTop = 0;
   logActiveViewDisplay(targetName, targetView);
 
