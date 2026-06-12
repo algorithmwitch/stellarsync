@@ -93,6 +93,117 @@
     min-width: 0;
   }
 
+  .stellar-assistant-button {
+    position: fixed;
+    right: 1.5rem;
+    bottom: 1.5rem;
+    z-index: 118;
+    width: 3.75rem;
+    height: 3.75rem;
+    border-radius: 999px;
+    border: 1px solid rgba(199, 125, 255, 0.42);
+    background: radial-gradient(circle at 30% 20%, rgba(0, 255, 170, 0.28), transparent 34%), linear-gradient(135deg, rgba(157, 78, 221, 0.95), rgba(45, 27, 78, 0.95));
+    color: #fff;
+    box-shadow: 0 0 28px rgba(157, 78, 221, 0.42), 0 18px 50px rgba(0, 0, 0, 0.45);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 160ms ease, box-shadow 160ms ease;
+  }
+
+  .stellar-assistant-button:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 0 34px rgba(0, 255, 170, 0.25), 0 0 36px rgba(199, 125, 255, 0.54), 0 18px 50px rgba(0, 0, 0, 0.5);
+  }
+
+  .stellar-assistant-button-label {
+    position: absolute;
+    right: calc(100% + 0.75rem);
+    top: 50%;
+    transform: translateY(-50%);
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    padding: 0.45rem 0.65rem;
+    border-radius: 0.75rem;
+    background: rgba(18, 12, 29, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: opacity 160ms ease, transform 160ms ease;
+  }
+
+  .stellar-assistant-button:hover .stellar-assistant-button-label {
+    opacity: 1;
+    transform: translate(-0.15rem, -50%);
+  }
+
+  .stellar-assistant-panel {
+    position: fixed;
+    right: 1.5rem;
+    bottom: 6rem;
+    z-index: 119;
+    width: min(440px, calc(100vw - 2rem));
+    max-height: min(720px, calc(100vh - 7.5rem));
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 1.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: linear-gradient(180deg, rgba(24, 17, 37, 0.96), rgba(15, 10, 24, 0.96));
+    box-shadow: 0 28px 80px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(20px);
+  }
+
+  .stellar-assistant-panel.hidden {
+    display: none;
+  }
+
+  .stellar-assistant-message {
+    padding: 0.85rem 0.95rem;
+    border-radius: 1rem;
+    font-size: 0.84rem;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+  }
+
+  .stellar-assistant-message.user {
+    margin-left: 2.2rem;
+    background: rgba(157, 78, 221, 0.22);
+    border: 1px solid rgba(199, 125, 255, 0.2);
+    color: #fff;
+  }
+
+  .stellar-assistant-message.assistant {
+    margin-right: 1.4rem;
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    color: #d1d5db;
+  }
+
+  .stellar-assistant-chip {
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(18, 12, 29, 0.9);
+    color: #d1d5db;
+    padding: 0.45rem 0.7rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+  }
+
+  .stellar-assistant-chip:hover {
+    border-color: rgba(199, 125, 255, 0.45);
+    color: #fff;
+    background: rgba(45, 27, 78, 0.88);
+  }
+
   #desktop-sidebar-nav {
     position: relative;
     transition: width 180ms ease, flex-basis 180ms ease, padding 180ms ease;
@@ -4181,6 +4292,55 @@
   </div>
 </div>
 
+<button id="stellar-assistant-button" type="button" class="stellar-assistant-button" onclick="toggleAssistant()" aria-label="Stellar Assistant">
+  <i class="ph-fill ph-sparkle text-2xl"></i>
+  <span class="stellar-assistant-button-label">Stellar Assistant</span>
+</button>
+
+<section id="stellar-assistant-panel" class="stellar-assistant-panel hidden" aria-label="Stellar Assistant">
+  <div class="px-5 py-4 border-b border-white/5 flex items-center justify-between gap-3">
+    <div class="flex items-center gap-3 min-w-0">
+      <div class="w-10 h-10 rounded-2xl bg-[#2d1b4e] border border-white/10 flex items-center justify-center text-[#c77dff] shrink-0">
+        <i class="ph-fill ph-planet text-xl"></i>
+      </div>
+      <div class="min-w-0">
+        <h3 class="text-white text-sm font-bold tracking-wide">Stellar Assistant</h3>
+        <p class="text-[10px] uppercase tracking-widest text-[#00ffaa] font-bold mt-0.5">Active Strategist</p>
+      </div>
+    </div>
+    <button type="button" class="w-9 h-9 rounded-xl bg-[#181125] hover:bg-[#231738] text-gray-400 hover:text-white border border-white/5 transition-colors flex items-center justify-center" onclick="closeAssistantPanel()" aria-label="Close Stellar Assistant">
+      <i class="ph-bold ph-x"></i>
+    </button>
+  </div>
+  <div id="stellar-assistant-messages" class="p-4 space-y-3 overflow-y-auto custom-scrollbar flex-1 min-h-0"></div>
+  <div class="px-4 pb-3">
+    <div id="stellar-assistant-chips" class="flex flex-wrap gap-2">
+      <button type="button" class="stellar-assistant-chip" data-assistant-action="suggest_campaigns">Suggest campaigns</button>
+      <button type="button" class="stellar-assistant-chip" data-assistant-action="build_newsletter">Build a newsletter</button>
+      <button type="button" class="stellar-assistant-chip" data-assistant-action="create_carousel">Create a carousel</button>
+      <button type="button" class="stellar-assistant-chip" data-assistant-action="find_content_gaps">Find content gaps</button>
+      <button type="button" class="stellar-assistant-chip" data-assistant-action="turn_inspo_into_posts">Turn inspo into posts</button>
+      <button type="button" class="stellar-assistant-chip" data-assistant-action="review_week_calendar">Review this week’s calendar</button>
+      <button type="button" class="stellar-assistant-chip" data-assistant-action="repurpose_top_post">Repurpose top post</button>
+      <button type="button" class="stellar-assistant-chip" data-assistant-action="build_campaign_from_notes">Build campaign from notes</button>
+    </div>
+  </div>
+  <div id="stellar-assistant-followups" class="px-4 pb-3 hidden">
+    <div class="flex flex-wrap gap-2">
+      <button type="button" class="stellar-assistant-chip" data-assistant-followup="save_draft">Save to AI Drafts</button>
+      <button type="button" class="stellar-assistant-chip" data-assistant-followup="create_post">Create Post Draft</button>
+      <button type="button" class="stellar-assistant-chip" data-assistant-followup="add_calendar">Add to Calendar</button>
+      <button type="button" class="stellar-assistant-chip" data-assistant-followup="campaign_plan">Create Campaign Plan</button>
+      <button type="button" class="stellar-assistant-chip" data-assistant-followup="copy">Copy</button>
+      <button type="button" class="stellar-assistant-chip" data-assistant-followup="open_ai_drafts">Open AI Drafts</button>
+    </div>
+  </div>
+  <div class="p-4 border-t border-white/5 flex gap-2">
+    <input id="stellar-assistant-input" class="form-input text-sm flex-1" placeholder="Ask for a campaign, carousel, walkthrough, or next best post">
+    <button id="stellar-assistant-send" type="button" class="px-4 py-2 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs uppercase tracking-wider font-bold border border-white/10" onclick="sendAssistantMessage()">Send</button>
+  </div>
+</section>
+
 <div id="ai-toast" class="fixed bottom-8 right-8 z-[110] opacity-0 pointer-events-none transition-opacity duration-300">
   <div class="bg-[#181125] px-5 py-4 rounded-xl border border-white/5 shadow-2xl flex items-center gap-4">
     <div class="w-10 h-10 rounded-full bg-[#2d1b4e] flex items-center justify-center text-[#c77dff]">
@@ -4732,8 +4892,26 @@ function renderStackedAssetPreview(assets = []) {
 }
 
 function renderPublishingReadiness(post = {}) {
-  const target = publishReadinessEl || document.getElementById("audit-publishing-readiness");
+  const target = post.auditTarget ? document.getElementById("audit-publishing-readiness") : (publishReadinessEl || document.getElementById("audit-publishing-readiness"));
   if (!target) return;
+  if (post.auditTarget) {
+    const posts = appState.posts || [];
+    const rows = [
+      { label: "Ready to publish", value: posts.filter((item) => getPostDisplayTitle(item, "") && getPostDate(item) && item.platform && getCampaignName(item, "") && String(item.description || "").trim()).length },
+      { label: "Needs title", value: posts.filter((item) => !getPostDisplayTitle(item, "")).length },
+      { label: "Needs date", value: posts.filter((item) => !getPostDate(item)).length },
+      { label: "Needs platform", value: posts.filter((item) => !String(item.platform || "").trim()).length },
+      { label: "Needs campaign", value: posts.filter((item) => !getCampaignName(item, "")).length },
+      { label: "Needs caption", value: posts.filter((item) => !String(item.description || item.caption || "").trim()).length }
+    ];
+    target.innerHTML = rows.map((row) => `
+      <div class="p-3 rounded-xl bg-[#181125] border border-white/5 flex items-center justify-between gap-3">
+        <div class="text-sm text-gray-300 wrap-safe">${escapeHtml(row.label)}</div>
+        <div class="text-sm font-bold text-white">${escapeHtml(String(row.value))}</div>
+      </div>
+    `).join("") || makeEmptyState("Publishing readiness unavailable", "No post rows are loaded yet.", "ph-paper-plane-tilt");
+    return;
+  }
   const platformTargets = Array.isArray(post.platformTargets) && post.platformTargets.length
     ? post.platformTargets
     : String(post.platform || platSelect?.value || "linkedin").split(/[|,\n]/).map((item) => item.trim()).filter(Boolean);
@@ -5580,6 +5758,12 @@ const aiDraftLoading = document.getElementById("ai-draft-loading");
 const aiDraftLoadingMessage = document.getElementById("ai-draft-loading-message");
 const aiDraftLoadingPercent = document.getElementById("ai-draft-loading-percent");
 const aiDraftLoadingBar = document.getElementById("ai-draft-loading-bar");
+const stellarAssistantButton = document.getElementById("stellar-assistant-button");
+const stellarAssistantPanel = document.getElementById("stellar-assistant-panel");
+const stellarAssistantMessages = document.getElementById("stellar-assistant-messages");
+const stellarAssistantInput = document.getElementById("stellar-assistant-input");
+const stellarAssistantSendBtn = document.getElementById("stellar-assistant-send");
+const stellarAssistantFollowups = document.getElementById("stellar-assistant-followups");
 const openBrandFrameworkBtn = document.getElementById("open-brand-framework-btn");
 const brandFrameworkModal = document.getElementById("brand-framework-modal");
 const brandFrameworkModalCard = document.getElementById("brand-framework-modal-card");
@@ -6711,6 +6895,262 @@ function setupWorkspaceUI() {
       });
     };
     setTimeout(flushPanelToggle, 300);
+  });
+}
+
+let stellarAssistantHistory = [];
+let stellarAssistantContext = {};
+let stellarAssistantLastOutput = "";
+let stellarAssistantLastAction = "";
+
+function buildAssistantContext(overrides = {}) {
+  const topPost = (appState.posts || []).slice().sort((a, b) => Math.max(getPostImpressions(b), getEngagementTotal(b)) - Math.max(getPostImpressions(a), getEngagementTotal(a)))[0] || null;
+  const scheduledPosts = (appState.posts || []).filter((post) => String(post.status || "").toLowerCase() === "scheduled");
+  return {
+    view: currentView,
+    currentMonth: calendarCursor ? `${calendarCursor.getFullYear()}-${String(calendarCursor.getMonth() + 1).padStart(2, "0")}` : "",
+    scheduledPostCount: scheduledPosts.length,
+    topPostId: topPost?.id || topPost?.postId || "",
+    topPostTitle: topPost ? getPostDisplayTitle(topPost, "Top post") : "",
+    postsCount: (appState.posts || []).length,
+    notesCount: (appState.notes || []).length,
+    inspoCount: (appState.inspo || []).length,
+    mediaCount: (appState.media || []).length,
+    aiDraftsCount: (appState.aiDrafts || []).length,
+    ...overrides
+  };
+}
+
+function ensureAssistantWelcome() {
+  if (stellarAssistantHistory.length || !stellarAssistantMessages) return;
+  renderAssistantMessage("assistant", "Hi, I’m Stellar Assistant. I can help you build campaigns, turn notes into posts, draft newsletters, outline carousels, and find gaps in your content calendar.");
+}
+
+function toggleAssistant() {
+  if (!stellarAssistantPanel) return;
+  if (stellarAssistantPanel.classList.contains("hidden")) openAssistantPanel();
+  else closeAssistantPanel();
+}
+
+function openAssistantPanel(context = {}) {
+  stellarAssistantContext = { ...buildAssistantContext(), ...(context || {}) };
+  stellarAssistantPanel?.classList.remove("hidden");
+  ensureAssistantWelcome();
+  setTimeout(() => stellarAssistantInput?.focus(), 40);
+}
+
+function closeAssistantPanel() {
+  stellarAssistantPanel?.classList.add("hidden");
+}
+
+function renderAssistantMessage(role, content) {
+  if (!stellarAssistantMessages) return;
+  const normalizedRole = role === "user" ? "user" : "assistant";
+  const text = String(content || "").trim();
+  if (!text) return;
+  stellarAssistantHistory.push({ role: normalizedRole, content: text, time: new Date().toISOString() });
+  const node = document.createElement("div");
+  node.className = `stellar-assistant-message ${normalizedRole}`;
+  node.textContent = text;
+  stellarAssistantMessages.appendChild(node);
+  stellarAssistantMessages.scrollTop = stellarAssistantMessages.scrollHeight;
+}
+
+function setAssistantLoading(message = "Thinking...") {
+  if (!stellarAssistantMessages) return null;
+  const node = document.createElement("div");
+  node.className = "stellar-assistant-message assistant";
+  node.setAttribute("data-assistant-loading", "true");
+  node.textContent = message;
+  stellarAssistantMessages.appendChild(node);
+  stellarAssistantMessages.scrollTop = stellarAssistantMessages.scrollHeight;
+  if (stellarAssistantSendBtn) {
+    stellarAssistantSendBtn.disabled = true;
+    stellarAssistantSendBtn.classList.add("opacity-50", "cursor-not-allowed");
+  }
+  return node;
+}
+
+function clearAssistantLoading(node) {
+  node?.remove();
+  if (stellarAssistantSendBtn) {
+    stellarAssistantSendBtn.disabled = false;
+    stellarAssistantSendBtn.classList.remove("opacity-50", "cursor-not-allowed");
+  }
+}
+
+function buildLocalAssistantResponse(action, message) {
+  const posts = appState.posts || [];
+  const campaigns = getAvailableCampaignRecords().filter((item) => !item.isArchived);
+  const topPost = posts.slice().sort((a, b) => Math.max(getPostImpressions(b), getEngagementTotal(b)) - Math.max(getPostImpressions(a), getEngagementTotal(a)))[0];
+  const lower = `${action} ${message}`.toLowerCase();
+  if (lower.includes("newsletter")) {
+    return "Subject line options:\n- What your strongest content signal is pointing toward\n- A field note from this week’s content pattern\n- The idea worth expanding next\n\nIntro:\nOpen with the strongest recent signal, then connect it to a practical shift your audience can use.\n\nSections:\n1. The pattern you are seeing\n2. One concrete example from a post, note, or inspo item\n3. The practical next step\n\nCTA:\nAsk readers to reply with the version of this pattern they are seeing.\n\nRelated posts/carousels to create:\n- A short post naming the pattern\n- A 5-slide carousel explaining the shift\n- A follow-up post from saved inspo";
+  }
+  if (lower.includes("carousel")) {
+    return "Carousel title: The pattern your audience needs to see\n\nSlide-by-slide outline:\n1. Name the tension\n2. Explain why it matters\n3. Show the repeated pattern\n4. Give one concrete example\n5. Offer the better question\n6. Close with a practical CTA\n\nCaption:\nThe useful part of a pattern is what it helps people decide next.\n\nCTA:\nSave this for the next time you are turning scattered ideas into a sequence.";
+  }
+  if (lower.includes("gap") || lower.includes("calendar")) {
+    const scheduled = posts.filter((post) => String(post.status || "").toLowerCase() === "scheduled").length;
+    return ["Content gaps:", `- Scheduled posts: ${scheduled}`, `- Campaigns tracked: ${campaigns.length}`, "- Check for uneven campaign, platform, and pillar coverage before adding new ideas.", "", "Next recommended post:", topPost ? `- Repurpose “${getPostDisplayTitle(topPost)}” into a carousel or newsletter.` : "- Add one draft post for the least-used pillar."].join("\n");
+  }
+  if (lower.includes("inspo") || lower.includes("notes") || lower.includes("repurpose")) {
+    return "3 post angles:\n- What this saved idea makes visible\n- What people usually misunderstand about it\n- How your audience can apply it this week\n\nCarousel outline:\n1. Hook from the source idea\n2. Why it matters\n3. What gets missed\n4. The reframing\n5. CTA\n\nNewsletter angle:\nUse the saved idea as an opening example, then expand into the broader pattern.";
+  }
+  return "Campaign concepts:\n\n1. Signal Systems\nAudience: people who need a clearer way to understand recurring patterns.\nCore message: make the hidden system visible.\nPost ideas: name the tension; show an example; ask the better question.\nNewsletter angle: a field note on what the signal changes.\nCarousel idea: problem, pattern, example, shift, CTA.\nSuggested platforms: LinkedIn, Instagram carousel, newsletter\n\n2. Community Proof\nAudience: people looking for practical examples, not abstractions.\nCore message: proof lives in repeatable community practice.\nPost ideas: case detail; lesson learned; checklist.\nNewsletter angle: what the example teaches beyond itself.\nCarousel idea: before, constraint, action, result, question.\nSuggested platforms: LinkedIn and newsletter\n\n3. Field Notes\nAudience: people following your process and decisions.\nCore message: share the thinking behind the work.\nPost ideas: observation; decision; next experiment.\nNewsletter angle: a reflective process note.\nCarousel idea: what I noticed, what changed, what I am testing.\nSuggested platforms: LinkedIn and Instagram";
+}
+
+async function runAssistantQuickAction(action) {
+  openAssistantPanel({ action });
+  const labels = {
+    suggest_campaigns: "Suggest campaigns",
+    build_newsletter: "Build a newsletter",
+    create_carousel: "Create a carousel",
+    find_content_gaps: "Find content gaps",
+    turn_inspo_into_posts: "Turn inspo into posts",
+    review_week_calendar: "Review this week’s calendar",
+    repurpose_top_post: "Repurpose top post",
+    build_campaign_from_notes: "Build campaign from notes"
+  };
+  renderAssistantMessage("user", labels[action] || action);
+  const loading = setAssistantLoading("Building strategy from your workspace...");
+  try {
+    const payload = { action, message: labels[action] || action, context: stellarAssistantContext };
+    const result = APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()
+      ? await apiRunStellarAssistant(payload)
+      : { response: buildLocalAssistantResponse(action, labels[action] || action), action };
+    clearAssistantLoading(loading);
+    stellarAssistantLastOutput = String(result.response || "").trim();
+    stellarAssistantLastAction = String(result.action || action || "").trim();
+    renderAssistantMessage("assistant", stellarAssistantLastOutput || "I could not generate a response from the available context.");
+    stellarAssistantFollowups?.classList.remove("hidden");
+  } catch (err) {
+    clearAssistantLoading(loading);
+    renderAssistantMessage("assistant", err.message || "Stellar Assistant could not complete that request.");
+    showToast("Assistant failed", err.message || "Could not generate assistant response.", "ph-warning", "text-yellow-400");
+  }
+}
+
+async function sendAssistantMessage() {
+  const message = String(stellarAssistantInput?.value || "").trim();
+  if (!message) return;
+  if (stellarAssistantInput) stellarAssistantInput.value = "";
+  openAssistantPanel();
+  renderAssistantMessage("user", message);
+  const loading = setAssistantLoading("Reading workspace signals...");
+  try {
+    const payload = { action: "message", message, context: stellarAssistantContext };
+    const result = APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()
+      ? await apiRunStellarAssistant(payload)
+      : { response: buildLocalAssistantResponse("message", message), action: "message" };
+    clearAssistantLoading(loading);
+    stellarAssistantLastOutput = String(result.response || "").trim();
+    stellarAssistantLastAction = String(result.action || "message").trim();
+    renderAssistantMessage("assistant", stellarAssistantLastOutput || "I could not generate a response from the available context.");
+    stellarAssistantFollowups?.classList.remove("hidden");
+  } catch (err) {
+    clearAssistantLoading(loading);
+    renderAssistantMessage("assistant", err.message || "Stellar Assistant could not complete that request.");
+    showToast("Assistant failed", err.message || "Could not send assistant message.", "ph-warning", "text-yellow-400");
+  }
+}
+
+function extractAssistantTitle(text) {
+  return firstNonEmptyLine(String(text || "").replace(/^(Campaign concepts:|Subject line options:|Carousel title:)/i, "").trim()).slice(0, 80) || "Stellar Assistant Output";
+}
+
+async function runAssistantFollowup(action) {
+  const output = String(stellarAssistantLastOutput || "").trim();
+  if (!output && action !== "open_ai_drafts") {
+    showToast("No assistant output", "Generate an assistant response first.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  try {
+    if (action === "copy") {
+      await navigator.clipboard.writeText(output);
+      showToast("Copied", "Assistant output copied.", "ph-check", "text-[#00ffaa]");
+      return;
+    }
+    if (action === "open_ai_drafts") {
+      openAIWorkspaceModal();
+      return;
+    }
+    if (action === "save_draft" || action === "campaign_plan") {
+      const payload = {
+        title: extractAssistantTitle(output),
+        platform: "linkedin",
+        postType: stellarAssistantLastAction && stellarAssistantLastAction.includes("carousel") ? "carousel" : "text",
+        generationMode: "stellar_assistant",
+        sourceType: "assistant",
+        prompt: stellarAssistantLastAction || "assistant",
+        generated_output: output,
+        generatedOutput: output,
+        draftText: output,
+        draftStatus: "needs_review",
+        reviewNotes: "Saved from Stellar Assistant."
+      };
+      const result = APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()
+        ? await apiSaveAIDraft(payload)
+        : { draft: normalizeRemoteAIDraft({ ...payload, aiDraftId: `local-${Date.now()}` }) };
+      const draft = normalizeRemoteAIDraft(result.draft || result);
+      const index = (appState.aiDrafts || []).findIndex((item) => item.aiDraftId === draft.aiDraftId);
+      if (index >= 0) appState.aiDrafts[index] = draft;
+      else appState.aiDrafts.unshift(draft);
+      persistLocalState();
+      renderAIDraftList();
+      showToast("Saved", "Assistant output saved to AI Drafts.", "ph-check", "text-[#00ffaa]");
+      return;
+    }
+    if (action === "create_post" || action === "add_calendar") {
+      const publishDate = stellarAssistantContext.publishDate || stellarAssistantContext.date || "";
+      if (action === "add_calendar" && !publishDate) {
+        showToast("Date required", "Add to Calendar needs a date in the assistant context.", "ph-warning", "text-yellow-400");
+        return;
+      }
+      const postPayload = {
+        title: extractAssistantTitle(output),
+        platform: "linkedin",
+        postType: stellarAssistantLastAction && stellarAssistantLastAction.includes("carousel") ? "carousel" : "text",
+        description: output,
+        status: action === "add_calendar" ? "scheduled" : "draft",
+        publishDate,
+        queueDateLabel: publishDate,
+        aiSourceType: "assistant",
+        aiPrompt: stellarAssistantLastAction || "assistant",
+        aiDraftStatus: "assistant_generated"
+      };
+      if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
+        await apiSavePost(postPayload);
+        await syncRemoteIfConfigured();
+      } else {
+        appState.posts.unshift(normalizeRemotePost({ ...postPayload, id: generateId("post") }, getAvailableCampaignRecords(), appState.media || []));
+        persistLocalState();
+        rerenderAll();
+      }
+      showToast(action === "add_calendar" ? "Scheduled" : "Draft created", action === "add_calendar" ? "Assistant output added to Calendar." : "Assistant output created as a POSTS draft.", "ph-check", "text-[#00ffaa]");
+    }
+  } catch (err) {
+    console.error(err);
+    showToast("Assistant action failed", err.message || "Could not complete assistant follow-up.", "ph-warning", "text-yellow-400");
+  }
+}
+
+function setupStellarAssistant() {
+  document.getElementById("stellar-assistant-chips")?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-assistant-action]");
+    if (!button) return;
+    runAssistantQuickAction(button.dataset.assistantAction);
+  });
+  stellarAssistantFollowups?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-assistant-followup]");
+    if (!button) return;
+    runAssistantFollowup(button.dataset.assistantFollowup);
+  });
+  stellarAssistantInput?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      sendAssistantMessage();
+    }
   });
 }
 
@@ -16007,6 +16447,10 @@ async function apiGenerateAIDraft(payload) {
   return result.draft || result.data || result;
 }
 
+async function apiRunStellarAssistant(payload) {
+  return apiPost("runStellarAssistant", payload);
+}
+
 async function apiRegenerateKeywords(payload) {
   const result = await apiPost("regenerateKeywords", payload);
   return result.keywords || result.semanticTags || result.data || [];
@@ -16154,6 +16598,69 @@ function renderDeployChecklist() {
   if (!target) return;
   target.innerHTML = getDeployChecklistItems().map((item) => `
     <div class="p-3 rounded-xl bg-[#181125] border border-white/5 text-sm text-gray-300">${escapeHtml(item)}</div>
+  `).join("");
+}
+
+function renderAuditGapCards() {
+  const target = document.getElementById("audit-gap-cards");
+  if (!target) return;
+  const schemaDiagnostics = backendDiagnostics?.schemaFlowValidation || {};
+  const posts = appState.posts || [];
+  const rows = [
+    {
+      label: "Missing campaign values",
+      value: (schemaDiagnostics.postsWithUnknownCampaign || []).length || posts.filter((post) => !getCampaignName(post, "")).length,
+      detail: "Posts should map to active campaigns or Uncategorized."
+    },
+    {
+      label: "Missing pillar values",
+      value: posts.filter((post) => !getPostContentPillar(post)).length,
+      detail: "Pillar values keep calendar balance readable."
+    },
+    {
+      label: "Orphan AI drafts",
+      value: (schemaDiagnostics.orphanAiDrafts || []).length || (appState.aiDrafts || []).filter((draft) => !String(draft.createdPostId || draft.created_post_id || "").trim()).length,
+      detail: "Standalone drafts are okay, but promoted drafts should link to POSTS."
+    },
+    {
+      label: "Media not linked to posts/drafts",
+      value: (schemaDiagnostics.orphanMedia || []).length || (appState.media || []).filter((asset) => !String(asset.linkedPostId || asset.postId || asset.linkedAiDraftId || "").trim()).length,
+      detail: "Library-only media is okay; publishing media should be linked."
+    },
+    {
+      label: "Inspo not converted yet",
+      value: (appState.inspo || []).filter((item) => !String(item.convertedPostId || item.linkedPostId || item.linkedAiDraftId || "").trim()).length,
+      detail: "Saved inspo can become drafts, posts, or campaign ideas."
+    }
+  ];
+  target.innerHTML = rows.map((row) => `
+    <div class="p-3 rounded-xl bg-[#181125] border border-white/5">
+      <div class="flex items-center justify-between gap-3 mb-1">
+        <div class="text-sm font-bold text-white wrap-safe">${escapeHtml(row.label)}</div>
+        <div class="text-sm font-bold ${row.value ? "text-yellow-200" : "text-emerald-300"}">${escapeHtml(String(row.value))}</div>
+      </div>
+      <div class="text-[11px] text-gray-400 wrap-safe">${escapeHtml(row.detail)}</div>
+    </div>
+  `).join("");
+}
+
+function renderAuditDataHealth() {
+  const target = document.getElementById("audit-data-health");
+  if (!target) return;
+  const posts = appState.posts || [];
+  const rows = [
+    ["Total posts", posts.length],
+    ["Total scheduled", posts.filter((post) => String(post.status || "").toLowerCase() === "scheduled").length],
+    ["Posts missing title", posts.filter((post) => !getPostDisplayTitle(post, "")).length],
+    ["Posts missing date", posts.filter((post) => !getPostDate(post)).length],
+    ["Posts missing campaign", posts.filter((post) => !getCampaignName(post, "")).length],
+    ["Posts missing metrics", posts.filter((post) => !getPostImpressions(post) && !getEngagementTotal(post)).length]
+  ];
+  target.innerHTML = rows.map(([label, value]) => `
+    <div class="p-3 rounded-xl bg-[#181125] border border-white/5 flex items-center justify-between gap-3">
+      <div class="text-sm text-gray-300 wrap-safe">${escapeHtml(label)}</div>
+      <div class="text-sm font-bold text-white">${escapeHtml(String(value))}</div>
+    </div>
   `).join("");
 }
 
@@ -19055,6 +19562,45 @@ function renderPerformanceMetrics(posts) {
   ].map(([label, value]) => `<div class="mini-card p-4"><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${escapeHtml(label)}</div><div class="text-2xl font-bold text-white mt-1">${escapeHtml(String(value))}</div></div>`).join("");
 }
 
+function buildSignalOverviewRecommendations(posts = appState.posts || []) {
+  const recs = [];
+  const scheduled = (posts || []).filter((post) => String(post.status || "").toLowerCase() === "scheduled");
+  const campaignCounts = countPostsBy(posts || [], (post) => getCampaignName(post, "Uncategorized"));
+  const pillarCounts = countPostsBy(posts || [], (post) => getPostContentPillar(post) || "Uncategorized");
+  const mediaLinkedIds = new Set((appState.media || []).map((asset) => String(asset.linkedPostId || asset.postId || "").trim()).filter(Boolean));
+  const upcomingWithoutMedia = scheduled.filter((post) => !mediaLinkedIds.has(String(post.id || post.postId || "").trim()) && !(post.carouselAssetIds || []).length);
+  const hasMetrics = (posts || []).some((post) => getPostImpressions(post) || getEngagementTotal(post));
+  const topPost = (posts || []).slice().sort((a, b) => Math.max(getPostImpressions(b), getEngagementTotal(b)) - Math.max(getPostImpressions(a), getEngagementTotal(a)))[0];
+  if (scheduled.length < 3) recs.push("Add 2–3 posts to this week’s calendar.");
+  if (campaignCounts.length > 1 && campaignCounts[0][1] - campaignCounts[campaignCounts.length - 1][1] > 1) recs.push("Balance upcoming posts across active campaigns.");
+  if (pillarCounts.length > 1 && pillarCounts[0][1] - pillarCounts[pillarCounts.length - 1][1] > 1) recs.push("Add a post for the least-used content pillar.");
+  if (upcomingWithoutMedia.length) recs.push("Attach media assets to upcoming posts.");
+  if ((appState.inspo || []).length && !(appState.aiDrafts || []).length) recs.push("Turn saved inspo into an AI draft.");
+  if (hasMetrics && topPost) recs.push("Repurpose your highest-performing post into a carousel or newsletter.");
+  if (!(posts || []).length && !(appState.inspo || []).length && !getAvailableCampaignRecords().length) recs.push("Start by adding a campaign, a post, and one inspo item.");
+  [
+    "Add 2–3 posts to this week’s calendar.",
+    "Balance upcoming posts across active campaigns.",
+    "Add a post for the least-used content pillar.",
+    "Turn saved inspo into an AI draft."
+  ].forEach((item) => {
+    if (recs.length < 3 && !recs.includes(item)) recs.push(item);
+  });
+  return recs.slice(0, 5);
+}
+
+function renderSignalOverviewRecommendations(posts = appState.posts || []) {
+  const target = document.getElementById("overview-recommendation-cards");
+  if (!target) return;
+  const recs = buildSignalOverviewRecommendations(posts);
+  target.innerHTML = recs.map((item, index) => `
+    <div class="p-3 rounded-xl bg-[#181125] border border-white/5 flex items-start gap-3">
+      <span class="w-6 h-6 rounded-lg bg-[#2d1b4e] text-[#c77dff] flex items-center justify-center text-[10px] font-bold shrink-0">${index + 1}</span>
+      <div class="text-xs text-gray-300 leading-relaxed wrap-safe">${escapeHtml(item)}</div>
+    </div>
+  `).join("") || makeEmptyState("Recommendations unavailable", "Start by adding a campaign, a post, and one inspo item.", "ph-lightbulb");
+}
+
 function renderPerformanceTopPosts(posts) {
   const topPosts = document.getElementById("performance-top-posts");
   if (!topPosts) return;
@@ -19073,6 +19619,7 @@ function renderSignalOverview(posts = getPerformanceFilteredPosts()) {
   renderPerformanceMetrics(posts);
   renderPerformanceTimeChart(posts);
   renderPerformanceImpressionsChart(posts);
+  renderSignalOverviewRecommendations(appState.posts || posts);
 }
 
 function setupPerformanceFilters() {
@@ -19135,7 +19682,9 @@ function renderAuditView() {
     attention.innerHTML = (gaps.length ? gaps : ["No local blocking issues detected"]).map((item) => `<li>${escapeHtml(item)}</li>`).join("");
   }
   if (nextAction) nextAction.textContent = offlineMode ? "Reconnect backend diagnostics when deployment access is available." : "Review diagnostics and resolve any backend-reported errors.";
-  renderPublishingReadiness({ platformTargets: appState.settings?.platforms || ["linkedin"], status: "draft" });
+  safeRender(renderAuditGapCards, "audit-gaps");
+  safeRender(renderAuditDataHealth, "audit-data-health");
+  safeRender(() => renderPublishingReadiness({ platformTargets: appState.settings?.platforms || ["linkedin"], status: "draft", auditTarget: true }), "publishing-readiness");
   renderDeployChecklist();
   renderDiagnosticsPanel();
   console.log("[render] renderAuditView done", {
@@ -19393,6 +19942,7 @@ function initApp() {
   guardedCall(setupConstellationInteractions, "setupConstellationInteractions");
   guardedCall(setupWriteIdeaWorkspace, "setupWriteIdeaWorkspace");
   guardedCall(setupAIAndBrandWorkspaces, "setupAIAndBrandWorkspaces");
+  guardedCall(setupStellarAssistant, "setupStellarAssistant");
   guardedCall(setupPWAInstall, "setupPWAInstall");
   guardedCall(registerServiceWorkerSafe, "registerServiceWorkerSafe");
 
