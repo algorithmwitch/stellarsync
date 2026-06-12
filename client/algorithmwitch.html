@@ -1589,21 +1589,41 @@
                 border-bottom: 1px solid rgba(255,255,255,0.05);
             }
 
-            #view-media .media-vault-card .aspect-square {
-                aspect-ratio: 16 / 10 !important;
+            #view-media .media-vault-card {
+                display: flex;
+                flex-direction: column;
+                height: 100%;
             }
 
-            #view-media .media-vault-card .p-4,
+            #view-media .media-vault-card .media-preview {
+                flex: 1;
+                min-height: 240px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            #view-media .media-vault-card .media-preview img,
+            #view-media .media-vault-card .media-preview video {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                border-radius: 0;
+            }
+
+            #view-media .media-vault-card .media-card-footer {
+                flex-shrink: 0;
+                padding: 0.9rem !important;
+            }
+
             #view-inspo .inspo-card .p-5,
             #view-notes .notes-card {
                 padding: 0.9rem !important;
             }
 
             #view-inspo .inspo-card-body,
-            #view-notes .notes-card-body,
-            #view-media .media-vault-card {
+            #view-notes .notes-card-body {
                 min-height: 0 !important;
-                height: auto !important;
             }
 
             #view-inspo .inspo-card-body {
@@ -4175,7 +4195,7 @@
 </div>
 <script>
 const APP_CONFIG = {
-  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbzmsvfvBxNRjzd9LNWa79nozbxR2c7QO2fHgFqnXx6IJxMz6IhioQs_TFdamS_PphoQ/exec",
+  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbw0HjW9eBBQe-qNv8NAPyPnxiDs2HMEvXFNTI80-DKwpTjO1zl9_T8da0DGCNMID5az/exec",
   ENABLE_REMOTE_SYNC: true,
   STORAGE_KEY: "stellarsync_local_state_v5",
   SHELL_LAYOUT_KEY: "stellarsync_shell_layout_v2"
@@ -12375,8 +12395,8 @@ const metaLine = [item.meta || "", campaignLabel, sourceLabel].filter(Boolean).j
       : `<div class="w-full h-full flex items-center justify-center"><i class="ph-fill ${icon} text-gray-600 text-5xl"></i></div>`;
 
     return `
-      <button type="button" class="glass-card media-vault-card overflow-hidden group text-left w-full" onclick="openMediaAsset('${escapeHtml(item.id)}')">
-        <div class="aspect-square bg-[#120c1d] border-b border-white/5 flex items-center justify-center relative p-4">
+      <button type="button" class="glass-card media-vault-card group text-left w-full" onclick="openMediaAsset('${escapeHtml(item.id)}')">
+        <div class="media-preview bg-[#120c1d] border-b border-white/5 relative p-4">
           ${previewBlock}
           <span class="absolute top-3 right-3 px-2 py-1 bg-[#181125] border border-white/5 rounded text-[8px] uppercase font-bold text-gray-300">${escapeHtml(badge)}</span>
           <div class="absolute inset-0 bg-[#2d1b4e]/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
@@ -12385,7 +12405,7 @@ const metaLine = [item.meta || "", campaignLabel, sourceLabel].filter(Boolean).j
             </span>
           </div>
         </div>
-        <div class="p-4">
+        <div class="media-card-footer">
           <p class="text-white text-sm font-semibold wrap-safe mb-1" title="${escapeHtml(displayTitle)}">${escapeHtml(displayTitle)}</p>
           <p class="text-gray-500 text-[10px] font-medium wrap-safe">${escapeHtml(metaLine)}</p>
           ${isCarouselPreview ? `<p class="text-gray-600 text-[10px] font-medium wrap-safe mt-1">${(item.assets?.length || linkedPostAssets.length || (linkedPost?.carouselAssetIds || []).length)} linked images</p>` : ""}
@@ -13540,35 +13560,63 @@ async function aiGenerate(type) {
       toastText.textContent = "Emoji added!";
       return;
     }
-	    const current = String(captionField?.value || "").trim();
-	    const payload = {
-      sourceType: currentModalSourceContext.type || "manual",
-      sourceId: currentModalSourceContext.sourceId || "",
-      platform: String(platSelect?.value || "linkedin").trim().toLowerCase(),
-      pillar: getActivePillar() || "authority",
-      postType: String(postTypeSelect?.value || "text").trim().toLowerCase(),
-      generationMode: "LinkedIn draft",
-      targetField: type === "keywords" ? "keywords" : "description",
-      title: String(titleInput?.value || "").trim(),
-      existingTitle: String(titleInput?.value || "").trim(),
-      existingText: current,
-      description: current,
-      prompt: type === "keywords"
-        ? "Return strong semantic tags and sharpen the core angle without generic phrasing."
-        : "Rewrite this into a stronger finished draft while preserving the human voice and emotional truth."
-    };
-	    const result = APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()
-	      ? await apiGenerateAIDraft(payload)
-	      : buildLocalAIPost({ prompt: payload.prompt, ideaPrompt: current || payload.prompt, platform: payload.platform, postType: payload.postType });
-    if (captionField) {
-      if (type === "keywords") {
-        const tags = Array.isArray(result.semanticTags) ? result.semanticTags.filter(Boolean) : [];
+ 	    const current = String(captionField?.value || "").trim();
+    if (type === "keywords") {
+      let tags = [];
+      // Try backend semantic keyword generation first for existing items
+      if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured() && currentEditingPostId) {
+        try {
+          const result = await apiRegenerateKeywords({ itemType: "post", itemId: currentEditingPostId });
+          tags = Array.isArray(result) ? result : [];
+        } catch (_) { /* fall through to AI generation */ }
+      }
+      if (!tags.length) {
+        const payload = {
+          sourceType: currentModalSourceContext.type || "manual",
+          sourceId: currentModalSourceContext.sourceId || "",
+          platform: String(platSelect?.value || "linkedin").trim().toLowerCase(),
+          pillar: getActivePillar() || "authority",
+          postType: String(postTypeSelect?.value || "text").trim().toLowerCase(),
+          generationMode: "LinkedIn draft",
+          targetField: "keywords",
+          title: String(titleInput?.value || "").trim(),
+          existingTitle: String(titleInput?.value || "").trim(),
+          existingText: current,
+          description: current,
+          prompt: "Return strong semantic tags and sharpen the core angle without generic phrasing."
+        };
+        const result = APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()
+          ? await apiGenerateAIDraft(payload)
+          : buildLocalAIPost({ prompt: payload.prompt, ideaPrompt: current || payload.prompt, platform: payload.platform, postType: payload.postType });
+        tags = Array.isArray(result.semanticTags) ? result.semanticTags.filter(Boolean) : [];
+      }
+      if (captionField) {
         captionField.value = current ? `${current}\n\nKeywords: ${tags.join(", ")}` : `Keywords: ${tags.join(", ")}`;
-      } else {
+      }
+      toastText.textContent = "Keywords ready!";
+    } else {
+      const payload = {
+        sourceType: currentModalSourceContext.type || "manual",
+        sourceId: currentModalSourceContext.sourceId || "",
+        platform: String(platSelect?.value || "linkedin").trim().toLowerCase(),
+        pillar: getActivePillar() || "authority",
+        postType: String(postTypeSelect?.value || "text").trim().toLowerCase(),
+        generationMode: "LinkedIn draft",
+        targetField: "description",
+        title: String(titleInput?.value || "").trim(),
+        existingTitle: String(titleInput?.value || "").trim(),
+        existingText: current,
+        description: current,
+        prompt: "Rewrite this into a stronger finished draft while preserving the human voice and emotional truth."
+      };
+      const result = APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()
+        ? await apiGenerateAIDraft(payload)
+        : buildLocalAIPost({ prompt: payload.prompt, ideaPrompt: current || payload.prompt, platform: payload.platform, postType: payload.postType });
+      if (captionField) {
         captionField.value = result.draftText || result.captionVariant || current;
       }
+      toastText.textContent = "Caption ready!";
     }
-    toastText.textContent = type === "keywords" ? "Keywords ready!" : "Caption ready!";
   } catch (err) {
     console.error(err);
     toastText.textContent = err.message || "AI drafting failed.";
@@ -15944,6 +15992,11 @@ async function apiPrepareAIGenerationContext(payload) {
 async function apiGenerateAIDraft(payload) {
   const result = await apiPost("generateAIDraft", payload);
   return result.draft || result.data || result;
+}
+
+async function apiRegenerateKeywords(payload) {
+  const result = await apiPost("regenerateKeywords", payload);
+  return result.keywords || result.semanticTags || result.data || [];
 }
 
 async function apiSaveIdeaPrompt(payload) {
