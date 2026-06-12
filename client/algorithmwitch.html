@@ -13435,9 +13435,6 @@ function switchView(viewName) {
   const targetView = document.getElementById(`view-${targetName}`);
   const targetNav = document.querySelector(`[data-view-target="${targetName}"], #nav-${targetName}`);
   const renderFn = getViewRenderFunction(targetName);
-  console.log("[switch-debug] targetName:", targetName, "targetView found:", !!targetView, "renderFn:", typeof renderFn);
-  console.log("[switch-debug] getViewRenderFunction performance:", typeof getViewRenderFunction("performance"));
-  console.log("[switch-debug] getViewRenderFunction audit:", typeof getViewRenderFunction("audit"));
   registeredViews.forEach((name) => {
     const health = ensureViewHealth(name);
     health.containerFound = !!document.getElementById(`view-${name}`);
@@ -15823,8 +15820,6 @@ async function syncRemoteIfConfigured() {
     persistLocalState();
     console.log("[data]", getAppStateCounts());
     rerenderAll();
-    safeRender(renderPerformanceView, "sync-refresh/performance");
-    safeRender(renderAuditView, "sync-refresh/audit");
     showToast("Connected", "Google Sheets data loaded.", "ph-cloud-check", "text-[#00ffaa]");
   } catch (err) {
     console.error(err);
@@ -15833,8 +15828,6 @@ async function syncRemoteIfConfigured() {
     lastSyncError = err && err.message ? err.message : String(err);
     console.log("[data]", getAppStateCounts());
     rerenderAll();
-    safeRender(renderPerformanceView, "sync-refresh/performance");
-    safeRender(renderAuditView, "sync-refresh/audit");
     showToast("Offline mode", "Using local data. Remote fetch failed.", "ph-warning", "text-yellow-400");
   }
 }
