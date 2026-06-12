@@ -1589,18 +1589,27 @@
                 border-bottom: 1px solid rgba(255,255,255,0.05);
             }
 
+            #view-media #media-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+                gap: 24px;
+                align-content: start;
+            }
+
             #view-media .media-vault-card {
                 display: flex;
                 flex-direction: column;
-                height: 100%;
+                min-height: 520px;
+                height: 520px;
             }
 
             #view-media .media-vault-card .media-preview {
                 flex: 1;
-                min-height: 240px;
+                min-height: 380px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
+                overflow: hidden;
             }
 
             #view-media .media-vault-card .media-preview img,
@@ -1613,7 +1622,7 @@
 
             #view-media .media-vault-card .media-card-footer {
                 flex-shrink: 0;
-                padding: 0.9rem !important;
+                padding: 16px !important;
             }
 
             #view-inspo .inspo-card .p-5,
@@ -2530,7 +2539,7 @@
     </button>
   </div>
 
-  <div id="media-grid" class="grid grid-cols-3 gap-4 overflow-visible flex-1 min-h-0 content-start"></div>
+  <div id="media-grid" class="overflow-visible flex-1 min-h-0"></div>
 </section>
 
 <section id="view-performance" class="view-section hidden w-full h-full p-8 min-h-0 flex-col overflow-y-auto custom-scrollbar bg-[#120c1d] border border-white/5 rounded-2xl">
