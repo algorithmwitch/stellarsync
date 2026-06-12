@@ -13435,6 +13435,9 @@ function switchView(viewName) {
   const targetView = document.getElementById(`view-${targetName}`);
   const targetNav = document.querySelector(`[data-view-target="${targetName}"], #nav-${targetName}`);
   const renderFn = getViewRenderFunction(targetName);
+  console.log("[switch-debug] targetName:", targetName, "targetView found:", !!targetView, "renderFn:", typeof renderFn);
+  console.log("[switch-debug] getViewRenderFunction performance:", typeof getViewRenderFunction("performance"));
+  console.log("[switch-debug] getViewRenderFunction audit:", typeof getViewRenderFunction("audit"));
   registeredViews.forEach((name) => {
     const health = ensureViewHealth(name);
     health.containerFound = !!document.getElementById(`view-${name}`);
@@ -15820,6 +15823,8 @@ async function syncRemoteIfConfigured() {
     persistLocalState();
     console.log("[data]", getAppStateCounts());
     rerenderAll();
+    safeRender(renderPerformanceView, "sync-refresh/performance");
+    safeRender(renderAuditView, "sync-refresh/audit");
     showToast("Connected", "Google Sheets data loaded.", "ph-cloud-check", "text-[#00ffaa]");
   } catch (err) {
     console.error(err);
@@ -15828,6 +15833,8 @@ async function syncRemoteIfConfigured() {
     lastSyncError = err && err.message ? err.message : String(err);
     console.log("[data]", getAppStateCounts());
     rerenderAll();
+    safeRender(renderPerformanceView, "sync-refresh/performance");
+    safeRender(renderAuditView, "sync-refresh/audit");
     showToast("Offline mode", "Using local data. Remote fetch failed.", "ph-warning", "text-yellow-400");
   }
 }
@@ -19091,6 +19098,16 @@ function setupPerformanceFilters() {
 
 function renderPerformanceView() {
   console.log("[render] renderPerformanceView start", getAppStateCounts());
+  console.log("[perf-debug] posts count:", (appState.posts || []).length);
+  console.log("[perf-debug] first 3 posts with metrics:", (appState.posts || []).slice(0, 3).map(p => ({
+    id: p.id,
+    title: p.title,
+    impressions: p.impressions,
+    engagement_total: p.engagementTotal || p.engagement_total,
+    engagement_rate: p.engagementRate || p.engagement_rate,
+    platform: p.platform,
+    date: p.date
+  })));
   setupPerformanceFilters();
   const rangeInput = document.getElementById("performance-range-filter");
   const platformInput = document.getElementById("performance-platform-filter");
@@ -19116,6 +19133,8 @@ function renderPerformanceView() {
 
 function renderAuditView() {
   console.log("[render] renderAuditView start", getAppStateCounts());
+  console.log("[audit-debug] diagnostics:", backendDiagnostics);
+  console.log("[audit-debug] offlineMode:", offlineMode, "backendReachable:", backendReachable);
   const working = document.getElementById("audit-working-list");
   const attention = document.getElementById("audit-attention-list");
   const nextAction = document.getElementById("audit-next-action");
