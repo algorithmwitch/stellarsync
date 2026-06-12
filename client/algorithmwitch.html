@@ -1589,50 +1589,21 @@
                 border-bottom: 1px solid rgba(255,255,255,0.05);
             }
 
-            #view-media #media-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
-                gap: 24px;
-                align-content: start;
+            #view-media .media-vault-card .aspect-square {
+                aspect-ratio: 16 / 10 !important;
             }
 
-            #view-media .media-vault-card {
-                display: flex;
-                flex-direction: column;
-                min-height: 520px;
-                height: 520px;
-            }
-
-            #view-media .media-vault-card .media-preview {
-                flex: 1;
-                min-height: 380px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                overflow: hidden;
-            }
-
-            #view-media .media-vault-card .media-preview img,
-            #view-media .media-vault-card .media-preview video {
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-                border-radius: 0;
-            }
-
-            #view-media .media-vault-card .media-card-footer {
-                flex-shrink: 0;
-                padding: 16px !important;
-            }
-
+            #view-media .media-vault-card .p-4,
             #view-inspo .inspo-card .p-5,
             #view-notes .notes-card {
                 padding: 0.9rem !important;
             }
 
             #view-inspo .inspo-card-body,
-            #view-notes .notes-card-body {
+            #view-notes .notes-card-body,
+            #view-media .media-vault-card {
                 min-height: 0 !important;
+                height: auto !important;
             }
 
             #view-inspo .inspo-card-body {
@@ -2539,7 +2510,7 @@
     </button>
   </div>
 
-  <div id="media-grid" class="overflow-visible flex-1 min-h-0"></div>
+  <div id="media-grid" class="grid grid-cols-3 gap-4 overflow-visible flex-1 min-h-0 content-start"></div>
 </section>
 
 <section id="view-performance" class="view-section hidden w-full h-full p-8 min-h-0 flex-col overflow-y-auto custom-scrollbar bg-[#120c1d] border border-white/5 rounded-2xl">
@@ -12404,8 +12375,8 @@ const metaLine = [item.meta || "", campaignLabel, sourceLabel].filter(Boolean).j
       : `<div class="w-full h-full flex items-center justify-center"><i class="ph-fill ${icon} text-gray-600 text-5xl"></i></div>`;
 
     return `
-      <button type="button" class="glass-card media-vault-card group text-left w-full" onclick="openMediaAsset('${escapeHtml(item.id)}')">
-        <div class="media-preview bg-[#120c1d] border-b border-white/5 relative p-4">
+      <button type="button" class="glass-card media-vault-card overflow-hidden group text-left w-full" onclick="openMediaAsset('${escapeHtml(item.id)}')">
+        <div class="aspect-square bg-[#120c1d] border-b border-white/5 flex items-center justify-center relative p-4">
           ${previewBlock}
           <span class="absolute top-3 right-3 px-2 py-1 bg-[#181125] border border-white/5 rounded text-[8px] uppercase font-bold text-gray-300">${escapeHtml(badge)}</span>
           <div class="absolute inset-0 bg-[#2d1b4e]/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
@@ -12414,7 +12385,7 @@ const metaLine = [item.meta || "", campaignLabel, sourceLabel].filter(Boolean).j
             </span>
           </div>
         </div>
-        <div class="media-card-footer">
+        <div class="p-4">
           <p class="text-white text-sm font-semibold wrap-safe mb-1" title="${escapeHtml(displayTitle)}">${escapeHtml(displayTitle)}</p>
           <p class="text-gray-500 text-[10px] font-medium wrap-safe">${escapeHtml(metaLine)}</p>
           ${isCarouselPreview ? `<p class="text-gray-600 text-[10px] font-medium wrap-safe mt-1">${(item.assets?.length || linkedPostAssets.length || (linkedPost?.carouselAssetIds || []).length)} linked images</p>` : ""}
