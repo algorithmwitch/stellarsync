@@ -1591,28 +1591,42 @@
 
             #view-media .media-vault-card .aspect-square {
                 aspect-ratio: 16 / 10 !important;
-                flex: 0 0 auto !important;
             }
 
             #view-media .media-vault-card .p-4,
             #view-inspo .inspo-card .p-5,
             #view-notes .notes-card {
                 padding: 0.9rem !important;
-                overflow: visible !important;
             }
 
             #view-inspo .inspo-card-body,
             #view-notes .notes-card-body,
             #view-media .media-vault-card {
-                display: flex !important;
-                flex-direction: column !important;
-                min-height: 520px !important;
+                min-height: 0 !important;
+                height: auto !important;
                 overflow: hidden !important;
             }
 
-            #view-media #media-grid {
-                align-items: start !important;
-                grid-auto-rows: minmax(520px, auto) !important;
+            #view-media {
+                display: flex !important;
+                flex-direction: column !important;
+                min-height: 0 !important;
+                overflow: hidden !important;
+            }
+
+            .media-grid-scroll {
+                flex: 1;
+                min-height: 0;
+                overflow-y: auto;
+                padding-bottom: 48px;
+            }
+
+            #media-grid {
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 24px;
+                align-content: start;
+                overflow: visible;
             }
 
             #view-inspo .inspo-card-body {
@@ -2519,7 +2533,9 @@
     </button>
   </div>
 
-  <div id="media-grid" class="grid grid-cols-3 gap-4 overflow-visible flex-1 min-h-0 content-start"></div>
+  <div id="media-grid-scroll" class="media-grid-scroll">
+    <div id="media-grid" class="media-grid"></div>
+  </div>
 </section>
 
 <section id="view-performance" class="view-section hidden w-full h-full p-8 min-h-0 flex-col overflow-y-auto custom-scrollbar bg-[#120c1d] border border-white/5 rounded-2xl">
