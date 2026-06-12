@@ -4509,6 +4509,47 @@ function getDisplayTitle(item, fallback = "Untitled", maxLength = 0) {
   return title;
 }
 
+function isUntitledValue(value) {
+  return /^untitled(\s+inspo)?$/i.test(String(value || '').trim());
+}
+
+function firstNonEmpty(...args) {
+  for (const arg of args) {
+    const str = String(arg || '').trim();
+    if (str && !isUntitledValue(str)) return str;
+  }
+  return '';
+}
+
+function getDomainFromUrl(url) {
+  const text = String(url || '').trim();
+  if (!text) return '';
+  const match = text.match(/^(?:https?:\/\/)?(?:www\.)?([^\/?#]+)/i);
+  return match && match[1] ? match[1] : '';
+}
+
+function getInspoTitle(item) {
+  if (!item) return 'Untitled inspo';
+  return firstNonEmpty(
+    item?.title,
+    item?.inspo_title,
+    item?.inspoTitle,
+    item?.source_title,
+    item?.sourceTitle,
+    item?.headline,
+    item?.link_title,
+    item?.linkTitle,
+    item?.page_title,
+    item?.pageTitle,
+    item?.imported_title,
+    item?.importedTitle,
+    item?.description,
+    item?.summary,
+    item?.notes,
+    getDomainFromUrl(item?.source_url || item?.sourceUrl || item?.url)
+  ) || 'Untitled inspo';
+}
+
 function firstNonEmptyLine(value) {
   return String(value || "")
     .split(/\r?\n/)
@@ -10726,7 +10767,7 @@ function buildWriteIdeaArtifactFromRecord(type, record) {
     return normalizeWriteIdeaArtifact({
       artifactId: record.id,
       artifactType: "inspo",
-      title: record.title || "Untitled inspo",
+      title: getInspoTitle(record),
       summary: record.description || record.notes || "",
       platform: record.suggestedPlatform || "",
       pillar: record.suggestedPillar || ""
@@ -15420,7 +15461,7 @@ function renderInspo() {
   }
   if (String(filters.query || "").trim()) {
     const query = String(filters.query).trim().toLowerCase();
-    items = items.filter((item) => `${getDisplayTitle(item, "Untitled inspiration")} ${item.description || ""} ${item.summary || ""} ${item.notes || ""}`.toLowerCase().includes(query));
+    items = items.filter((item) => `${getInspoTitle(item)} ${item.description || ""} ${item.summary || ""} ${item.notes || ""}`.toLowerCase().includes(query));
   }
 
   if (!items.length) {
@@ -15435,7 +15476,7 @@ function renderInspo() {
     const meta = inspoMetaLabel(item);
     const description = item.description || "";
     const url = item.url || item.domainOrMeta || item.notes || "";
-    const displayTitle = getDisplayTitle(item.title || "Untitled inspiration");
+    const displayTitle = getInspoTitle(item);
     const displayDescription = getDisplayExcerpt(description, "No summary saved yet.");
 
     const previewBlock =
@@ -15474,7 +15515,7 @@ function renderInspo() {
             </button>
           </div>
 
-          <h3 class="text-white text-base font-bold mb-2 wrap-safe" title="${escapeHtml(item.title || "Untitled inspiration")}">
+          <h3 class="text-white text-base font-bold mb-2 wrap-safe" title="${escapeHtml(getInspoTitle(item))}">
             ${escapeHtml(displayTitle)}
           </h3>
 
@@ -16824,7 +16865,7 @@ function populateAISourceOptions() {
   const sourceType = aiSourceTypeInput?.value || "manual";
   let items = [];
   if (sourceType === "note") items = (appState.notes || []).map(item => ({ value: item.noteId || item.id, label: item.title || "Untitled note" }));
-  else if (sourceType === "inspo") items = (appState.inspo || []).map(item => ({ value: item.id, label: item.title || "Untitled inspo" }));
+  else if (sourceType === "inspo") items = (appState.inspo || []).map(item => ({ value: item.id, label: getInspoTitle(item) }));
   else if (sourceType === "media") items = buildMediaVaultItems().map(item => ({ value: item.id, label: item.title || item.assetName || "Untitled media" }));
   else if (sourceType === "post") items = (appState.posts || []).map(item => ({ value: item.id, label: getPostDisplayTitle(item, "Untitled post") }));
   else if (sourceType === "campaign") items = getAvailableCampaignRecords().map(item => ({ value: item.campaignId, label: item.campaignName || "Untitled campaign" }));
@@ -17480,6 +17521,12 @@ function normalizeRemoteInspo(item) {
   return {
     id: String(pickRemoteValue(item?.inspoId, item?.inspo_id, item?.id, "")).trim(),
     title: String(pickRemoteValue(item?.title, "")).trim(),
+    inspo_title: String(pickRemoteValue(item?.inspo_title, item?.inspoTitle, "")).trim(),
+    source_title: String(pickRemoteValue(item?.source_title, item?.sourceTitle, "")).trim(),
+    link_title: String(pickRemoteValue(item?.link_title, item?.linkTitle, "")).trim(),
+    page_title: String(pickRemoteValue(item?.page_title, item?.pageTitle, "")).trim(),
+    imported_title: String(pickRemoteValue(item?.imported_title, item?.importedTitle, "")).trim(),
+    headline: String(pickRemoteValue(item?.headline, "")).trim(),
     type: String(pickRemoteValue(item?.inspoType, item?.inspo_type, item?.type, "article")).trim(),
     description: String(pickRemoteValue(item?.createPostDescription, item?.create_post_description, item?.summary, item?.description, "")).trim(),
     sourceLabel: String(pickRemoteValue(item?.sourceLabel, item?.source_label, "")).trim(),
@@ -17495,6 +17542,10 @@ function normalizeRemoteInspo(item) {
     metricsJson: String(pickRemoteValue(item?.metricsJson, item?.metrics_json, "")).trim(),
     sourceUrl: String(pickRemoteValue(item?.sourceUrl, item?.source_url, item?.url, "")).trim(),
     url: String(pickRemoteValue(item?.sourceUrl, item?.source_url, item?.url, item?.domainOrMeta, item?.domain_or_meta, item?.notes, "")).trim(),
+    campaignName: String(pickRemoteValue(item?.campaignName, item?.campaign_name, item?.campaign, "")).trim(),
+    pillar: String(pickRemoteValue(item?.pillar, item?.suggested_pillar, "")).trim(),
+    createdAt: String(pickRemoteValue(item?.createdAt, item?.created_at, "")).trim(),
+    updatedAt: String(pickRemoteValue(item?.updatedAt, item?.updated_at, "")).trim(),
     status: String(pickRemoteValue(item?.status, "active")).trim() || "active",
     convertedPostId: String(pickRemoteValue(item?.convertedPostId, item?.converted_post_id, "")).trim(),
     sourceNoteId: String(pickRemoteValue(item?.sourceNoteId, item?.source_note_id, "")).trim(),
