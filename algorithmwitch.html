@@ -1115,6 +1115,35 @@
             display: none !important;
         }
 
+        #view-media {
+            display: flex !important;
+            flex-direction: column !important;
+            min-height: 0 !important;
+            overflow: hidden !important;
+        }
+
+        .media-grid-scroll {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            padding-bottom: 48px;
+        }
+
+        #media-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 24px;
+            align-content: start;
+            overflow: visible;
+        }
+
+        @media (max-width: 1200px) {
+            #view-media #media-grid,
+            #media-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            }
+        }
+
         @media (max-width: 768px) {
             html,
             body {
@@ -1604,6 +1633,7 @@
             #view-media .media-vault-card {
                 min-height: 0 !important;
                 height: auto !important;
+                overflow: hidden !important;
             }
 
             #view-inspo .inspo-card-body {
@@ -2510,7 +2540,9 @@
     </button>
   </div>
 
-  <div id="media-grid" class="grid grid-cols-3 gap-4 overflow-visible flex-1 min-h-0 content-start"></div>
+  <div id="media-grid-scroll" class="media-grid-scroll">
+    <div id="media-grid" class="media-grid"></div>
+  </div>
 </section>
 
 <section id="view-performance" class="view-section hidden w-full h-full p-8 min-h-0 flex-col overflow-y-auto custom-scrollbar bg-[#120c1d] border border-white/5 rounded-2xl">
@@ -12375,7 +12407,7 @@ const metaLine = [item.meta || "", campaignLabel, sourceLabel].filter(Boolean).j
       : `<div class="w-full h-full flex items-center justify-center"><i class="ph-fill ${icon} text-gray-600 text-5xl"></i></div>`;
 
     return `
-      <button type="button" class="glass-card media-vault-card group text-left w-full" onclick="openMediaAsset('${escapeHtml(item.id)}')">
+      <button type="button" class="glass-card media-vault-card overflow-hidden group text-left w-full" onclick="openMediaAsset('${escapeHtml(item.id)}')">
         <div class="aspect-square bg-[#120c1d] border-b border-white/5 flex items-center justify-center relative p-4">
           ${previewBlock}
           <span class="absolute top-3 right-3 px-2 py-1 bg-[#181125] border border-white/5 rounded text-[8px] uppercase font-bold text-gray-300">${escapeHtml(badge)}</span>
