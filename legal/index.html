@@ -1,2116 +1,318 @@
-
-<html lang="en" vid="0"><head vid="1">
-    <meta charset="UTF-8" vid="2">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" vid="3">
-    <title vid="4">Legal | StellarSync - Privacy Policy &amp; Terms of Service</title>
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com" vid="6">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" vid="7">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" vid="8">
-    <script src="https://unpkg.com/@phosphor-icons/web" vid="9"></script>
-    <style vid="10">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legal | StellarSync</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="icon" type="image/png" sizes="192x192" href="../icon/stellarsync-192.png">
+    <style>
         :root {
-            --color-bg: #0a0612;
-            --color-accent: #c77dff;
-            --panel-bg: #120c1d;
-            --panel-border: rgba(255, 255, 255, 0.05);
-            --gradient-primary: linear-gradient(135deg, #9d4edd 0%, #c77dff 100%);
+            --bg: #0a0612;
+            --panel: #120c1d;
+            --panel-border: rgba(255,255,255,0.08);
+            --accent: #c77dff;
         }
-
         html { scroll-behavior: smooth; }
-
         body {
-            background-color: var(--color-bg);
-            color: #e2e8f0;
-            font-family: 'Inter', sans-serif;
             margin: 0;
+            background: var(--bg);
+            color: #e2e8f0;
+            font-family: Inter, sans-serif;
             overflow-x: hidden;
-            width: 100%;
         }
-
-        .stars { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
-        .star { position: absolute; background: white; border-radius: 50%; opacity: 0; animation: twinkle var(--duration) ease-in-out infinite; animation-delay: var(--delay); }
-        @keyframes twinkle {
-            0% { opacity: 0; transform: scale(0.5); }
-            50% { opacity: var(--opacity); transform: scale(1.3); }
-            100% { opacity: 0; transform: scale(0.5); }
-        }
-
         .glass-panel {
-            background: rgba(18, 12, 29, 0.8);
+            background: rgba(18, 12, 29, 0.88);
             border: 1px solid var(--panel-border);
             backdrop-filter: blur(12px);
         }
-
         .glass-card {
-            background: #120c1d;
+            background: #181125;
             border: 1px solid var(--panel-border);
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-        .glass-card:hover {
-            border-color: rgba(199, 125, 255, 0.2);
-            transform: translateY(-4px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-        }
-
-        .glow-btn {
-            background: var(--gradient-primary);
-            box-shadow: 0 0 20px rgba(157, 78, 221, 0.3);
-            transition: all 0.3s ease;
-        }
-        .glow-btn:hover {
-            opacity: 0.9;
-            transform: scale(1.02);
-            box-shadow: 0 0 30px rgba(157, 78, 221, 0.5);
-        }
-
-        .nav-sidebar-link {
-            transition: all 0.3s ease;
-            border-left: 2px solid transparent;
-        }
-        .nav-sidebar-link.active {
-            border-left-color: #c77dff;
-            color: white;
-            padding-left: 1.25rem;
-            background: linear-gradient(90deg, rgba(199, 125, 255, 0.05) 0%, transparent 100%);
-        }
-
-        .privacy-accent { border-top: 1px solid rgba(199, 125, 255, 0.3); }
-        .terms-accent { border-top: 1px solid rgba(0, 240, 255, 0.3); }
-
-        .pill-tag {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            padding: 4px 12px;
-            border-radius: 100px;
-            font-size: 11px;
-            font-weight: 600;
-            color: #94a3b8;
-        }
-
-        .architecture-line {
-            position: absolute;
-            background: rgba(199, 125, 255, 0.1);
-            z-index: 0;
-        }
-
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: var(--color-bg); }
-        ::-webkit-scrollbar-thumb { background: #2d1b4e; border-radius: 10px; }
-
-        .reveal { opacity: 0; transform: translateY(20px); transition: all 0.6s ease-out; }
-        .reveal.active { opacity: 1; transform: translateY(0); }
+        .nav-link { color: #94a3b8; text-decoration: none; }
+        .nav-link:hover { color: #fff; }
+        .toc-link { color: #cbd5e1; text-decoration: none; }
+        .toc-link:hover { color: #fff; }
+        .legal-section { scroll-margin-top: 100px; }
+        .legal-section + .legal-section { margin-top: 1.25rem; }
+        .section-list { margin: 0.75rem 0 0; padding-left: 1.1rem; color: #cbd5e1; }
+        .section-list li { margin: 0.35rem 0; }
+        .section-copy p { color: #cbd5e1; line-height: 1.75; }
+        .section-copy a { color: #c77dff; }
+        .section-copy a:hover { color: #fff; }
     </style>
-
-  <style type="text/css">
-*, ::before, ::after {
-  --tw-border-spacing-x: 0;
-  --tw-border-spacing-y: 0;
-  --tw-translate-x: 0;
-  --tw-translate-y: 0;
-  --tw-rotate: 0;
-  --tw-skew-x: 0;
-  --tw-skew-y: 0;
-  --tw-scale-x: 1;
-  --tw-scale-y: 1;
-  --tw-pan-x:  ;
-  --tw-pan-y:  ;
-  --tw-pinch-zoom:  ;
-  --tw-scroll-snap-strictness: proximity;
-  --tw-gradient-from-position:  ;
-  --tw-gradient-via-position:  ;
-  --tw-gradient-to-position:  ;
-  --tw-ordinal:  ;
-  --tw-slashed-zero:  ;
-  --tw-numeric-figure:  ;
-  --tw-numeric-spacing:  ;
-  --tw-numeric-fraction:  ;
-  --tw-ring-inset:  ;
-  --tw-ring-offset-width: 0px;
-  --tw-ring-offset-color: #fff;
-  --tw-ring-color: rgb(59 130 246 / 0.5);
-  --tw-ring-offset-shadow: 0 0 #0000;
-  --tw-ring-shadow: 0 0 #0000;
-  --tw-shadow: 0 0 #0000;
-  --tw-shadow-colored: 0 0 #0000;
-  --tw-blur:  ;
-  --tw-brightness:  ;
-  --tw-contrast:  ;
-  --tw-grayscale:  ;
-  --tw-hue-rotate:  ;
-  --tw-invert:  ;
-  --tw-saturate:  ;
-  --tw-sepia:  ;
-  --tw-drop-shadow:  ;
-  --tw-backdrop-blur:  ;
-  --tw-backdrop-brightness:  ;
-  --tw-backdrop-contrast:  ;
-  --tw-backdrop-grayscale:  ;
-  --tw-backdrop-hue-rotate:  ;
-  --tw-backdrop-invert:  ;
-  --tw-backdrop-opacity:  ;
-  --tw-backdrop-saturate:  ;
-  --tw-backdrop-sepia:  ;
-  --tw-contain-size:  ;
-  --tw-contain-layout:  ;
-  --tw-contain-paint:  ;
-  --tw-contain-style:  ;
-}
-
-::backdrop {
-  --tw-border-spacing-x: 0;
-  --tw-border-spacing-y: 0;
-  --tw-translate-x: 0;
-  --tw-translate-y: 0;
-  --tw-rotate: 0;
-  --tw-skew-x: 0;
-  --tw-skew-y: 0;
-  --tw-scale-x: 1;
-  --tw-scale-y: 1;
-  --tw-pan-x:  ;
-  --tw-pan-y:  ;
-  --tw-pinch-zoom:  ;
-  --tw-scroll-snap-strictness: proximity;
-  --tw-gradient-from-position:  ;
-  --tw-gradient-via-position:  ;
-  --tw-gradient-to-position:  ;
-  --tw-ordinal:  ;
-  --tw-slashed-zero:  ;
-  --tw-numeric-figure:  ;
-  --tw-numeric-spacing:  ;
-  --tw-numeric-fraction:  ;
-  --tw-ring-inset:  ;
-  --tw-ring-offset-width: 0px;
-  --tw-ring-offset-color: #fff;
-  --tw-ring-color: rgb(59 130 246 / 0.5);
-  --tw-ring-offset-shadow: 0 0 #0000;
-  --tw-ring-shadow: 0 0 #0000;
-  --tw-shadow: 0 0 #0000;
-  --tw-shadow-colored: 0 0 #0000;
-  --tw-blur:  ;
-  --tw-brightness:  ;
-  --tw-contrast:  ;
-  --tw-grayscale:  ;
-  --tw-hue-rotate:  ;
-  --tw-invert:  ;
-  --tw-saturate:  ;
-  --tw-sepia:  ;
-  --tw-drop-shadow:  ;
-  --tw-backdrop-blur:  ;
-  --tw-backdrop-brightness:  ;
-  --tw-backdrop-contrast:  ;
-  --tw-backdrop-grayscale:  ;
-  --tw-backdrop-hue-rotate:  ;
-  --tw-backdrop-invert:  ;
-  --tw-backdrop-opacity:  ;
-  --tw-backdrop-saturate:  ;
-  --tw-backdrop-sepia:  ;
-  --tw-contain-size:  ;
-  --tw-contain-layout:  ;
-  --tw-contain-paint:  ;
-  --tw-contain-style:  ;
-}/*
-! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com
-*//*
-1. Prevent padding and border from affecting element width. (https://github.com/mozdevs/cssremedy/issues/4)
-2. Allow adding a border to an element by just adding a border-width. (https://github.com/tailwindcss/tailwindcss/pull/116)
-*/
-
-*,
-::before,
-::after {
-  box-sizing: border-box; /* 1 */
-  border-width: 0; /* 2 */
-  border-style: solid; /* 2 */
-  border-color: #e5e7eb; /* 2 */
-}
-
-::before,
-::after {
-  --tw-content: '';
-}
-
-/*
-1. Use a consistent sensible line-height in all browsers.
-2. Prevent adjustments of font size after orientation changes in iOS.
-3. Use a more readable tab size.
-4. Use the user's configured `sans` font-family by default.
-5. Use the user's configured `sans` font-feature-settings by default.
-6. Use the user's configured `sans` font-variation-settings by default.
-7. Disable tap highlights on iOS
-*/
-
-html,
-:host {
-  line-height: 1.5; /* 1 */
-  -webkit-text-size-adjust: 100%; /* 2 */
-  -moz-tab-size: 4; /* 3 */
-  tab-size: 4; /* 3 */
-  font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; /* 4 */
-  font-feature-settings: normal; /* 5 */
-  font-variation-settings: normal; /* 6 */
-  -webkit-tap-highlight-color: transparent; /* 7 */
-}
-
-/*
-1. Remove the margin in all browsers.
-2. Inherit line-height from `html` so users can set them as a class directly on the `html` element.
-*/
-
-body {
-  margin: 0; /* 1 */
-  line-height: inherit; /* 2 */
-}
-
-/*
-1. Add the correct height in Firefox.
-2. Correct the inheritance of border color in Firefox. (https://bugzilla.mozilla.org/show_bug.cgi?id=190655)
-3. Ensure horizontal rules are visible by default.
-*/
-
-hr {
-  height: 0; /* 1 */
-  color: inherit; /* 2 */
-  border-top-width: 1px; /* 3 */
-}
-
-/*
-Add the correct text decoration in Chrome, Edge, and Safari.
-*/
-
-abbr:where([title]) {
-  text-decoration: underline dotted;
-}
-
-/*
-Remove the default font size and weight for headings.
-*/
-
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  font-size: inherit;
-  font-weight: inherit;
-}
-
-/*
-Reset links to optimize for opt-in styling instead of opt-out.
-*/
-
-a {
-  color: inherit;
-  text-decoration: inherit;
-}
-
-/*
-Add the correct font weight in Edge and Safari.
-*/
-
-b,
-strong {
-  font-weight: bolder;
-}
-
-/*
-1. Use the user's configured `mono` font-family by default.
-2. Use the user's configured `mono` font-feature-settings by default.
-3. Use the user's configured `mono` font-variation-settings by default.
-4. Correct the odd `em` font sizing in all browsers.
-*/
-
-code,
-kbd,
-samp,
-pre {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; /* 1 */
-  font-feature-settings: normal; /* 2 */
-  font-variation-settings: normal; /* 3 */
-  font-size: 1em; /* 4 */
-}
-
-/*
-Add the correct font size in all browsers.
-*/
-
-small {
-  font-size: 80%;
-}
-
-/*
-Prevent `sub` and `sup` elements from affecting the line height in all browsers.
-*/
-
-sub,
-sup {
-  font-size: 75%;
-  line-height: 0;
-  position: relative;
-  vertical-align: baseline;
-}
-
-sub {
-  bottom: -0.25em;
-}
-
-sup {
-  top: -0.5em;
-}
-
-/*
-1. Remove text indentation from table contents in Chrome and Safari. (https://bugs.chromium.org/p/chromium/issues/detail?id=999088, https://bugs.webkit.org/show_bug.cgi?id=201297)
-2. Correct table border color inheritance in all Chrome and Safari. (https://bugs.chromium.org/p/chromium/issues/detail?id=935729, https://bugs.webkit.org/show_bug.cgi?id=195016)
-3. Remove gaps between table borders by default.
-*/
-
-table {
-  text-indent: 0; /* 1 */
-  border-color: inherit; /* 2 */
-  border-collapse: collapse; /* 3 */
-}
-
-/*
-1. Change the font styles in all browsers.
-2. Remove the margin in Firefox and Safari.
-3. Remove default padding in all browsers.
-*/
-
-button,
-input,
-optgroup,
-select,
-textarea {
-  font-family: inherit; /* 1 */
-  font-feature-settings: inherit; /* 1 */
-  font-variation-settings: inherit; /* 1 */
-  font-size: 100%; /* 1 */
-  font-weight: inherit; /* 1 */
-  line-height: inherit; /* 1 */
-  letter-spacing: inherit; /* 1 */
-  color: inherit; /* 1 */
-  margin: 0; /* 2 */
-  padding: 0; /* 3 */
-}
-
-/*
-Remove the inheritance of text transform in Edge and Firefox.
-*/
-
-button,
-select {
-  text-transform: none;
-}
-
-/*
-1. Correct the inability to style clickable types in iOS and Safari.
-2. Remove default button styles.
-*/
-
-button,
-input:where([type='button']),
-input:where([type='reset']),
-input:where([type='submit']) {
-  -webkit-appearance: button; /* 1 */
-  background-color: transparent; /* 2 */
-  background-image: none; /* 2 */
-}
-
-/*
-Use the modern Firefox focus style for all focusable elements.
-*/
-
-:-moz-focusring {
-  outline: auto;
-}
-
-/*
-Remove the additional `:invalid` styles in Firefox. (https://github.com/mozilla/gecko-dev/blob/2f9eacd9d3d995c937b4251a5557d95d494c9be1/layout/style/res/forms.css#L728-L737)
-*/
-
-:-moz-ui-invalid {
-  box-shadow: none;
-}
-
-/*
-Add the correct vertical alignment in Chrome and Firefox.
-*/
-
-progress {
-  vertical-align: baseline;
-}
-
-/*
-Correct the cursor style of increment and decrement buttons in Safari.
-*/
-
-::-webkit-inner-spin-button,
-::-webkit-outer-spin-button {
-  height: auto;
-}
-
-/*
-1. Correct the odd appearance in Chrome and Safari.
-2. Correct the outline style in Safari.
-*/
-
-[type='search'] {
-  -webkit-appearance: textfield; /* 1 */
-  outline-offset: -2px; /* 2 */
-}
-
-/*
-Remove the inner padding in Chrome and Safari on macOS.
-*/
-
-::-webkit-search-decoration {
-  -webkit-appearance: none;
-}
-
-/*
-1. Correct the inability to style clickable types in iOS and Safari.
-2. Change font properties to `inherit` in Safari.
-*/
-
-::-webkit-file-upload-button {
-  -webkit-appearance: button; /* 1 */
-  font: inherit; /* 2 */
-}
-
-/*
-Add the correct display in Chrome and Safari.
-*/
-
-summary {
-  display: list-item;
-}
-
-/*
-Removes the default spacing and border for appropriate elements.
-*/
-
-blockquote,
-dl,
-dd,
-h1,
-h2,
-h3,
-h4,
-h5,
-h6,
-hr,
-figure,
-p,
-pre {
-  margin: 0;
-}
-
-fieldset {
-  margin: 0;
-  padding: 0;
-}
-
-legend {
-  padding: 0;
-}
-
-ol,
-ul,
-menu {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-/*
-Reset default styling for dialogs.
-*/
-dialog {
-  padding: 0;
-}
-
-/*
-Prevent resizing textareas horizontally by default.
-*/
-
-textarea {
-  resize: vertical;
-}
-
-/*
-1. Reset the default placeholder opacity in Firefox. (https://github.com/tailwindlabs/tailwindcss/issues/3300)
-2. Set the default placeholder color to the user's configured gray 400 color.
-*/
-
-input::placeholder,
-textarea::placeholder {
-  opacity: 1; /* 1 */
-  color: #9ca3af; /* 2 */
-}
-
-/*
-Set the default cursor for buttons.
-*/
-
-button,
-[role="button"] {
-  cursor: pointer;
-}
-
-/*
-Make sure disabled buttons don't get the pointer cursor.
-*/
-:disabled {
-  cursor: default;
-}
-
-/*
-1. Make replaced elements `display: block` by default. (https://github.com/mozdevs/cssremedy/issues/14)
-2. Add `vertical-align: middle` to align replaced elements more sensibly by default. (https://github.com/jensimmons/cssremedy/issues/14#issuecomment-634934210)
-   This can trigger a poorly considered lint error in some tools but is included by design.
-*/
-
-img,
-svg,
-video,
-canvas,
-audio,
-iframe,
-embed,
-object {
-  display: block; /* 1 */
-  vertical-align: middle; /* 2 */
-}
-
-/*
-Constrain images and videos to the parent width and preserve their intrinsic aspect ratio. (https://github.com/mozdevs/cssremedy/issues/14)
-*/
-
-img,
-video {
-  max-width: 100%;
-  height: auto;
-}
-
-/* Make elements with the HTML hidden attribute stay hidden by default */
-[hidden]:where(:not([hidden="until-found"])) {
-  display: none;
-}
-.pointer-events-none {
-  pointer-events: none;
-}
-.fixed {
-  position: fixed;
-}
-.absolute {
-  position: absolute;
-}
-.relative {
-  position: relative;
-}
-.sticky {
-  position: sticky;
-}
-.inset-0 {
-  inset: 0px;
-}
-.-bottom-8 {
-  bottom: -2rem;
-}
-.-top-4 {
-  top: -1rem;
-}
-.bottom-\[-10\%\] {
-  bottom: -10%;
-}
-.left-0 {
-  left: 0px;
-}
-.left-1\/2 {
-  left: 50%;
-}
-.left-1\/4 {
-  left: 25%;
-}
-.left-4 {
-  left: 1rem;
-}
-.left-\[-10\%\] {
-  left: -10%;
-}
-.right-1\/4 {
-  right: 25%;
-}
-.right-4 {
-  right: 1rem;
-}
-.right-\[-10\%\] {
-  right: -10%;
-}
-.top-0 {
-  top: 0px;
-}
-.top-1\/3 {
-  top: 33.333333%;
-}
-.top-32 {
-  top: 8rem;
-}
-.top-\[-10\%\] {
-  top: -10%;
-}
-.z-0 {
-  z-index: 0;
-}
-.z-10 {
-  z-index: 10;
-}
-.z-20 {
-  z-index: 20;
-}
-.z-\[100\] {
-  z-index: 100;
-}
-.mx-auto {
-  margin-left: auto;
-  margin-right: auto;
-}
-.mb-10 {
-  margin-bottom: 2.5rem;
-}
-.mb-12 {
-  margin-bottom: 3rem;
-}
-.mb-2 {
-  margin-bottom: 0.5rem;
-}
-.mb-6 {
-  margin-bottom: 1.5rem;
-}
-.mb-8 {
-  margin-bottom: 2rem;
-}
-.mt-1 {
-  margin-top: 0.25rem;
-}
-.mt-12 {
-  margin-top: 3rem;
-}
-.mt-20 {
-  margin-top: 5rem;
-}
-.mt-6 {
-  margin-top: 1.5rem;
-}
-.block {
-  display: block;
-}
-.flex {
-  display: flex;
-}
-.grid {
-  display: grid;
-}
-.hidden {
-  display: none;
-}
-.h-1\.5 {
-  height: 0.375rem;
-}
-.h-10 {
-  height: 2.5rem;
-}
-.h-16 {
-  height: 4rem;
-}
-.h-20 {
-  height: 5rem;
-}
-.h-64 {
-  height: 16rem;
-}
-.h-8 {
-  height: 2rem;
-}
-.h-\[1px\] {
-  height: 1px;
-}
-.h-\[600px\] {
-  height: 600px;
-}
-.h-\[800px\] {
-  height: 800px;
-}
-.h-full {
-  height: 100%;
-}
-.h-px {
-  height: 1px;
-}
-.w-1\.5 {
-  width: 0.375rem;
-}
-.w-10 {
-  width: 2.5rem;
-}
-.w-16 {
-  width: 4rem;
-}
-.w-40 {
-  width: 10rem;
-}
-.w-8 {
-  width: 2rem;
-}
-.w-\[1px\] {
-  width: 1px;
-}
-.w-\[600px\] {
-  width: 600px;
-}
-.w-\[800px\] {
-  width: 800px;
-}
-.w-full {
-  width: 100%;
-}
-.max-w-2xl {
-  max-width: 42rem;
-}
-.max-w-3xl {
-  max-width: 48rem;
-}
-.max-w-7xl {
-  max-width: 80rem;
-}
-.max-w-xl {
-  max-width: 36rem;
-}
-.flex-1 {
-  flex: 1 1 0%;
-}
-.shrink-0 {
-  flex-shrink: 0;
-}
-.-translate-x-1\/2 {
-  --tw-translate-x: -50%;
-  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
-}
-.-translate-x-20 {
-  --tw-translate-x: -5rem;
-  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
-}
-.-translate-y-10 {
-  --tw-translate-y: -2.5rem;
-  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
-}
-.-translate-y-2 {
-  --tw-translate-y: -0.5rem;
-  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
-}
-.translate-x-20 {
-  --tw-translate-x: 5rem;
-  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
-}
-.translate-y-20 {
-  --tw-translate-y: 5rem;
-  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
-}
-.rotate-\[150deg\] {
-  --tw-rotate: 150deg;
-  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
-}
-.rotate-\[15deg\] {
-  --tw-rotate: 15deg;
-  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
-}
-.rotate-\[165deg\] {
-  --tw-rotate: 165deg;
-  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
-}
-.rotate-\[30deg\] {
-  --tw-rotate: 30deg;
-  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
-}
-.transform {
-  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
-}
-.cursor-default {
-  cursor: default;
-}
-.grid-cols-1 {
-  grid-template-columns: repeat(1, minmax(0, 1fr));
-}
-.grid-cols-2 {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-.flex-col {
-  flex-direction: column;
-}
-.flex-wrap {
-  flex-wrap: wrap;
-}
-.items-start {
-  align-items: flex-start;
-}
-.items-center {
-  align-items: center;
-}
-.justify-center {
-  justify-content: center;
-}
-.justify-between {
-  justify-content: space-between;
-}
-.gap-1 {
-  gap: 0.25rem;
-}
-.gap-10 {
-  gap: 2.5rem;
-}
-.gap-12 {
-  gap: 3rem;
-}
-.gap-16 {
-  gap: 4rem;
-}
-.gap-2 {
-  gap: 0.5rem;
-}
-.gap-3 {
-  gap: 0.75rem;
-}
-.gap-4 {
-  gap: 1rem;
-}
-.gap-6 {
-  gap: 1.5rem;
-}
-.gap-8 {
-  gap: 2rem;
-}
-.space-y-12 > :not([hidden]) ~ :not([hidden]) {
-  --tw-space-y-reverse: 0;
-  margin-top: calc(3rem * calc(1 - var(--tw-space-y-reverse)));
-  margin-bottom: calc(3rem * var(--tw-space-y-reverse));
-}
-.space-y-24 > :not([hidden]) ~ :not([hidden]) {
-  --tw-space-y-reverse: 0;
-  margin-top: calc(6rem * calc(1 - var(--tw-space-y-reverse)));
-  margin-bottom: calc(6rem * var(--tw-space-y-reverse));
-}
-.space-y-3 > :not([hidden]) ~ :not([hidden]) {
-  --tw-space-y-reverse: 0;
-  margin-top: calc(0.75rem * calc(1 - var(--tw-space-y-reverse)));
-  margin-bottom: calc(0.75rem * var(--tw-space-y-reverse));
-}
-.space-y-4 > :not([hidden]) ~ :not([hidden]) {
-  --tw-space-y-reverse: 0;
-  margin-top: calc(1rem * calc(1 - var(--tw-space-y-reverse)));
-  margin-bottom: calc(1rem * var(--tw-space-y-reverse));
-}
-.space-y-6 > :not([hidden]) ~ :not([hidden]) {
-  --tw-space-y-reverse: 0;
-  margin-top: calc(1.5rem * calc(1 - var(--tw-space-y-reverse)));
-  margin-bottom: calc(1.5rem * var(--tw-space-y-reverse));
-}
-.overflow-hidden {
-  overflow: hidden;
-}
-.rounded-2xl {
-  border-radius: 1rem;
-}
-.rounded-3xl {
-  border-radius: 1.5rem;
-}
-.rounded-\[2\.5rem\] {
-  border-radius: 2.5rem;
-}
-.rounded-\[3rem\] {
-  border-radius: 3rem;
-}
-.rounded-full {
-  border-radius: 9999px;
-}
-.rounded-lg {
-  border-radius: 0.5rem;
-}
-.rounded-xl {
-  border-radius: 0.75rem;
-}
-.border {
-  border-width: 1px;
-}
-.border-b {
-  border-bottom-width: 1px;
-}
-.border-t {
-  border-top-width: 1px;
-}
-.border-none {
-  border-style: none;
-}
-.border-amber-500\/20 {
-  border-color: rgb(245 158 11 / 0.2);
-}
-.border-blue-500\/20 {
-  border-color: rgb(59 130 246 / 0.2);
-}
-.border-green-500\/20 {
-  border-color: rgb(34 197 94 / 0.2);
-}
-.border-pink-500\/20 {
-  border-color: rgb(236 72 153 / 0.2);
-}
-.border-purple-500\/20 {
-  border-color: rgb(168 85 247 / 0.2);
-}
-.border-red-500\/10 {
-  border-color: rgb(239 68 68 / 0.1);
-}
-.border-white\/10 {
-  border-color: rgb(255 255 255 / 0.1);
-}
-.border-white\/5 {
-  border-color: rgb(255 255 255 / 0.05);
-}
-.bg-\[\#0a0612\] {
-  --tw-bg-opacity: 1;
-  background-color: rgb(10 6 18 / var(--tw-bg-opacity, 1));
-}
-.bg-\[\#120c1d\]\/80 {
-  background-color: rgb(18 12 29 / 0.8);
-}
-.bg-amber-500\/5 {
-  background-color: rgb(245 158 11 / 0.05);
-}
-.bg-blue-500\/10 {
-  background-color: rgb(59 130 246 / 0.1);
-}
-.bg-cyan-500\/10 {
-  background-color: rgb(6 182 212 / 0.1);
-}
-.bg-cyan-600\/5 {
-  background-color: rgb(8 145 178 / 0.05);
-}
-.bg-purple-400 {
-  --tw-bg-opacity: 1;
-  background-color: rgb(192 132 252 / var(--tw-bg-opacity, 1));
-}
-.bg-purple-500\/10 {
-  background-color: rgb(168 85 247 / 0.1);
-}
-.bg-purple-500\/5 {
-  background-color: rgb(168 85 247 / 0.05);
-}
-.bg-purple-600\/5 {
-  background-color: rgb(147 51 234 / 0.05);
-}
-.bg-white\/5 {
-  background-color: rgb(255 255 255 / 0.05);
-}
-.bg-yellow-500\/10 {
-  background-color: rgb(234 179 8 / 0.1);
-}
-.bg-gradient-to-br {
-  background-image: linear-gradient(to bottom right, var(--tw-gradient-stops));
-}
-.bg-gradient-to-r {
-  background-image: linear-gradient(to right, var(--tw-gradient-stops));
-}
-.from-\[\#9d4edd\] {
-  --tw-gradient-from: #9d4edd var(--tw-gradient-from-position);
-  --tw-gradient-to: rgb(157 78 221 / 0) var(--tw-gradient-to-position);
-  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
-}
-.from-transparent {
-  --tw-gradient-from: transparent var(--tw-gradient-from-position);
-  --tw-gradient-to: rgb(0 0 0 / 0) var(--tw-gradient-to-position);
-  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
-}
-.via-white\/10 {
-  --tw-gradient-to: rgb(255 255 255 / 0)  var(--tw-gradient-to-position);
-  --tw-gradient-stops: var(--tw-gradient-from), rgb(255 255 255 / 0.1) var(--tw-gradient-via-position), var(--tw-gradient-to);
-}
-.to-\[\#00f0ff\] {
-  --tw-gradient-to: #00f0ff var(--tw-gradient-to-position);
-}
-.to-\[\#c77dff\] {
-  --tw-gradient-to: #c77dff var(--tw-gradient-to-position);
-}
-.to-transparent {
-  --tw-gradient-to: transparent var(--tw-gradient-to-position);
-}
-.bg-clip-text {
-  background-clip: text;
-}
-.p-12 {
-  padding: 3rem;
-}
-.p-20 {
-  padding: 5rem;
-}
-.p-6 {
-  padding: 1.5rem;
-}
-.p-8 {
-  padding: 2rem;
-}
-.px-12 {
-  padding-left: 3rem;
-  padding-right: 3rem;
-}
-.px-4 {
-  padding-left: 1rem;
-  padding-right: 1rem;
-}
-.px-5 {
-  padding-left: 1.25rem;
-  padding-right: 1.25rem;
-}
-.px-6 {
-  padding-left: 1.5rem;
-  padding-right: 1.5rem;
-}
-.px-8 {
-  padding-left: 2rem;
-  padding-right: 2rem;
-}
-.py-2 {
-  padding-top: 0.5rem;
-  padding-bottom: 0.5rem;
-}
-.py-2\.5 {
-  padding-top: 0.625rem;
-  padding-bottom: 0.625rem;
-}
-.py-20 {
-  padding-top: 5rem;
-  padding-bottom: 5rem;
-}
-.py-3 {
-  padding-top: 0.75rem;
-  padding-bottom: 0.75rem;
-}
-.py-4 {
-  padding-top: 1rem;
-  padding-bottom: 1rem;
-}
-.py-5 {
-  padding-top: 1.25rem;
-  padding-bottom: 1.25rem;
-}
-.pb-12 {
-  padding-bottom: 3rem;
-}
-.pb-24 {
-  padding-bottom: 6rem;
-}
-.pb-40 {
-  padding-bottom: 10rem;
-}
-.pl-4 {
-  padding-left: 1rem;
-}
-.pt-24 {
-  padding-top: 6rem;
-}
-.pt-48 {
-  padding-top: 12rem;
-}
-.pt-8 {
-  padding-top: 2rem;
-}
-.text-center {
-  text-align: center;
-}
-.text-2xl {
-  font-size: 1.5rem;
-  line-height: 2rem;
-}
-.text-3xl {
-  font-size: 1.875rem;
-  line-height: 2.25rem;
-}
-.text-4xl {
-  font-size: 2.25rem;
-  line-height: 2.5rem;
-}
-.text-6xl {
-  font-size: 3.75rem;
-  line-height: 1;
-}
-.text-\[10px\] {
-  font-size: 10px;
-}
-.text-\[11px\] {
-  font-size: 11px;
-}
-.text-\[9px\] {
-  font-size: 9px;
-}
-.text-lg {
-  font-size: 1.125rem;
-  line-height: 1.75rem;
-}
-.text-sm {
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-}
-.text-xl {
-  font-size: 1.25rem;
-  line-height: 1.75rem;
-}
-.text-xs {
-  font-size: 0.75rem;
-  line-height: 1rem;
-}
-.font-bold {
-  font-weight: 700;
-}
-.font-extrabold {
-  font-weight: 800;
-}
-.font-medium {
-  font-weight: 500;
-}
-.font-semibold {
-  font-weight: 600;
-}
-.uppercase {
-  text-transform: uppercase;
-}
-.italic {
-  font-style: italic;
-}
-.leading-relaxed {
-  line-height: 1.625;
-}
-.leading-tight {
-  line-height: 1.25;
-}
-.tracking-\[0\.2em\] {
-  letter-spacing: 0.2em;
-}
-.tracking-\[0\.3em\] {
-  letter-spacing: 0.3em;
-}
-.tracking-wide {
-  letter-spacing: 0.025em;
-}
-.tracking-wider {
-  letter-spacing: 0.05em;
-}
-.tracking-widest {
-  letter-spacing: 0.1em;
-}
-.text-amber-200\/60 {
-  color: rgb(253 230 138 / 0.6);
-}
-.text-amber-500 {
-  --tw-text-opacity: 1;
-  color: rgb(245 158 11 / var(--tw-text-opacity, 1));
-}
-.text-blue-400 {
-  --tw-text-opacity: 1;
-  color: rgb(96 165 250 / var(--tw-text-opacity, 1));
-}
-.text-blue-500 {
-  --tw-text-opacity: 1;
-  color: rgb(59 130 246 / var(--tw-text-opacity, 1));
-}
-.text-cyan-400 {
-  --tw-text-opacity: 1;
-  color: rgb(34 211 238 / var(--tw-text-opacity, 1));
-}
-.text-gray-300 {
-  --tw-text-opacity: 1;
-  color: rgb(209 213 219 / var(--tw-text-opacity, 1));
-}
-.text-gray-400 {
-  --tw-text-opacity: 1;
-  color: rgb(156 163 175 / var(--tw-text-opacity, 1));
-}
-.text-gray-500 {
-  --tw-text-opacity: 1;
-  color: rgb(107 114 128 / var(--tw-text-opacity, 1));
-}
-.text-gray-600 {
-  --tw-text-opacity: 1;
-  color: rgb(75 85 99 / var(--tw-text-opacity, 1));
-}
-.text-green-400 {
-  --tw-text-opacity: 1;
-  color: rgb(74 222 128 / var(--tw-text-opacity, 1));
-}
-.text-pink-400 {
-  --tw-text-opacity: 1;
-  color: rgb(244 114 182 / var(--tw-text-opacity, 1));
-}
-.text-purple-400 {
-  --tw-text-opacity: 1;
-  color: rgb(192 132 252 / var(--tw-text-opacity, 1));
-}
-.text-red-500 {
-  --tw-text-opacity: 1;
-  color: rgb(239 68 68 / var(--tw-text-opacity, 1));
-}
-.text-transparent {
-  color: transparent;
-}
-.text-white {
-  --tw-text-opacity: 1;
-  color: rgb(255 255 255 / var(--tw-text-opacity, 1));
-}
-.text-yellow-400 {
-  --tw-text-opacity: 1;
-  color: rgb(250 204 21 / var(--tw-text-opacity, 1));
-}
-.text-yellow-500 {
-  --tw-text-opacity: 1;
-  color: rgb(234 179 8 / var(--tw-text-opacity, 1));
-}
-.opacity-20 {
-  opacity: 0.2;
-}
-.opacity-60 {
-  opacity: 0.6;
-}
-.shadow-lg {
-  --tw-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --tw-shadow-colored: 0 10px 15px -3px var(--tw-shadow-color), 0 4px 6px -4px var(--tw-shadow-color);
-  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
-}
-.blur {
-  --tw-blur: blur(8px);
-  filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);
-}
-.blur-\[150px\] {
-  --tw-blur: blur(150px);
-  filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);
-}
-.grayscale {
-  --tw-grayscale: grayscale(100%);
-  filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);
-}
-.backdrop-filter {
-  -webkit-backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
-  backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
-}
-.transition {
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
-}
-.transition-all {
-  transition-property: all;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
-}
-.transition-colors {
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
-}
-.duration-300 {
-  transition-duration: 300ms;
-}
-.ease-in-out {
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-}
-.hover\:bg-white\/10:hover {
-  background-color: rgb(255 255 255 / 0.1);
-}
-.hover\:text-purple-300:hover {
-  --tw-text-opacity: 1;
-  color: rgb(216 180 254 / var(--tw-text-opacity, 1));
-}
-.hover\:text-purple-400:hover {
-  --tw-text-opacity: 1;
-  color: rgb(192 132 252 / var(--tw-text-opacity, 1));
-}
-.hover\:text-white:hover {
-  --tw-text-opacity: 1;
-  color: rgb(255 255 255 / var(--tw-text-opacity, 1));
-}
-.hover\:opacity-100:hover {
-  opacity: 1;
-}
-.hover\:grayscale-0:hover {
-  --tw-grayscale: grayscale(0);
-  filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);
-}
-@media (min-width: 640px) {
-
-  .sm\:grid-cols-2 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .sm\:flex-row {
-    flex-direction: row;
-  }
-}
-@media (min-width: 768px) {
-
-  .md\:flex {
-    display: flex;
-  }
-
-  .md\:w-1\/4 {
-    width: 25%;
-  }
-
-  .md\:grid-cols-4 {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
-  .md\:grid-cols-5 {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
-
-  .md\:flex-row {
-    flex-direction: row;
-  }
-
-  .md\:text-5xl {
-    font-size: 3rem;
-    line-height: 1;
-  }
-
-  .md\:text-8xl {
-    font-size: 6rem;
-    line-height: 1;
-  }
-}
-@media (min-width: 1024px) {
-
-  .lg\:grid-cols-2 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .lg\:grid-cols-3 {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .lg\:grid-cols-4 {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}* {
-      -ms-overflow-style: none !important;
-      scrollbar-width: none !important;
-    }
-
-    *::-webkit-scrollbar {
-      display: none !important;
-      width: 0 !important;
-      height: 0 !important;
-    }
-  </style></head>
-<body vid="11">
-
-    <div id="stars-container" class="stars" vid="12"></div>
-
-    <div class="fixed inset-0 z-0 pointer-events-none" vid="13">
-        <div class="absolute top-[-10%] left-[-10%] w-[800px] h-[800px] bg-purple-600/5 rounded-full blur-[150px]" vid="14"></div>
-        <div class="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-cyan-600/5 rounded-full blur-[150px]" vid="15"></div>
+</head>
+<body>
+    <div class="fixed inset-0 pointer-events-none" aria-hidden="true">
+        <div class="absolute inset-0 bg-gradient-to-br from-[#0a0514] via-[#05020a] to-[#0a0514]"></div>
+        <div class="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] bg-purple-600/10 rounded-full blur-[150px]"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-cyan-600/10 rounded-full blur-[150px]"></div>
     </div>
 
-    <nav class="fixed top-0 left-0 w-full h-20 z-[100] glass-panel bg-[#120c1d]/80 border-none border-b border-white/5 px-8 flex justify-between items-center transition-all duration-300" vid="16">
-        <div class="flex items-center gap-3" vid="17">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-[#9d4edd] to-[#c77dff] flex items-center justify-center shadow-lg" vid="18">
-                <i class="ph-fill ph-planet text-white text-2xl" vid="19"></i>
+    <nav class="relative z-10 h-20 px-8 flex items-center justify-between border-b border-white/5 glass-panel">
+        <a href="/" class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-[#9d4edd] to-[#c77dff] flex items-center justify-center shadow-lg overflow-hidden">
+                <img src="../icon/stellarsync-192.png" alt="StellarSync" class="w-full h-full object-cover">
             </div>
-            <span class="font-bold text-xl text-white tracking-wide" vid="20">StellarSync</span>
-        </div>
-        
-        <div class="hidden md:flex items-center gap-10" vid="21">
-            <a href="/" class="text-sm font-medium text-gray-400 hover:text-white transition-colors" vid="22">Home</a>
-            <a href="/pricing" class="text-sm font-medium text-gray-400 hover:text-white transition-colors" vid="23">Pricing</a>
-            <a href="/about" class="text-sm font-medium text-gray-400 hover:text-white transition-colors" vid="24">About</a>
-        </div>
-
-        <div class="flex items-center gap-6" vid="25">
-            <a href="#" class="text-sm font-semibold text-gray-400 hover:text-white transition-colors" vid="26">Login</a>
-            <button class="glow-btn px-6 py-2.5 rounded-xl text-white text-xs font-bold uppercase tracking-wider" vid="27">Create Workspace</button>
+            <span class="font-bold text-xl text-white tracking-wide">StellarSync</span>
+        </a>
+        <div class="hidden md:flex items-center gap-8">
+            <a href="/" class="nav-link text-sm font-medium">Home</a>
+            <a href="/about/" class="nav-link text-sm font-medium">About</a>
+            <a href="/pricing/" class="nav-link text-sm font-medium">Pricing</a>
+            <a href="/login/" class="nav-link text-sm font-medium">Login</a>
+            <a href="/sign-up/" class="px-5 py-2.5 rounded-xl text-white text-xs font-bold uppercase tracking-wider bg-gradient-to-r from-[#9d4edd] to-[#c77dff]">Create Workspace</a>
         </div>
     </nav>
 
-    <main class="relative z-10" vid="28">
-        
-        <section class="pt-48 pb-24 px-8 flex flex-col items-center text-center relative overflow-hidden" vid="29">
-            <div class="absolute inset-0 opacity-20 pointer-events-none" vid="30">
-                <svg class="w-full h-full" viewBox="0 0 1440 400" vid="31">
-                    <line x1="100" y1="100" x2="300" y2="250" stroke="white" stroke-width="0.5" stroke-dasharray="4" vid="32"></line>
-                    <line x1="300" y1="250" x2="600" y2="150" stroke="white" stroke-width="0.5" stroke-dasharray="4" vid="33"></line>
-                    <line x1="600" y1="150" x2="900" y2="300" stroke="white" stroke-width="0.5" stroke-dasharray="4" vid="34"></line>
-                    <line x1="900" y1="300" x2="1200" y2="100" stroke="white" stroke-width="0.5" stroke-dasharray="4" vid="35"></line>
-                </svg>
-            </div>
-            
-            <div class="max-w-3xl relative z-10" vid="36">
-                <span class="text-[11px] font-bold text-purple-400 uppercase tracking-[0.3em] mb-6 block" vid="37">Legal</span>
-                <h1 class="text-6xl md:text-8xl font-extrabold text-white leading-tight mb-8" vid="38">
-                    Privacy &amp; <span class="text-transparent bg-clip-text bg-gradient-to-r from-[#9d4edd] to-[#00f0ff]" vid="39">Terms</span>
-                </h1>
-                <p class="text-xl text-gray-400 leading-relaxed mb-12 max-w-2xl mx-auto" vid="40">
-                    Everything you need to know about how StellarSync handles information, subscriptions, content ownership, and platform usage.
-                </p>
-                
-                <div class="flex flex-wrap justify-center gap-4" vid="41">
-                    <div class="glass-card px-5 py-3 rounded-2xl flex items-center gap-3 border-white/5" vid="42">
-                        <i class="ph ph-calendar-blank text-purple-400" vid="43"></i>
-                        <span class="text-xs font-bold text-gray-300" vid="44">Last Updated: <span class="text-white" vid="45">July 2026</span></span>
-                    </div>
-                    <div class="glass-card px-5 py-3 rounded-2xl flex items-center gap-3 border-white/5" vid="46">
-                        <i class="ph ph-globe text-cyan-400" vid="47"></i>
-                        <span class="text-xs font-bold text-gray-300" vid="48">Applies To: <span class="text-white" vid="49">All Workspaces</span></span>
-                    </div>
-                    <div class="glass-card px-5 py-3 rounded-2xl flex items-center gap-3 border-white/5" vid="50">
-                        <i class="ph ph-envelope text-yellow-400" vid="51"></i>
-                        <span class="text-xs font-bold text-gray-300" vid="52">Questions: <span class="text-white" vid="53">support@stellarsync.app</span></span>
-                    </div>
-                </div>
-            </div>
-        </section>
+    <main class="relative z-10 px-8 py-14 max-w-7xl mx-auto">
+        <div class="max-w-3xl mb-10">
+            <p class="text-xs font-bold uppercase tracking-[0.25em] text-purple-400 mb-4">Legal</p>
+            <h1 class="text-5xl md:text-6xl font-extrabold text-white leading-tight">Privacy Policy and Terms of Service</h1>
+            <p class="mt-6 text-lg text-gray-400 leading-relaxed">
+                This page combines StellarSync's privacy and subscription terms into one route for easier reference.
+                For questions, contact <a href="mailto:support@stellarsync.app">support@stellarsync.app</a>.
+            </p>
+        </div>
 
-        
-        <section class="max-w-7xl mx-auto px-8 pb-40 flex flex-col md:flex-row gap-16" vid="54">
-            
-            <aside class="md:w-1/4 shrink-0" vid="55">
-                <div class="sticky top-32 space-y-12" vid="56">
-                    <div vid="57">
-                        <h4 class="text-[10px] font-extrabold text-gray-600 uppercase tracking-[0.2em] mb-6" vid="58">Privacy Policy</h4>
-                        <nav class="flex flex-col gap-1" vid="59">
-                            <a href="#privacy-intro" class="nav-sidebar-link text-sm font-medium text-gray-400 hover:text-white py-2 pl-4" vid="60">Introduction</a>
-                            <a href="#privacy-collect" class="nav-sidebar-link text-sm font-medium text-gray-400 hover:text-white py-2 pl-4" vid="61">Information We Collect</a>
-                            <a href="#privacy-use" class="nav-sidebar-link text-sm font-medium text-gray-400 hover:text-white py-2 pl-4" vid="62">How We Use Information</a>
-                            <a href="#privacy-storage" class="nav-sidebar-link text-sm font-medium text-gray-400 hover:text-white py-2 pl-4" vid="63">Data Storage</a>
-                            <a href="#privacy-thirdparty" class="nav-sidebar-link text-sm font-medium text-gray-400 hover:text-white py-2 pl-4" vid="64">Third-Party Services</a>
-                            <a href="#privacy-security" class="nav-sidebar-link text-sm font-medium text-gray-400 hover:text-white py-2 pl-4" vid="65">Data Security</a>
-                            <a href="#privacy-retention" class="nav-sidebar-link text-sm font-medium text-gray-400 hover:text-white py-2 pl-4" vid="66">Data Retention</a>
-                            <a href="#privacy-rights" class="nav-sidebar-link text-sm font-medium text-gray-400 hover:text-white py-2 pl-4" vid="67">User Rights</a>
-                            <a href="#privacy-children" class="nav-sidebar-link text-sm font-medium text-gray-400 hover:text-white py-2 pl-4" vid="68">Children's Privacy</a>
-                            <a href="#privacy-updates" class="nav-sidebar-link text-sm font-medium text-gray-400 hover:text-white py-2 pl-4" vid="69">Policy Updates</a>
-                            <a href="#privacy-contact" class="nav-sidebar-link text-sm font-medium text-gray-400 hover:text-white py-2 pl-4" vid="70">Contact</a>
-                        </nav>
+        <div class="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-8 items-start">
+            <aside class="glass-panel rounded-3xl p-6 sticky top-8 self-start">
+                <h2 class="text-sm font-bold uppercase tracking-widest text-white mb-5">Table of Contents</h2>
+                <div class="space-y-6 text-sm">
+                    <div>
+                        <p class="text-[10px] font-bold uppercase tracking-widest text-purple-400 mb-3">Privacy Policy</p>
+                        <ul class="space-y-2">
+                            <li><a class="toc-link" href="#privacy-introduction">Introduction</a></li>
+                            <li><a class="toc-link" href="#privacy-information-we-collect">Information We Collect</a></li>
+                            <li><a class="toc-link" href="#privacy-how-we-use-information">How We Use Information</a></li>
+                            <li><a class="toc-link" href="#privacy-data-storage">Data Storage</a></li>
+                            <li><a class="toc-link" href="#privacy-third-party-services">Third-Party Services</a></li>
+                            <li><a class="toc-link" href="#privacy-data-security">Data Security</a></li>
+                            <li><a class="toc-link" href="#privacy-data-retention">Data Retention</a></li>
+                            <li><a class="toc-link" href="#privacy-user-rights">User Rights</a></li>
+                            <li><a class="toc-link" href="#privacy-childrens-privacy">Children’s Privacy</a></li>
+                            <li><a class="toc-link" href="#privacy-changes">Changes</a></li>
+                            <li><a class="toc-link" href="#privacy-contact">Contact</a></li>
+                        </ul>
                     </div>
-
-                    <div vid="71">
-                        <h4 class="text-[10px] font-extrabold text-gray-600 uppercase tracking-[0.2em] mb-6" vid="72">Terms of Service</h4>
-                        <nav class="flex flex-col gap-1" vid="73">
-                            <a href="#terms-acceptance" class="nav-sidebar-link text-sm font-medium text-gray-400 hover:text-white py-2 pl-4" vid="74">Acceptance</a>
-                            <a href="#terms-eligibility" class="nav-sidebar-link text-sm font-medium text-gray-400 hover:text-white py-2 pl-4" vid="75">Eligibility</a>
-                            <a href="#terms-accounts" class="nav-sidebar-link text-sm font-medium text-gray-400 hover:text-white py-2 pl-4" vid="76">Accounts</a>
-                            <a href="#terms-plans" class="nav-sidebar-link text-sm font-medium text-gray-400 hover:text-white py-2 pl-4" vid="77">Subscription Plans</a>
-                            <a href="#terms-trial" class="nav-sidebar-link text-sm font-medium text-gray-400 hover:text-white py-2 pl-4" vid="78">Free Trial</a>
-                            <a href="#terms-content" class="nav-sidebar-link text-sm font-medium text-gray-400 hover:text-white py-2 pl-4" vid="79">User Content</a>
-                            <a href="#terms-use" class="nav-sidebar-link text-sm font-medium text-gray-400 hover:text-white py-2 pl-4" vid="80">Acceptable Use</a>
-                            <a href="#terms-integrations" class="nav-sidebar-link text-sm font-medium text-gray-400 hover:text-white py-2 pl-4" vid="81">Integrations</a>
-                            <a href="#terms-availability" class="nav-sidebar-link text-sm font-medium text-gray-400 hover:text-white py-2 pl-4" vid="82">Availability</a>
-                            <a href="#terms-liability" class="nav-sidebar-link text-sm font-medium text-gray-400 hover:text-white py-2 pl-4" vid="83">Limitation of Liability</a>
-                            <a href="#terms-termination" class="nav-sidebar-link text-sm font-medium text-gray-400 hover:text-white py-2 pl-4" vid="84">Termination</a>
-                            <a href="#terms-law" class="nav-sidebar-link text-sm font-medium text-gray-400 hover:text-white py-2 pl-4" vid="85">Governing Law</a>
-                        </nav>
+                    <div>
+                        <p class="text-[10px] font-bold uppercase tracking-widest text-purple-400 mb-3">Terms of Service</p>
+                        <ul class="space-y-2">
+                            <li><a class="toc-link" href="#terms-acceptance">Acceptance</a></li>
+                            <li><a class="toc-link" href="#terms-eligibility">Eligibility</a></li>
+                            <li><a class="toc-link" href="#terms-accounts">Accounts</a></li>
+                            <li><a class="toc-link" href="#terms-subscription-plans">Subscription Plans</a></li>
+                            <li><a class="toc-link" href="#terms-free-trial">Free Trial</a></li>
+                            <li><a class="toc-link" href="#terms-user-content">User Content</a></li>
+                            <li><a class="toc-link" href="#terms-acceptable-use">Acceptable Use</a></li>
+                            <li><a class="toc-link" href="#terms-integrations">Integrations</a></li>
+                            <li><a class="toc-link" href="#terms-availability">Availability</a></li>
+                            <li><a class="toc-link" href="#terms-limitation-of-liability">Limitation of Liability</a></li>
+                            <li><a class="toc-link" href="#terms-termination">Termination</a></li>
+                            <li><a class="toc-link" href="#terms-governing-law">Governing Law</a></li>
+                            <li><a class="toc-link" href="#terms-changes">Changes</a></li>
+                            <li><a class="toc-link" href="#terms-contact">Contact</a></li>
+                        </ul>
                     </div>
                 </div>
             </aside>
 
-            
-            <div class="flex-1 space-y-24" vid="86">
-                
-                
-                <div id="privacy-intro" class="glass-card p-12 rounded-[2.5rem] privacy-accent reveal" vid="87">
-                    <h2 class="text-3xl font-bold text-white mb-6" vid="88">Introduction</h2>
-                    <p class="text-gray-400 leading-relaxed text-lg" vid="89">
-                        StellarSync is a content planning, campaign management, media organization, and collaboration platform. We understand that users trust StellarSync with their workspace information, content, media assets, account information, and operational data. This Privacy Policy explains how we collect, use, store, and protect information when you use StellarSync.
-                    </p>
-                    <p class="text-gray-400 leading-relaxed text-lg mt-6" vid="90">
-                        By accessing or using StellarSync, you agree to the practices described in this Privacy Policy.
-                    </p>
-                </div>
-
-                
-                <div id="privacy-collect" class="glass-card p-12 rounded-[2.5rem] privacy-accent reveal" vid="91">
-                    <h2 class="text-3xl font-bold text-white mb-10" vid="92">Information We Collect</h2>
-                    
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6" vid="93">
-                        <div class="glass-card p-8 rounded-3xl border-white/5" vid="94">
-                            <div class="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400 mb-6" vid="95">
-                                <i class="ph-fill ph-database text-xl" vid="96"></i>
-                            </div>
-                            <h3 class="text-lg font-bold text-white mb-6" vid="97">Account Information</h3>
-                            <div class="flex flex-wrap gap-2" vid="98">
-                                <span class="pill-tag" vid="99">Name</span>
-                                <span class="pill-tag" vid="100">Email</span>
-                                <span class="pill-tag" vid="101">Organization</span>
-                                <span class="pill-tag" vid="102">Workspace Information</span>
-                                <span class="pill-tag" vid="103">Preferences</span>
-                            </div>
-                        </div>
-                        <div class="glass-card p-8 rounded-3xl border-white/5" vid="104">
-                            <div class="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-400 mb-6" vid="105">
-                                <i class="ph-fill ph-folder text-xl" vid="106"></i>
-                            </div>
-                            <h3 class="text-lg font-bold text-white mb-6" vid="107">Workspace Data</h3>
-                            <div class="flex flex-wrap gap-2" vid="108">
-                                <span class="pill-tag" vid="109">Campaigns</span>
-                                <span class="pill-tag" vid="110">Posts</span>
-                                <span class="pill-tag" vid="111">Notes</span>
-                                <span class="pill-tag" vid="112">Media</span>
-                                <span class="pill-tag" vid="113">Calendar</span>
-                                <span class="pill-tag" vid="114">Team Members</span>
-                            </div>
-                        </div>
+            <div class="space-y-6">
+                <section id="privacy-introduction" class="legal-section glass-panel rounded-3xl p-8">
+                    <h2 class="text-2xl font-bold text-white mb-3">Privacy Policy</h2>
+                    <h3 class="text-lg font-semibold text-purple-300 mb-3">Introduction</h3>
+                    <div class="section-copy space-y-4">
+                        <p>StellarSync is a content operating system for mission-driven organizations. This policy explains how we collect, use, and protect information when you use the service.</p>
+                        <p>The policy applies to the website, onboarding flow, and workspace features that are part of the StellarSync experience.</p>
                     </div>
+                </section>
 
-                    <div class="space-y-6" vid="115">
-                        <div class="glass-card p-8 rounded-3xl border-white/5" vid="116">
-                            <div class="flex items-center gap-4 mb-6" vid="117">
-                                <div class="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center text-yellow-500" vid="118">
-                                    <i class="ph-fill ph-link text-xl" vid="119"></i>
-                                </div>
-                                <h3 class="text-lg font-bold text-white" vid="120">Connection Data</h3>
-                            </div>
-                            <div class="flex flex-wrap gap-2" vid="121">
-                                <span class="pill-tag" vid="122">Google Sheets connection data</span>
-                                <span class="pill-tag" vid="123">Monday.com connection data</span>
-                                <span class="pill-tag" vid="124">Google Drive connection data</span>
-                                <span class="pill-tag" vid="125">Social media platform connection data</span>
-                                <span class="pill-tag" vid="126">Integration status</span>
-                            </div>
-                        </div>
-                        <div class="glass-card p-8 rounded-3xl border-white/5" vid="127">
-                            <div class="flex items-center gap-4 mb-6" vid="128">
-                                <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500" vid="129">
-                                    <i class="ph-fill ph-chart-line text-xl" vid="130"></i>
-                                </div>
-                                <h3 class="text-lg font-bold text-white" vid="131">Usage Data</h3>
-                            </div>
-                            <div class="flex flex-wrap gap-2" vid="132">
-                                <span class="pill-tag" vid="133">Device information</span>
-                                <span class="pill-tag" vid="134">Browser information</span>
-                                <span class="pill-tag" vid="135">IP address</span>
-                                <span class="pill-tag" vid="136">Session activity</span>
-                                <span class="pill-tag" vid="137">Usage analytics</span>
-                                <span class="pill-tag" vid="138">Error logs</span>
-                                <span class="pill-tag" vid="139">Diagnostic information</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                
-                <div id="privacy-use" class="glass-card p-12 rounded-[2.5rem] privacy-accent reveal" vid="140">
-                    <h2 class="text-3xl font-bold text-white mb-10" vid="141">How We Use Information</h2>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8" vid="142">
-                        <div class="flex flex-col gap-4" vid="143">
-                            <i class="ph ph-chart-line text-purple-400 text-3xl" vid="144"></i>
-                            <span class="text-sm font-bold text-white uppercase tracking-widest" vid="145">Improve performance</span>
-                        </div>
-                        <div class="flex flex-col gap-4" vid="146">
-                            <i class="ph ph-users-three text-cyan-400 text-3xl" vid="147"></i>
-                            <span class="text-sm font-bold text-white uppercase tracking-widest" vid="148">Enable collaboration</span>
-                        </div>
-                        <div class="flex flex-col gap-4" vid="149">
-                            <i class="ph ph-link text-yellow-400 text-3xl" vid="150"></i>
-                            <span class="text-sm font-bold text-white uppercase tracking-widest" vid="151">Power integrations</span>
-                        </div>
-                        <div class="flex flex-col gap-4" vid="152">
-                            <i class="ph ph-credit-card text-purple-400 text-3xl" vid="153"></i>
-                            <span class="text-sm font-bold text-white uppercase tracking-widest" vid="154">Process subscriptions</span>
-                        </div>
-                        <div class="flex flex-col gap-4" vid="155">
-                            <i class="ph ph-shield-check text-green-400 text-3xl" vid="156"></i>
-                            <span class="text-sm font-bold text-white uppercase tracking-widest" vid="157">Prevent abuse</span>
-                        </div>
-                    </div>
-                    <p class="text-gray-400 mt-12 text-sm leading-relaxed" vid="158">
-                        We use the information we collect to operate, maintain, and provide the features of StellarSync, including providing customer support, monitoring security, and developing new tools to enhance your mission-driven content operations.
-                    </p>
-                </div>
-
-                
-                <div id="privacy-storage" class="glass-card p-12 rounded-[2.5rem] privacy-accent reveal" vid="159">
-                    <h2 class="text-3xl font-bold text-white mb-12" vid="160">Data Storage</h2>
-                    <div class="relative h-64 flex items-center justify-center mb-12" vid="161">
-                        
-                        <div class="z-20 w-16 h-16 rounded-full bg-gradient-to-br from-[#9d4edd] to-[#c77dff] flex items-center justify-center shadow-lg" vid="162">
-                            <i class="ph-fill ph-planet text-white text-2xl" vid="163"></i>
-                        </div>
-                        
-                        
-                        <div class="absolute inset-0 flex items-center justify-center" vid="164">
-                            <div class="architecture-line w-40 h-[1px] rotate-[150deg] -translate-x-20 -translate-y-10" vid="165"></div>
-                            <div class="architecture-line w-40 h-[1px] rotate-[165deg] -translate-x-20 -translate-y-2" vid="166"></div>
-                            <div class="architecture-line w-40 h-[1px] rotate-[15deg] translate-x-20 -translate-y-2" vid="167"></div>
-                            <div class="architecture-line w-40 h-[1px] rotate-[30deg] translate-x-20 -translate-y-10" vid="168"></div>
-                            <div class="architecture-line w-[1px] h-20 translate-y-20" vid="169"></div>
-                        </div>
-
-                        
-                        <div class="absolute -top-4 left-1/4 glass-card px-4 py-2 rounded-xl flex items-center gap-2 border-purple-500/20" vid="170">
-                            <i class="ph ph-database text-purple-400" vid="171"></i>
-                            <span class="text-[10px] font-bold text-white" vid="172">SUPABASE</span>
-                        </div>
-                        <div class="absolute top-1/3 left-4 glass-card px-4 py-2 rounded-xl flex items-center gap-2 border-green-500/20" vid="173">
-                            <i class="ph ph-table text-green-400" vid="174"></i>
-                            <span class="text-[10px] font-bold text-white" vid="175">GOOGLE SHEETS</span>
-                        </div>
-                        <div class="absolute top-1/3 right-4 glass-card px-4 py-2 rounded-xl flex items-center gap-2 border-blue-500/20" vid="176">
-                            <i class="ph ph-folder text-blue-400" vid="177"></i>
-                            <span class="text-[10px] font-bold text-white" vid="178">GOOGLE DRIVE</span>
-                        </div>
-                        <div class="absolute -top-4 right-1/4 glass-card px-4 py-2 rounded-xl flex items-center gap-2 border-pink-500/20" vid="179">
-                            <i class="ph ph-circles-three text-pink-400" vid="180"></i>
-                            <span class="text-[10px] font-bold text-white" vid="181">MONDAY.COM</span>
-                        </div>
-                        <div class="absolute -bottom-8 left-1/2 -translate-x-1/2 glass-card px-4 py-2 rounded-xl flex items-center gap-2 border-white/10" vid="182">
-                            <i class="ph ph-link text-gray-400" vid="183"></i>
-                            <span class="text-[10px] font-bold text-white uppercase tracking-widest" vid="184">Platforms</span>
-                        </div>
-                    </div>
-                    <p class="text-gray-400 text-sm leading-relaxed" vid="185">
-                        StellarSync stores and processes information using a distributed infrastructure. The exact storage location and processing of data may vary depending on the specific integrations and features enabled within your individual workspace.
-                    </p>
-                </div>
-
-                
-                <div id="privacy-thirdparty" class="glass-card p-12 rounded-[2.5rem] privacy-accent reveal" vid="186">
-                    <h2 class="text-3xl font-bold text-white mb-10" vid="187">Third-Party Services</h2>
-                    <div class="flex flex-wrap gap-4 mb-10" vid="188">
-                        <div class="glass-card px-6 py-4 rounded-2xl flex items-center gap-3 border-white/5 grayscale opacity-60 hover:grayscale-0 hover:opacity-100 transition-all cursor-default" vid="189">
-                            <i class="ph ph-database text-lg" vid="190"></i>
-                            <span class="text-xs font-bold text-white" vid="191">Supabase</span>
-                        </div>
-                        <div class="glass-card px-6 py-4 rounded-2xl flex items-center gap-3 border-white/5 grayscale opacity-60 hover:grayscale-0 hover:opacity-100 transition-all cursor-default" vid="192">
-                            <i class="ph ph-credit-card text-lg" vid="193"></i>
-                            <span class="text-xs font-bold text-white" vid="194">Stripe</span>
-                        </div>
-                        <div class="glass-card px-6 py-4 rounded-2xl flex items-center gap-3 border-white/5 grayscale opacity-60 hover:grayscale-0 hover:opacity-100 transition-all cursor-default" vid="195">
-                            <i class="ph ph-google-logo text-lg" vid="196"></i>
-                            <span class="text-xs font-bold text-white" vid="197">Google</span>
-                        </div>
-                        <div class="glass-card px-6 py-4 rounded-2xl flex items-center gap-3 border-white/5 grayscale opacity-60 hover:grayscale-0 hover:opacity-100 transition-all cursor-default" vid="198">
-                            <i class="ph ph-circles-three text-lg" vid="199"></i>
-                            <span class="text-xs font-bold text-white" vid="200">Monday.com</span>
-                        </div>
-                        <div class="glass-card px-6 py-4 rounded-2xl flex items-center gap-3 border-white/5 grayscale opacity-60 hover:grayscale-0 hover:opacity-100 transition-all cursor-default" vid="201">
-                            <i class="ph ph-linkedin-logo text-lg" vid="202"></i>
-                            <span class="text-xs font-bold text-white" vid="203">LinkedIn</span>
-                        </div>
-                        <div class="glass-card px-6 py-4 rounded-2xl flex items-center gap-3 border-white/5 grayscale opacity-60 hover:grayscale-0 hover:opacity-100 transition-all cursor-default" vid="204">
-                            <i class="ph ph-meta-logo text-lg" vid="205"></i>
-                            <span class="text-xs font-bold text-white" vid="206">Meta Platforms</span>
-                        </div>
-                    </div>
-                    <p class="text-gray-400 text-sm leading-relaxed" vid="207">
-                        StellarSync relies on these integrated providers to deliver specialized functionality. Your use of these services remains subject to their respective privacy policies and terms.
-                    </p>
-                </div>
-
-                
-                <div id="privacy-security" class="glass-card p-12 rounded-[2.5rem] privacy-accent reveal" vid="208">
-                    <h2 class="text-3xl font-bold text-white mb-8" vid="209">Data Security</h2>
-                    <div class="flex flex-col md:flex-row gap-12 items-start" vid="210">
-                        <div class="w-16 h-16 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-400 shrink-0" vid="211">
-                            <i class="ph-fill ph-shield-check text-4xl" vid="212"></i>
-                        </div>
-                        <div vid="213">
-                            <p class="text-gray-400 text-lg leading-relaxed mb-8" vid="214">
-                                We implement reasonable administrative, technical, and organizational safeguards designed to protect information from unauthorized access, disclosure, alteration, or destruction.
-                            </p>
-                            <div class="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-6" vid="215">
-                                <div class="flex items-center gap-3 mb-2" vid="216">
-                                    <i class="ph-fill ph-warning text-amber-500" vid="217"></i>
-                                    <span class="text-xs font-bold text-amber-500 uppercase tracking-widest" vid="218">Risk Disclosure</span>
-                                </div>
-                                <p class="text-sm text-amber-200/60 leading-relaxed" vid="219">
-                                    No internet-based service can guarantee absolute security. Users acknowledge that information is transmitted and stored at their own risk.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                
-                <div id="privacy-retention" class="glass-card p-12 rounded-[2.5rem] privacy-accent reveal" vid="220">
-                    <h2 class="text-3xl font-bold text-white mb-6" vid="221">Data Retention</h2>
-                    <p class="text-gray-400 leading-relaxed" vid="222">
-                        We retain information for as long as necessary to provide StellarSync services, maintain active accounts, comply with legal obligations, resolve disputes, and enforce our agreements. Information may be deleted, anonymized, or archived when no longer required.
-                    </p>
-                </div>
-
-                
-                <div id="privacy-rights" class="glass-card p-12 rounded-[2.5rem] privacy-accent reveal" vid="223">
-                    <h2 class="text-3xl font-bold text-white mb-10" vid="224">User Rights</h2>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10" vid="225">
-                        <div class="glass-card p-6 rounded-2xl flex flex-col items-center gap-4 text-center" vid="226">
-                            <i class="ph ph-eye text-purple-400 text-2xl" vid="227"></i>
-                            <span class="text-xs font-bold text-white uppercase tracking-widest" vid="228">Access</span>
-                        </div>
-                        <div class="glass-card p-6 rounded-2xl flex flex-col items-center gap-4 text-center" vid="229">
-                            <i class="ph ph-pencil text-cyan-400 text-2xl" vid="230"></i>
-                            <span class="text-xs font-bold text-white uppercase tracking-widest" vid="231">Corrections</span>
-                        </div>
-                        <div class="glass-card p-6 rounded-2xl flex flex-col items-center gap-4 text-center" vid="232">
-                            <i class="ph ph-trash text-yellow-400 text-2xl" vid="233"></i>
-                            <span class="text-xs font-bold text-white uppercase tracking-widest" vid="234">Deletion</span>
-                        </div>
-                        <div class="glass-card p-6 rounded-2xl flex flex-col items-center gap-4 text-center" vid="235">
-                            <i class="ph ph-download text-green-400 text-2xl" vid="236"></i>
-                            <span class="text-xs font-bold text-white uppercase tracking-widest" vid="237">Export</span>
-                        </div>
-                    </div>
-                    <p class="text-gray-400 text-sm leading-relaxed" vid="238">
-                        Subject to applicable law, users may request access to, corrections of, or deletion of their information. Deletion requests may result in the permanent removal of workspace history and content.
-                    </p>
-                </div>
-
-                
-                <div id="privacy-children" class="glass-card p-12 rounded-[2.5rem] privacy-accent reveal" vid="239">
-                    <h2 class="text-3xl font-bold text-white mb-6" vid="240">Children's Privacy</h2>
-                    <p class="text-gray-400 leading-relaxed" vid="241">
-                        StellarSync is not intended for children under the age of 13. We do not knowingly collect personal information from children under 13. If we become aware that such information has been collected, we will take reasonable steps to remove it promptly from our systems.
-                    </p>
-                </div>
-
-                
-                <div id="privacy-updates" class="glass-card p-12 rounded-[2.5rem] privacy-accent reveal" vid="242">
-                    <h2 class="text-3xl font-bold text-white mb-6" vid="243">Policy Updates</h2>
-                    <p class="text-gray-400 leading-relaxed" vid="244">
-                        We may update this Privacy Policy from time to time. Changes become effective when posted on this page. Continued use of StellarSync after updates constitutes acceptance of the revised Privacy Policy. We encourage you to check this page periodically for updates.
-                    </p>
-                </div>
-
-                
-                <div id="privacy-contact" class="glass-card p-12 rounded-[2.5rem] privacy-accent reveal" vid="245">
-                    <h2 class="text-3xl font-bold text-white mb-6" vid="246">Contact</h2>
-                    <p class="text-gray-400 leading-relaxed mb-8" vid="247">
-                        For questions regarding this Privacy Policy, please reach out to our dedicated support team:
-                    </p>
-                    <a href="mailto:support@stellarsync.app" class="text-2xl font-bold text-purple-400 hover:text-purple-300 transition-colors" vid="248">
-                        support@stellarsync.app
-                    </a>
-                </div>
-
-                
-                <div class="pt-24 pb-12" vid="249">
-                    <div class="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" vid="250"></div>
-                </div>
-
-                
-                
-                <div id="terms-acceptance" class="glass-card p-12 rounded-[2.5rem] terms-accent reveal" vid="251">
-                    <h2 class="text-3xl font-bold text-white mb-6" vid="252">Acceptance of Terms</h2>
-                    <p class="text-gray-400 leading-relaxed text-lg" vid="253">
-                        By accessing or using StellarSync, you agree to be bound by these Terms of Service. If you do not agree to these terms, you may not use StellarSync.
-                    </p>
-                </div>
-
-                
-                <div id="terms-eligibility" class="glass-card p-12 rounded-[2.5rem] terms-accent reveal" vid="254">
-                    <h2 class="text-3xl font-bold text-white mb-6" vid="255">Eligibility</h2>
-                    <p class="text-gray-400 leading-relaxed" vid="256">
-                        You must be legally capable of entering into a binding agreement in order to use StellarSync. By creating an account, you represent and warrant that you meet this requirement.
-                    </p>
-                </div>
-
-                
-                <div id="terms-accounts" class="glass-card p-12 rounded-[2.5rem] terms-accent reveal" vid="257">
-                    <h2 class="text-3xl font-bold text-white mb-10" vid="258">Accounts</h2>
-                    <div class="space-y-6" vid="259">
-                        <div class="flex items-start gap-4" vid="260">
-                            <i class="ph-bold ph-check text-cyan-400 mt-1" vid="261"></i>
-                            <p class="text-gray-300" vid="262">Maintaining account security and confidentiality of login credentials.</p>
-                        </div>
-                        <div class="flex items-start gap-4" vid="263">
-                            <i class="ph-bold ph-check text-cyan-400 mt-1" vid="264"></i>
-                            <p class="text-gray-300" vid="265">All activities occurring under your account, authorized or unauthorized.</p>
-                        </div>
-                        <div class="flex items-start gap-4" vid="266">
-                            <i class="ph-bold ph-check text-cyan-400 mt-1" vid="267"></i>
-                            <p class="text-gray-300" vid="268">Ensuring authorized use of workspace access for all team members.</p>
-                        </div>
-                        <div class="flex items-start gap-4" vid="269">
-                            <i class="ph-bold ph-check text-cyan-400 mt-1" vid="270"></i>
-                            <p class="text-gray-300" vid="271">Promptly notifying StellarSync of any suspected unauthorized access or breach.</p>
-                        </div>
-                    </div>
-                </div>
-
-                
-                <div id="terms-plans" class="glass-card p-12 rounded-[2.5rem] terms-accent reveal" vid="272">
-                    <h2 class="text-3xl font-bold text-white mb-10" vid="273">Subscription Plans</h2>
-                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10" vid="274">
-                        <div class="glass-card p-6 rounded-2xl border-white/5" vid="275">
-                            <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 block" vid="276">Starter</span>
-                            <span class="text-xl font-bold text-white" vid="277">$49<span class="text-xs text-gray-500" vid="278">/mo</span></span>
-                        </div>
-                        <div class="glass-card p-6 rounded-2xl border-white/5" vid="279">
-                            <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 block" vid="280">Growth</span>
-                            <span class="text-xl font-bold text-white" vid="281">$149<span class="text-xs text-gray-500" vid="282">/mo</span></span>
-                        </div>
-                        <div class="glass-card p-6 rounded-2xl border-white/5" vid="283">
-                            <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 block" vid="284">Agency</span>
-                            <span class="text-xl font-bold text-white" vid="285">$399<span class="text-xs text-gray-500" vid="286">/mo</span></span>
-                        </div>
-                        <div class="glass-card p-6 rounded-2xl border-white/5" vid="287">
-                            <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 block" vid="288">Managed</span>
-                            <span class="text-xl font-bold text-white" vid="289">Custom</span>
-                        </div>
-                    </div>
-                    <p class="text-gray-500 text-xs italic" vid="290">Plan pricing and features may vary by plan. Pricing details may change with reasonable notice.</p>
-                </div>
-
-                
-                <div id="terms-trial" class="glass-card p-12 rounded-[2.5rem] terms-accent bg-purple-500/5 reveal" vid="291">
-                    <h2 class="text-3xl font-bold text-white mb-6" vid="292">3-Day Free Trial</h2>
-                    <div class="space-y-4" vid="293">
-                        <div class="flex items-center gap-4" vid="294">
-                            <div class="w-1.5 h-1.5 rounded-full bg-purple-400" vid="295"></div>
-                            <p class="text-gray-300 text-sm" vid="296">No charge will occur during the initial 3-day trial period.</p>
-                        </div>
-                        <div class="flex items-center gap-4" vid="297">
-                            <div class="w-1.5 h-1.5 rounded-full bg-purple-400" vid="298"></div>
-                            <p class="text-gray-300 text-sm" vid="299">Users may cancel anytime before the trial ends to avoid being billed.</p>
-                        </div>
-                        <div class="flex items-center gap-4" vid="300">
-                            <div class="w-1.5 h-1.5 rounded-full bg-purple-400" vid="301"></div>
-                            <p class="text-gray-300 text-sm" vid="302">Subscription billing will begin automatically if not canceled before expiration.</p>
-                        </div>
-                    </div>
-                </div>
-
-                
-                <div id="terms-content" class="glass-card p-12 rounded-[2.5rem] terms-accent reveal" vid="303">
-                    <h2 class="text-3xl font-bold text-white mb-10" vid="304">User Content</h2>
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8" vid="305">
-                        <div class="glass-card p-8 rounded-3xl border-white/5" vid="306">
-                            <h3 class="text-lg font-bold text-white mb-6 flex items-center gap-3" vid="307">
-                                <i class="ph ph-check-circle text-green-400" vid="308"></i> You Own
-                            </h3>
-                            <ul class="space-y-3" vid="309">
-                                <li class="text-sm text-gray-400" vid="310">Campaigns &amp; Strategies</li>
-                                <li class="text-sm text-gray-400" vid="311">Drafted &amp; Published Posts</li>
-                                <li class="text-sm text-gray-400" vid="312">Media Assets &amp; Files</li>
-                                <li class="text-sm text-gray-400" vid="313">Meeting Notes &amp; Briefs</li>
-                                <li class="text-sm text-gray-400" vid="314">Uploaded Team Materials</li>
-                            </ul>
-                        </div>
-                        <div class="glass-card p-8 rounded-3xl border-white/5" vid="315">
-                            <h3 class="text-lg font-bold text-white mb-6 flex items-center gap-3" vid="316">
-                                <i class="ph ph-info text-purple-400" vid="317"></i> We Need Permission To
-                            </h3>
-                            <ul class="space-y-3" vid="318">
-                                <li class="text-sm text-gray-400" vid="319">Store content on our servers</li>
-                                <li class="text-sm text-gray-400" vid="320">Display content to your team</li>
-                                <li class="text-sm text-gray-400" vid="321">Process content for AI features</li>
-                                <li class="text-sm text-gray-400" vid="322">Operate &amp; optimize the platform</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-
-                
-                <div id="terms-use" class="glass-card p-12 rounded-[2.5rem] terms-accent reveal" vid="323">
-                    <h2 class="text-3xl font-bold text-white mb-10" vid="324">Not Allowed</h2>
-                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4" vid="325">
-                        <div class="glass-card p-6 rounded-2xl flex flex-col items-center gap-4 text-center border-red-500/10" vid="326">
-                            <i class="ph ph-warning text-red-500 text-2xl" vid="327"></i>
-                            <span class="text-[9px] font-bold text-white uppercase tracking-widest" vid="328">Unauthorized Access</span>
-                        </div>
-                        <div class="glass-card p-6 rounded-2xl flex flex-col items-center gap-4 text-center border-red-500/10" vid="329">
-                            <i class="ph ph-bug text-red-500 text-2xl" vid="330"></i>
-                            <span class="text-[9px] font-bold text-white uppercase tracking-widest" vid="331">Malware</span>
-                        </div>
-                        <div class="glass-card p-6 rounded-2xl flex flex-col items-center gap-4 text-center border-red-500/10" vid="332">
-                            <i class="ph ph-hand-palm text-red-500 text-2xl" vid="333"></i>
-                            <span class="text-[9px] font-bold text-white uppercase tracking-widest" vid="334">Platform Abuse</span>
-                        </div>
-                        <div class="glass-card p-6 rounded-2xl flex flex-col items-center gap-4 text-center border-red-500/10" vid="335">
-                            <i class="ph ph-prohibit text-red-500 text-2xl" vid="336"></i>
-                            <span class="text-[9px] font-bold text-white uppercase tracking-widest" vid="337">Illegal Activity</span>
-                        </div>
-                        <div class="glass-card p-6 rounded-2xl flex flex-col items-center gap-4 text-center border-red-500/10" vid="338">
-                            <i class="ph ph-broadcast text-red-500 text-2xl" vid="339"></i>
-                            <span class="text-[9px] font-bold text-white uppercase tracking-widest" vid="340">Interference</span>
-                        </div>
-                    </div>
-                </div>
-
-                
-                <div id="terms-integrations" class="glass-card p-12 rounded-[2.5rem] terms-accent reveal" vid="341">
-                    <h2 class="text-3xl font-bold text-white mb-6" vid="342">Integrations</h2>
-                    <p class="text-gray-400 leading-relaxed" vid="343">
-                        StellarSync connects with various third-party services. Availability and functionality depend on those providers and may change or become limited without notice. StellarSync is not responsible for outages or modifications made by these external platforms.
-                    </p>
-                </div>
-
-                
-                <div id="terms-availability" class="glass-card p-12 rounded-[2.5rem] terms-accent reveal" vid="344">
-                    <h2 class="text-3xl font-bold text-white mb-6" vid="345">Availability</h2>
-                    <p class="text-gray-400 leading-relaxed" vid="346">
-                        StellarSync is provided on an "as available" and "as is" basis. We do not guarantee uninterrupted service or error-free operation. Maintenance, updates, or third-party failures may impact your access.
-                    </p>
-                </div>
-
-                
-                <div id="terms-liability" class="glass-card p-12 rounded-[2.5rem] terms-accent reveal" vid="347">
-                    <h2 class="text-3xl font-bold text-white mb-6" vid="348">Limitation of Liability</h2>
-                    <p class="text-gray-400 leading-relaxed" vid="349">
-                        To the maximum extent permitted by law, StellarSync shall not be liable for any indirect, incidental, or consequential damages arising from the use of the platform, regardless of the legal theory asserted.
-                    </p>
-                </div>
-
-                
-                <div id="terms-termination" class="glass-card p-12 rounded-[2.5rem] terms-accent reveal" vid="350">
-                    <h2 class="text-3xl font-bold text-white mb-6" vid="351">Termination</h2>
-                    <p class="text-gray-400 leading-relaxed" vid="352">
-                        StellarSync reserves the right to suspend or terminate accounts that violate these Terms, present security risks, or fail to comply with payment obligations. Users may terminate their accounts at any time through workspace settings.
-                    </p>
-                </div>
-
-                
-                <div id="terms-law" class="glass-card p-12 rounded-[2.5rem] terms-accent reveal" vid="353">
-                    <h2 class="text-3xl font-bold text-white mb-6" vid="354">Governing Law</h2>
-                    <p class="text-gray-400 leading-relaxed" vid="355">
-                        These Terms are governed by the laws of the State of Illinois, United States. Any disputes arising from these Terms shall be resolved in accordance with applicable Illinois law.
-                    </p>
-                </div>
-
-                
-                <div id="privacy-contact-final" class="glass-card p-20 rounded-[3rem] text-center border-purple-500/20 reveal" vid="356">
-                    <h2 class="text-4xl md:text-5xl font-bold text-white mb-10" vid="357">Questions?</h2>
-                    <p class="text-xl text-gray-400 mb-12 max-w-xl mx-auto" vid="358">
-                        Our legal and support teams are here to help clarify any part of our policies or terms.
-                    </p>
-                    <div class="flex flex-col sm:flex-row items-center justify-center gap-6" vid="359">
-                        <button class="glow-btn px-12 py-5 rounded-2xl text-white font-bold uppercase tracking-widest text-sm" vid="360">Contact Support</button>
-                        <button class="px-12 py-5 rounded-2xl border border-white/10 bg-white/5 text-white font-bold uppercase tracking-widest text-sm hover:bg-white/10 transition-all" vid="361">Return Home</button>
-                    </div>
-                </div>
-
-            </div>
-        </section>
-
-        
-        <footer class="py-20 px-8 border-t border-white/5 bg-[#0a0612]" vid="362">
-            <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12" vid="363">
-                <div vid="364">
-                    <div class="flex items-center gap-3 mb-6" vid="365">
-                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-[#9d4edd] to-[#c77dff] flex items-center justify-center" vid="366">
-                            <i class="ph-fill ph-planet text-white text-xl" vid="367"></i>
-                        </div>
-                        <span class="font-bold text-lg text-white" vid="368">StellarSync</span>
-                    </div>
-                    <p class="text-sm text-gray-500 leading-relaxed mb-6" vid="369">The content operating system for organizations changing the world. Powered by intelligence, built for strategy.</p>
-                    <div class="flex gap-4" vid="370">
-                        <a href="#" class="text-gray-500 hover:text-white transition-colors" vid="371"><i class="ph-bold ph-linkedin-logo text-xl" vid="372"></i></a>
-                        <a href="#" class="text-gray-500 hover:text-white transition-colors" vid="373"><i class="ph-bold ph-twitter-logo text-xl" vid="374"></i></a>
-                        <a href="#" class="text-gray-500 hover:text-white transition-colors" vid="375"><i class="ph-bold ph-instagram-logo text-xl" vid="376"></i></a>
-                    </div>
-                </div>
-                <div vid="377">
-                    <h4 class="text-sm font-bold text-white uppercase tracking-widest mb-6" vid="378">Product</h4>
-                    <ul class="space-y-4" vid="379">
-                        <li vid="380"><a href="#" class="text-sm text-gray-500 hover:text-purple-400" vid="381">Features</a></li>
-                        <li vid="382"><a href="#" class="text-sm text-gray-500 hover:text-purple-400" vid="383">Integrations</a></li>
-                        <li vid="384"><a href="#" class="text-sm text-gray-500 hover:text-purple-400" vid="385">AI Assistant</a></li>
-                        <li vid="386"><a href="#" class="text-sm text-gray-500 hover:text-purple-400" vid="387">Pricing</a></li>
+                <section id="privacy-information-we-collect" class="legal-section glass-panel rounded-3xl p-8">
+                    <h3 class="text-lg font-semibold text-purple-300 mb-3">Information We Collect</h3>
+                    <ul class="section-list">
+                        <li>Account details such as name, email address, organization name, and workspace settings.</li>
+                        <li>Content you create, organize, upload, or import into the platform.</li>
+                        <li>Usage data, device data, and logs that help us operate and improve the service.</li>
                     </ul>
-                </div>
-                <div vid="388">
-                    <h4 class="text-sm font-bold text-white uppercase tracking-widest mb-6" vid="389">Company</h4>
-                    <ul class="space-y-4" vid="390">
-                        <li vid="391"><a href="#" class="text-sm text-gray-500 hover:text-purple-400" vid="392">About Us</a></li>
-                        <li vid="393"><a href="#" class="text-sm text-gray-500 hover:text-purple-400" vid="394">Blog</a></li>
-                        <li vid="395"><a href="#" class="text-sm text-gray-500 hover:text-purple-400" vid="396">Careers</a></li>
-                        <li vid="397"><a href="#" class="text-sm text-gray-500 hover:text-purple-400" vid="398">Contact</a></li>
+                </section>
+
+                <section id="privacy-how-we-use-information" class="legal-section glass-panel rounded-3xl p-8">
+                    <h3 class="text-lg font-semibold text-purple-300 mb-3">How We Use Information</h3>
+                    <ul class="section-list">
+                        <li>Provide and maintain the service.</li>
+                        <li>Support onboarding, billing, setup, and account communications.</li>
+                        <li>Improve the product, troubleshoot issues, and prevent abuse.</li>
                     </ul>
-                </div>
-                <div vid="399">
-                    <h4 class="text-sm font-bold text-white uppercase tracking-widest mb-6" vid="400">Legal</h4>
-                    <ul class="space-y-4" vid="401">
-                        <li vid="402"><a href="#" class="text-sm text-gray-500 hover:text-purple-400" vid="403">Privacy Policy</a></li>
-                        <li vid="404"><a href="#" class="text-sm text-gray-500 hover:text-purple-400" vid="405">Terms of Service</a></li>
-                        <li vid="406"><a href="#" class="text-sm text-gray-500 hover:text-purple-400" vid="407">Security</a></li>
+                </section>
+
+                <section id="privacy-data-storage" class="legal-section glass-panel rounded-3xl p-8">
+                    <h3 class="text-lg font-semibold text-purple-300 mb-3">Data Storage</h3>
+                    <div class="section-copy space-y-4">
+                        <p>StellarSync may store content and operational data in services such as <strong>Google Sheets</strong>, <strong>Supabase</strong>, and media storage systems used to support the workspace experience.</p>
+                        <p>We store only what is needed to provide the features you enable, and we keep system data separated from customer content where practical.</p>
+                    </div>
+                </section>
+
+                <section id="privacy-third-party-services" class="legal-section glass-panel rounded-3xl p-8">
+                    <h3 class="text-lg font-semibold text-purple-300 mb-3">Third-Party Services</h3>
+                    <div class="section-copy space-y-4">
+                        <p>We may use third-party services for hosting, analytics, payment processing, file storage, and workflow integrations. Those providers handle data according to their own terms and policies.</p>
+                    </div>
+                </section>
+
+                <section id="privacy-data-security" class="legal-section glass-panel rounded-3xl p-8">
+                    <h3 class="text-lg font-semibold text-purple-300 mb-3">Data Security</h3>
+                    <div class="section-copy space-y-4">
+                        <p>We use reasonable administrative, technical, and organizational safeguards to protect the service and customer data. No system is perfectly secure, but we work to reduce risk and limit exposure.</p>
+                    </div>
+                </section>
+
+                <section id="privacy-data-retention" class="legal-section glass-panel rounded-3xl p-8">
+                    <h3 class="text-lg font-semibold text-purple-300 mb-3">Data Retention</h3>
+                    <div class="section-copy space-y-4">
+                        <p>We retain data for as long as needed to provide the service, meet legal obligations, resolve disputes, and enforce our agreements.</p>
+                    </div>
+                </section>
+
+                <section id="privacy-user-rights" class="legal-section glass-panel rounded-3xl p-8">
+                    <h3 class="text-lg font-semibold text-purple-300 mb-3">User Rights</h3>
+                    <ul class="section-list">
+                        <li>Request access to or correction of your information.</li>
+                        <li>Request deletion of your workspace data where applicable.</li>
+                        <li>Export content or ask questions about how data is used by contacting support.</li>
                     </ul>
-                </div>
+                </section>
+
+                <section id="privacy-childrens-privacy" class="legal-section glass-panel rounded-3xl p-8">
+                    <h3 class="text-lg font-semibold text-purple-300 mb-3">Children’s Privacy</h3>
+                    <div class="section-copy space-y-4">
+                        <p>StellarSync is not intended for children under 13, and we do not knowingly collect personal information from children under that age.</p>
+                    </div>
+                </section>
+
+                <section id="privacy-changes" class="legal-section glass-panel rounded-3xl p-8">
+                    <h3 class="text-lg font-semibold text-purple-300 mb-3">Changes</h3>
+                    <div class="section-copy space-y-4">
+                        <p>We may update this policy from time to time. The latest version will always live at <a href="/legal/">/legal/</a>.</p>
+                    </div>
+                </section>
+
+                <section id="privacy-contact" class="legal-section glass-panel rounded-3xl p-8">
+                    <h3 class="text-lg font-semibold text-purple-300 mb-3">Contact</h3>
+                    <div class="section-copy space-y-4">
+                        <p>Questions about privacy can be sent to <a href="mailto:support@stellarsync.app">support@stellarsync.app</a>.</p>
+                    </div>
+                </section>
+
+                <section id="terms-acceptance" class="legal-section glass-panel rounded-3xl p-8">
+                    <h2 class="text-2xl font-bold text-white mb-3">Terms of Service</h2>
+                    <h3 class="text-lg font-semibold text-purple-300 mb-3">Acceptance</h3>
+                    <div class="section-copy space-y-4">
+                        <p>By accessing or using StellarSync, you agree to these terms and our privacy policy.</p>
+                    </div>
+                </section>
+
+                <section id="terms-eligibility" class="legal-section glass-panel rounded-3xl p-8">
+                    <h3 class="text-lg font-semibold text-purple-300 mb-3">Eligibility</h3>
+                    <div class="section-copy space-y-4">
+                        <p>You must be able to enter into a contract and represent that you are authorized to use the service on behalf of your organization if you are signing up for a team account.</p>
+                    </div>
+                </section>
+
+                <section id="terms-accounts" class="legal-section glass-panel rounded-3xl p-8">
+                    <h3 class="text-lg font-semibold text-purple-300 mb-3">Accounts</h3>
+                    <ul class="section-list">
+                        <li>Keep your login credentials secure.</li>
+                        <li>Make sure account information stays accurate.</li>
+                        <li>You are responsible for activity under your account.</li>
+                    </ul>
+                </section>
+
+                <section id="terms-subscription-plans" class="legal-section glass-panel rounded-3xl p-8">
+                    <h3 class="text-lg font-semibold text-purple-300 mb-3">Subscription Plans</h3>
+                    <div class="section-copy space-y-4">
+                        <p>Starter, Growth, and Agency are self-serve subscription plans. Managed is a contact-driven setup and support plan.</p>
+                        <p>Plan pricing, features, and availability may change, but we will keep the public pricing page current at <a href="/pricing/">/pricing/</a>.</p>
+                    </div>
+                </section>
+
+                <section id="terms-free-trial" class="legal-section glass-panel rounded-3xl p-8">
+                    <h3 class="text-lg font-semibold text-purple-300 mb-3">Free Trial</h3>
+                    <div class="section-copy space-y-4">
+                        <p>Paid self-serve plans include a 3-day free trial. Payment information is collected during setup, no charge is made today, and you can cancel before the trial ends.</p>
+                    </div>
+                </section>
+
+                <section id="terms-user-content" class="legal-section glass-panel rounded-3xl p-8">
+                    <h3 class="text-lg font-semibold text-purple-300 mb-3">User Content</h3>
+                    <div class="section-copy space-y-4">
+                        <p>You retain rights to content you create or upload, subject to the rights necessary for StellarSync to host, process, display, and deliver the service.</p>
+                    </div>
+                </section>
+
+                <section id="terms-acceptable-use" class="legal-section glass-panel rounded-3xl p-8">
+                    <h3 class="text-lg font-semibold text-purple-300 mb-3">Acceptable Use</h3>
+                    <ul class="section-list">
+                        <li>Do not misuse the service or attempt unauthorized access.</li>
+                        <li>Do not upload malicious or unlawful content.</li>
+                        <li>Do not interfere with platform operations or other customers.</li>
+                    </ul>
+                </section>
+
+                <section id="terms-integrations" class="legal-section glass-panel rounded-3xl p-8">
+                    <h3 class="text-lg font-semibold text-purple-300 mb-3">Integrations</h3>
+                    <div class="section-copy space-y-4">
+                        <p>Integrations with services like Google Sheets, Monday, Drive, and publishing platforms may require third-party accounts and permissions. We are not responsible for downtime or changes made by those providers.</p>
+                    </div>
+                </section>
+
+                <section id="terms-availability" class="legal-section glass-panel rounded-3xl p-8">
+                    <h3 class="text-lg font-semibold text-purple-300 mb-3">Availability</h3>
+                    <div class="section-copy space-y-4">
+                        <p>We aim to keep StellarSync available, but we do not guarantee uninterrupted access. Maintenance, provider outages, or force majeure events may affect availability.</p>
+                    </div>
+                </section>
+
+                <section id="terms-limitation-of-liability" class="legal-section glass-panel rounded-3xl p-8">
+                    <h3 class="text-lg font-semibold text-purple-300 mb-3">Limitation of Liability</h3>
+                    <div class="section-copy space-y-4">
+                        <p>To the extent allowed by law, StellarSync is not liable for indirect, incidental, special, or consequential damages arising from the use of the service.</p>
+                    </div>
+                </section>
+
+                <section id="terms-termination" class="legal-section glass-panel rounded-3xl p-8">
+                    <h3 class="text-lg font-semibold text-purple-300 mb-3">Termination</h3>
+                    <div class="section-copy space-y-4">
+                        <p>We may suspend or terminate access for violations of these terms, security risks, or non-payment. You may stop using the service at any time.</p>
+                    </div>
+                </section>
+
+                <section id="terms-governing-law" class="legal-section glass-panel rounded-3xl p-8">
+                    <h3 class="text-lg font-semibold text-purple-300 mb-3">Governing Law</h3>
+                    <div class="section-copy space-y-4">
+                        <p>These terms are governed by the laws applicable to the operator of StellarSync, without regard to conflict-of-law principles.</p>
+                    </div>
+                </section>
+
+                <section id="terms-changes" class="legal-section glass-panel rounded-3xl p-8">
+                    <h3 class="text-lg font-semibold text-purple-300 mb-3">Changes</h3>
+                    <div class="section-copy space-y-4">
+                        <p>We may update these terms as the product changes. Continued use after an update means you accept the revised terms.</p>
+                    </div>
+                </section>
+
+                <section id="terms-contact" class="legal-section glass-panel rounded-3xl p-8">
+                    <h3 class="text-lg font-semibold text-purple-300 mb-3">Contact</h3>
+                    <div class="section-copy space-y-4">
+                        <p>Questions about these terms can be sent to <a href="mailto:support@stellarsync.app">support@stellarsync.app</a>.</p>
+                    </div>
+                </section>
             </div>
-            <div class="max-w-7xl mx-auto mt-20 pt-8 border-t border-white/5 text-center" vid="408">
-                <p class="text-xs text-gray-600" vid="409">© 2024 StellarSync. All rights reserved. Built for the mission-driven.</p>
-            </div>
-        </footer>
+        </div>
     </main>
-
-    <script vid="410">
-        
-        const starsContainer = document.getElementById('stars-container');
-        for (let i = 0; i < 200; i++) {
-            const star = document.createElement('div');
-            star.className = 'star';
-            star.style.left = `${Math.random() * 100}%`;
-            star.style.top = `${Math.random() * 100}%`;
-            const size = Math.random() < 0.1 ? 3 : (Math.random() < 0.3 ? 2 : 1);
-            star.style.width = `${size}px`;
-            star.style.height = `${size}px`;
-            star.style.setProperty('--duration', `${2 + Math.random() * 5}s`);
-            star.style.setProperty('--delay', `${Math.random() * 5}s`);
-            star.style.setProperty('--opacity', `${0.1 + Math.random() * 0.4}`);
-            starsContainer.appendChild(star);
-        }
-
-        
-        const revealCallback = (entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('active');
-                }
-            });
-        };
-
-        const revealObserver = new IntersectionObserver(revealCallback, {
-            threshold: 0.1
-        });
-
-        document.querySelectorAll('.reveal').forEach(el => {
-            revealObserver.observe(el);
-        });
-
-        
-        const navLinks = document.querySelectorAll('.nav-sidebar-link');
-        const sections = document.querySelectorAll('.reveal[id]');
-
-        window.addEventListener('scroll', () => {
-            let current = '';
-            sections.forEach(section => {
-                const sectionTop = section.offsetTop;
-                if (window.pageYOffset >= sectionTop - 150) {
-                    current = section.getAttribute('id');
-                }
-            });
-
-            navLinks.forEach(link => {
-                link.classList.remove('active');
-                if (link.getAttribute('href').includes(current)) {
-                    link.classList.add('active');
-                }
-            });
-        });
-
-        
-        window.addEventListener('scroll', () => {
-            const nav = document.querySelector('nav');
-            if (window.scrollY > 50) {
-                nav.style.height = '72px';
-                nav.style.backgroundColor = 'rgba(18, 12, 29, 0.95)';
-            } else {
-                nav.style.height = '80px';
-                nav.style.backgroundColor = 'rgba(18, 12, 29, 0.8)';
-            }
-        });
-    </script>
-
-
-</body></html>
+</body>
+</html>

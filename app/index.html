@@ -1896,6 +1896,7 @@
             <div class="min-w-0">
               <div class="flex items-center gap-3 min-w-0">
                 <span id="app-header-title" class="font-bold text-xl text-white tracking-wide truncate" vid="21">StellarSync</span>
+                <span id="app-header-workspace-badge" class="hidden text-[10px] uppercase tracking-[0.2em] text-gray-500 font-bold ml-2 px-2 py-0.5 bg-[#1a1128] border border-white/5 rounded shrink-0"></span>
                 <span id="app-header-subtitle" class="hidden text-[10px] uppercase tracking-[0.24em] text-gray-500 font-bold">Calendar</span>
               </div>
               <p id="app-header-view-detail" class="hidden md:block text-[10px] uppercase tracking-[0.22em] text-gray-500 font-bold mt-1">Content command center</p>
@@ -1937,6 +1938,10 @@
                 </button>
                 <button id="diagnostics-open-btn" type="button" class="workspace-menu-btn" data-workspace-action="diagnostics">
                   <span class="flex items-center gap-3"><i class="ph-bold ph-shield-check text-[#00ffaa]"></i> Diagnostics</span>
+                  <i class="ph-bold ph-caret-right text-gray-500"></i>
+                </button>
+                <button id="client-load-fallback-btn" type="button" class="workspace-menu-btn" onclick="window.location.href='/app/load.html'">
+                  <span class="flex items-center gap-3"><i class="ph-bold ph-arrow-u-up-left text-gray-400"></i> Workspace Login</span>
                   <i class="ph-bold ph-caret-right text-gray-500"></i>
                 </button>
                 <button type="button" class="workspace-menu-btn" data-workspace-action="install">
@@ -4086,7 +4091,7 @@
         <aside id="workspace-settings-sidebar" class="p-5 border-r border-white/5 overflow-y-auto custom-scrollbar space-y-2">
           <button type="button" class="settings-tab-btn w-full text-left px-4 py-3 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold uppercase tracking-wider text-white active" data-settings-tab="settings" data-workspace-tab="settings">Settings</button>
           <button type="button" class="settings-tab-btn w-full text-left px-4 py-3 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold uppercase tracking-wider text-gray-300" data-settings-tab="accounts" data-workspace-tab="accounts">Connected Accounts</button>
-          <button type="button" class="settings-tab-btn w-full text-left px-4 py-3 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold uppercase tracking-wider text-gray-300" data-settings-tab="diagnostics" data-workspace-tab="diagnostics">Diagnostics</button>
+          <button id="settings-diagnostics-tab-btn" type="button" class="settings-tab-btn w-full text-left px-4 py-3 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold uppercase tracking-wider text-gray-300" data-settings-tab="diagnostics" data-workspace-tab="diagnostics">Diagnostics</button>
           <button type="button" class="settings-tab-btn w-full text-left px-4 py-3 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold uppercase tracking-wider text-gray-300" data-settings-tab="providers" data-workspace-tab="providers">AI Providers</button>
           <button type="button" id="workspace-open-brand-os-btn" class="w-full text-left px-4 py-3 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold uppercase tracking-wider text-gray-300">Brand OS</button>
         </aside>
@@ -4416,10 +4421,77 @@ function getCurrentWorkspaceSlug() {
   }
 }
 
+function getSessionWorkspaceConfig() {
+  try {
+    const raw = sessionStorage.getItem("STELLARSYNC_ACTIVE_WORKSPACE");
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return null;
+    return {
+      id: String(parsed.id || "").trim(),
+      slug: String(parsed.slug || "").trim(),
+      name: String(parsed.name || "").trim(),
+      backend_type: String(parsed.backend_type || "client_google_sheets").trim(),
+      apps_script_url: String(parsed.apps_script_url || "").trim(),
+      sheet_id: String(parsed.sheet_id || "").trim(),
+      monday_board_id: String(parsed.monday_board_id || "").trim(),
+      supabase_media_enabled: Boolean(parsed.supabase_media_enabled),
+      plan: String(parsed.plan || "").trim()
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
+function updateWorkspaceBadge(config) {
+  try {
+    const badge = document.getElementById("app-header-workspace-badge");
+    if (!badge) return;
+    const slug = (config && config.workspace_slug) || "";
+    if (slug && slug !== "master") {
+      const name = (config && config.name) || slug;
+      badge.textContent = name;
+      badge.classList.remove("hidden");
+    } else {
+      badge.classList.add("hidden");
+      badge.textContent = "";
+    }
+  } catch (_) {}
+}
+
 function loadWorkspaceConfig() {
   const requestedSlug = getCurrentWorkspaceSlug();
   const slug = requestedSlug || WORKSPACE_RUNTIME_CONFIG.default_workspace_slug;
   const masterConfig = WORKSPACE_RUNTIME_CONFIG.workspaces.master || {};
+
+  // Priority 1: sessionStorage config when slug matches URL workspace param.
+  const sessionConfig = getSessionWorkspaceConfig();
+  if (sessionConfig && sessionConfig.slug && requestedSlug && sessionConfig.slug === requestedSlug) {
+    const active = {
+      ...masterConfig,
+      workspace_slug: sessionConfig.slug,
+      workspace_id: sessionConfig.id || sessionConfig.slug,
+      backend_type: sessionConfig.backend_type || "client_google_sheets",
+      apps_script_url: sessionConfig.apps_script_url || "",
+      sheet_id: sessionConfig.sheet_id || "",
+      monday_board_id: sessionConfig.monday_board_id || "",
+      supabase_media_enabled: sessionConfig.supabase_media_enabled,
+      storage_bucket: masterConfig.storage_bucket || "media"
+    };
+    if (!WORKSPACE_RUNTIME_CONFIG.backend_types.includes(active.backend_type)) {
+      active.backend_type = "client_google_sheets";
+    }
+    if (!active.apps_script_url) {
+      console.warn("[workspace] No apps_script_url in session config for:", requestedSlug);
+      try { showToast("Workspace Config", "No Apps Script URL for this workspace. Some features may be limited.", "ph-warning", "text-yellow-400"); } catch (_) {}
+    }
+    WORKSPACE_RUNTIME_CONFIG.active = active;
+    APP_CONFIG.APP_SCRIPT_URL = active.apps_script_url || APP_CONFIG.APP_SCRIPT_URL;
+    updateWorkspaceBadge(active);
+    return active;
+  }
+
+  // Priority 2: hardcoded workspace config.
   const workspaceConfig = WORKSPACE_RUNTIME_CONFIG.workspaces[slug] || {};
   const active = {
     ...masterConfig,
@@ -4428,13 +4500,20 @@ function loadWorkspaceConfig() {
     workspace_id: String(workspaceConfig.workspace_id || workspaceConfig.workspace_slug || slug || masterConfig.workspace_id || "master").trim(),
     backend_type: String(workspaceConfig.backend_type || masterConfig.backend_type || "master_google_sheets").trim(),
     apps_script_url: String(workspaceConfig.apps_script_url || masterConfig.apps_script_url || APP_CONFIG.APP_SCRIPT_URL || "").trim(),
+    sheet_id: String(workspaceConfig.sheet_id || masterConfig.sheet_id || "").trim(),
+    monday_board_id: String(workspaceConfig.monday_board_id || masterConfig.monday_board_id || "").trim(),
     storage_bucket: String(workspaceConfig.storage_bucket || masterConfig.storage_bucket || "media").trim()
   };
   if (!WORKSPACE_RUNTIME_CONFIG.backend_types.includes(active.backend_type)) {
     active.backend_type = requestedSlug ? "client_google_sheets" : "master_google_sheets";
   }
+  if (requestedSlug && requestedSlug !== "master" && !active.apps_script_url) {
+    console.warn("[workspace] No apps_script_url configured for workspace:", requestedSlug);
+    try { showToast("Workspace Config", "No Apps Script URL configured. Check workspace settings.", "ph-warning", "text-yellow-400"); } catch (_) {}
+  }
   WORKSPACE_RUNTIME_CONFIG.active = active;
   APP_CONFIG.APP_SCRIPT_URL = active.apps_script_url || APP_CONFIG.APP_SCRIPT_URL;
+  updateWorkspaceBadge(active);
   return active;
 }
 
@@ -4531,6 +4610,30 @@ function withWorkspaceRequestMetadata(payload = {}) {
 }
 
 loadWorkspaceConfig();
+
+// Client-safe mode: hides master-only/internal features.
+const CLIENT_SAFE_MODE = true;
+if (CLIENT_SAFE_MODE) {
+  try {
+    document.getElementById("diagnostics-open-btn")?.classList.add("hidden");
+    document.getElementById("repair-date-fields-btn")?.setAttribute("disabled", "disabled");
+    document.getElementById("repair-date-fields-btn")?.classList.add("opacity-50", "cursor-not-allowed");
+    document.getElementById("linkedin-rewrite-route-test-btn")?.setAttribute("disabled", "disabled");
+    document.getElementById("linkedin-rewrite-dry-run-btn")?.setAttribute("disabled", "disabled");
+    document.getElementById("linkedin-rewrite-apply-btn")?.setAttribute("disabled", "disabled");
+    document.getElementById("workspace-refresh-diagnostics-btn")?.setAttribute("disabled", "disabled");
+    document.getElementById("check-constellation-lanes-btn")?.setAttribute("disabled", "disabled");
+    document.getElementById("audit-flow-integrity-btn")?.setAttribute("disabled", "disabled");
+    document.getElementById("workspace-open-accounts-from-diagnostics-btn")?.setAttribute("disabled", "disabled");
+    document.getElementById("open-creator-memory-dashboard-btn")?.setAttribute("disabled", "disabled");
+    document.getElementById("open-branding-diagnostics-btn")?.setAttribute("disabled", "disabled");
+    document.getElementById("settings-diagnostics-tab-btn")?.classList.add("hidden");
+    ["linkedin-rewrite-start-row-input", "linkedin-rewrite-end-row-input"].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) { el.setAttribute("disabled", "disabled"); el.classList.add("opacity-50"); }
+    });
+  } catch (_) {}
+}
 
 const APP_FRONTEND_VERSION = "2026.06.07.01-runtime-ui";
 const APP_SERVICE_WORKER_VERSION = "2026.06.07.01-runtime-ui";
@@ -10666,6 +10769,7 @@ function renderWorkspaceHub() {
     btn.classList.toggle("text-gray-300", !active);
   });
   document.querySelectorAll("[data-settings-panel]").forEach((panel) => {
+    if (CLIENT_SAFE_MODE && panel.dataset.settingsPanel === "diagnostics") return;
     panel.classList.toggle("hidden", panel.dataset.settingsPanel !== currentWorkspaceSettingsTab);
   });
   const settings = appState.settings || {};
