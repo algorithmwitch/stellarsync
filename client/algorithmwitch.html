@@ -7,9 +7,9 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="StellarSync">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="./icons/stellarsync-apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="./icons/stellarsync-192.png">
-    <link rel="shortcut icon" href="./icons/stellarsync-192.png">
+    <link rel="apple-touch-icon" href="../icon/stellarsync-apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="../icon/stellarsync-192.png">
+    <link rel="shortcut icon" href="../icon/stellarsync-192.png">
     <script src="https://cdn.tailwindcss.com/3.4.17" vid="5"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" vid="6">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" vid="7">
@@ -1890,8 +1890,8 @@
     <header class="h-16 px-6 flex justify-between items-center gap-3 bg-[#120c1d] border border-white/5 rounded-2xl relative z-50 shrink-0" vid="17">
         <div class="flex items-center gap-4 min-w-0 flex-1" vid="18">
             <div id="app-header-logo" class="w-10 h-10 rounded-xl bg-[#231738] flex items-center justify-center shrink-0 overflow-hidden" vid="19">
-                <img src="./icons/stellarsync-192.png" alt="StellarSync" class="w-full h-full object-cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" loading="lazy">
-                <i class="ph-fill ph-planet text-[#c77dff] text-2xl hidden"></i>
+                <img src="../icon/stellarsync-192.png" alt="StellarSync" class="w-full h-full object-cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" loading="lazy">
+                <i class="ph-fill ph-sparkle text-[#c77dff] text-2xl hidden"></i>
             </div>
             <div class="min-w-0">
               <div class="flex items-center gap-3 min-w-0">
@@ -2158,7 +2158,7 @@
             <div class="relative ledger-menu-item">
               <button type="button" class="w-full px-3 py-3 rounded-lg hover:bg-[#181125] text-left flex items-center justify-between text-gray-300 hover:text-white transition-all">
                 <span class="text-xs font-medium flex items-center gap-2">
-                  <i class="ph-bold ph-planet text-[#c77dff]"></i>
+                  <i class="ph-bold ph-compass text-[#c77dff]"></i>
                   Campaign
                 </span>
                 <span id="ledger-filter-campaignlbl" class="text-[10px] text-gray-500 mr-2">All</span>
@@ -3491,7 +3491,7 @@
     <div class="p-6 border-b border-white/10 flex justify-between items-center bg-gradient-to-r from-[#1a1128] to-[#120c1d]">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 rounded-xl bg-[#2d1b4e] flex items-center justify-center">
-          <i class="ph-fill ph-planet text-[#c77dff] text-xl"></i>
+          <i class="ph-fill ph-compass text-[#c77dff] text-xl"></i>
         </div>
         <div>
           <h2 id="campaign-modal-title" class="text-xl font-bold text-white tracking-tight">Create Campaign</h2>
@@ -3723,8 +3723,8 @@
       <div class="flex items-center justify-between px-6 py-5 border-b border-white/5">
         <div class="flex items-center gap-4 mb-4">
           <div class="w-14 h-14 rounded-2xl bg-[#231738] flex items-center justify-center overflow-hidden shrink-0">
-            <img src="./icons/stellarsync-192.png" alt="StellarSync" class="w-full h-full object-cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" loading="lazy">
-            <i class="ph-fill ph-planet text-[#c77dff] text-3xl hidden"></i>
+            <img src="../icon/stellarsync-192.png" alt="StellarSync" class="w-full h-full object-cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" loading="lazy">
+            <i class="ph-fill ph-sparkle text-[#c77dff] text-3xl hidden"></i>
           </div>
           <div>
             <h3 class="text-white font-bold text-lg">Install StellarSync</h3>
@@ -4301,7 +4301,7 @@
   <div class="px-5 py-4 border-b border-white/5 flex items-center justify-between gap-3">
     <div class="flex items-center gap-3 min-w-0">
       <div class="w-10 h-10 rounded-2xl bg-[#2d1b4e] border border-white/10 flex items-center justify-center text-[#c77dff] shrink-0">
-        <i class="ph-fill ph-planet text-xl"></i>
+        <i class="ph-fill ph-sparkle text-xl"></i>
       </div>
       <div class="min-w-0">
         <h3 class="text-white text-sm font-bold tracking-wide">Stellar Assistant</h3>
@@ -4373,6 +4373,164 @@ const APP_CONFIG = {
   STORAGE_KEY: "stellarsync_local_state_v5",
   SHELL_LAYOUT_KEY: "stellarsync_shell_layout_v2"
 };
+
+// Phase 1 Workspace Adapter Layer.
+const WORKSPACE_RUNTIME_CONFIG = {
+  default_workspace_slug: "master",
+  active: null,
+  backend_types: ["master_google_sheets", "client_google_sheets", "hybrid", "supabase_private"],
+  workspaces: {
+    master: {
+      workspace_id: "master",
+      workspace_slug: "master",
+      backend_type: "master_google_sheets",
+      apps_script_url: APP_CONFIG.APP_SCRIPT_URL,
+      sheet_id: "",
+      monday_board_id: "",
+      supabase_url: "",
+      supabase_anon_key: "",
+      storage_bucket: "media",
+      supabase_media_enabled: false
+    },
+    "client-1": {
+      workspace_id: "client-1",
+      workspace_slug: "client-1",
+      backend_type: "client_google_sheets",
+      apps_script_url: "",
+      sheet_id: "",
+      monday_board_id: "",
+      supabase_url: "",
+      supabase_anon_key: "",
+      storage_bucket: "media",
+      supabase_media_enabled: false
+    }
+  }
+};
+
+function getCurrentWorkspaceSlug() {
+  try {
+    const params = new URLSearchParams(window.location.search || "");
+    return String(params.get("workspace") || "").trim();
+  } catch (_) {
+    return "";
+  }
+}
+
+function loadWorkspaceConfig() {
+  const requestedSlug = getCurrentWorkspaceSlug();
+  const slug = requestedSlug || WORKSPACE_RUNTIME_CONFIG.default_workspace_slug;
+  const masterConfig = WORKSPACE_RUNTIME_CONFIG.workspaces.master || {};
+  const workspaceConfig = WORKSPACE_RUNTIME_CONFIG.workspaces[slug] || {};
+  const active = {
+    ...masterConfig,
+    ...workspaceConfig,
+    workspace_slug: String(workspaceConfig.workspace_slug || slug || masterConfig.workspace_slug || "master").trim(),
+    workspace_id: String(workspaceConfig.workspace_id || workspaceConfig.workspace_slug || slug || masterConfig.workspace_id || "master").trim(),
+    backend_type: String(workspaceConfig.backend_type || masterConfig.backend_type || "master_google_sheets").trim(),
+    apps_script_url: String(workspaceConfig.apps_script_url || masterConfig.apps_script_url || APP_CONFIG.APP_SCRIPT_URL || "").trim(),
+    storage_bucket: String(workspaceConfig.storage_bucket || masterConfig.storage_bucket || "media").trim()
+  };
+  if (!WORKSPACE_RUNTIME_CONFIG.backend_types.includes(active.backend_type)) {
+    active.backend_type = requestedSlug ? "client_google_sheets" : "master_google_sheets";
+  }
+  WORKSPACE_RUNTIME_CONFIG.active = active;
+  APP_CONFIG.APP_SCRIPT_URL = active.apps_script_url || APP_CONFIG.APP_SCRIPT_URL;
+  return active;
+}
+
+function getWorkspaceApiUrl() {
+  const config = WORKSPACE_RUNTIME_CONFIG.active || loadWorkspaceConfig();
+  return String(config.apps_script_url || APP_CONFIG.APP_SCRIPT_URL || "").trim();
+}
+
+function isRunningInsideAppsScript() {
+  return typeof google !== "undefined" && google.script && google.script.run;
+}
+
+function isSupabaseMediaEnabled() {
+  const config = WORKSPACE_RUNTIME_CONFIG.active || loadWorkspaceConfig();
+  return !!(
+    config.supabase_media_enabled &&
+    config.supabase_url &&
+    config.supabase_anon_key &&
+    config.storage_bucket
+  );
+}
+
+function sanitizeWorkspacePathSegment(value, fallback) {
+  const safe = String(value || fallback || "item")
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return safe || String(fallback || "item");
+}
+
+function buildWorkspaceMediaPath(workspaceSlug, postId, filename) {
+  const slug = sanitizeWorkspacePathSegment(workspaceSlug || getCurrentWorkspaceSlug() || "master", "master");
+  const owner = sanitizeWorkspacePathSegment(postId || "unassigned", "unassigned");
+  const name = sanitizeWorkspacePathSegment(filename || "media", "media");
+  return `${slug}/${owner}/${Date.now()}-${name}`;
+}
+
+async function uploadMediaToSupabaseStorage(file, options = {}) {
+  if (!isSupabaseMediaEnabled()) {
+    throw new Error("Supabase media is not configured for this workspace.");
+  }
+  const config = WORKSPACE_RUNTIME_CONFIG.active || loadWorkspaceConfig();
+  const storagePath = buildWorkspaceMediaPath(config.workspace_slug, options.postId || "", file?.name || "media");
+  const bucket = encodeURIComponent(config.storage_bucket || "media");
+  const uploadUrl = `${String(config.supabase_url || "").replace(/\/+$/, "")}/storage/v1/object/${bucket}/${storagePath}`;
+  const response = await fetch(uploadUrl, {
+    method: "POST",
+    headers: {
+      apikey: config.supabase_anon_key,
+      Authorization: `Bearer ${config.supabase_anon_key}`,
+      "Content-Type": file?.type || "application/octet-stream",
+      "x-upsert": "true"
+    },
+    body: file
+  });
+  if (!response.ok) throw new Error(`Supabase upload failed: ${response.status}`);
+  const publicUrl = `${String(config.supabase_url || "").replace(/\/+$/, "")}/storage/v1/object/public/${bucket}/${storagePath}`;
+  const mediaId = `sb-${Date.now()}`;
+  return {
+    media_id: mediaId,
+    media_url: publicUrl,
+    media_type: file?.type || "",
+    media_filename: file?.name || "",
+    media_alt_text: options.altText || "",
+    media_source: "supabase",
+    storage_path: storagePath,
+    assetId: mediaId,
+    assetName: file?.name || "Supabase media",
+    assetType: file?.type || "",
+    fileUrl: publicUrl,
+    sourceUrl: publicUrl,
+    linkedPostId: options.postId || "",
+    campaign: options.campaign || ""
+  };
+}
+
+function getWorkspaceRequestMetadata() {
+  const config = WORKSPACE_RUNTIME_CONFIG.active || loadWorkspaceConfig();
+  return {
+    workspace_id: config.workspace_id || config.workspace_slug || "master",
+    workspace_slug: config.workspace_slug || "master",
+    backend_type: config.backend_type || "master_google_sheets",
+    sheet_id: config.sheet_id || "",
+    monday_board_id: config.monday_board_id || "",
+    supabase_media_enabled: !!config.supabase_media_enabled
+  };
+}
+
+function withWorkspaceRequestMetadata(payload = {}) {
+  return {
+    ...payload,
+    ...getWorkspaceRequestMetadata()
+  };
+}
+
+loadWorkspaceConfig();
 
 const APP_FRONTEND_VERSION = "2026.06.07.01-runtime-ui";
 const APP_SERVICE_WORKER_VERSION = "2026.06.07.01-runtime-ui";
@@ -9438,19 +9596,43 @@ async function commitPendingUploads() {
   for (let index = 0; index < validItems.length; index += 1) {
     const item = validItems[index];
     uploadStagingStatus.textContent = `Uploading ${index + 1} of ${validItems.length}`;
-    const base64Data = await fileToBase64(item.file);
-    const result = await apiPost("uploadMedia", {
-      fileName: item.file.name,
-      mimeType: item.file.type,
-      base64Data,
-      fileSizeBytes: item.file.size,
-      originalFilename: item.file.name,
-      importedMediaSource: uploadStagingTarget === "post" ? "post_upload" : "vault_upload",
-      assetBadge: item.file.type.startsWith("video/") ? "Reel" : item.file.type.startsWith("image/") ? uploadStagingTarget === "post" && postTypeSelect?.value === "carousel" ? "Carousel" : "Image" : "Document",
-      assetMeta: "",
-      linkedPostId: uploadStagingTarget === "post" ? (currentEditingPostId || "") : "",
-      campaign: uploadStagingTarget === "post" ? getCurrentModalCampaignLabel() : ""
-    });
+    const linkedPostId = uploadStagingTarget === "post" ? (currentEditingPostId || "") : "";
+    const campaign = uploadStagingTarget === "post" ? getCurrentModalCampaignLabel() : "";
+    let result = null;
+    if (isSupabaseMediaEnabled()) {
+      const supabaseAsset = await uploadMediaToSupabaseStorage(item.file, { postId: linkedPostId, campaign });
+      result = await apiPost("saveMediaLink", {
+        sourceUrl: supabaseAsset.media_url,
+        assetName: supabaseAsset.media_filename,
+        assetType: supabaseAsset.media_type,
+        linkedPostId,
+        campaign,
+        assetBadge: item.file.type.startsWith("video/") ? "Reel" : item.file.type.startsWith("image/") ? uploadStagingTarget === "post" && postTypeSelect?.value === "carousel" ? "Carousel" : "Image" : "Document",
+        assetMeta: "",
+        media_id: supabaseAsset.media_id,
+        media_url: supabaseAsset.media_url,
+        media_type: supabaseAsset.media_type,
+        media_filename: supabaseAsset.media_filename,
+        media_alt_text: supabaseAsset.media_alt_text,
+        media_source: supabaseAsset.media_source,
+        storage_path: supabaseAsset.storage_path
+      });
+      result.asset = { ...supabaseAsset, ...(result.asset || {}) };
+    } else {
+      const base64Data = await fileToBase64(item.file);
+      result = await apiPost("uploadMedia", {
+        fileName: item.file.name,
+        mimeType: item.file.type,
+        base64Data,
+        fileSizeBytes: item.file.size,
+        originalFilename: item.file.name,
+        importedMediaSource: uploadStagingTarget === "post" ? "post_upload" : "vault_upload",
+        assetBadge: item.file.type.startsWith("video/") ? "Reel" : item.file.type.startsWith("image/") ? uploadStagingTarget === "post" && postTypeSelect?.value === "carousel" ? "Carousel" : "Image" : "Document",
+        assetMeta: "",
+        linkedPostId,
+        campaign
+      });
+    }
     const normalized = normalizeRemoteMedia(result.asset);
     if (uploadStagingTarget === "post") {
       if (!currentModalAsset) currentModalAsset = normalized;
@@ -11175,7 +11357,7 @@ function renderMobileUtilitySheet() {
     return;
   }
   if (currentMobileUtilityTab === "semantic") {
-    mobileUtilityContent.innerHTML = document.getElementById("semantic-memory-panel")?.innerHTML || makeEmptyState("Semantic memory unavailable", "No semantic memory summary is available right now.", "ph-planet");
+    mobileUtilityContent.innerHTML = document.getElementById("semantic-memory-panel")?.innerHTML || makeEmptyState("Semantic memory unavailable", "No semantic memory summary is available right now.", "ph-brain");
     return;
   }
   if (currentMobileUtilityTab === "brand") {
@@ -11606,7 +11788,7 @@ function renderWriteIdeaGuidance() {
           </div>
         </div>
       `).join("")
-      : makeEmptyState("No campaigns yet", "Create a campaign to reuse it as idea context.", "ph-planet");
+      : makeEmptyState("No campaigns yet", "Create a campaign to reuse it as idea context.", "ph-compass");
   }
 }
 
@@ -12521,16 +12703,39 @@ async function saveSocialCardToMedia() {
   }
   try {
     if (socialCardUpload?.file) {
-      const base64Data = await fileToBase64(socialCardUpload.file);
-      await apiPost("uploadMedia", {
-        fileName: socialCardUpload.file.name,
-        mimeType: socialCardUpload.file.type,
-        base64Data,
-        assetBadge: String(mediaLinkBadgeInput?.value || "Social Card").trim(),
-        assetMeta: String(mediaLinkMetaInput?.value || state.fallback || "").trim(),
-        linkedPostId: "",
-        campaign: ""
-      });
+      if (isSupabaseMediaEnabled()) {
+        const supabaseAsset = await uploadMediaToSupabaseStorage(socialCardUpload.file, {
+          postId: "",
+          altText: state.title || deriveSourceLabel(state.sourceUrl)
+        });
+        await apiPost("saveMediaLink", {
+          sourceUrl: supabaseAsset.media_url,
+          assetName: supabaseAsset.media_filename,
+          assetType: supabaseAsset.media_type,
+          assetBadge: String(mediaLinkBadgeInput?.value || "Social Card").trim(),
+          assetMeta: String(mediaLinkMetaInput?.value || state.fallback || "").trim(),
+          linkedPostId: "",
+          campaign: "",
+          media_id: supabaseAsset.media_id,
+          media_url: supabaseAsset.media_url,
+          media_type: supabaseAsset.media_type,
+          media_filename: supabaseAsset.media_filename,
+          media_alt_text: supabaseAsset.media_alt_text,
+          media_source: supabaseAsset.media_source,
+          storage_path: supabaseAsset.storage_path
+        });
+      } else {
+        const base64Data = await fileToBase64(socialCardUpload.file);
+        await apiPost("uploadMedia", {
+          fileName: socialCardUpload.file.name,
+          mimeType: socialCardUpload.file.type,
+          base64Data,
+          assetBadge: String(mediaLinkBadgeInput?.value || "Social Card").trim(),
+          assetMeta: String(mediaLinkMetaInput?.value || state.fallback || "").trim(),
+          linkedPostId: "",
+          campaign: ""
+        });
+      }
     } else {
       await apiPost("saveMediaLink", {
         sourceUrl: state.imageUrl,
@@ -13635,6 +13840,17 @@ function setupSaveHandler() {
       postType: postTypeSelect?.value || "text",
       description: descInput?.value.trim() || "",
       assetId: currentModalAsset?.id || existing?.assetId || "",
+      mediaId: currentModalAsset?.mediaId || currentModalAsset?.media_id || currentModalAsset?.assetId || existing?.mediaId || existing?.media_id || "",
+      mediaUrl: currentModalAsset?.mediaUrl || currentModalAsset?.media_url || currentModalAsset?.fileUrl || currentModalAsset?.url || existing?.mediaUrl || existing?.media_url || "",
+      mediaType: currentModalAsset?.mediaType || currentModalAsset?.media_type || currentModalAsset?.assetType || existing?.mediaType || existing?.media_type || "",
+      mediaFilename: currentModalAsset?.mediaFilename || currentModalAsset?.media_filename || currentModalAsset?.originalFilename || currentModalAsset?.assetName || existing?.mediaFilename || existing?.media_filename || "",
+      mediaAltText: currentModalAsset?.mediaAltText || currentModalAsset?.media_alt_text || currentModalAsset?.altText || existing?.mediaAltText || existing?.media_alt_text || "",
+      mediaSource: currentModalAsset?.mediaSource || currentModalAsset?.media_source || currentModalAsset?.sourceType || existing?.mediaSource || existing?.media_source || "",
+      storagePath: currentModalAsset?.storagePath || currentModalAsset?.storage_path || existing?.storagePath || existing?.storage_path || "",
+      mondayItemId: existing?.mondayItemId || existing?.monday_item_id || "",
+      mondayGroupId: existing?.mondayGroupId || existing?.monday_group_id || "",
+      mondayLastSyncedAt: existing?.mondayLastSyncedAt || existing?.monday_last_synced_at || "",
+      mondaySyncStatus: existing?.mondaySyncStatus || existing?.monday_sync_status || "",
       carouselAssetIds: currentModalCarouselAssets.length
         ? currentModalCarouselAssets.map(asset => asset.assetId || asset.id).filter(Boolean)
         : Array.isArray(existing?.carouselAssetIds) ? existing.carouselAssetIds : [],
@@ -16274,18 +16490,19 @@ async function syncRemoteIfConfigured() {
 }
 
 function isRemoteConfigured() {
+  const apiUrl = getWorkspaceApiUrl();
   return (
-    APP_CONFIG.APP_SCRIPT_URL &&
-    APP_CONFIG.APP_SCRIPT_URL !== "PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE"
+    apiUrl &&
+    apiUrl !== "PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE"
   );
 }
 
 async function apiGet(action, params = {}) {
   const search = new URLSearchParams({ action });
-  Object.entries(params || {}).forEach(([key, value]) => {
+  Object.entries(withWorkspaceRequestMetadata(params || {})).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== "") search.set(key, String(value));
   });
-  const response = await fetch(`${APP_CONFIG.APP_SCRIPT_URL}?${search.toString()}`, {
+  const response = await fetch(`${getWorkspaceApiUrl()}?${search.toString()}`, {
     method: "GET",
     mode: "cors"
   });
@@ -16297,11 +16514,11 @@ async function apiGet(action, params = {}) {
 }
 
 async function apiPost(action, payload = {}) {
-  const response = await fetch(APP_CONFIG.APP_SCRIPT_URL, {
+  const response = await fetch(getWorkspaceApiUrl(), {
     method: "POST",
     mode: "cors",
     headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({ action, payload })
+    body: JSON.stringify({ action, payload: withWorkspaceRequestMetadata(payload || {}) })
   });
 
   if (!response.ok) throw new Error(`Request failed: ${response.status}`);
@@ -16356,7 +16573,7 @@ async function apiGetSettings() {
 }
 
 async function apiGetDiagnostics() {
-  const result = await apiPost("getDiagnostics", { activeDeploymentUrlFromFrontend: APP_CONFIG.APP_SCRIPT_URL });
+  const result = await apiPost("getDiagnostics", { activeDeploymentUrlFromFrontend: getWorkspaceApiUrl() });
   return result.diagnostics || result.data || result;
 }
 
@@ -17081,7 +17298,7 @@ function renderDiagnosticsPanel() {
         <div class="p-3 rounded-xl bg-[#120c1d] border border-white/5">
           <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Frontend / Backend Match</div>
           <div class="text-sm ${deploymentDiagnostics.deploymentUrlMismatch ? "text-red-200" : "text-white"} wrap-safe">${escapeHtml(deploymentDiagnostics.deploymentUrlMismatch ? "Mismatch detected" : "Aligned")}</div>
-          <div class="mt-1 text-[11px] text-gray-400 wrap-safe break-all">${escapeHtml(`Frontend: ${deploymentDiagnostics.activeDeploymentUrlFromFrontend || APP_CONFIG.APP_SCRIPT_URL || "Missing"}`)}</div>
+          <div class="mt-1 text-[11px] text-gray-400 wrap-safe break-all">${escapeHtml(`Frontend: ${deploymentDiagnostics.activeDeploymentUrlFromFrontend || getWorkspaceApiUrl() || "Missing"}`)}</div>
           <div class="mt-1 text-[11px] text-gray-400 wrap-safe break-all">${escapeHtml(`Backend: ${deploymentDiagnostics.publicWebappBaseUrl || "Missing"}`)}</div>
         </div>
       </div>
@@ -18111,6 +18328,30 @@ function normalizeRemotePost(post, campaigns = [], mediaItems = []) {
     copy: String(pickRemoteValue(post?.copy, "")).trim(),
     ledgerExcerpt: String(pickRemoteValue(post?.ledgerExcerpt, post?.ledger_excerpt, "")).trim(),
     assetId: String(pickRemoteValue(post?.assetId, post?.asset_id, "")).trim(),
+    workspaceId: String(pickRemoteValue(post?.workspaceId, post?.workspace_id, "")).trim(),
+    workspace_id: String(pickRemoteValue(post?.workspace_id, post?.workspaceId, "")).trim(),
+    mediaId: String(pickRemoteValue(post?.mediaId, post?.media_id, post?.assetId, post?.asset_id, "")).trim(),
+    media_id: String(pickRemoteValue(post?.media_id, post?.mediaId, post?.asset_id, post?.assetId, "")).trim(),
+    mediaUrl: String(pickRemoteValue(post?.mediaUrl, post?.media_url, "")).trim(),
+    media_url: String(pickRemoteValue(post?.media_url, post?.mediaUrl, "")).trim(),
+    mediaType: String(pickRemoteValue(post?.mediaType, post?.media_type, "")).trim(),
+    media_type: String(pickRemoteValue(post?.media_type, post?.mediaType, "")).trim(),
+    mediaFilename: String(pickRemoteValue(post?.mediaFilename, post?.media_filename, "")).trim(),
+    media_filename: String(pickRemoteValue(post?.media_filename, post?.mediaFilename, "")).trim(),
+    mediaAltText: String(pickRemoteValue(post?.mediaAltText, post?.media_alt_text, "")).trim(),
+    media_alt_text: String(pickRemoteValue(post?.media_alt_text, post?.mediaAltText, "")).trim(),
+    mediaSource: String(pickRemoteValue(post?.mediaSource, post?.media_source, "")).trim(),
+    media_source: String(pickRemoteValue(post?.media_source, post?.mediaSource, "")).trim(),
+    storagePath: String(pickRemoteValue(post?.storagePath, post?.storage_path, "")).trim(),
+    storage_path: String(pickRemoteValue(post?.storage_path, post?.storagePath, "")).trim(),
+    mondayItemId: String(pickRemoteValue(post?.mondayItemId, post?.monday_item_id, "")).trim(),
+    monday_item_id: String(pickRemoteValue(post?.monday_item_id, post?.mondayItemId, "")).trim(),
+    mondayGroupId: String(pickRemoteValue(post?.mondayGroupId, post?.monday_group_id, "")).trim(),
+    monday_group_id: String(pickRemoteValue(post?.monday_group_id, post?.mondayGroupId, "")).trim(),
+    mondayLastSyncedAt: String(pickRemoteValue(post?.mondayLastSyncedAt, post?.monday_last_synced_at, "")).trim(),
+    monday_last_synced_at: String(pickRemoteValue(post?.monday_last_synced_at, post?.mondayLastSyncedAt, "")).trim(),
+    mondaySyncStatus: String(pickRemoteValue(post?.mondaySyncStatus, post?.monday_sync_status, "")).trim(),
+    monday_sync_status: String(pickRemoteValue(post?.monday_sync_status, post?.mondaySyncStatus, "")).trim(),
     hubTitle: String(pickRemoteValue(post?.hubTitle, post?.hub_title, title)).trim(),
     hubPillarLabel: formatContentPillarLabel(pickRemoteValue(post?.hubPillarLabel, post?.hub_pillar_label, post?.pillar, matchedCampaign?.pillar, (appState.settings?.pillars || [])[0] || "authority")),
     queueDateLabel: planning.queueDateLabel,
@@ -18331,7 +18572,7 @@ function normalizeRemoteNote(item) {
 }
 
 function normalizeRemoteMedia(asset) {
-  const assetId = String(pickRemoteValue(asset?.assetId, asset?.asset_id, asset?.id, "")).trim();
+  const assetId = String(pickRemoteValue(asset?.assetId, asset?.asset_id, asset?.mediaId, asset?.media_id, asset?.id, "")).trim();
   const linkedPostId = String(pickRemoteValue(asset?.linkedPostId, asset?.linked_post_id, asset?.postId, asset?.post_id, "")).trim();
   const assetName = getMediaTitle(asset);
   const assetType = String(pickRemoteValue(asset?.type, asset?.media_type, asset?.mediaType, asset?.assetType, asset?.asset_type, "image")).trim().toLowerCase() || "image";
@@ -18342,6 +18583,8 @@ function normalizeRemoteMedia(asset) {
     id: assetId,
     assetId,
     asset_id: assetId,
+    mediaId: String(pickRemoteValue(asset?.mediaId, asset?.media_id, assetId)).trim(),
+    media_id: String(pickRemoteValue(asset?.media_id, asset?.mediaId, assetId)).trim(),
     title: assetName,
     media_title: String(pickRemoteValue(asset?.media_title, asset?.mediaTitle, assetName)).trim() || assetName,
     asset_title: String(pickRemoteValue(asset?.asset_title, asset?.assetTitle, asset?.asset_name, asset?.assetName, assetName)).trim() || assetName,
@@ -18362,8 +18605,10 @@ function normalizeRemoteMedia(asset) {
     status: assetStatus,
     assetStatus,
     placeholderIcon: String(pickRemoteValue(asset?.placeholderIcon, asset?.placeholder_icon, "")).trim(),
-    fileUrl: String(pickRemoteValue(asset?.fileUrl, asset?.file_url, asset?.url, "")).trim(),
-    url: String(pickRemoteValue(asset?.url, asset?.fileUrl, asset?.file_url, asset?.sourceUrl, asset?.source_url, "")).trim(),
+    fileUrl: String(pickRemoteValue(asset?.fileUrl, asset?.file_url, asset?.mediaUrl, asset?.media_url, asset?.url, "")).trim(),
+    url: String(pickRemoteValue(asset?.url, asset?.mediaUrl, asset?.media_url, asset?.fileUrl, asset?.file_url, asset?.sourceUrl, asset?.source_url, "")).trim(),
+    mediaUrl: String(pickRemoteValue(asset?.mediaUrl, asset?.media_url, asset?.fileUrl, asset?.file_url, asset?.url, "")).trim(),
+    media_url: String(pickRemoteValue(asset?.media_url, asset?.mediaUrl, asset?.file_url, asset?.fileUrl, asset?.url, "")).trim(),
     thumbnailUrl: String(pickRemoteValue(asset?.thumbnailUrl, asset?.thumbnail_url, asset?.fileUrl, asset?.file_url, "")).trim(),
     thumbnail_url: String(pickRemoteValue(asset?.thumbnail_url, asset?.thumbnailUrl, asset?.file_url, asset?.fileUrl, "")).trim(),
     campaign: String(pickRemoteValue(asset?.campaign, asset?.campaignName, asset?.campaign_name, "")).trim(),
@@ -18373,10 +18618,18 @@ function normalizeRemoteMedia(asset) {
     driveFileId: String(pickRemoteValue(asset?.driveFileId, asset?.drive_file_id, "")).trim(),
     sourceUrl: String(pickRemoteValue(asset?.sourceUrl, asset?.source_url, "")).trim(),
     source_url: String(pickRemoteValue(asset?.source_url, asset?.sourceUrl, "")).trim(),
-    sourceType: String(pickRemoteValue(asset?.sourceType, asset?.source_type, "")).trim(),
-    altText: String(pickRemoteValue(asset?.altText, asset?.alt_text, "")).trim(),
-    alt_text: String(pickRemoteValue(asset?.alt_text, asset?.altText, "")).trim(),
+    sourceType: String(pickRemoteValue(asset?.sourceType, asset?.source_type, asset?.mediaSource, asset?.media_source, "")).trim(),
+    mediaSource: String(pickRemoteValue(asset?.mediaSource, asset?.media_source, asset?.sourceType, asset?.source_type, "")).trim(),
+    media_source: String(pickRemoteValue(asset?.media_source, asset?.mediaSource, asset?.source_type, asset?.sourceType, "")).trim(),
+    altText: String(pickRemoteValue(asset?.altText, asset?.alt_text, asset?.mediaAltText, asset?.media_alt_text, "")).trim(),
+    alt_text: String(pickRemoteValue(asset?.alt_text, asset?.altText, asset?.media_alt_text, asset?.mediaAltText, "")).trim(),
+    mediaAltText: String(pickRemoteValue(asset?.mediaAltText, asset?.media_alt_text, asset?.altText, asset?.alt_text, "")).trim(),
+    media_alt_text: String(pickRemoteValue(asset?.media_alt_text, asset?.mediaAltText, asset?.alt_text, asset?.altText, "")).trim(),
     mimeType: String(pickRemoteValue(asset?.mimeType, asset?.mime_type, "")).trim(),
+    mediaFilename: String(pickRemoteValue(asset?.mediaFilename, asset?.media_filename, asset?.originalFilename, asset?.original_filename, assetName)).trim(),
+    media_filename: String(pickRemoteValue(asset?.media_filename, asset?.mediaFilename, asset?.original_filename, asset?.originalFilename, assetName)).trim(),
+    storagePath: String(pickRemoteValue(asset?.storagePath, asset?.storage_path, "")).trim(),
+    storage_path: String(pickRemoteValue(asset?.storage_path, asset?.storagePath, "")).trim(),
     fileSizeBytes: Number(pickRemoteValue(asset?.fileSizeBytes, asset?.file_size_bytes, 0)) || 0,
     originalFilename: String(pickRemoteValue(asset?.originalFilename, asset?.original_filename, assetName)).trim(),
     importedMediaSource: String(pickRemoteValue(asset?.importedMediaSource, asset?.imported_media_source, "")).trim(),
@@ -18647,6 +18900,18 @@ async function apiSavePost(post) {
     postType: hydratedPost.postType || "text",
     description: hydratedPost.description || "",
     assetId: hydratedPost.assetId || "",
+    workspaceId: hydratedPost.workspaceId || hydratedPost.workspace_id || getWorkspaceRequestMetadata().workspace_id || "",
+    mediaId: hydratedPost.mediaId || hydratedPost.media_id || hydratedPost.assetId || "",
+    mediaUrl: hydratedPost.mediaUrl || hydratedPost.media_url || "",
+    mediaType: hydratedPost.mediaType || hydratedPost.media_type || "",
+    mediaFilename: hydratedPost.mediaFilename || hydratedPost.media_filename || "",
+    mediaAltText: hydratedPost.mediaAltText || hydratedPost.media_alt_text || "",
+    mediaSource: hydratedPost.mediaSource || hydratedPost.media_source || "",
+    storagePath: hydratedPost.storagePath || hydratedPost.storage_path || "",
+    mondayItemId: hydratedPost.mondayItemId || hydratedPost.monday_item_id || "",
+    mondayGroupId: hydratedPost.mondayGroupId || hydratedPost.monday_group_id || "",
+    mondayLastSyncedAt: hydratedPost.mondayLastSyncedAt || hydratedPost.monday_last_synced_at || "",
+    mondaySyncStatus: hydratedPost.mondaySyncStatus || hydratedPost.monday_sync_status || "",
     hubTitle: hydratedPost.hubTitle || hydratedPost.title || "",
     hubPillarLabel: formatContentPillarLabel(hydratedPost.hubPillarLabel || hydratedPost.pillar || (appState.settings?.pillars || [])[0] || "authority"),
     mediaLabel: hydratedPost.mediaLabel || "",
@@ -19443,7 +19708,7 @@ function renderOverviewPanel() {
   const campaignTarget = document.getElementById("overview-campaign-snapshot");
   if (campaignTarget) {
     campaignTarget.innerHTML = countPostsBy(appState.posts || [], (post) => post.campaignName || "Uncategorized").slice(0, 4)
-      .map(([label, count]) => `<div class="flex justify-between text-sm"><span class="text-gray-400 wrap-safe">${escapeHtml(formatCampaignDisplayName(label))}</span><span class="text-white font-bold">${count}</span></div>`).join("") || makeEmptyState("No campaign data", "Campaign counts appear after posts are assigned.", "ph-planet");
+      .map(([label, count]) => `<div class="flex justify-between text-sm"><span class="text-gray-400 wrap-safe">${escapeHtml(formatCampaignDisplayName(label))}</span><span class="text-white font-bold">${count}</span></div>`).join("") || makeEmptyState("No campaign data", "Campaign counts appear after posts are assigned.", "ph-compass");
   }
   renderSemanticMemoryPanel();
   renderContextualGuidancePanel();

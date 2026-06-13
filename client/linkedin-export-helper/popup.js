@@ -45,9 +45,45 @@ function setDiagnostics(value) {
 }
 
 function setButtonsEnabled(enabled) {
-  ["copy-tsv-btn", "download-json-btn", "download-csv-btn", "download-tsv-btn"].forEach(function(id) {
+  ["copy-tsv-btn", "download-json-btn", "download-csv-btn", "download-tsv-btn", "download-media-manifest-btn", "import-media-btn"].forEach(function(id) {
     $(id).disabled = !enabled;
   });
+}
+
+function mediaManifestFromPayload(payload) {
+  if (payload && payload.media_manifest && payload.media_manifest.items && payload.media_manifest.items.length) {
+    return {
+      generated_at: payload.generated_at || payload.generatedAt,
+      source_url: payload.source_url,
+      page_type: payload.page_type,
+      total_items_with_media: payload.media_manifest.total_items_with_media,
+      total_media_count: payload.media_manifest.total_media_count,
+      media_types: payload.media_manifest.media_types || {},
+      items: payload.media_manifest.items
+    };
+  }
+  var items = (payload && payload.items) || [];
+  var mediaItems = [];
+  items.forEach(function(item) {
+    var itemMedia = item.media || [];
+    if (!itemMedia.length) return;
+    mediaItems.push({
+      capture_index: item.capture_index,
+      linkedin_url: item.url || "",
+      post_text: (item.text || item.rawText || "").slice(0, 200),
+      media: itemMedia
+    });
+  });
+  if (!mediaItems.length) return null;
+  return {
+    generated_at: payload.generated_at || payload.generatedAt,
+    source_url: payload.source_url,
+    page_type: payload.page_type,
+    total_items_with_media: mediaItems.length,
+    total_media_count: mediaItems.reduce(function(sum, m) { return sum + m.media.length; }, 0),
+    media_types: {},
+    items: mediaItems
+  };
 }
 
 function csvEscape(value, delimiter) {
@@ -349,6 +385,37 @@ function downloadTsv() {
   }
 }
 
+function downloadMediaManifest() {
+  try {
+    var payload = requirePayload();
+    var manifest = mediaManifestFromPayload(payload);
+    if (!manifest || !manifest.items || !manifest.items.length) {
+      setStatus("No media found in the captured payload.");
+      return;
+    }
+    downloadBlob("linkedin-media-manifest-" + new Date().toISOString().replace(/[:.]/g, "-") + ".json", "application/json", JSON.stringify(manifest, null, 2));
+    setStatus(manifest.total_media_count + " media items (" + manifest.total_items_with_media + " posts). JSON download started.");
+  } catch (error) {
+    setStatus(error && error.message ? error.message : "Could not download media manifest.");
+  }
+}
+
+async function importMediaToStellarSync() {
+  try {
+    var payload = requirePayload();
+    var manifest = mediaManifestFromPayload(payload);
+    if (!manifest || !manifest.items || !manifest.items.length) {
+      setStatus("No media found in the captured payload.");
+      return;
+    }
+    var json = JSON.stringify(manifest, null, 2);
+    await navigator.clipboard.writeText(json);
+    setStatus("Media manifest copied to clipboard (" + manifest.total_media_count + " media items). Paste into StellarSync LinkedIn import modal.");
+  } catch (error) {
+    setStatus(error && error.message ? error.message : "Could not copy media manifest.");
+  }
+}
+
 $("export-btn").addEventListener("click", exportVisiblePosts);
 $("capture-page-text-btn").addEventListener("click", capturePageText);
 $("capture-selected-text-btn").addEventListener("click", captureSelectedText);
@@ -357,3 +424,5 @@ $("copy-tsv-btn").addEventListener("click", copyTsv);
 $("download-json-btn").addEventListener("click", downloadJson);
 $("download-csv-btn").addEventListener("click", downloadCsv);
 $("download-tsv-btn").addEventListener("click", downloadTsv);
+$("download-media-manifest-btn").addEventListener("click", downloadMediaManifest);
+$("import-media-btn").addEventListener("click", importMediaToStellarSync);

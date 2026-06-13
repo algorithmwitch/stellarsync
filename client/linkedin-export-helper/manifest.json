@@ -27,7 +27,8 @@
   ],
   "host_permissions": [
     "https://www.linkedin.com/*",
-    "https://linkedin.com/*"
+    "https://linkedin.com/*",
+    "https://media.licdn.com/*"
   ],
   "content_scripts": [
     {

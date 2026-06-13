@@ -8,6 +8,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" vid="7">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" vid="8">
     <script src="https://unpkg.com/@phosphor-icons/web" vid="9"></script>
+    <link rel="apple-touch-icon" href="icon/stellarsync-apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon/stellarsync-192.png">
+    <link rel="shortcut icon" href="icon/stellarsync-192.png">
     <style vid="10">
         :root {
             --color-bg: #0a0612;
@@ -88,6 +91,35 @@
         .nav-link:hover { color: white; }
         .nav-link::after { content: ''; position: absolute; bottom: -4px; left: 0; width: 0; height: 1px; background: #c77dff; transition: width 0.3s ease; }
         .nav-link:hover::after { width: 100%; }
+        .index-cta {
+            min-height: 44px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1.1;
+            white-space: nowrap;
+        }
+        .index-cta-lg { min-height: 48px; }
+        .pricing-card {
+            display: flex;
+            flex-direction: column;
+        }
+        .pricing-card ul {
+            flex: 1;
+        }
+        .pricing-cta {
+            min-height: 46px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1.1;
+        }
+        @media (max-width: 640px) {
+            .index-cta {
+                width: 100%;
+                max-width: 22rem;
+            }
+        }
     </style>
 
   <style type="text/css">
@@ -1450,7 +1482,7 @@ video {
     <nav class="fixed top-0 left-0 w-full h-20 z-[100] glass-panel bg-[#120c1d]/80 border-none border-b border-white/5 px-8 flex justify-between items-center" vid="17">
         <div class="flex items-center gap-3" vid="18">
             <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-[#9d4edd] to-[#c77dff] flex items-center justify-center shadow-lg" vid="19">
-                <i class="ph-fill ph-planet text-white text-2xl" vid="20"></i>
+                <img src="icon/stellarsync-192.png" alt="StellarSync" class="w-full h-full object-cover rounded-xl" vid="20">
             </div>
             <span class="font-bold text-xl text-white tracking-wide" vid="21">StellarSync</span>
         </div>
@@ -1463,8 +1495,8 @@ video {
         </div>
 
         <div class="flex items-center gap-6" vid="27">
-            <a href="#" class="text-sm font-semibold text-gray-400 hover:text-white transition-colors" vid="28">Login</a>
-            <button class="glow-btn px-6 py-2.5 rounded-xl text-white text-xs font-bold uppercase tracking-wider" vid="29">Start Free Trial</button>
+            <a href="/login/" class="text-sm font-semibold text-gray-400 hover:text-white transition-colors" vid="28">Login</a>
+            <a href="/sign-up/" class="index-cta glow-btn px-6 rounded-xl text-white text-xs font-bold uppercase tracking-wider" vid="29">Start Free Trial</a>
         </div>
     </nav>
 
@@ -1479,8 +1511,8 @@ video {
                     Plan campaigns, create content, organize research, connect your channels, and publish with confidence—all from a single mystical workspace.
                 </p>
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-24" vid="36">
-                    <button class="glow-btn px-10 py-4 rounded-2xl text-white font-bold uppercase tracking-widest text-sm" vid="37">Start Free Trial</button>
-                    <button class="px-10 py-4 rounded-2xl border border-white/10 bg-white/5 text-white font-bold uppercase tracking-widest text-sm hover:bg-white/10 transition-all flex items-center gap-2" vid="38">
+                    <a href="/sign-up/" class="index-cta index-cta-lg glow-btn px-8 rounded-2xl text-white font-bold uppercase tracking-widest text-sm" vid="37">Start Free Trial</a>
+                    <button class="index-cta index-cta-lg px-8 rounded-2xl border border-white/10 bg-white/5 text-white font-bold uppercase tracking-widest text-sm hover:bg-white/10 transition-all flex items-center gap-2" vid="38">
                         <i class="ph-bold ph-play-circle text-lg" vid="39"></i> Watch Demo
                     </button>
                 </div>
@@ -1544,7 +1576,7 @@ video {
                                     <div class="w-24 h-2 bg-white/10 rounded" vid="82"></div>
                                 </div>
                                 <div class="flex items-center gap-3" vid="83">
-                                    <div class="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400" vid="84"><i class="ph-bold ph-planet" vid="85"></i></div>
+                                    <div class="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400" vid="84"><i class="ph-bold ph-compass" vid="85"></i></div>
                                     <div class="w-24 h-2 bg-white/10 rounded" vid="86"></div>
                                 </div>
                             </div>
@@ -1615,28 +1647,28 @@ video {
                 </div>
 
                 <div class="glass-card p-8 rounded-2xl reveal" vid="140">
-                    <div class="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mb-6" vid="141">
-                        <i class="ph-fill ph-images text-purple-400 text-2xl" vid="142"></i>
+                    <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-6" style="background: rgba(244, 114, 182, 0.10); border: 1px solid rgba(244, 114, 182, 0.22);" vid="141">
+                        <i class="ph-fill ph-images text-2xl" style="color:#f472b6" vid="142"></i>
                     </div>
                     <h3 class="text-xl font-bold text-white mb-4" vid="143">Media Vault</h3>
                     <p class="text-gray-400 text-sm leading-relaxed mb-6" vid="144">Keep all assets connected to campaigns. Images, videos, and brand guides at your fingertips.</p>
                     <ul class="space-y-3" vid="145">
-                        <li class="flex items-center gap-3 text-xs text-gray-300 font-medium" vid="146"><i class="ph-bold ph-check-circle text-purple-500" vid="147"></i> Central asset library</li>
-                        <li class="flex items-center gap-3 text-xs text-gray-300 font-medium" vid="148"><i class="ph-bold ph-check-circle text-purple-500" vid="149"></i> Brand template storage</li>
-                        <li class="flex items-center gap-3 text-xs text-gray-300 font-medium" vid="150"><i class="ph-bold ph-check-circle text-purple-500" vid="151"></i> Auto-compression sync</li>
+                        <li class="flex items-center gap-3 text-xs text-gray-300 font-medium" vid="146"><i class="ph-bold ph-check-circle" style="color:#f472b6" vid="147"></i> Central asset library</li>
+                        <li class="flex items-center gap-3 text-xs text-gray-300 font-medium" vid="148"><i class="ph-bold ph-check-circle" style="color:#f472b6" vid="149"></i> Brand template storage</li>
+                        <li class="flex items-center gap-3 text-xs text-gray-300 font-medium" vid="150"><i class="ph-bold ph-check-circle" style="color:#f472b6" vid="151"></i> Auto-compression sync</li>
                     </ul>
                 </div>
 
                 <div class="glass-card p-8 rounded-2xl reveal" vid="152">
-                    <div class="w-12 h-12 rounded-xl bg-gray-500/10 border border-gray-500/20 flex items-center justify-center mb-6" vid="153">
-                        <i class="ph-fill ph-notebook text-gray-400 text-2xl" vid="154"></i>
+                    <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-6" style="background: rgba(96, 165, 250, 0.10); border: 1px solid rgba(96, 165, 250, 0.22);" vid="153">
+                        <i class="ph-fill ph-notebook text-2xl" style="color:#60a5fa" vid="154"></i>
                     </div>
                     <h3 class="text-xl font-bold text-white mb-4" vid="155">Notes &amp; Research</h3>
                     <p class="text-gray-400 text-sm leading-relaxed mb-6" vid="156">Capture meeting notes and campaign briefs alongside the content they support.</p>
                     <ul class="space-y-3" vid="157">
-                        <li class="flex items-center gap-3 text-xs text-gray-300 font-medium" vid="158"><i class="ph-bold ph-check-circle text-gray-500" vid="159"></i> Collaborative briefs</li>
-                        <li class="flex items-center gap-3 text-xs text-gray-300 font-medium" vid="160"><i class="ph-bold ph-check-circle text-gray-500" vid="161"></i> Messaging frameworks</li>
-                        <li class="flex items-center gap-3 text-xs text-gray-300 font-medium" vid="162"><i class="ph-bold ph-check-circle text-gray-500" vid="163"></i> Contextual research links</li>
+                        <li class="flex items-center gap-3 text-xs text-gray-300 font-medium" vid="158"><i class="ph-bold ph-check-circle" style="color:#60a5fa" vid="159"></i> Collaborative briefs</li>
+                        <li class="flex items-center gap-3 text-xs text-gray-300 font-medium" vid="160"><i class="ph-bold ph-check-circle" style="color:#60a5fa" vid="161"></i> Messaging frameworks</li>
+                        <li class="flex items-center gap-3 text-xs text-gray-300 font-medium" vid="162"><i class="ph-bold ph-check-circle" style="color:#60a5fa" vid="163"></i> Contextual research links</li>
                     </ul>
                 </div>
             </div>
@@ -1712,7 +1744,7 @@ video {
                                     </div>
                                 </div>
                                 <div class="flex gap-3 flex-row-reverse" vid="213">
-                                    <div class="w-6 h-6 rounded bg-purple-600 flex-shrink-0 flex items-center justify-center text-[10px] font-bold" vid="214">✨</div>
+                                    <div class="w-6 h-6 rounded bg-purple-600 flex-shrink-0 flex items-center justify-center text-[10px] font-bold" vid="214"><i class="ph-fill ph-sparkle"></i></div>
                                     <div class="bg-purple-900/20 p-4 rounded-2xl rounded-tr-none border border-purple-500/20" vid="215">
                                         <p class="text-xs text-purple-100 font-bold mb-2" vid="216">Strategic Suggestion:</p>
                                         <p class="text-xs text-purple-200 leading-relaxed mb-3" vid="217">Start with a "Why It Matters" infographic focusing on utility savings for local districts. I've drafted 3 hooks based on your last education report.</p>
@@ -1807,26 +1839,30 @@ video {
                 <p class="text-gray-400" vid="270">Engineered for teams that measure success in impact, not just clicks.</p>
             </div>
 
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-4" vid="271">
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4" vid="271">
                 <div class="glass-card p-8 rounded-2xl text-center reveal" vid="272">
-                    <div class="text-3xl mb-4" vid="273">🌱</div>
+                    <div class="text-3xl mb-4" style="color:#a78bfa" vid="273"><i class="ph-fill ph-heart"></i></div>
                     <h4 class="text-sm font-bold text-white uppercase tracking-wider" vid="274">Nonprofits</h4>
                 </div>
                 <div class="glass-card p-8 rounded-2xl text-center reveal" vid="275" style="transition-delay: 100ms;">
-                    <div class="text-3xl mb-4" vid="276">📣</div>
+                    <div class="text-3xl mb-4" style="color:#fb7185" vid="276"><i class="ph-fill ph-megaphone"></i></div>
                     <h4 class="text-sm font-bold text-white uppercase tracking-wider" vid="277">Advocacy</h4>
                 </div>
                 <div class="glass-card p-8 rounded-2xl text-center reveal" vid="278" style="transition-delay: 200ms;">
-                    <div class="text-3xl mb-4" vid="279">⚡</div>
-                    <h4 class="text-sm font-bold text-white uppercase tracking-wider" vid="280">Climate Tech</h4>
+                    <div class="text-3xl mb-4" style="color:#34d399" vid="279"><i class="ph-fill ph-leaf"></i></div>
+                    <h4 class="text-sm font-bold text-white uppercase tracking-wider" vid="280">Climate</h4>
                 </div>
                 <div class="glass-card p-8 rounded-2xl text-center reveal" vid="281" style="transition-delay: 300ms;">
-                    <div class="text-3xl mb-4" vid="282">🎯</div>
+                    <div class="text-3xl mb-4" style="color:#facc15" vid="282"><i class="ph-fill ph-lightning"></i></div>
+                    <h4 class="text-sm font-bold text-white uppercase tracking-wider" vid="283">Clean Energy</h4>
+                </div>
+                <div class="glass-card p-8 rounded-2xl text-center reveal" vid="281a" style="transition-delay: 350ms;">
+                    <div class="text-3xl mb-4" style="color:#60a5fa" vid="282a"><i class="ph-fill ph-briefcase"></i></div>
                     <h4 class="text-sm font-bold text-white uppercase tracking-wider" vid="283">Agencies</h4>
                 </div>
                 <div class="glass-card p-8 rounded-2xl text-center reveal" vid="284" style="transition-delay: 400ms;">
-                    <div class="text-3xl mb-4" vid="285">👥</div>
-                    <h4 class="text-sm font-bold text-white uppercase tracking-wider" vid="286">Comms Teams</h4>
+                    <div class="text-3xl mb-4" style="color:#c084fc" vid="285"><i class="ph-fill ph-sparkle"></i></div>
+                    <h4 class="text-sm font-bold text-white uppercase tracking-wider" vid="286">Creators/Strategists</h4>
                 </div>
             </div>
         </section>
@@ -1837,56 +1873,63 @@ video {
                 <p class="text-gray-400" vid="290">Choose the plan that fits your organization's orbit.</p>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8" vid="291">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8" vid="291">
                 
-                <div class="glass-card p-10 rounded-3xl reveal" vid="292">
-                    <h3 class="text-xl font-bold text-white mb-2" vid="293">Starter</h3>
+                <div class="glass-card p-10 rounded-3xl reveal pricing-card" vid="292">
+                    <h3 class="text-xl font-bold text-white mb-2" vid="293">Free</h3>
                     <div class="flex items-baseline gap-1 mb-8" vid="294">
-                        <span class="text-4xl font-extrabold text-white" vid="295">$49</span>
+                        <span class="text-4xl font-extrabold text-white" vid="295">$0</span>
                         <span class="text-gray-500" vid="296">/month</span>
                     </div>
-                    <ul class="space-y-4 mb-10" vid="297">
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="298"><i class="ph-bold ph-check text-purple-500" vid="299"></i> 1 Workspace</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="300"><i class="ph-bold ph-check text-purple-500" vid="301"></i> 2 Users</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="302"><i class="ph-bold ph-check text-purple-500" vid="303"></i> Content Calendar</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="304"><i class="ph-bold ph-check text-purple-500" vid="305"></i> All Vaults included</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="306"><i class="ph-bold ph-check text-purple-500" vid="307"></i> Basic AI Assistant</li>
+                    <ul class="space-y-4 mb-8" vid="297">
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="298"><i class="ph-bold ph-check" style="color:#00f0ff" vid="299"></i> 1 Workspace</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="302"><i class="ph-bold ph-check" style="color:#00f0ff" vid="303"></i> Content Calendar</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="304"><i class="ph-bold ph-check" style="color:#00f0ff" vid="305"></i> Media references</li>
                     </ul>
-                    <button class="w-full py-4 rounded-2xl border border-white/10 bg-white/5 text-white font-bold hover:bg-white/10 transition-all" vid="308">Get Started</button>
+                    <a href="/sign-up/" class="pricing-cta w-full rounded-2xl border border-white/10 bg-white/5 text-white font-bold hover:bg-white/10 transition-all" vid="308">Get Started</a>
                 </div>
 
-                <div class="glass-card p-10 rounded-3xl border-purple-500/50 shadow-[0_0_40px_rgba(157,78,221,0.2)] relative reveal scale-105" vid="309">
+                <div class="glass-card p-10 rounded-3xl border-purple-500/50 shadow-[0_0_40px_rgba(157,78,221,0.2)] relative reveal pricing-card" vid="309">
                     <div class="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-[#9d4edd] to-[#c77dff] px-4 py-1 rounded-full text-[10px] font-bold text-white uppercase tracking-widest shadow-lg" vid="310">Most Popular</div>
-                    <h3 class="text-xl font-bold text-white mb-2" vid="311">Growth</h3>
+                    <h3 class="text-xl font-bold text-white mb-2" vid="311">Pro</h3>
                     <div class="flex items-baseline gap-1 mb-8" vid="312">
-                        <span class="text-4xl font-extrabold text-white" vid="313">$149</span>
+                        <span class="text-4xl font-extrabold text-white" vid="313">$49</span>
                         <span class="text-gray-500" vid="314">/month</span>
                     </div>
-                    <ul class="space-y-4 mb-10" vid="315">
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="316"><i class="ph-bold ph-check text-purple-500" vid="317"></i> 5 Users</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="318"><i class="ph-bold ph-check text-purple-500" vid="319"></i> Unlimited Campaigns</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="320"><i class="ph-bold ph-check text-purple-500" vid="321"></i> Social Integrations</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="322"><i class="ph-bold ph-check text-purple-500" vid="323"></i> Full Analytics Sync</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="324"><i class="ph-bold ph-check text-purple-500" vid="325"></i> Advanced AI Workflows</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="326"><i class="ph-bold ph-check text-purple-500" vid="327"></i> Approval System</li>
+                    <ul class="space-y-4 mb-8" vid="315">
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="318"><i class="ph-bold ph-check" style="color:#c77dff" vid="319"></i> Unlimited Campaigns</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="324"><i class="ph-bold ph-check" style="color:#c77dff" vid="325"></i> Advanced AI Workflows</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="326"><i class="ph-bold ph-check" style="color:#c77dff" vid="327"></i> Approval System</li>
                     </ul>
-                    <button class="glow-btn w-full py-4 rounded-2xl text-white font-bold" vid="328">Start Trial</button>
+                    <a href="/sign-up/" class="pricing-cta glow-btn w-full rounded-2xl text-white font-bold" vid="328">Start Trial</a>
                 </div>
 
-                <div class="glass-card p-10 rounded-3xl reveal" vid="329">
+                <div class="glass-card p-10 rounded-3xl reveal pricing-card" vid="329">
                     <h3 class="text-xl font-bold text-white mb-2" vid="330">Agency</h3>
                     <div class="flex items-baseline gap-1 mb-8" vid="331">
-                        <span class="text-4xl font-extrabold text-white" vid="332">$399</span>
+                        <span class="text-4xl font-extrabold text-white" vid="332">$499</span>
                         <span class="text-gray-500" vid="333">/month</span>
                     </div>
-                    <ul class="space-y-4 mb-10" vid="334">
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="335"><i class="ph-bold ph-check text-purple-500" vid="336"></i> Unlimited Clients</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="337"><i class="ph-bold ph-check text-purple-500" vid="338"></i> Unlimited Users</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="339"><i class="ph-bold ph-check text-purple-500" vid="340"></i> White Label Portals</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="341"><i class="ph-bold ph-check text-purple-500" vid="342"></i> Custom API Access</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="343"><i class="ph-bold ph-check text-purple-500" vid="344"></i> Advanced Reporting</li>
+                    <ul class="space-y-4 mb-8" vid="334">
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="335"><i class="ph-bold ph-check" style="color:#ff7a59" vid="336"></i> Unlimited Clients</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="337"><i class="ph-bold ph-check" style="color:#ff7a59" vid="338"></i> Unlimited Users</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="343"><i class="ph-bold ph-check" style="color:#ff7a59" vid="344"></i> Advanced Reporting</li>
                     </ul>
-                    <button class="w-full py-4 rounded-2xl border border-white/10 bg-white/5 text-white font-bold hover:bg-white/10 transition-all" vid="345">Contact Sales</button>
+                    <a href="/sign-up/" class="pricing-cta w-full rounded-2xl border border-white/10 bg-white/5 text-white font-bold hover:bg-white/10 transition-all" vid="345">Contact Sales</a>
+                </div>
+
+                <div class="glass-card p-10 rounded-3xl reveal pricing-card" vid="345a">
+                    <h3 class="text-xl font-bold text-white mb-2" vid="345b">Managed</h3>
+                    <div class="flex items-baseline gap-1 mb-8" vid="345c">
+                        <span class="text-4xl font-extrabold text-white" vid="345d">Contact</span>
+                        <span class="text-gray-500" vid="345e">for pricing</span>
+                    </div>
+                    <ul class="space-y-4 mb-8" vid="345f">
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="345g"><i class="ph-bold ph-check" style="color:#00ffaa" vid="345h"></i> Managed Setup</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="345i"><i class="ph-bold ph-check" style="color:#00ffaa" vid="345j"></i> Campaign Architecture</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="345m"><i class="ph-bold ph-check" style="color:#00ffaa" vid="345n"></i> Launch Support</li>
+                    </ul>
+                    <a href="/sign-up/" class="pricing-cta w-full rounded-2xl border border-white/10 bg-white/5 text-white font-bold hover:bg-white/10 transition-all" vid="345o">Request Managed Setup</a>
                 </div>
             </div>
         </section>
@@ -1897,8 +1940,8 @@ video {
                 <h2 class="text-4xl md:text-5xl font-bold text-white mb-8 relative z-10" vid="349">Stop Managing Content Across Spreadsheets, Documents, Drives, and Social Platforms.</h2>
                 <p class="text-xl text-gray-400 mb-12 relative z-10 max-w-2xl mx-auto" vid="350">Bring planning, creation, collaboration, publishing, and analytics into one celestial workspace.</p>
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-4 relative z-10" vid="351">
-                    <button class="glow-btn px-10 py-4 rounded-2xl text-white font-bold uppercase tracking-widest text-sm" vid="352">Start Free Trial</button>
-                    <button class="px-10 py-4 rounded-2xl border border-white/10 bg-white/5 text-white font-bold uppercase tracking-widest text-sm hover:bg-white/10 transition-all" vid="353">Book a Demo</button>
+                    <a href="/sign-up/" class="index-cta index-cta-lg glow-btn px-8 rounded-2xl text-white font-bold uppercase tracking-widest text-sm" vid="352">Start Free Trial</a>
+                    <button class="index-cta index-cta-lg px-8 rounded-2xl border border-white/10 bg-white/5 text-white font-bold uppercase tracking-widest text-sm hover:bg-white/10 transition-all" vid="353">Book a Demo</button>
                 </div>
             </div>
         </section>
@@ -1908,7 +1951,7 @@ video {
                 <div vid="356">
                     <div class="flex items-center gap-3 mb-6" vid="357">
                         <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-[#9d4edd] to-[#c77dff] flex items-center justify-center" vid="358">
-                            <i class="ph-fill ph-planet text-white text-xl" vid="359"></i>
+                            <img src="icon/stellarsync-192.png" alt="StellarSync" class="w-full h-full object-cover rounded-lg" vid="359">
                         </div>
                         <span class="font-bold text-lg text-white" vid="360">StellarSync</span>
                     </div>
@@ -1922,10 +1965,10 @@ video {
                 <div vid="369">
                     <h4 class="text-sm font-bold text-white uppercase tracking-widest mb-6" vid="370">Product</h4>
                     <ul class="space-y-4" vid="371">
-                        <li vid="372"><a href="#" class="text-sm text-gray-500 hover:text-purple-400" vid="373">Features</a></li>
+                        <li vid="372"><a href="#features" class="text-sm text-gray-500 hover:text-purple-400" vid="373">Features</a></li>
                         <li vid="374"><a href="#" class="text-sm text-gray-500 hover:text-purple-400" vid="375">Integrations</a></li>
                         <li vid="376"><a href="#" class="text-sm text-gray-500 hover:text-purple-400" vid="377">AI Assistant</a></li>
-                        <li vid="378"><a href="#" class="text-sm text-gray-500 hover:text-purple-400" vid="379">Pricing</a></li>
+                        <li vid="378"><a href="#pricing" class="text-sm text-gray-500 hover:text-purple-400" vid="379">Pricing</a></li>
                     </ul>
                 </div>
                 <div vid="380">
@@ -1940,8 +1983,8 @@ video {
                 <div vid="391">
                     <h4 class="text-sm font-bold text-white uppercase tracking-widest mb-6" vid="392">Legal</h4>
                     <ul class="space-y-4" vid="393">
-                        <li vid="394"><a href="#" class="text-sm text-gray-500 hover:text-purple-400" vid="395">Privacy Policy</a></li>
-                        <li vid="396"><a href="#" class="text-sm text-gray-500 hover:text-purple-400" vid="397">Terms of Service</a></li>
+                        <li vid="394"><a href="/privacy/" class="text-sm text-gray-500 hover:text-purple-400" vid="395">Privacy Policy</a></li>
+                        <li vid="396"><a href="/terms/" class="text-sm text-gray-500 hover:text-purple-400" vid="397">Terms of Service</a></li>
                         <li vid="398"><a href="#" class="text-sm text-gray-500 hover:text-purple-400" vid="399">Security</a></li>
                     </ul>
                 </div>

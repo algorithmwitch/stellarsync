@@ -248,6 +248,79 @@
     return deduped;
   }
 
+  function detectMediaType(el) {
+    var tag = (el.tagName || "").toLowerCase();
+    if (tag === "video") return "video";
+    if (tag === "img") {
+      var src = String(el.src || el.currentSrc || "").toLowerCase();
+      if (/\.(mp4|mov|avi|webm|m4v)/.test(src)) return "video";
+      if (/document|thumbnail|doc|pdf|slide/i.test(src) || /document/i.test(attrOf(el, "alt") || "")) return "document_thumbnail";
+      return "image";
+    }
+    return "unknown";
+  }
+
+  function captureCardMedia(card) {
+    var results = [];
+    var seenUrls = new Set();
+    var imgElements = Array.from(card.querySelectorAll("img[src*=\"media\"], img[src*=\"cloudfront\"], img[src*=\"licdn\"], img[src*=\"linkedin\"]"));
+    imgElements.forEach(function(img) {
+      var url = String(img.currentSrc || img.src || "").trim();
+      if (!url || seenUrls.has(url)) return;
+      seenUrls.add(url);
+      var alt = attrOf(img, "alt");
+      var w = img.naturalWidth || img.width || 0;
+      var h = img.naturalHeight || img.height || 0;
+      results.push({
+        url: url,
+        alt: alt,
+        type: detectMediaType(img),
+        width: w,
+        height: h,
+        source: "linkedin_dom"
+      });
+    });
+    var videoElements = Array.from(card.querySelectorAll("video"));
+    videoElements.forEach(function(video) {
+      var url = String(video.currentSrc || video.src || "").trim();
+      if (!url || seenUrls.has(url)) return;
+      seenUrls.add(url);
+      var poster = String(video.poster || "").trim();
+      var w = video.videoWidth || 0;
+      var h = video.videoHeight || 0;
+      var alt = attrOf(video, "aria-label") || attrOf(video, "alt") || "";
+      results.push({
+        url: url,
+        alt: alt,
+        type: "video",
+        width: w,
+        height: h,
+        source: "linkedin_dom",
+        posterUrl: poster || undefined
+      });
+    });
+    var docThumbnails = Array.from(card.querySelectorAll("a[href*=\"/document/\"], a[href*=\"/documents/\"], [data-document-id]"));
+    docThumbnails.forEach(function(docLink) {
+      var thumbnail = docLink.querySelector("img[src]");
+      var url = thumbnail ? String(thumbnail.currentSrc || thumbnail.src || "").trim() : "";
+      if (url && !seenUrls.has(url)) {
+        seenUrls.add(url);
+        var alt = attrOf(thumbnail, "alt") || "Document preview";
+        var w = thumbnail ? thumbnail.naturalWidth || thumbnail.width || 0 : 0;
+        var h = thumbnail ? thumbnail.naturalHeight || thumbnail.height || 0 : 0;
+        results.push({
+          url: url,
+          alt: alt,
+          type: "document_thumbnail",
+          width: w,
+          height: h,
+          source: "linkedin_dom"
+        });
+      }
+    });
+    return results;
+  }
+
   function buildPostItem(card, index, generatedAt, pageType) {
     var rawText = textOf(card);
     var rawLines = rawText.split(/\n+/).map(function(line) { return String(line || "").trim(); }).filter(Boolean);
@@ -272,9 +345,7 @@
     var author = authorNode ? textOf(authorNode) : "";
     var actionNode = card.querySelector(".update-components-actor__sub-description, .feed-shared-actor__sub-description, .update-components-header__text-view");
     var actionText = actionNode ? textOf(actionNode) : "";
-    var media = Array.from(card.querySelectorAll("img[src*=\"media\"], img[src*=\"cloudfront\"]")).map(function(img) {
-      return { url: String(img.currentSrc || img.src || "").trim(), alt: attrOf(img, "alt") };
-    }).filter(function(m) { return m.url; });
+    var media = captureCardMedia(card);
     var metrics = extractMetricsFromText(rawText);
     var decodedActivity = decodeLinkedInActivityId(url);
     var relativeDate = dateLabel ? parseRelativeDateLabel(dateLabel, generatedAt) : null;
@@ -409,6 +480,10 @@
       autoPageTextFallbackUsed = true;
     }
 
+    var allMedia = items.reduce(function(acc, item) {
+      return acc.concat(item.media || []);
+    }, []);
+
     return {
       source: SOURCE_ID,
       helper_version: HELPER_VERSION,
@@ -416,6 +491,17 @@
       source_url: window.location.href,
       page_type: pageType,
       used_fallback: useFallback,
+      media_manifest: {
+        total_items_with_media: items.filter(function(i) { return (i.media || []).length > 0; }).length,
+        total_media_count: allMedia.length,
+        media_types: allMedia.reduce(function(types, m) {
+          types[m.type] = (types[m.type] || 0) + 1;
+          return types;
+        }, {}),
+        items: items.filter(function(i) { return (i.media || []).length > 0; }).map(function(i) {
+          return { capture_index: i.capture_index, media: i.media, linkedin_url: i.url };
+        })
+      },
       diagnostics: {
         pageUrl: window.location.href,
         pageType: pageType,
@@ -590,6 +676,20 @@
     };
   }
 
+  function captureMediaManifest() {
+    var full = collectPayload();
+    return {
+      source: SOURCE_ID,
+      helper_version: HELPER_VERSION,
+      generated_at: full.generated_at,
+      source_url: full.source_url,
+      page_type: full.page_type,
+      media_manifest: full.media_manifest,
+      items: full.items,
+      diagnostics: full.diagnostics
+    };
+  }
+
   function getDiagnostics() {
     var diag = collectPayload().diagnostics;
     diag.selectionTextLength = window.getSelection() ? String(window.getSelection().toString()).trim().length : 0;
@@ -632,6 +732,10 @@
     }
     if (message === "captureSelectedText" || (message && message.type === "captureSelectedText")) {
       sendResponse(captureSelectedText());
+      return true;
+    }
+    if (message === "captureMediaManifest" || (message && message.type === "captureMediaManifest")) {
+      sendResponse(captureMediaManifest());
       return true;
     }
     sendResponse({ error: "Unknown message: " + JSON.stringify(message) });
