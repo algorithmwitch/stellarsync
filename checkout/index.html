@@ -1,0 +1,1436 @@
+
+<html lang="en" vid="0"><head vid="1">
+    <meta charset="UTF-8" vid="2">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" vid="3">
+    <title vid="4">Checkout | StellarSync - Secure Your Mission</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com" vid="6">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" vid="7">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" vid="8">
+    <script src="https://unpkg.com/@phosphor-icons/web" vid="9"></script>
+    <style vid="10">
+        :root {
+            --color-bg: #0a0612;
+            --color-accent: #c77dff;
+            --panel-bg: #120c1d;
+            --panel-border: rgba(255, 255, 255, 0.05);
+            --gradient-primary: linear-gradient(135deg, #9d4edd 0%, #c77dff 100%);
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            background-color: var(--color-bg);
+            color: #e2e8f0;
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            overflow-x: hidden;
+            width: 100%;
+            min-height: 100vh;
+        }
+
+        .stars { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+        .star { position: absolute; background: white; border-radius: 50%; opacity: 0; animation: twinkle var(--duration) ease-in-out infinite; animation-delay: var(--delay); }
+        @keyframes twinkle {
+            0% { opacity: 0; transform: scale(0.5); }
+            50% { opacity: var(--opacity); transform: scale(1.3); }
+            100% { opacity: 0; transform: scale(0.5); }
+        }
+
+        .glass-panel {
+            background: rgba(18, 12, 29, 0.85);
+            border: 1px solid var(--panel-border);
+            backdrop-filter: blur(16px);
+        }
+
+        .glass-card {
+            background: #120c1d;
+            border: 1px solid var(--panel-border);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .glow-btn {
+            background: var(--gradient-primary);
+            box-shadow: 0 0 20px rgba(157, 78, 221, 0.3);
+            transition: all 0.3s ease;
+        }
+        .glow-btn:hover {
+            opacity: 0.95;
+            transform: scale(1.015);
+            box-shadow: 0 0 35px rgba(157, 78, 221, 0.5);
+        }
+
+        .reveal { opacity: 0; transform: translateY(20px); transition: all 0.6s ease-out; }
+        .reveal.active { opacity: 1; transform: translateY(0); }
+
+        .loader {
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(199, 125, 255, 0.2);
+            border-bottom-color: #c77dff;
+            border-radius: 50%;
+            display: inline-block;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+        }
+        @keyframes rotation {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--color-bg); }
+        ::-webkit-scrollbar-thumb { background: #2d1b4e; border-radius: 10px; }
+
+        .stripe-placeholder {
+            background: repeating-linear-gradient(
+                45deg,
+                rgba(255, 255, 255, 0.02),
+                rgba(255, 255, 255, 0.02) 10px,
+                transparent 10px,
+                transparent 20px
+            );
+        }
+    </style>
+
+  <style type="text/css">
+*, ::before, ::after {
+  --tw-border-spacing-x: 0;
+  --tw-border-spacing-y: 0;
+  --tw-translate-x: 0;
+  --tw-translate-y: 0;
+  --tw-rotate: 0;
+  --tw-skew-x: 0;
+  --tw-skew-y: 0;
+  --tw-scale-x: 1;
+  --tw-scale-y: 1;
+  --tw-pan-x:  ;
+  --tw-pan-y:  ;
+  --tw-pinch-zoom:  ;
+  --tw-scroll-snap-strictness: proximity;
+  --tw-gradient-from-position:  ;
+  --tw-gradient-via-position:  ;
+  --tw-gradient-to-position:  ;
+  --tw-ordinal:  ;
+  --tw-slashed-zero:  ;
+  --tw-numeric-figure:  ;
+  --tw-numeric-spacing:  ;
+  --tw-numeric-fraction:  ;
+  --tw-ring-inset:  ;
+  --tw-ring-offset-width: 0px;
+  --tw-ring-offset-color: #fff;
+  --tw-ring-color: rgb(59 130 246 / 0.5);
+  --tw-ring-offset-shadow: 0 0 #0000;
+  --tw-ring-shadow: 0 0 #0000;
+  --tw-shadow: 0 0 #0000;
+  --tw-shadow-colored: 0 0 #0000;
+  --tw-blur:  ;
+  --tw-brightness:  ;
+  --tw-contrast:  ;
+  --tw-grayscale:  ;
+  --tw-hue-rotate:  ;
+  --tw-invert:  ;
+  --tw-saturate:  ;
+  --tw-sepia:  ;
+  --tw-drop-shadow:  ;
+  --tw-backdrop-blur:  ;
+  --tw-backdrop-brightness:  ;
+  --tw-backdrop-contrast:  ;
+  --tw-backdrop-grayscale:  ;
+  --tw-backdrop-hue-rotate:  ;
+  --tw-backdrop-invert:  ;
+  --tw-backdrop-opacity:  ;
+  --tw-backdrop-saturate:  ;
+  --tw-backdrop-sepia:  ;
+  --tw-contain-size:  ;
+  --tw-contain-layout:  ;
+  --tw-contain-paint:  ;
+  --tw-contain-style:  ;
+}
+
+::backdrop {
+  --tw-border-spacing-x: 0;
+  --tw-border-spacing-y: 0;
+  --tw-translate-x: 0;
+  --tw-translate-y: 0;
+  --tw-rotate: 0;
+  --tw-skew-x: 0;
+  --tw-skew-y: 0;
+  --tw-scale-x: 1;
+  --tw-scale-y: 1;
+  --tw-pan-x:  ;
+  --tw-pan-y:  ;
+  --tw-pinch-zoom:  ;
+  --tw-scroll-snap-strictness: proximity;
+  --tw-gradient-from-position:  ;
+  --tw-gradient-via-position:  ;
+  --tw-gradient-to-position:  ;
+  --tw-ordinal:  ;
+  --tw-slashed-zero:  ;
+  --tw-numeric-figure:  ;
+  --tw-numeric-spacing:  ;
+  --tw-numeric-fraction:  ;
+  --tw-ring-inset:  ;
+  --tw-ring-offset-width: 0px;
+  --tw-ring-offset-color: #fff;
+  --tw-ring-color: rgb(59 130 246 / 0.5);
+  --tw-ring-offset-shadow: 0 0 #0000;
+  --tw-ring-shadow: 0 0 #0000;
+  --tw-shadow: 0 0 #0000;
+  --tw-shadow-colored: 0 0 #0000;
+  --tw-blur:  ;
+  --tw-brightness:  ;
+  --tw-contrast:  ;
+  --tw-grayscale:  ;
+  --tw-hue-rotate:  ;
+  --tw-invert:  ;
+  --tw-saturate:  ;
+  --tw-sepia:  ;
+  --tw-drop-shadow:  ;
+  --tw-backdrop-blur:  ;
+  --tw-backdrop-brightness:  ;
+  --tw-backdrop-contrast:  ;
+  --tw-backdrop-grayscale:  ;
+  --tw-backdrop-hue-rotate:  ;
+  --tw-backdrop-invert:  ;
+  --tw-backdrop-opacity:  ;
+  --tw-backdrop-saturate:  ;
+  --tw-backdrop-sepia:  ;
+  --tw-contain-size:  ;
+  --tw-contain-layout:  ;
+  --tw-contain-paint:  ;
+  --tw-contain-style:  ;
+}/*
+! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com
+*//*
+1. Prevent padding and border from affecting element width. (https://github.com/mozdevs/cssremedy/issues/4)
+2. Allow adding a border to an element by just adding a border-width. (https://github.com/tailwindcss/tailwindcss/pull/116)
+*/
+
+*,
+::before,
+::after {
+  box-sizing: border-box; /* 1 */
+  border-width: 0; /* 2 */
+  border-style: solid; /* 2 */
+  border-color: #e5e7eb; /* 2 */
+}
+
+::before,
+::after {
+  --tw-content: '';
+}
+
+/*
+1. Use a consistent sensible line-height in all browsers.
+2. Prevent adjustments of font size after orientation changes in iOS.
+3. Use a more readable tab size.
+4. Use the user's configured `sans` font-family by default.
+5. Use the user's configured `sans` font-feature-settings by default.
+6. Use the user's configured `sans` font-variation-settings by default.
+7. Disable tap highlights on iOS
+*/
+
+html,
+:host {
+  line-height: 1.5; /* 1 */
+  -webkit-text-size-adjust: 100%; /* 2 */
+  -moz-tab-size: 4; /* 3 */
+  tab-size: 4; /* 3 */
+  font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; /* 4 */
+  font-feature-settings: normal; /* 5 */
+  font-variation-settings: normal; /* 6 */
+  -webkit-tap-highlight-color: transparent; /* 7 */
+}
+
+/*
+1. Remove the margin in all browsers.
+2. Inherit line-height from `html` so users can set them as a class directly on the `html` element.
+*/
+
+body {
+  margin: 0; /* 1 */
+  line-height: inherit; /* 2 */
+}
+
+/*
+1. Add the correct height in Firefox.
+2. Correct the inheritance of border color in Firefox. (https://bugzilla.mozilla.org/show_bug.cgi?id=190655)
+3. Ensure horizontal rules are visible by default.
+*/
+
+hr {
+  height: 0; /* 1 */
+  color: inherit; /* 2 */
+  border-top-width: 1px; /* 3 */
+}
+
+/*
+Add the correct text decoration in Chrome, Edge, and Safari.
+*/
+
+abbr:where([title]) {
+  text-decoration: underline dotted;
+}
+
+/*
+Remove the default font size and weight for headings.
+*/
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+/*
+Reset links to optimize for opt-in styling instead of opt-out.
+*/
+
+a {
+  color: inherit;
+  text-decoration: inherit;
+}
+
+/*
+Add the correct font weight in Edge and Safari.
+*/
+
+b,
+strong {
+  font-weight: bolder;
+}
+
+/*
+1. Use the user's configured `mono` font-family by default.
+2. Use the user's configured `mono` font-feature-settings by default.
+3. Use the user's configured `mono` font-variation-settings by default.
+4. Correct the odd `em` font sizing in all browsers.
+*/
+
+code,
+kbd,
+samp,
+pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; /* 1 */
+  font-feature-settings: normal; /* 2 */
+  font-variation-settings: normal; /* 3 */
+  font-size: 1em; /* 4 */
+}
+
+/*
+Add the correct font size in all browsers.
+*/
+
+small {
+  font-size: 80%;
+}
+
+/*
+Prevent `sub` and `sup` elements from affecting the line height in all browsers.
+*/
+
+sub,
+sup {
+  font-size: 75%;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+}
+
+sub {
+  bottom: -0.25em;
+}
+
+sup {
+  top: -0.5em;
+}
+
+/*
+1. Remove text indentation from table contents in Chrome and Safari. (https://bugs.chromium.org/p/chromium/issues/detail?id=999088, https://bugs.webkit.org/show_bug.cgi?id=201297)
+2. Correct table border color inheritance in all Chrome and Safari. (https://bugs.chromium.org/p/chromium/issues/detail?id=935729, https://bugs.webkit.org/show_bug.cgi?id=195016)
+3. Remove gaps between table borders by default.
+*/
+
+table {
+  text-indent: 0; /* 1 */
+  border-color: inherit; /* 2 */
+  border-collapse: collapse; /* 3 */
+}
+
+/*
+1. Change the font styles in all browsers.
+2. Remove the margin in Firefox and Safari.
+3. Remove default padding in all browsers.
+*/
+
+button,
+input,
+optgroup,
+select,
+textarea {
+  font-family: inherit; /* 1 */
+  font-feature-settings: inherit; /* 1 */
+  font-variation-settings: inherit; /* 1 */
+  font-size: 100%; /* 1 */
+  font-weight: inherit; /* 1 */
+  line-height: inherit; /* 1 */
+  letter-spacing: inherit; /* 1 */
+  color: inherit; /* 1 */
+  margin: 0; /* 2 */
+  padding: 0; /* 3 */
+}
+
+/*
+Remove the inheritance of text transform in Edge and Firefox.
+*/
+
+button,
+select {
+  text-transform: none;
+}
+
+/*
+1. Correct the inability to style clickable types in iOS and Safari.
+2. Remove default button styles.
+*/
+
+button,
+input:where([type='button']),
+input:where([type='reset']),
+input:where([type='submit']) {
+  -webkit-appearance: button; /* 1 */
+  background-color: transparent; /* 2 */
+  background-image: none; /* 2 */
+}
+
+/*
+Use the modern Firefox focus style for all focusable elements.
+*/
+
+:-moz-focusring {
+  outline: auto;
+}
+
+/*
+Remove the additional `:invalid` styles in Firefox. (https://github.com/mozilla/gecko-dev/blob/2f9eacd9d3d995c937b4251a5557d95d494c9be1/layout/style/res/forms.css#L728-L737)
+*/
+
+:-moz-ui-invalid {
+  box-shadow: none;
+}
+
+/*
+Add the correct vertical alignment in Chrome and Firefox.
+*/
+
+progress {
+  vertical-align: baseline;
+}
+
+/*
+Correct the cursor style of increment and decrement buttons in Safari.
+*/
+
+::-webkit-inner-spin-button,
+::-webkit-outer-spin-button {
+  height: auto;
+}
+
+/*
+1. Correct the odd appearance in Chrome and Safari.
+2. Correct the outline style in Safari.
+*/
+
+[type='search'] {
+  -webkit-appearance: textfield; /* 1 */
+  outline-offset: -2px; /* 2 */
+}
+
+/*
+Remove the inner padding in Chrome and Safari on macOS.
+*/
+
+::-webkit-search-decoration {
+  -webkit-appearance: none;
+}
+
+/*
+1. Correct the inability to style clickable types in iOS and Safari.
+2. Change font properties to `inherit` in Safari.
+*/
+
+::-webkit-file-upload-button {
+  -webkit-appearance: button; /* 1 */
+  font: inherit; /* 2 */
+}
+
+/*
+Add the correct display in Chrome and Safari.
+*/
+
+summary {
+  display: list-item;
+}
+
+/*
+Removes the default spacing and border for appropriate elements.
+*/
+
+blockquote,
+dl,
+dd,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+hr,
+figure,
+p,
+pre {
+  margin: 0;
+}
+
+fieldset {
+  margin: 0;
+  padding: 0;
+}
+
+legend {
+  padding: 0;
+}
+
+ol,
+ul,
+menu {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/*
+Reset default styling for dialogs.
+*/
+dialog {
+  padding: 0;
+}
+
+/*
+Prevent resizing textareas horizontally by default.
+*/
+
+textarea {
+  resize: vertical;
+}
+
+/*
+1. Reset the default placeholder opacity in Firefox. (https://github.com/tailwindlabs/tailwindcss/issues/3300)
+2. Set the default placeholder color to the user's configured gray 400 color.
+*/
+
+input::placeholder,
+textarea::placeholder {
+  opacity: 1; /* 1 */
+  color: #9ca3af; /* 2 */
+}
+
+/*
+Set the default cursor for buttons.
+*/
+
+button,
+[role="button"] {
+  cursor: pointer;
+}
+
+/*
+Make sure disabled buttons don't get the pointer cursor.
+*/
+:disabled {
+  cursor: default;
+}
+
+/*
+1. Make replaced elements `display: block` by default. (https://github.com/mozdevs/cssremedy/issues/14)
+2. Add `vertical-align: middle` to align replaced elements more sensibly by default. (https://github.com/jensimmons/cssremedy/issues/14#issuecomment-634934210)
+   This can trigger a poorly considered lint error in some tools but is included by design.
+*/
+
+img,
+svg,
+video,
+canvas,
+audio,
+iframe,
+embed,
+object {
+  display: block; /* 1 */
+  vertical-align: middle; /* 2 */
+}
+
+/*
+Constrain images and videos to the parent width and preserve their intrinsic aspect ratio. (https://github.com/mozdevs/cssremedy/issues/14)
+*/
+
+img,
+video {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Make elements with the HTML hidden attribute stay hidden by default */
+[hidden]:where(:not([hidden="until-found"])) {
+  display: none;
+}
+.pointer-events-none {
+  pointer-events: none;
+}
+.fixed {
+  position: fixed;
+}
+.absolute {
+  position: absolute;
+}
+.relative {
+  position: relative;
+}
+.inset-0 {
+  inset: 0px;
+}
+.bottom-\[-10\%\] {
+  bottom: -10%;
+}
+.left-0 {
+  left: 0px;
+}
+.left-\[-10\%\] {
+  left: -10%;
+}
+.right-\[-10\%\] {
+  right: -10%;
+}
+.top-0 {
+  top: 0px;
+}
+.top-\[-10\%\] {
+  top: -10%;
+}
+.z-0 {
+  z-index: 0;
+}
+.z-10 {
+  z-index: 10;
+}
+.z-\[100\] {
+  z-index: 100;
+}
+.mx-auto {
+  margin-left: auto;
+  margin-right: auto;
+}
+.mb-1 {
+  margin-bottom: 0.25rem;
+}
+.mb-10 {
+  margin-bottom: 2.5rem;
+}
+.mb-4 {
+  margin-bottom: 1rem;
+}
+.mb-6 {
+  margin-bottom: 1.5rem;
+}
+.mb-8 {
+  margin-bottom: 2rem;
+}
+.mt-8 {
+  margin-top: 2rem;
+}
+.block {
+  display: block;
+}
+.flex {
+  display: flex;
+}
+.grid {
+  display: grid;
+}
+.hidden {
+  display: none;
+}
+.h-10 {
+  height: 2.5rem;
+}
+.h-12 {
+  height: 3rem;
+}
+.h-16 {
+  height: 4rem;
+}
+.h-20 {
+  height: 5rem;
+}
+.h-\[600px\] {
+  height: 600px;
+}
+.h-\[800px\] {
+  height: 800px;
+}
+.h-px {
+  height: 1px;
+}
+.min-h-\[600px\] {
+  min-height: 600px;
+}
+.min-h-\[calc\(100vh-80px\)\] {
+  min-height: calc(100vh - 80px);
+}
+.w-10 {
+  width: 2.5rem;
+}
+.w-12 {
+  width: 3rem;
+}
+.w-16 {
+  width: 4rem;
+}
+.w-\[600px\] {
+  width: 600px;
+}
+.w-\[800px\] {
+  width: 800px;
+}
+.w-full {
+  width: 100%;
+}
+.max-w-7xl {
+  max-width: 80rem;
+}
+.max-w-lg {
+  max-width: 32rem;
+}
+.max-w-xl {
+  max-width: 36rem;
+}
+.transform {
+  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
+}
+.grid-cols-1 {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+.grid-cols-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.flex-col {
+  flex-direction: column;
+}
+.items-center {
+  align-items: center;
+}
+.justify-center {
+  justify-content: center;
+}
+.justify-between {
+  justify-content: space-between;
+}
+.gap-1 {
+  gap: 0.25rem;
+}
+.gap-10 {
+  gap: 2.5rem;
+}
+.gap-2 {
+  gap: 0.5rem;
+}
+.gap-3 {
+  gap: 0.75rem;
+}
+.gap-4 {
+  gap: 1rem;
+}
+.gap-6 {
+  gap: 1.5rem;
+}
+.gap-x-8 {
+  column-gap: 2rem;
+}
+.gap-y-4 {
+  row-gap: 1rem;
+}
+.space-y-6 > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-y-reverse: 0;
+  margin-top: calc(1.5rem * calc(1 - var(--tw-space-y-reverse)));
+  margin-bottom: calc(1.5rem * var(--tw-space-y-reverse));
+}
+.overflow-hidden {
+  overflow: hidden;
+}
+.rounded-2xl {
+  border-radius: 1rem;
+}
+.rounded-3xl {
+  border-radius: 1.5rem;
+}
+.rounded-\[2\.5rem\] {
+  border-radius: 2.5rem;
+}
+.rounded-full {
+  border-radius: 9999px;
+}
+.rounded-xl {
+  border-radius: 0.75rem;
+}
+.border {
+  border-width: 1px;
+}
+.border-2 {
+  border-width: 2px;
+}
+.border-b {
+  border-bottom-width: 1px;
+}
+.border-t {
+  border-top-width: 1px;
+}
+.border-dashed {
+  border-style: dashed;
+}
+.border-none {
+  border-style: none;
+}
+.border-green-500\/20 {
+  border-color: rgb(34 197 94 / 0.2);
+}
+.border-purple-500\/20 {
+  border-color: rgb(168 85 247 / 0.2);
+}
+.border-white\/10 {
+  border-color: rgb(255 255 255 / 0.1);
+}
+.border-white\/5 {
+  border-color: rgb(255 255 255 / 0.05);
+}
+.bg-\[\#0a0612\] {
+  --tw-bg-opacity: 1;
+  background-color: rgb(10 6 18 / var(--tw-bg-opacity, 1));
+}
+.bg-\[\#0a0612\]\/50 {
+  background-color: rgb(10 6 18 / 0.5);
+}
+.bg-amber-500\/10 {
+  background-color: rgb(245 158 11 / 0.1);
+}
+.bg-cyan-600\/5 {
+  background-color: rgb(8 145 178 / 0.05);
+}
+.bg-green-500\/10 {
+  background-color: rgb(34 197 94 / 0.1);
+}
+.bg-purple-500\/10 {
+  background-color: rgb(168 85 247 / 0.1);
+}
+.bg-purple-600\/5 {
+  background-color: rgb(147 51 234 / 0.05);
+}
+.bg-white\/5 {
+  background-color: rgb(255 255 255 / 0.05);
+}
+.bg-gradient-to-br {
+  background-image: linear-gradient(to bottom right, var(--tw-gradient-stops));
+}
+.from-\[\#9d4edd\] {
+  --tw-gradient-from: #9d4edd var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(157 78 221 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+.to-\[\#c77dff\] {
+  --tw-gradient-to: #c77dff var(--tw-gradient-to-position);
+}
+.p-10 {
+  padding: 2.5rem;
+}
+.p-16 {
+  padding: 4rem;
+}
+.p-6 {
+  padding: 1.5rem;
+}
+.p-8 {
+  padding: 2rem;
+}
+.px-2 {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+.px-4 {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+.px-6 {
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+.px-8 {
+  padding-left: 2rem;
+  padding-right: 2rem;
+}
+.py-12 {
+  padding-top: 3rem;
+  padding-bottom: 3rem;
+}
+.py-2 {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+.py-2\.5 {
+  padding-top: 0.625rem;
+  padding-bottom: 0.625rem;
+}
+.pt-20 {
+  padding-top: 5rem;
+}
+.pt-6 {
+  padding-top: 1.5rem;
+}
+.text-center {
+  text-align: center;
+}
+.text-2xl {
+  font-size: 1.5rem;
+  line-height: 2rem;
+}
+.text-3xl {
+  font-size: 1.875rem;
+  line-height: 2.25rem;
+}
+.text-4xl {
+  font-size: 2.25rem;
+  line-height: 2.5rem;
+}
+.text-\[10px\] {
+  font-size: 10px;
+}
+.text-\[11px\] {
+  font-size: 11px;
+}
+.text-sm {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+.text-xl {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+}
+.text-xs {
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+.font-bold {
+  font-weight: 700;
+}
+.font-extrabold {
+  font-weight: 800;
+}
+.font-medium {
+  font-weight: 500;
+}
+.font-semibold {
+  font-weight: 600;
+}
+.uppercase {
+  text-transform: uppercase;
+}
+.leading-relaxed {
+  line-height: 1.625;
+}
+.leading-tight {
+  line-height: 1.25;
+}
+.tracking-\[0\.2em\] {
+  letter-spacing: 0.2em;
+}
+.tracking-\[0\.3em\] {
+  letter-spacing: 0.3em;
+}
+.tracking-wide {
+  letter-spacing: 0.025em;
+}
+.tracking-wider {
+  letter-spacing: 0.05em;
+}
+.tracking-widest {
+  letter-spacing: 0.1em;
+}
+.text-amber-500 {
+  --tw-text-opacity: 1;
+  color: rgb(245 158 11 / var(--tw-text-opacity, 1));
+}
+.text-gray-300 {
+  --tw-text-opacity: 1;
+  color: rgb(209 213 219 / var(--tw-text-opacity, 1));
+}
+.text-gray-400 {
+  --tw-text-opacity: 1;
+  color: rgb(156 163 175 / var(--tw-text-opacity, 1));
+}
+.text-gray-500 {
+  --tw-text-opacity: 1;
+  color: rgb(107 114 128 / var(--tw-text-opacity, 1));
+}
+.text-gray-600 {
+  --tw-text-opacity: 1;
+  color: rgb(75 85 99 / var(--tw-text-opacity, 1));
+}
+.text-gray-700 {
+  --tw-text-opacity: 1;
+  color: rgb(55 65 81 / var(--tw-text-opacity, 1));
+}
+.text-green-400 {
+  --tw-text-opacity: 1;
+  color: rgb(74 222 128 / var(--tw-text-opacity, 1));
+}
+.text-purple-400 {
+  --tw-text-opacity: 1;
+  color: rgb(192 132 252 / var(--tw-text-opacity, 1));
+}
+.text-white {
+  --tw-text-opacity: 1;
+  color: rgb(255 255 255 / var(--tw-text-opacity, 1));
+}
+.shadow-lg {
+  --tw-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --tw-shadow-colored: 0 10px 15px -3px var(--tw-shadow-color), 0 4px 6px -4px var(--tw-shadow-color);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+.blur {
+  --tw-blur: blur(8px);
+  filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);
+}
+.blur-\[150px\] {
+  --tw-blur: blur(150px);
+  filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);
+}
+.backdrop-filter {
+  -webkit-backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
+  backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
+}
+.transition {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+.transition-colors {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+.transition-opacity {
+  transition-property: opacity;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+.duration-300 {
+  transition-duration: 300ms;
+}
+.duration-500 {
+  transition-duration: 500ms;
+}
+.duration-700 {
+  transition-duration: 700ms;
+}
+.ease-in-out {
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+.hover\:text-purple-300:hover {
+  --tw-text-opacity: 1;
+  color: rgb(216 180 254 / var(--tw-text-opacity, 1));
+}
+.hover\:text-white:hover {
+  --tw-text-opacity: 1;
+  color: rgb(255 255 255 / var(--tw-text-opacity, 1));
+}
+@media (min-width: 640px) {
+
+  .sm\:grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (min-width: 768px) {
+
+  .md\:flex {
+    display: flex;
+  }
+
+  .md\:flex-row {
+    flex-direction: row;
+  }
+
+  .md\:items-center {
+    align-items: center;
+  }
+
+  .md\:p-12 {
+    padding: 3rem;
+  }
+
+  .md\:text-5xl {
+    font-size: 3rem;
+    line-height: 1;
+  }
+}
+@media (min-width: 1024px) {
+
+  .lg\:mx-0 {
+    margin-left: 0px;
+    margin-right: 0px;
+  }
+
+  .lg\:min-h-0 {
+    min-height: 0px;
+  }
+
+  .lg\:w-1\/2 {
+    width: 50%;
+  }
+
+  .lg\:flex-row {
+    flex-direction: row;
+  }
+
+  .lg\:justify-start {
+    justify-content: flex-start;
+  }
+
+  .lg\:justify-end {
+    justify-content: flex-end;
+  }
+
+  .lg\:border-b-0 {
+    border-bottom-width: 0px;
+  }
+
+  .lg\:border-r {
+    border-right-width: 1px;
+  }
+
+  .lg\:pl-16 {
+    padding-left: 4rem;
+  }
+
+  .lg\:pr-16 {
+    padding-right: 4rem;
+  }
+
+  .lg\:text-left {
+    text-align: left;
+  }
+}
+@media (min-width: 1280px) {
+
+  .xl\:pl-24 {
+    padding-left: 6rem;
+  }
+
+  .xl\:pr-24 {
+    padding-right: 6rem;
+  }
+}* {
+      -ms-overflow-style: none !important;
+      scrollbar-width: none !important;
+    }
+
+    *::-webkit-scrollbar {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+    }
+  </style></head>
+<body vid="11">
+
+    <div id="stars-container" class="stars" vid="12"></div>
+
+    <div class="fixed inset-0 z-0 pointer-events-none" vid="13">
+        <div class="absolute top-[-10%] left-[-10%] w-[800px] h-[800px] bg-purple-600/5 rounded-full blur-[150px]" vid="14"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-cyan-600/5 rounded-full blur-[150px]" vid="15"></div>
+    </div>
+
+    <nav id="main-nav" class="fixed top-0 left-0 w-full h-20 z-[100] glass-panel border-none border-b border-white/5 px-8 flex justify-between items-center transition-all duration-300" vid="16">
+        <div class="max-w-7xl mx-auto w-full flex justify-between items-center" vid="17">
+            <div class="flex items-center gap-3" vid="18">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-[#9d4edd] to-[#c77dff] flex items-center justify-center shadow-lg" vid="19">
+                    <i class="ph-fill ph-planet text-white text-2xl" vid="20"></i>
+                </div>
+                <span class="font-bold text-xl text-white tracking-wide" vid="21">StellarSync</span>
+            </div>
+            
+            <div class="hidden md:flex items-center gap-10" vid="22">
+                <a href="#" class="text-sm font-medium text-gray-400 hover:text-white transition-colors" vid="23">Home</a>
+                <a href="#" class="text-sm font-medium text-gray-400 hover:text-white transition-colors" vid="24">Pricing</a>
+                <a href="#" class="text-sm font-medium text-gray-400 hover:text-white transition-colors" vid="25">About</a>
+            </div>
+
+            <div class="flex items-center gap-6" vid="26">
+                <a href="#" class="text-sm font-semibold text-gray-400 hover:text-white transition-colors" vid="27">Login</a>
+                <button class="glow-btn px-6 py-2.5 rounded-xl text-white text-xs font-bold uppercase tracking-wider" vid="28">Create Workspace</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="relative z-10 pt-20" vid="29">
+        <div class="flex flex-col lg:flex-row min-h-[calc(100vh-80px)]" vid="30">
+            
+            
+            <section class="lg:w-1/2 flex items-center justify-center lg:justify-end p-6 md:p-12 lg:pr-16 xl:pr-24 border-b lg:border-b-0 lg:border-r border-white/5 min-h-[600px] lg:min-h-0" vid="31">
+                <div id="plan-container" class="max-w-xl w-full reveal active" vid="32">
+                    
+                    <div id="plan-content" vid="33">
+                        <span class="text-purple-400 text-[11px] font-bold uppercase tracking-[0.3em] mb-4 block" vid="34">StellarSync</span>
+                        <h1 class="text-4xl md:text-5xl font-extrabold text-white leading-tight mb-8" vid="35">
+                            Start your 3-day free trial
+                        </h1>
+
+                        <div class="glass-card rounded-3xl p-8 border-purple-500/20 mb-8 relative overflow-hidden" vid="36">
+                            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6" vid="37">
+                                <div vid="38">
+                                    <h3 id="plan-name" class="text-3xl font-extrabold text-white mb-1" vid="39">Growth</h3>
+                                    <div class="flex items-center gap-1" vid="40">
+                                        <span id="plan-price" class="text-2xl font-bold text-white" vid="41">$149</span>
+                                        <span class="text-gray-500 text-sm font-medium" vid="42">/month after trial</span>
+                                    </div>
+                                </div>
+                                <div class="bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-2 flex items-center gap-2" vid="43">
+                                    <i class="ph-bold ph-credit-card text-green-400" vid="44"></i>
+                                    <span class="text-xs font-bold text-green-400 uppercase tracking-wider" vid="45">No charge today</span>
+                                </div>
+                            </div>
+                            
+                            <p class="text-sm text-gray-500 mb-8" vid="46">Cancel before your trial ends to avoid being charged.</p>
+                            
+                            <div class="h-px w-full bg-white/5 mb-8" vid="47"></div>
+                            
+                            <div vid="48">
+                                <span class="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-6 block" vid="49">Included in your mission:</span>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8" vid="50">
+                                    <div class="flex items-center gap-3 text-gray-300" vid="51">
+                                        <i class="ph-bold ph-check text-green-400" vid="52"></i>
+                                        <span class="text-sm" vid="53">Campaign planning</span>
+                                    </div>
+                                    <div class="flex items-center gap-3 text-gray-300" vid="54">
+                                        <i class="ph-bold ph-check text-green-400" vid="55"></i>
+                                        <span class="text-sm" vid="56">Content calendar</span>
+                                    </div>
+                                    <div class="flex items-center gap-3 text-gray-300" vid="57">
+                                        <i class="ph-bold ph-check text-green-400" vid="58"></i>
+                                        <span class="text-sm" vid="59">Media library</span>
+                                    </div>
+                                    <div class="flex items-center gap-3 text-gray-300" vid="60">
+                                        <i class="ph-bold ph-check text-green-400" vid="61"></i>
+                                        <span class="text-sm" vid="62">Team collaboration</span>
+                                    </div>
+                                    <div class="flex items-center gap-3 text-gray-300" vid="63">
+                                        <i class="ph-bold ph-check text-green-400" vid="64"></i>
+                                        <span class="text-sm" vid="65">Publishing readiness</span>
+                                    </div>
+                                    <div class="flex items-center gap-3 text-gray-300" vid="66">
+                                        <i class="ph-bold ph-check text-green-400" vid="67"></i>
+                                        <span class="text-sm" vid="68">Performance reporting</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-3 px-2" vid="69">
+                            <i class="ph ph-shield-check text-gray-600 text-xl" vid="70"></i>
+                            <p class="text-xs text-gray-600 leading-relaxed" vid="71">
+                                Payments are securely processed by Stripe. StellarSync never stores your card information. All transactions are encrypted.
+                            </p>
+                        </div>
+                    </div>
+
+                    
+                    <div id="no-plan-content" class="hidden text-center lg:text-left py-12" vid="72">
+                        <div class="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center text-gray-400 mb-8 mx-auto lg:mx-0" vid="73">
+                            <i class="ph ph-shopping-cart text-3xl" vid="74"></i>
+                        </div>
+                        <h2 class="text-3xl font-bold text-white mb-4" vid="75">Choose a plan to continue.</h2>
+                        <p class="text-gray-400 mb-8" vid="76">Select the right operational scale for your organization.</p>
+                        <a href="#" class="text-purple-400 font-bold hover:text-purple-300 transition-colors flex items-center justify-center lg:justify-start gap-2" vid="77">
+                            View Pricing <i class="ph-bold ph-arrow-right" vid="78"></i>
+                        </a>
+                    </div>
+
+                    
+                    <div id="managed-plan-content" class="hidden text-center lg:text-left py-12" vid="79">
+                        <div class="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 mb-8 mx-auto lg:mx-0" vid="80">
+                            <i class="ph-fill ph-handshake text-3xl" vid="81"></i>
+                        </div>
+                        <h2 class="text-3xl font-bold text-white mb-4" vid="82">Managed plans are custom.</h2>
+                        <p class="text-gray-400 mb-8" vid="83">White-glove implementation requires a discovery call with our mission team.</p>
+                        <a href="#" class="text-purple-400 font-bold hover:text-purple-300 transition-colors flex items-center justify-center lg:justify-start gap-2" vid="84">
+                            Contact Us <i class="ph-bold ph-arrow-right" vid="85"></i>
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            
+            <section class="lg:w-1/2 flex items-center justify-center lg:justify-start p-6 md:p-12 lg:pl-16 xl:pl-24 bg-[#0a0612]" vid="86">
+                <div class="max-w-lg w-full reveal active" style="transition-delay: 200ms;" vid="87">
+                    <div class="glass-panel rounded-[2.5rem] p-8 md:p-12 border-white/10" vid="88">
+                        <div class="flex items-center gap-4 mb-8" vid="89">
+                            <div class="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400" vid="90">
+                                <i class="ph-fill ph-lock-key text-2xl" vid="91"></i>
+                            </div>
+                            <div vid="92">
+                                <h2 class="text-xl font-bold text-white" vid="93">Secure Checkout</h2>
+                                <p class="text-sm text-gray-400" vid="94">Complete your subscription securely.</p>
+                            </div>
+                        </div>
+
+                        
+                        <div class="mb-10" vid="95">
+                            <div id="stripe-loading" class="stripe-placeholder border-2 border-white/10 border-dashed rounded-3xl p-16 flex flex-col items-center justify-center text-center transition-opacity duration-500" vid="96">
+                                <span class="loader mb-4" vid="97"></span>
+                                <p class="text-sm font-medium text-gray-500 tracking-wide" vid="98">Preparing secure checkout...</p>
+                            </div>
+
+                            <div id="stripe-form" class="hidden space-y-6" vid="99">
+                                
+                                <div class="stripe-placeholder border border-white/10 rounded-2xl p-10 flex flex-col items-center justify-center gap-4 bg-[#0a0612]/50" vid="100">
+                                    <i class="ph-bold ph-credit-card text-4xl text-gray-700" vid="101"></i>
+                                    <p class="text-sm text-gray-500 font-medium" vid="102">Stripe embedded payment form renders here</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        
+                        <div class="grid grid-cols-3 gap-4 pt-6 border-t border-white/5" vid="103">
+                            <div class="flex flex-col items-center gap-2" vid="104">
+                                <i class="ph ph-shield text-gray-500" vid="105"></i>
+                                <span class="text-[10px] text-gray-500 font-bold uppercase tracking-widest" vid="106">SSL Secure</span>
+                            </div>
+                            <div class="flex flex-col items-center gap-2" vid="107">
+                                <i class="ph ph-lock text-gray-500" vid="108"></i>
+                                <span class="text-[10px] text-gray-500 font-bold uppercase tracking-widest" vid="109">256-Bit AES</span>
+                            </div>
+                            <div class="flex flex-col items-center gap-2" vid="110">
+                                <i class="ph ph-check-circle text-gray-500" vid="111"></i>
+                                <span class="text-[10px] text-gray-500 font-bold uppercase tracking-widest" vid="112">Verified</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <p class="text-center mt-8 text-xs text-gray-600 font-medium" vid="113">
+                        Powered by <span class="text-gray-400" vid="114">Stripe</span>
+                    </p>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script vid="115">
+        
+        const starsContainer = document.getElementById('stars-container');
+        for (let i = 0; i < 200; i++) {
+            const star = document.createElement('div');
+            star.className = 'star';
+            star.style.left = `${Math.random() * 100}%`;
+            star.style.top = `${Math.random() * 100}%`;
+            const size = Math.random() < 0.1 ? 3 : (Math.random() < 0.3 ? 2 : 1);
+            star.style.width = `${size}px`;
+            star.style.height = `${size}px`;
+            star.style.setProperty('--duration', `${2 + Math.random() * 5}s`);
+            star.style.setProperty('--delay', `${Math.random() * 5}s`);
+            star.style.setProperty('--opacity', `${0.1 + Math.random() * 0.4}`);
+            starsContainer.appendChild(star);
+        }
+
+        
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('main-nav');
+            if (window.scrollY > 50) {
+                nav.style.height = '72px';
+                nav.style.backgroundColor = 'rgba(18, 12, 29, 0.95)';
+            } else {
+                nav.style.height = '80px';
+                nav.style.backgroundColor = 'rgba(18, 12, 29, 0.8)';
+            }
+        });
+
+        
+        function configurePage() {
+            const params = new URLSearchParams(window.location.search);
+            const plan = params.get('plan');
+
+            const planContent = document.getElementById('plan-content');
+            const noPlanContent = document.getElementById('no-plan-content');
+            const managedContent = document.getElementById('managed-plan-content');
+            
+            const planNameEl = document.getElementById('plan-name');
+            const planPriceEl = document.getElementById('plan-price');
+
+            const plans = {
+                'starter': { name: 'Starter', price: '$49' },
+                'growth': { name: 'Growth', price: '$149' },
+                'agency': { name: 'Agency', price: '$399' }
+            };
+
+            if (plan === 'managed') {
+                planContent.classList.add('hidden');
+                noPlanContent.classList.add('hidden');
+                managedContent.classList.remove('hidden');
+            } else if (plans[plan]) {
+                planContent.classList.remove('hidden');
+                noPlanContent.classList.add('hidden');
+                managedContent.classList.add('hidden');
+                planNameEl.textContent = plans[plan].name;
+                planPriceEl.textContent = plans[plan].price;
+            } else {
+                planContent.classList.add('hidden');
+                noPlanContent.classList.remove('hidden');
+                managedContent.classList.add('hidden');
+            }
+        }
+
+        
+        setTimeout(() => {
+            const loader = document.getElementById('stripe-loading');
+            const form = document.getElementById('stripe-form');
+            if (loader) {
+                loader.style.opacity = '0';
+                setTimeout(() => {
+                    loader.classList.add('hidden');
+                    form.classList.remove('hidden');
+                    form.classList.add('animate-in', 'fade-in', 'duration-700');
+                }, 500);
+            }
+        }, 2500);
+
+        
+        configurePage();
+
+        
+        const revealCallback = (entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                }
+            });
+        };
+        const revealObserver = new IntersectionObserver(revealCallback, { threshold: 0.1 });
+        document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+    </script>
+
+
+</body></html>
