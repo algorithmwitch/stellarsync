@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" vid="7">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" vid="8">
     <script src="https://unpkg.com/@phosphor-icons/web" vid="9"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="apple-touch-icon" href="../icon/stellarsync-apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="192x192" href="../icon/stellarsync-192.png">
     <link rel="shortcut icon" href="../icon/stellarsync-192.png">
@@ -121,14 +122,11 @@
             transform: none;
         }
         .login-error {
-            display: none;
             margin: -0.35rem 0 0.85rem;
             color: #fca5a5;
             font-size: 12px;
             line-height: 1.4;
-        }
-        .login-error.visible {
-            display: block;
+            min-height: 1rem;
         }
 
         .checkbox-container {
@@ -933,12 +931,12 @@ video {
         <form id="login-form" class="space-y-4" vid="23">
             <div class="input-group" vid="24">
                 <i class="ph-bold ph-at input-icon" vid="25"></i>
-                <input type="email" id="email-input" name="email" autocomplete="email" placeholder="Signal frequency (Email)" class="form-input" required="" vid="26">
+                <input type="email" id="login-email" name="email" autocomplete="email" placeholder="Signal frequency (Email)" class="form-input" required="" vid="26">
             </div>
 
             <div class="input-group" vid="27">
                 <i class="ph-bold ph-lock input-icon" vid="28"></i>
-                <input type="password" id="password-input" name="password" autocomplete="current-password" placeholder="Secure passphrase" class="form-input" required="" vid="29">
+                <input type="password" id="login-password" name="password" autocomplete="current-password" placeholder="Secure passphrase" class="form-input" required="" vid="29">
                 <i class="ph-bold ph-eye toggle-password" id="password-toggle" onclick="togglePasswordVisibility()" vid="30"></i>
             </div>
 
@@ -984,7 +982,7 @@ video {
         }
 
         function togglePasswordVisibility() {
-            const passwordInput = document.getElementById('password-input');
+            const passwordInput = document.getElementById('login-password');
             const passwordToggle = document.getElementById('password-toggle');
             if (passwordInput.type === 'password') {
                 passwordInput.type = 'text';
@@ -997,40 +995,60 @@ video {
             }
         }
 
-        const loginForm = document.getElementById('login-form');
-        const loginError = document.getElementById('login-error');
-        const loginSubmit = document.getElementById('login-submit');
-        const emailInput = document.getElementById('email-input');
-        const passwordInput = document.getElementById('password-input');
+        const SUPABASE_URL = "https://szdlvyzjeqkfxsoqltwg.supabase.co";
+        const SUPABASE_ANON_KEY = "";
+        const supabase = SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase
+            ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+            : {
+                auth: {
+                    signInWithPassword: async () => ({
+                        data: null,
+                        error: { message: "Login is not configured. Add the Supabase anon key to login/index.html." }
+                    })
+                }
+            };
 
-        function showLoginError(message) {
-            loginError.textContent = message;
-            loginError.classList.add('visible');
-        }
+        document.addEventListener("DOMContentLoaded", () => {
+          const form = document.getElementById("login-form");
+          const emailInput = document.getElementById("login-email");
+          const passwordInput = document.getElementById("login-password");
+          const errorEl = document.getElementById("login-error");
 
-        loginForm.addEventListener('submit', (event) => {
+          console.log("[login] script loaded", { form, emailInput, passwordInput, errorEl });
+
+          if (!form || !emailInput || !passwordInput) {
+            console.error("[login] Missing login form elements");
+            return;
+          }
+
+          form.addEventListener("submit", async (event) => {
             event.preventDefault();
-            loginError.classList.remove('visible');
+            console.log("[login] submit triggered");
+
+            if (errorEl) errorEl.textContent = "";
 
             const email = emailInput.value.trim();
             const password = passwordInput.value;
 
             if (!email || !password) {
-                showLoginError('Enter your email and passphrase to continue.');
-                return;
+              if (errorEl) errorEl.textContent = "Enter your email and password.";
+              return;
             }
 
-            loginSubmit.disabled = true;
-            loginSubmit.textContent = 'Entering...';
+            const { data, error } = await supabase.auth.signInWithPassword({
+              email,
+              password,
+            });
 
-            try {
-                sessionStorage.setItem('stellarsync_login_email', email);
-                window.location.href = '/app/load.html';
-            } catch (error) {
-                loginSubmit.disabled = false;
-                loginSubmit.textContent = 'Enter the Void';
-                showLoginError('We could not start your session. Please try again or contact support.');
+            if (error) {
+              console.error("[login] auth error", error);
+              if (errorEl) errorEl.textContent = error.message || "Login failed.";
+              return;
             }
+
+            console.log("[login] success", data?.user?.email);
+            window.location.href = "/app/";
+          });
         });
     </script>
 
