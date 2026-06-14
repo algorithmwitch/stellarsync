@@ -1525,9 +1525,9 @@ video {
                 </p>
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-24" vid="36">
                     <a href="/sign-up/" class="index-cta index-cta-lg glow-btn px-8 rounded-2xl text-white font-bold uppercase tracking-widest text-sm" vid="37">Create Workspace</a>
-                    <button class="index-cta index-cta-lg px-8 rounded-2xl border border-white/10 bg-white/5 text-white font-bold uppercase tracking-widest text-sm hover:bg-white/10 transition-all flex items-center gap-2" vid="38">
+                    <a href="/contact/?topic=demo" class="index-cta index-cta-lg px-8 rounded-2xl border border-white/10 bg-white/5 text-white font-bold uppercase tracking-widest text-sm hover:bg-white/10 transition-all flex items-center gap-2" vid="38">
                         <i class="ph-bold ph-play-circle text-lg" vid="39"></i> Watch Demo
-                    </button>
+                    </a>
                 </div>
             </div>
 
@@ -1761,7 +1761,7 @@ video {
                                     <div class="bg-purple-900/20 p-4 rounded-2xl rounded-tr-none border border-purple-500/20" vid="215">
                                         <p class="text-xs text-purple-100 font-bold mb-2" vid="216">Strategic Suggestion:</p>
                                         <p class="text-xs text-purple-200 leading-relaxed mb-3" vid="217">Start with a "Why It Matters" infographic focusing on utility savings for local districts. I've drafted 3 hooks based on your last education report.</p>
-                                        <button class="px-4 py-2 bg-purple-500 text-white text-[10px] font-bold rounded-lg" vid="218">Apply to Calendar</button>
+                                        <span class="inline-block px-4 py-2 bg-purple-500 text-white text-[10px] font-bold rounded-lg" vid="218">Apply to Calendar</span>
                                     </div>
                                 </div>
                             </div>
@@ -1886,69 +1886,81 @@ video {
                 <p class="text-gray-400" vid="290">Choose the plan that fits your organization's orbit.</p>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch" vid="291">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 items-stretch" vid="291">
                 
-                <div class="glass-card p-8 rounded-3xl reveal pricing-card" vid="292">
-                    <h3 class="text-xl font-bold text-white mb-2" vid="293">Starter</h3>
-                    <div class="flex items-baseline gap-1 mb-8" vid="294">
-                        <span class="text-4xl font-extrabold text-white" vid="295">$49</span>
-                        <span class="text-gray-500" vid="296">/month</span>
+                <div class="glass-card p-10 rounded-3xl flex flex-col reveal" vid="292">
+                    <div class="mb-8" vid="293">
+                        <h3 class="text-xl font-bold text-white mb-2" vid="294">Starter</h3>
+                        <div class="flex items-baseline gap-1" vid="295">
+                            <span class="text-4xl font-extrabold text-white" vid="296">$49</span>
+                            <span class="text-gray-500 text-sm" vid="296a">/mo</span>
+                        </div>
+                        <p class="text-gray-500 text-xs mt-2" vid="296b"><a href="/legal/#terms-free-trial" class="hover:text-white underline underline-offset-2">3-day free trial</a>. No charge today.</p>
                     </div>
-                    <ul class="space-y-4 mb-8" vid="297">
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="298"><i class="ph-bold ph-check" style="color:#00f0ff" vid="299"></i> <a href="/legal/#terms-free-trial" class="hover:text-white underline underline-offset-2">3-day free trial</a></li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="302"><i class="ph-bold ph-check" style="color:#00f0ff" vid="303"></i> No charge today</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="304"><i class="ph-bold ph-check" style="color:#00f0ff" vid="305"></i> 1 workspace</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="305a"><i class="ph-bold ph-check" style="color:#00f0ff" vid="305b"></i> Core planning, calendar, campaigns</li>
+                    <ul class="space-y-4 mb-10 flex-1" vid="297">
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="298"><i class="ph-bold ph-check text-purple-500" vid="299"></i> 1 workspace</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="302"><i class="ph-bold ph-check text-purple-500" vid="303"></i> Core planning</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="304"><i class="ph-bold ph-check text-purple-500" vid="305"></i> Calendar and campaigns</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="305a"><i class="ph-bold ph-check text-purple-500" vid="305b"></i> Notes and inspo</li>
                     </ul>
-                    <a href="/onboarding/?plan=starter" class="pricing-cta w-full rounded-2xl border border-white/10 bg-white/5 text-white font-bold hover:bg-white/10 transition-all" vid="308">Start Starter</a>
+                    <a href="/onboarding/?plan=starter" class="block text-center w-full py-4 rounded-2xl border border-white/10 bg-white/5 text-white font-bold hover:bg-white/10 transition-all text-sm uppercase tracking-widest" vid="308">Start Starter</a>
                 </div>
 
-                <div class="glass-card p-8 rounded-3xl reveal pricing-card" vid="309">
-                    <h3 class="text-xl font-bold text-white mb-2" vid="311">Growth</h3>
-                    <div class="flex items-baseline gap-1 mb-8" vid="312">
-                        <span class="text-4xl font-extrabold text-white" vid="313">$149</span>
-                        <span class="text-gray-500" vid="314">/month</span>
+                <div class="glass-card p-10 rounded-3xl flex flex-col reveal" style="transition-delay: 100ms;" vid="309">
+                    <div class="mb-8" vid="311">
+                        <h3 class="text-xl font-bold text-white mb-2" vid="312">Growth</h3>
+                        <div class="flex items-baseline gap-1" vid="313">
+                            <span class="text-4xl font-extrabold text-white" vid="314">$149</span>
+                            <span class="text-gray-500 text-sm" vid="314a">/mo</span>
+                        </div>
+                        <p class="text-gray-500 text-xs mt-2" vid="314b"><a href="/legal/#terms-free-trial" class="hover:text-white underline underline-offset-2">3-day free trial</a>. No charge today.</p>
                     </div>
-                    <ul class="space-y-4 mb-8" vid="315">
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="318"><i class="ph-bold ph-check" style="color:#c77dff" vid="319"></i> <a href="/legal/#terms-free-trial" class="hover:text-white underline underline-offset-2">3-day free trial</a></li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="324"><i class="ph-bold ph-check" style="color:#c77dff" vid="325"></i> No charge today</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="326"><i class="ph-bold ph-check" style="color:#c77dff" vid="327"></i> Team collaboration</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="327a"><i class="ph-bold ph-check" style="color:#c77dff" vid="327b"></i> Media and publishing readiness</li>
+                    <ul class="space-y-4 mb-10 flex-1" vid="315">
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="318"><i class="ph-bold ph-check text-purple-500" vid="319"></i> Everything in Starter</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="324"><i class="ph-bold ph-check text-purple-500" vid="325"></i> Team collaboration</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="326"><i class="ph-bold ph-check text-purple-500" vid="327"></i> Media library</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="327a"><i class="ph-bold ph-check text-purple-500" vid="327b"></i> Google Sheets</li>
                     </ul>
-                    <a href="/onboarding/?plan=growth" class="pricing-cta w-full rounded-2xl border border-white/10 bg-white/5 text-white font-bold hover:bg-white/10 transition-all" vid="328">Start Growth</a>
+                    <a href="/onboarding/?plan=growth" class="block text-center glow-btn w-full py-4 rounded-2xl text-white font-bold text-sm uppercase tracking-widest" vid="328">Start Growth</a>
                 </div>
 
-                <div class="glass-card p-8 rounded-3xl border-purple-500/50 shadow-[0_0_40px_rgba(157,78,221,0.2)] relative reveal pricing-card" vid="329">
+                <div class="glass-card p-10 rounded-3xl border-purple-500/50 shadow-[0_0_40px_rgba(157,78,221,0.2)] relative flex flex-col reveal scale-105 z-10" style="transition-delay: 200ms;" vid="329">
                     <div class="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-[#9d4edd] to-[#c77dff] px-4 py-1 rounded-full text-[10px] font-bold text-white uppercase tracking-widest shadow-lg" vid="310">Most Popular</div>
-                    <h3 class="text-xl font-bold text-white mb-2" vid="330">Agency</h3>
-                    <div class="flex items-baseline gap-1 mb-8" vid="331">
-                        <span class="text-4xl font-extrabold text-white" vid="332">$399</span>
-                        <span class="text-gray-500" vid="333">/month</span>
+                    <div class="mb-8" vid="330">
+                        <h3 class="text-2xl font-bold text-white mb-2" vid="331">Agency</h3>
+                        <div class="flex items-baseline gap-1" vid="332">
+                            <span class="text-4xl font-extrabold text-white" vid="333">$399</span>
+                            <span class="text-gray-500 text-sm" vid="333a">/mo</span>
+                        </div>
+                        <p class="text-gray-500 text-xs mt-2" vid="333b"><a href="/legal/#terms-free-trial" class="hover:text-white underline underline-offset-2">3-day free trial</a>. No charge today.</p>
                     </div>
-                    <ul class="space-y-4 mb-8" vid="334">
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="335"><i class="ph-bold ph-check" style="color:#ff7a59" vid="336"></i> <a href="/legal/#terms-free-trial" class="hover:text-white underline underline-offset-2">3-day free trial</a></li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="337"><i class="ph-bold ph-check" style="color:#ff7a59" vid="338"></i> No charge today</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="343"><i class="ph-bold ph-check" style="color:#ff7a59" vid="344"></i> Multiple workspaces</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="344a"><i class="ph-bold ph-check" style="color:#ff7a59" vid="344b"></i> Client management and templates</li>
+                    <ul class="space-y-4 mb-10 flex-1" vid="334">
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="335"><i class="ph-bold ph-check text-purple-500" vid="336"></i> Everything in Growth</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="337"><i class="ph-bold ph-check text-purple-500" vid="338"></i> Multiple workspaces</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="343"><i class="ph-bold ph-check text-purple-500" vid="344"></i> Client management</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="344a"><i class="ph-bold ph-check text-purple-500" vid="344b"></i> Advanced permissions</li>
                     </ul>
-                    <a href="/onboarding/?plan=agency" class="pricing-cta glow-btn w-full rounded-2xl text-white font-bold" vid="345">Start Agency</a>
+                    <a href="/onboarding/?plan=agency" class="block text-center glow-btn w-full py-5 rounded-2xl text-white font-bold text-sm uppercase tracking-widest" vid="345">Start Agency</a>
                 </div>
 
-                <div class="glass-card p-8 rounded-3xl reveal pricing-card" vid="345a">
-                    <h3 class="text-xl font-bold text-white mb-2" vid="345b">Managed</h3>
-                    <div class="flex items-baseline gap-1 mb-8" vid="345c">
-                        <span class="text-4xl font-extrabold text-white" vid="345d">Contact</span>
-                        <span class="text-gray-500" vid="345e">for pricing</span>
+                <div class="glass-card p-10 rounded-3xl flex flex-col reveal" style="transition-delay: 300ms;" vid="345a">
+                    <div class="mb-8" vid="345b">
+                        <h3 class="text-xl font-bold text-white mb-2" vid="345c">Managed</h3>
+                        <div class="flex items-baseline gap-1" vid="345d">
+                            <span class="text-3xl font-extrabold text-white" vid="345e">Contact</span>
+                            <span class="text-gray-500 text-sm" vid="345f">for pricing</span>
+                        </div>
+                        <p class="text-gray-500 text-xs mt-2" vid="345g">No self-serve checkout.</p>
                     </div>
-                    <ul class="space-y-4 mb-8" vid="345f">
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="345g"><i class="ph-bold ph-check" style="color:#00ffaa" vid="345h"></i> Managed setup and support</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="345i"><i class="ph-bold ph-check" style="color:#00ffaa" vid="345j"></i> Workflow migration</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="345m"><i class="ph-bold ph-check" style="color:#00ffaa" vid="345n"></i> No self-serve checkout</li>
+                    <ul class="space-y-4 mb-10 flex-1" vid="345h">
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="345i"><i class="ph-bold ph-check text-purple-500" vid="345j"></i> Everything in Agency</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="345k"><i class="ph-bold ph-check text-purple-500" vid="345l"></i> Managed setup</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="345m"><i class="ph-bold ph-check text-purple-500" vid="345n"></i> Workflow migration</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="345q"><i class="ph-bold ph-check text-purple-500" vid="345r"></i> Strategic support</li>
                     </ul>
-                    <a href="/contact/?topic=managed" class="pricing-cta w-full rounded-2xl border border-white/10 bg-white/5 text-white font-bold hover:bg-white/10 transition-all" vid="345o">Request Setup</a>
+                    <a href="/contact/?topic=managed" class="block text-center w-full py-4 rounded-2xl border border-white/10 bg-white/5 text-white font-bold hover:bg-white/10 transition-all text-sm uppercase tracking-widest" vid="345o">Request Setup</a>
                 </div>
             </div>
-            <p class="mt-8 text-center text-xs text-gray-500 max-w-3xl mx-auto" vid="345p">Payment information is collected during setup for Starter, Growth, and Agency. Cancel before the 3-day trial ends to avoid billing. Managed uses a setup request.</p>
         </section>
 
         <section class="py-32 px-8 max-w-5xl mx-auto" vid="346">
