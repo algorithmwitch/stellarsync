@@ -1883,7 +1883,8 @@
         </div>
         <div class="flex gap-3">
           <button onclick="location.reload()" class="px-4 py-2 bg-[#2d1b4e] hover:bg-[#3d2b5e] text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-colors">Reload App</button>
-          <button onclick="try{localStorage.clear();location.reload()}catch(e){alert('Could not clear cache: '+e.message)}" class="px-4 py-2 bg-red-900/40 hover:bg-red-900/60 text-red-300 text-xs uppercase tracking-wider font-bold rounded-xl transition-colors">Reset Cache & Reload</button>
+          <button onclick="try{localStorage.clear();location.reload()}catch(e){var d=document.getElementById('boot-diag-error-detail');if(d){d.classList.remove('hidden');d.textContent='Cache clear failed: '+e.message}else console.error('Cache clear failed:',e)}" class="px-4 py-2 bg-red-900/40 hover:bg-red-900/60 text-red-300 text-xs uppercase tracking-wider font-bold rounded-xl transition-colors">Reset Cache & Reload</button>
+          <a href="/contact/?topic=support" class="px-4 py-2 bg-[#231738] hover:bg-[#2d1b4e] text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-colors inline-flex items-center" onclick="var f=window.openSupportModalFromDiagnostics;if(typeof f==='function'){event.preventDefault();f()}">Contact Support</a>
         </div>
       </div>
     </div>
@@ -1947,6 +1948,14 @@
                 </button>
                 <button type="button" class="workspace-menu-btn" data-workspace-action="install">
                   <span class="flex items-center gap-3"><i class="ph-bold ph-download-simple text-white"></i> Install App</span>
+                  <i class="ph-bold ph-caret-right text-gray-500"></i>
+                </button>
+                <button type="button" class="workspace-menu-btn" data-workspace-action="support">
+                  <span class="flex items-center gap-3"><i class="ph-bold ph-bug-beetle text-[#ffd700]"></i> Report Bug</span>
+                  <i class="ph-bold ph-caret-right text-gray-500"></i>
+                </button>
+                <button type="button" class="workspace-menu-btn" data-workspace-action="contact">
+                  <span class="flex items-center gap-3"><i class="ph-bold ph-envelope text-[#38bdf8]"></i> Contact Support</span>
                   <i class="ph-bold ph-caret-right text-gray-500"></i>
                 </button>
               </div>
@@ -4241,6 +4250,60 @@
   </div>
 </div>
 
+<div id="support-modal" class="fixed inset-0 z-[136] sheet-backdrop opacity-0 pointer-events-none transition-opacity duration-200">
+  <div class="w-full h-full flex items-center justify-center p-4">
+    <div id="support-modal-card" class="w-full max-w-lg bg-[#120c1d] border border-white/10 rounded-2xl shadow-2xl transform scale-95 transition-transform duration-200 overflow-hidden">
+      <div class="flex items-center justify-between px-6 py-5 border-b border-white/5">
+        <div>
+          <h3 class="text-white font-bold text-lg">Report an Issue</h3>
+          <p class="text-xs text-gray-500 mt-1">Help us improve StellarSync. Your report helps our team respond faster.</p>
+        </div>
+        <button id="close-support-modal-btn" type="button" class="w-10 h-10 rounded-xl bg-[#1a1128] hover:bg-[#231738] text-gray-400 hover:text-white border border-white/5 transition-colors flex items-center justify-center">
+          <i class="ph-bold ph-x"></i>
+        </button>
+      </div>
+      <div class="p-6 space-y-4">
+        <input type="hidden" id="support-issue-type" value="">
+        <div class="space-y-2">
+          <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Issue Type</div>
+          <select id="support-issue-select" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white focus:outline-none focus:border-purple-500/50">
+            <option value="Bug">Bug</option>
+            <option value="Integration setup">Integration setup</option>
+            <option value="API connection">API connection</option>
+            <option value="Publishing issue">Publishing issue</option>
+            <option value="Workspace access">Workspace access</option>
+            <option value="Billing/account">Billing/account</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="space-y-1">
+            <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Workspace</div>
+            <div id="support-workspace-display" class="text-sm text-white bg-[#0a0612] rounded-xl px-3 py-2.5 border border-white/5">—</div>
+          </div>
+          <div class="space-y-1">
+            <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">User</div>
+            <div id="support-user-display" class="text-sm text-white bg-[#0a0612] rounded-xl px-3 py-2.5 border border-white/5 truncate">—</div>
+          </div>
+        </div>
+        <div class="space-y-2">
+          <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Message</div>
+          <textarea id="support-message-input" placeholder="Describe what happened, what you expected, and any steps to reproduce..." class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 min-h-[100px] resize-y"></textarea>
+        </div>
+        <label class="flex items-center gap-3 cursor-pointer">
+          <input id="support-include-diagnostics" type="checkbox" class="w-4 h-4 rounded border-white/10 bg-[#0a0612] text-purple-500 focus:ring-purple-500/40">
+          <span class="text-[11px] text-gray-400">Include workspace diagnostics to help our team debug faster</span>
+        </label>
+        <div id="support-modal-status" class="text-xs text-center hidden"></div>
+        <div class="flex flex-wrap gap-3">
+          <button id="support-send-btn" type="button" class="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all">Send Report</button>
+          <button id="support-cancel-btn" type="button" class="flex-1 px-4 py-2.5 rounded-xl border border-white/10 bg-white/5 text-white text-xs font-bold uppercase tracking-widest hover:bg-white/10 transition-all">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="mobile-more-sheet" class="mobile-sheet">
   <div class="absolute inset-0 sheet-backdrop"></div>
   <div class="mobile-sheet-card">
@@ -4891,11 +4954,32 @@ async function ensureSupabaseWorkspaceBeforeBoot() {
     return null;
   }
 
+  // Fetch workspace_connections and resolve apps_script_url
+  try {
+    const { data: connData } = await STELLARSYNC_SUPABASE_CLIENT
+      .from("workspace_connections")
+      .select("*")
+      .eq("workspace_id", activeWorkspace.id);
+    WORKSPACE_CONNECTIONS = Array.isArray(connData) ? connData : [];
+    console.log("[app-router] workspace_connections loaded", WORKSPACE_CONNECTIONS.length);
+  } catch (e) {
+    console.warn("[app-router] failed to fetch workspace_connections", e);
+    WORKSPACE_CONNECTIONS = [];
+  }
+
+  // Prefer google_sheets connection apps_script_url, fallback to workspace.apps_script_url
+  const gsConn = WORKSPACE_CONNECTIONS.find(c => c && c.provider === "google_sheets");
+  const connAppsScriptUrl = gsConn && gsConn.config && String(gsConn.config.apps_script_url || "").trim();
+  if (connAppsScriptUrl) {
+    activeWorkspace.apps_script_url = connAppsScriptUrl;
+    console.log("[app-router] using google_sheets connection apps_script_url");
+  }
+
   if (!activeWorkspace.apps_script_url) {
     console.warn("[app-router] missing apps_script_url", activeWorkspace.slug);
     showAppRouterState({
-      title: "Workspace setup needed",
-      message: "This workspace is missing an Apps Script backend URL.",
+      title: "Workspace connection needed",
+      message: "This workspace needs a Google Sheets backend connection before data can sync.",
       detail: activeWorkspace.slug,
       ctaHref: "/contact/?topic=setup",
       ctaLabel: "Contact Setup"
@@ -5000,7 +5084,8 @@ function getWorkspaceRequestMetadata() {
     backend_type: config.backend_type || "master_google_sheets",
     sheet_id: config.sheet_id || "",
     monday_board_id: config.monday_board_id || "",
-    supabase_media_enabled: !!config.supabase_media_enabled
+    supabase_media_enabled: !!config.supabase_media_enabled,
+    connection_provider: "google_sheets"
   };
 }
 
@@ -5885,6 +5970,7 @@ let diagnosticsRefreshing = false;
 let socialCardUpload = null;
 let socialImportCapabilities = null;
 let connectedAccounts = [];
+let WORKSPACE_CONNECTIONS = [];
 let aiProviders = [];
 let aiProvidersLoading = false;
 let connectedAccountsStatusLoading = true;
@@ -5910,6 +5996,7 @@ let mobileFilterState = {
 };
 let activeConnectionSetupPlatform = "";
 const CONNECTED_ACCOUNT_PLATFORMS = ["linkedin", "instagram", "threads", "bluesky", "tiktok"];
+const WORKSPACE_CONNECTION_PROVIDERS = ["google_sheets", "google_drive", "monday", "stripe"];
 let installContext = {
   isIos: /iphone|ipad|ipod/i.test(navigator.userAgent || ""),
   isStandalone: false
@@ -7240,6 +7327,14 @@ function setupWorkspaceUI() {
       toggleProfileMenu(false);
       openInstallHelperModal();
     }
+    if (action === "support") {
+      toggleProfileMenu(false);
+      openSupportModalFromDiagnostics();
+    }
+    if (action === "contact") {
+      toggleProfileMenu(false);
+      window.location.href = "/contact/?topic=support";
+    }
   });
   document.addEventListener("click", (event) => {
     if (!event.target.closest("#profile-menu") && !event.target.closest("#avatar-menu-btn") && !event.target.closest("#profile-menu-trigger")) toggleProfileMenu(false);
@@ -7475,6 +7570,12 @@ function setupWorkspaceUI() {
   closeConnectionSetupBtn?.addEventListener("click", closeConnectionSetupModal);
   connectionSetupModal?.addEventListener("click", (event) => {
     if (event.target === connectionSetupModal) closeConnectionSetupModal();
+  });
+  document.getElementById("close-support-modal-btn")?.addEventListener("click", closeSupportModal);
+  document.getElementById("support-cancel-btn")?.addEventListener("click", closeSupportModal);
+  document.getElementById("support-send-btn")?.addEventListener("click", submitSupportReport);
+  document.getElementById("support-modal")?.addEventListener("click", (event) => {
+    if (event.target === document.getElementById("support-modal")) closeSupportModal();
   });
   document.getElementById("copy-auth-diagnostics-btn")?.addEventListener("click", () => {
     var pre = document.getElementById("connection-setup-auth-diagnostics");
@@ -10235,6 +10336,10 @@ function getConnectedAccount(platform) {
   return (connectedAccounts || []).find((item) => item.platform === platform) || null;
 }
 
+function getWorkspaceConnection(provider) {
+  return (WORKSPACE_CONNECTIONS || []).find((item) => item.provider === provider) || null;
+}
+
 function inferSocialImportMode(state) {
   const platform = state?.detected || "external";
   const account = getConnectedAccount(platform);
@@ -10753,6 +10858,146 @@ function closeWorkspaceHub() {
   workspaceHubModalCard?.classList.add("scale-95");
 }
 
+function openSupportModal(issueType) {
+  var modal = document.getElementById("support-modal");
+  var modalCard = document.getElementById("support-modal-card");
+  var issueSelect = document.getElementById("support-issue-select");
+  var workspaceDisplay = document.getElementById("support-workspace-display");
+  var userDisplay = document.getElementById("support-user-display");
+  var messageInput = document.getElementById("support-message-input");
+  var statusEl = document.getElementById("support-modal-status");
+  var diagnosticsCheck = document.getElementById("support-include-diagnostics");
+  if (!modal || !modalCard) return;
+
+  // Auto-fill context
+  var config = (typeof WORKSPACE_RUNTIME_CONFIG !== "undefined" && WORKSPACE_RUNTIME_CONFIG.active) || {};
+  var user = (typeof STELLARSYNC_AUTH_USER !== "undefined" && STELLARSYNC_AUTH_USER) || {};
+  if (workspaceDisplay) workspaceDisplay.textContent = config.workspace_slug || config.slug || "—";
+  if (userDisplay) userDisplay.textContent = user.email || user.id || "—";
+  if (messageInput) messageInput.value = "";
+  if (statusEl) { statusEl.classList.add("hidden"); statusEl.textContent = ""; }
+  if (diagnosticsCheck) diagnosticsCheck.checked = false;
+
+  if (issueType && issueSelect) {
+    for (var i = 0; i < issueSelect.options.length; i++) {
+      if (issueSelect.options[i].value === issueType) {
+        issueSelect.selectedIndex = i;
+        break;
+      }
+    }
+  }
+
+  modal.classList.remove("opacity-0", "pointer-events-none");
+  modalCard.classList.remove("scale-95");
+  modalCard.classList.add("scale-100");
+}
+
+function closeSupportModal() {
+  var modal = document.getElementById("support-modal");
+  var modalCard = document.getElementById("support-modal-card");
+  if (modal) modal.classList.add("opacity-0", "pointer-events-none");
+  if (modalCard) { modalCard.classList.remove("scale-100"); modalCard.classList.add("scale-95"); }
+}
+
+async function submitSupportReport() {
+  var sendBtn = document.getElementById("support-send-btn");
+  var statusEl = document.getElementById("support-modal-status");
+  var issueSelect = document.getElementById("support-issue-select");
+  var messageInput = document.getElementById("support-message-input");
+  var diagnosticsCheck = document.getElementById("support-include-diagnostics");
+  var config = (typeof WORKSPACE_RUNTIME_CONFIG !== "undefined" && WORKSPACE_RUNTIME_CONFIG.active) || {};
+  var user = (typeof STELLARSYNC_AUTH_USER !== "undefined" && STELLARSYNC_AUTH_USER) || {};
+
+  if (!issueSelect || !messageInput) return;
+  var issueType = issueSelect.value;
+  var message = (messageInput.value || "").trim();
+  if (!message) {
+    if (statusEl) { statusEl.textContent = "Please describe the issue."; statusEl.classList.remove("hidden"); }
+    return;
+  }
+
+  if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = "Sending..."; }
+  if (statusEl) { statusEl.classList.add("hidden"); statusEl.textContent = ""; }
+
+  try {
+    var diagnostics = "";
+    if (diagnosticsCheck && diagnosticsCheck.checked) {
+      try {
+        var diagInfo = [];
+        if (typeof APP_CONFIG !== "undefined") diagInfo.push("App URL: " + (APP_CONFIG.APP_SCRIPT_URL || "not set"));
+        if (typeof WORKSPACE_CONNECTIONS !== "undefined") diagInfo.push("Connections: " + (WORKSPACE_CONNECTIONS.length || 0));
+        if (typeof connectedAccounts !== "undefined") diagInfo.push("Social accounts: " + (connectedAccounts.length || 0));
+        var view = window.location.pathname + window.location.search;
+        diagInfo.push("View: " + view);
+        diagInfo.push("User agent: " + navigator.userAgent.substring(0, 120));
+        diagnostics = "\n\n--- Diagnostics ---\n" + diagInfo.join("\n");
+      } catch (_) {}
+    }
+
+    var fullMessage = [
+      "Issue Type: " + issueType,
+      "Workspace: " + (config.workspace_slug || config.slug || "—"),
+      "User: " + (user.email || user.id || "—"),
+      "View: " + (window.location.pathname + window.location.search),
+      "",
+      message,
+      diagnostics
+    ].join("\n");
+
+    var payload = {
+      name: (user.email || "StellarSync User").split("@")[0] || "User",
+      organization: config.workspace_slug || config.slug || "",
+      email: user.email || "",
+      website: window.location.origin,
+      team_size: "",
+      plan_interest: "Support Report",
+      message: fullMessage
+    };
+
+    var resp = await fetch(SUPABASE_URL + "/functions/v1/contact-form", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY },
+      body: JSON.stringify(payload)
+    });
+
+    if (!resp.ok) {
+      // Try reading error body
+      var errText = await resp.text().catch(function(){ return ""; });
+      throw new Error(errText || "Server responded with " + resp.status);
+    }
+
+    if (typeof showToast === "function") {
+      showToast("Report sent", "Thank you. Our team will review your report.", "ph-check-circle", "text-emerald-300");
+    }
+    closeSupportModal();
+  } catch (err) {
+    if (statusEl) {
+      statusEl.textContent = "Failed to send: " + (err.message || "Unknown error") + ". Please try again or email us directly.";
+      statusEl.classList.remove("hidden");
+    }
+  } finally {
+    if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = "Send Report"; }
+  }
+}
+
+function openAIProviderSupportModal(providerId) {
+  var config = (typeof aiProviders !== "undefined" && Array.isArray(aiProviders)) ? aiProviders.find(function(p) { return p.id === providerId; }) : null;
+  var statusEl = document.getElementById("support-modal-status");
+  openSupportModal("API connection");
+}
+
+function openWorkspaceSetupSupportModal() {
+  openSupportModal("Integration setup");
+}
+
+function openPublishIssueSupportModal() {
+  openSupportModal("Publishing issue");
+}
+
+function openSupportModalFromDiagnostics() {
+  openSupportModal("Bug");
+}
+
 function openConnectionSetupModal(platform, auth = null) {
   activeConnectionSetupPlatform = platform;
   const account = getConnectedAccount(platform) || {};
@@ -11021,6 +11266,69 @@ function getConnectedAccountsMarkup(options = {}) {
         </div>` : ""}
       </div>
     `;
+  }).join("") + "\n" + renderWorkspaceConnectionCards();
+}
+
+function renderWorkspaceConnectionCards() {
+  const providers = WORKSPACE_CONNECTION_PROVIDERS;
+  return providers.map((provider) => {
+    const conn = getWorkspaceConnection(provider);
+    const providerLabel = toTitleCase(provider.replace(/_/g, " "));
+    var statusLabel, statusTone, chipLabel, detailParts, actions;
+
+    if (conn) {
+      const status = (conn.status || "setup_needed").toLowerCase();
+      if (status === "connected") {
+        statusLabel = "Connected";
+        statusTone = "text-emerald-300";
+        chipLabel = "Connected";
+      } else if (status === "error") {
+        statusLabel = "Error";
+        statusTone = "text-yellow-300";
+        chipLabel = "Error";
+      } else {
+        statusLabel = "Setup Needed";
+        statusTone = "text-gray-300";
+        chipLabel = "Setup Required";
+      }
+      detailParts = [];
+      if (conn.last_sync_at) detailParts.push("Last sync: " + conn.last_sync_at);
+      if (conn.last_error) detailParts.push("Last error: " + conn.last_error);
+      if (conn.last_connected_at) detailParts.push("Connected: " + conn.last_connected_at);
+      if (conn.config && conn.config.sheet_name) detailParts.push("Sheet: " + conn.config.sheet_name);
+
+      if (provider === "google_sheets" && conn.config && conn.config.apps_script_url) {
+        actions = '<button type="button" onclick="showToast(\'Google Sheets is active as the backend provider.\', \'info\')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Connected</button>';
+      } else if (provider === "google_sheets") {
+        actions = '<a href="/contact/?topic=setup" class="inline-block px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Contact Setup</a>';
+      } else {
+        actions = '<a href="/contact/?topic=integration" class="inline-block px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">OAuth setup coming soon</a>';
+      }
+    } else {
+      statusLabel = "Not connected";
+      statusTone = "text-gray-300";
+      chipLabel = "Setup Required";
+      detailParts = ["No connection record found in workspace"];
+      if (provider === "google_sheets") {
+        actions = '<a href="/contact/?topic=setup" class="inline-block px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Contact Setup</a>';
+      } else {
+        actions = '<a href="/contact/?topic=integration" class="inline-block px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">OAuth setup coming soon</a>';
+      }
+    }
+
+    return (
+      '<div class="platform-card">' +
+        '<div class="flex items-start justify-between gap-3 mb-4">' +
+          '<div>' +
+            '<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">' + escapeHtml(providerLabel) + '</div>' +
+            '<div class="text-lg font-bold ' + statusTone + ' mt-1">' + escapeHtml(statusLabel) + '</div>' +
+          '</div>' +
+          '<span class="diagnostic-chip">' + escapeHtml(chipLabel) + '</span>' +
+        '</div>' +
+        '<div class="text-sm text-gray-400 wrap-safe">' + escapeHtml(detailParts.join(" • ")) + '</div>' +
+        '<div class="mt-4 flex flex-wrap gap-2">' + (actions || "") + '</div>' +
+      '</div>'
+    );
   }).join("");
 }
 
@@ -11104,7 +11412,13 @@ function renderAIProviderCards() {
 async function configureAIProvider(providerId) {
   var config = aiProviders.find(function(p) { return p.id === providerId; });
   if (!config) { showToast("Unknown provider", "error"); return; }
-  
+
+  if (typeof CLIENT_SAFE_MODE !== "undefined" && CLIENT_SAFE_MODE) {
+    openAIProviderSupportModal(providerId);
+    return;
+  }
+
+  // Internal/master mode: allow direct key entry
   var apiKey = await promptUser("Enter API key for " + config.label + (config.defaultApiUrl ? ":" : " (optional custom API URL in next step):"), "");
   if (apiKey === null) return;
   
@@ -19999,6 +20313,13 @@ window.getAIProviderConfig = getAIProviderConfig;
 window.saveAIProviderConfig = saveAIProviderConfig;
 window.testAIProviderConnection = testAIProviderConnection;
 window.disconnectAIProvider = disconnectAIProvider;
+window.openSupportModal = openSupportModal;
+window.closeSupportModal = closeSupportModal;
+window.submitSupportReport = submitSupportReport;
+window.openAIProviderSupportModal = openAIProviderSupportModal;
+window.openWorkspaceSetupSupportModal = openWorkspaceSetupSupportModal;
+window.openPublishIssueSupportModal = openPublishIssueSupportModal;
+window.openSupportModalFromDiagnostics = openSupportModalFromDiagnostics;
 window.openLinkedInCaptureImporter = openLinkedInCaptureImporter;
 window.openExistingPostImportModal = openExistingPostImportModal;
 window.aiGenerate = aiGenerate;
