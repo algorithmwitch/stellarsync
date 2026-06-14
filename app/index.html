@@ -1082,6 +1082,8 @@
         .audit-list li { position:relative; padding-left:1rem; }
         .audit-list li::before { content:""; position:absolute; left:0; top:0.5rem; width:6px; height:6px; border-radius:999px; background:currentColor; opacity:0.8; }
         .ledger-linkedin { color: #0A66C2; }
+        .ledger-youtube { color: #ff4d4d; }
+        .ledger-facebook { color: #1877F2; }
 
         #view-constellation .starmap-container,
         #view-constellation .hub-node,
@@ -2304,6 +2306,30 @@
                 </div>
               </div>
             </div>
+
+            <div class="relative ledger-menu-item">
+              <button type="button" class="w-full px-3 py-3 rounded-lg hover:bg-[#181125] text-left flex items-center justify-between text-gray-300 hover:text-white transition-all">
+                <span class="text-xs font-medium flex items-center gap-2">
+                  <i class="ph-bold ph-share-network text-[#c77dff]"></i>
+                  Platform
+                </span>
+                <span id="ledger-filter-platformlbl" class="text-[10px] text-gray-500 mr-2">All</span>
+                <i class="ph-bold ph-caret-right text-gray-500"></i>
+              </button>
+
+              <div class="ledger-submenu absolute left-full top-0 ml-2 w-44 bg-[#181125] border border-white/10 rounded-xl shadow-2xl z-[130] overflow-hidden">
+                <div class="p-2">
+                  <button type="button" data-filter-key="platform" data-filter-value="all" class="ledger-filter-option w-full px-3 py-2 rounded-lg hover:bg-[#2d1b4e] text-left text-xs text-gray-300 hover:text-white transition-all">All Platforms</button>
+                  <button type="button" data-filter-key="platform" data-filter-value="linkedin" class="ledger-filter-option w-full px-3 py-2 rounded-lg hover:bg-[#2d1b4e] text-left text-xs text-gray-300 hover:text-white transition-all">LinkedIn</button>
+                  <button type="button" data-filter-key="platform" data-filter-value="instagram" class="ledger-filter-option w-full px-3 py-2 rounded-lg hover:bg-[#2d1b4e] text-left text-xs text-gray-300 hover:text-white transition-all">Instagram</button>
+                  <button type="button" data-filter-key="platform" data-filter-value="threads" class="ledger-filter-option w-full px-3 py-2 rounded-lg hover:bg-[#2d1b4e] text-left text-xs text-gray-300 hover:text-white transition-all">Threads</button>
+                  <button type="button" data-filter-key="platform" data-filter-value="bluesky" class="ledger-filter-option w-full px-3 py-2 rounded-lg hover:bg-[#2d1b4e] text-left text-xs text-gray-300 hover:text-white transition-all">Bluesky</button>
+                  <button type="button" data-filter-key="platform" data-filter-value="tiktok" class="ledger-filter-option w-full px-3 py-2 rounded-lg hover:bg-[#2d1b4e] text-left text-xs text-gray-300 hover:text-white transition-all">TikTok</button>
+                  <button type="button" data-filter-key="platform" data-filter-value="youtube" class="ledger-filter-option w-full px-3 py-2 rounded-lg hover:bg-[#2d1b4e] text-left text-xs text-gray-300 hover:text-white transition-all">YouTube</button>
+                  <button type="button" data-filter-key="platform" data-filter-value="facebook" class="ledger-filter-option w-full px-3 py-2 rounded-lg hover:bg-[#2d1b4e] text-left text-xs text-gray-300 hover:text-white transition-all">Facebook</button>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div class="p-3 border-t border-white/5 bg-[#0f0a18]">
@@ -2762,7 +2788,11 @@
         <option value="all">All Platforms</option>
         <option value="linkedin">LinkedIn</option>
         <option value="instagram">Instagram</option>
-        <option value="both">Both Platforms</option>
+        <option value="threads">Threads</option>
+        <option value="bluesky">Bluesky</option>
+        <option value="tiktok">TikTok</option>
+        <option value="youtube">YouTube</option>
+        <option value="facebook">Facebook</option>
       </select>
     </div>
   </div>
@@ -2916,7 +2946,11 @@
                       <option value="all">All Platforms</option>
                       <option value="linkedin">LinkedIn</option>
                       <option value="instagram">Instagram</option>
-                      <option value="both">Both</option>
+                      <option value="threads">Threads</option>
+                      <option value="bluesky">Bluesky</option>
+                      <option value="tiktok">TikTok</option>
+                      <option value="youtube">YouTube</option>
+                      <option value="facebook">Facebook</option>
                     </select>
                     <select id="overview-range-filter" class="form-input text-[11px] font-medium">
                       <option value="30">Last 30 Days</option>
@@ -3327,6 +3361,11 @@
           <select id="note-platform" class="form-input text-sm font-medium">
             <option value="linkedin">LinkedIn</option>
             <option value="instagram">Instagram</option>
+            <option value="threads">Threads</option>
+            <option value="bluesky">Bluesky</option>
+            <option value="tiktok">TikTok</option>
+            <option value="youtube">YouTube</option>
+            <option value="facebook">Facebook</option>
             <option value="both">Both</option>
           </select>
         </div>
@@ -3419,12 +3458,17 @@
                 <div class="grid grid-cols-2 gap-6" vid="537">
                     <div class="space-y-5" vid="538">
                         <div vid="539">
-                            <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2" vid="540">Platform</label>
-                            <select id="modal-platform" class="form-input appearance-none bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgZmlsbD0iI2UyZThmMCIgdmlld0JveD0iMCAwIDE2IDE2Ij48cGF0aCBkPSJNNy4yNDcgMTEuMTRsLTQuNzk2LTUuNDgxYy0uNTY2LS42NDctLjEwNi0xLjY1OS43NTMtMS42NTloOS41OTJjLjg2IDAgMS4zMiAxLjAxMi43NTMgMS42NTlsLTQuNzk2IDUuNDhhMSAxIDAgMCAxLTEuNTA2IDB6Ii8+PC9zdmc+')] bg-no-repeat bg-[position:right_14px_center] pr-10 font-medium" vid="541">
-                                <option value="linkedin" vid="542">LinkedIn</option>
-                                <option value="instagram" vid="543">Instagram</option>
-                                <option value="both" vid="544">Both Platforms</option>
-                            </select>
+                            <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2" vid="540">Platforms</label>
+                            <input id="modal-platform" type="hidden" value="linkedin">
+                            <div id="modal-platform-targets" class="flex flex-wrap gap-2">
+                              <label class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs text-gray-300 font-bold flex items-center gap-2 cursor-pointer hover:border-[#c77dff]/40"><input type="checkbox" data-platform-target="linkedin" class="accent-[#c77dff]"> LinkedIn</label>
+                              <label class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs text-gray-300 font-bold flex items-center gap-2 cursor-pointer hover:border-[#c77dff]/40"><input type="checkbox" data-platform-target="instagram" class="accent-[#c77dff]"> Instagram</label>
+                              <label class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs text-gray-300 font-bold flex items-center gap-2 cursor-pointer hover:border-[#c77dff]/40"><input type="checkbox" data-platform-target="threads" class="accent-[#c77dff]"> Threads</label>
+                              <label class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs text-gray-300 font-bold flex items-center gap-2 cursor-pointer hover:border-[#c77dff]/40"><input type="checkbox" data-platform-target="bluesky" class="accent-[#c77dff]"> Bluesky</label>
+                              <label class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs text-gray-300 font-bold flex items-center gap-2 cursor-pointer hover:border-[#c77dff]/40"><input type="checkbox" data-platform-target="tiktok" class="accent-[#c77dff]"> TikTok</label>
+                              <label class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs text-gray-300 font-bold flex items-center gap-2 cursor-pointer hover:border-[#c77dff]/40"><input type="checkbox" data-platform-target="youtube" class="accent-[#c77dff]"> YouTube</label>
+                              <label class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs text-gray-300 font-bold flex items-center gap-2 cursor-pointer hover:border-[#c77dff]/40"><input type="checkbox" data-platform-target="facebook" class="accent-[#c77dff]"> Facebook</label>
+                            </div>
                         </div>
                         <div vid="545">
                             <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2" vid="546">Post Type</label>
@@ -3551,6 +3595,11 @@
                     </span>
                   </div>
                   <div id="modal-publish-readiness" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+                  <label class="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs text-gray-300">
+                    <input id="modal-schedule-social-enabled" type="checkbox" class="accent-[#c77dff]">
+                    Schedule to selected social platforms
+                  </label>
+                  <div id="modal-social-schedule-status" class="text-[11px] text-gray-500 leading-relaxed">Creates one scheduled_social_posts row per selected platform when saved.</div>
                   <div class="flex flex-wrap gap-2">
                     <button id="modal-validate-linkedin-btn" type="button" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Validate For LinkedIn</button>
                     <button id="modal-prepare-linkedin-payload-btn" type="button" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Prepare LinkedIn Payload</button>
@@ -3562,6 +3611,17 @@
                     <div id="linkedin-author-selector" class="hidden space-y-2"></div>
                   </div>
                   <div id="modal-linkedin-publish-output" class="p-3 rounded-xl bg-[#181125] border border-white/5 text-[11px] text-gray-300 leading-relaxed">LinkedIn validation and payload preparation results will appear here.</div>
+                  <div id="modal-monday-section" class="hidden p-3 rounded-xl bg-[#181125] border border-white/5 space-y-2">
+                    <div class="flex items-center justify-between gap-3 flex-wrap">
+                      <div>
+                        <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Monday.com Sync</p>
+                        <p id="modal-monday-sync-status" class="text-[11px] text-gray-500 leading-relaxed">Not synced to Monday</p>
+                      </div>
+                      <button id="modal-sync-monday-btn" type="button" onclick="syncPostToMonday()" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Sync Post to Monday</button>
+                    </div>
+                    <input id="modal-monday-item-id" type="hidden" value="">
+                    <input id="modal-monday-synced-at" type="hidden" value="">
+                  </div>
                 </div>
             </div>
 
@@ -3700,6 +3760,9 @@
             <option value="instagram">Instagram</option>
             <option value="threads">Threads</option>
             <option value="bluesky">Bluesky</option>
+            <option value="tiktok">TikTok</option>
+            <option value="youtube">YouTube</option>
+            <option value="facebook">Facebook</option>
             <option value="external">External URL</option>
           </select>
           <select id="media-link-type" class="form-input text-sm font-medium">
@@ -3949,6 +4012,11 @@
             <select id="ai-platform" class="form-input text-sm font-medium">
               <option value="linkedin">LinkedIn</option>
               <option value="instagram">Instagram</option>
+              <option value="threads">Threads</option>
+              <option value="bluesky">Bluesky</option>
+              <option value="tiktok">TikTok</option>
+              <option value="youtube">YouTube</option>
+              <option value="facebook">Facebook</option>
               <option value="both">Both</option>
             </select>
             <select id="ai-post-type" class="form-input text-sm font-medium">
@@ -3979,6 +4047,11 @@
                 <option value="all">All platforms</option>
                 <option value="linkedin">LinkedIn only</option>
                 <option value="instagram">Instagram only</option>
+                <option value="threads">Threads only</option>
+                <option value="bluesky">Bluesky only</option>
+                <option value="tiktok">TikTok only</option>
+                <option value="youtube">YouTube only</option>
+                <option value="facebook">Facebook only</option>
               </select>
               <select id="ai-history-campaign" class="form-input text-sm font-medium">
                 <option value="">All campaigns</option>
@@ -5944,6 +6017,78 @@ function renderPillarShape(pillar, className = "", theme = getPillarTheme(pillar
   return `<span class="${escapeHtml(className)} inline-block w-2.5 h-2.5 rounded-full shrink-0" style="background:${escapeHtml(theme.color || "#c77dff")}"></span>`;
 }
 
+function normalizePlatformTarget(value) {
+  const text = String(value || "").trim().toLowerCase();
+  if (!text) return "";
+  if (text === "both") return "both";
+  if (text.includes("linkedin")) return "linkedin";
+  if (text.includes("instagram")) return "instagram";
+  if (text.includes("threads")) return "threads";
+  if (text.includes("bsky") || text.includes("bluesky")) return "bluesky";
+  if (text.includes("tiktok") || text.includes("tik tok")) return "tiktok";
+  if (text.includes("youtube")) return "youtube";
+  if (text.includes("facebook") || text.includes("fb")) return "facebook";
+  return SUPPORTED_POST_PLATFORMS.includes(text) ? text : "";
+}
+
+function parsePlatformTargets(value, fallback = "") {
+  const raw = Array.isArray(value) ? value : String(value || "").split(/[|,\n]/);
+  const targets = raw.flatMap((item) => {
+    const normalized = normalizePlatformTarget(item);
+    return normalized === "both" ? ["linkedin", "instagram"] : normalized ? [normalized] : [];
+  });
+  const deduped = targets.filter((item, index, arr) => item && arr.indexOf(item) === index);
+  if (deduped.length) return deduped;
+  const fallbackTarget = normalizePlatformTarget(fallback);
+  if (fallbackTarget === "both") return ["linkedin", "instagram"];
+  return fallbackTarget ? [fallbackTarget] : [];
+}
+
+function getPostTargetPlatforms(post) {
+  return parsePlatformTargets(
+    post?.platforms || post?.platformTargets || post?.platform_targets || "",
+    post?.platform || "linkedin"
+  );
+}
+
+function renderPlatformChips(postOrPlatforms, options = {}) {
+  const platforms = Array.isArray(postOrPlatforms) ? parsePlatformTargets(postOrPlatforms) : getPostTargetPlatforms(postOrPlatforms);
+  const compact = !!options.compact;
+  const classes = compact
+    ? "inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#120c1d] border border-white/5 text-[8px] uppercase tracking-wide text-gray-300"
+    : "publishing-chip text-gray-300";
+  const iconMap = {
+    linkedin: "ph-linkedin-logo",
+    instagram: "ph-instagram-logo",
+    threads: "ph-at",
+    bluesky: "ph-butterfly",
+    tiktok: "ph-music-note",
+    youtube: "ph-youtube-logo",
+    facebook: "ph-facebook-logo"
+  };
+  return (platforms.length ? platforms : ["linkedin"]).map((platform) => `
+    <span class="${classes}" data-platform-chip="${escapeHtml(platform)}">
+      <i class="ph-fill ${escapeHtml(iconMap[platform] || "ph-share-network")}"></i>${compact ? "" : escapeHtml(toTitleCase(platform))}
+    </span>
+  `).join("");
+}
+
+function getSelectedModalPlatforms() {
+  const targets = Array.from(document.querySelectorAll("#modal-platform-targets [data-platform-target]:checked"))
+    .map((input) => normalizePlatformTarget(input.dataset.platformTarget))
+    .filter(Boolean);
+  return targets.filter((item, index, arr) => arr.indexOf(item) === index);
+}
+
+function setModalTargetPlatforms(platforms) {
+  const selected = parsePlatformTargets(platforms, "linkedin");
+  document.querySelectorAll("#modal-platform-targets [data-platform-target]").forEach((input) => {
+    input.checked = selected.includes(input.dataset.platformTarget);
+  });
+  if (platSelect) platSelect.value = selected[0] || "";
+  return selected;
+}
+
 function renderStackedAssetPreview(assets = []) {
   const items = (Array.isArray(assets) ? assets : []).slice(0, 3);
   return `<div class="stacked-preview">${items.map(() => "<span></span>").join("")}</div>`;
@@ -5970,9 +6115,9 @@ function renderPublishingReadiness(post = {}) {
     `).join("") || makeEmptyState("Publishing readiness unavailable", "No post rows are loaded yet.", "ph-paper-plane-tilt");
     return;
   }
-  const platformTargets = Array.isArray(post.platformTargets) && post.platformTargets.length
-    ? post.platformTargets
-    : String(post.platform || platSelect?.value || "linkedin").split(/[|,\n]/).map((item) => item.trim()).filter(Boolean);
+  const platformTargets = getPostTargetPlatforms(post).length
+    ? getPostTargetPlatforms(post)
+    : parsePlatformTargets(platSelect?.value || "linkedin");
   const status = String(post.publishStatus || post.status || statusSelect?.value || "draft").trim().toLowerCase();
   const rows = (platformTargets.length ? platformTargets : ["linkedin"]).map((platform) => {
     const account = typeof getConnectedAccount === "function" ? getConnectedAccount(platform) : null;
@@ -6307,7 +6452,8 @@ let mobileFilterState = {
   notes: { platform: "all", pillar: "all", query: "" }
 };
 let activeConnectionSetupPlatform = "";
-const CONNECTED_ACCOUNT_PLATFORMS = ["linkedin", "instagram", "threads", "bluesky", "tiktok"];
+const SUPPORTED_POST_PLATFORMS = ["linkedin", "instagram", "threads", "bluesky", "tiktok", "youtube", "facebook"];
+const CONNECTED_ACCOUNT_PLATFORMS = ["linkedin", "instagram", "threads", "bluesky", "tiktok", "youtube", "facebook"];
 const WORKSPACE_CONNECTION_PROVIDERS = ["google_sheets", "google_drive", "monday"]; // stripe removed — belongs in Billing tab, not Connections
 let installContext = {
   isIos: /iphone|ipad|ipod/i.test(navigator.userAgent || ""),
@@ -6406,7 +6552,8 @@ let ledgerFilters = {
   pillar: "all",
   campaign: "all",
   type: "all",
-  status: "all"
+  status: "all",
+  platform: "all"
 };
 
 let ledgerSortMode = "newest";
@@ -6539,6 +6686,8 @@ const linkedInImportResultErrorsEl = document.getElementById("modal-linkedin-imp
 const linkedInImportResultVerifyEl = document.getElementById("modal-linkedin-import-result-verify");
 const linkedInDownloadReportBtn = document.getElementById("modal-linkedin-download-report-btn");
 const publishReadinessEl = document.getElementById("modal-publish-readiness");
+const scheduleSocialEnabledInput = document.getElementById("modal-schedule-social-enabled");
+const socialScheduleStatusEl = document.getElementById("modal-social-schedule-status");
 const validateLinkedInBtn = document.getElementById("modal-validate-linkedin-btn");
 const prepareLinkedInPayloadBtn = document.getElementById("modal-prepare-linkedin-payload-btn");
 const linkedInPublishOutputEl = document.getElementById("modal-linkedin-publish-output");
@@ -7458,7 +7607,8 @@ function deriveSourceLabel(url) {
   if (!url) return "Added manually";
   try {
     const host = new URL(url).hostname.replace(/^www\./, "");
-    if (host.includes("youtube")) return "YouTube";
+    if (host.includes("youtube") || host.includes("youtu.be")) return "YouTube";
+    if (host.includes("facebook")) return "Facebook";
     if (host.includes("instagram")) return "Instagram";
     if (host.includes("tiktok")) return "TikTok";
     if (host.includes("linkedin")) return "LinkedIn";
@@ -7478,6 +7628,8 @@ function detectSourcePlatform(value) {
   if (text.includes("threads")) return "threads";
   if (text.includes("bsky") || text.includes("bluesky")) return "bluesky";
   if (text.includes("tiktok")) return "tiktok";
+  if (text.includes("youtube")) return "youtube";
+  if (text.includes("facebook")) return "facebook";
   return "";
 }
 
@@ -9067,6 +9219,7 @@ function renderMobileDayCalendar() {
             <i class="ph-bold ${badge.icon}"></i>${escapeHtml(badge.label)}
           </span>
         </div>
+        <div class="flex flex-wrap gap-1 mb-2">${renderPlatformChips(post)}</div>
         <p class="text-xs text-gray-400 wrap-safe">${escapeHtml(getDisplayExcerpt(post.description, post.description || "No description"))}</p>
       </button>
     `;
@@ -9075,12 +9228,7 @@ function renderMobileDayCalendar() {
 
 function renderCalendarPill(post, isWeekMode = false) {
   const compactMonth = window.innerWidth <= 768 && calendarMode === "month" && !isWeekMode;
-  const iconBlock =
-    post.platform === "both"
-      ? `<div class="flex"><i class="ph-fill ph-linkedin-logo text-xs"></i><i class="ph-fill ph-instagram-logo text-xs -ml-1"></i></div>`
-      : post.platform === "instagram"
-      ? `<i class="ph-fill ph-instagram-logo text-xs"></i>`
-      : `<i class="ph-fill ph-linkedin-logo text-xs"></i>`;
+  const iconBlock = `<span class="flex items-center gap-1">${renderPlatformChips(post, { compact: true })}</span>`;
 
   const statusColor =
     post.status === "published" ? "#00ffaa" :
@@ -9130,7 +9278,7 @@ function renderCalendarPill(post, isWeekMode = false) {
 
 function postMatchesCalendarViewFilters(post) {
   const filters = mobileFilterState.calendar || {};
-  if ((filters.platform || "all") !== "all" && String(post.platform || "").toLowerCase() !== String(filters.platform || "").toLowerCase()) return false;
+  if ((filters.platform || "all") !== "all" && !getPostTargetPlatforms(post).includes(String(filters.platform || "").toLowerCase())) return false;
   if ((filters.status || "all") !== "all" && String(post.status || "").toLowerCase() !== String(filters.status || "").toLowerCase()) return false;
   const query = String(filters.query || "").trim().toLowerCase();
   if (query) {
@@ -9171,6 +9319,10 @@ function renderLedger() {
 
   if (ledgerFilters.status !== "all") {
     posts = posts.filter(post => String(post.status || "") === ledgerFilters.status);
+  }
+
+  if (ledgerFilters.platform !== "all") {
+    posts = posts.filter(post => getPostTargetPlatforms(post).includes(String(ledgerFilters.platform || "").toLowerCase()));
   }
 
   posts.sort((a, b) => {
@@ -9219,15 +9371,11 @@ function renderLedger() {
     const pillarLabel = displayPillarValue ? formatContentPillarLabel(displayPillarValue) : "No Pillar";
     const campaignColor = getCampaignColor(hydrated, pillarValue);
 
-    const platformIcon =
-      post.platform === "instagram" ? "ph-instagram-logo" :
-      post.platform === "both" ? "ph-infinity" :
-      "ph-linkedin-logo";
-
-    const iconColor = post.platform === "linkedin" ? "#0A66C2" : post.platform === "instagram" ? "#b25fff" : "#ffd700";
+    const platformIcon = getPostTargetPlatforms(post)[0] === "instagram" ? "ph-instagram-logo" : getPostTargetPlatforms(post)[0] === "threads" ? "ph-at" : getPostTargetPlatforms(post)[0] === "bluesky" ? "ph-butterfly" : getPostTargetPlatforms(post)[0] === "tiktok" ? "ph-music-note" : getPostTargetPlatforms(post)[0] === "youtube" ? "ph-youtube-logo" : getPostTargetPlatforms(post)[0] === "facebook" ? "ph-facebook-logo" : "ph-linkedin-logo";
+    const iconColor = getPostTargetPlatforms(post)[0] === "linkedin" ? "#0A66C2" : getPostTargetPlatforms(post)[0] === "instagram" ? "#b25fff" : getPostTargetPlatforms(post)[0] === "youtube" ? "#ff4d4d" : getPostTargetPlatforms(post)[0] === "facebook" ? "#1877F2" : "#ffd700";
     const displayTitle = getPostDisplayTitle(post);
     const displayDescription = getDisplayExcerpt(post.description, post.ledgerExcerpt || "");
-    const platformIconClass = post.platform === "linkedin" ? "ledger-linkedin" : "";
+    const platformIconClass = getPostTargetPlatforms(post)[0] === "linkedin" ? "ledger-linkedin" : getPostTargetPlatforms(post)[0] === "youtube" ? "ledger-youtube" : getPostTargetPlatforms(post)[0] === "facebook" ? "ledger-facebook" : "";
     const campaignLabel = formatCampaignDisplayName(hydrated.campaignName || "Unassigned");
     const pillarShape = renderPillarShape(pillarValue, "", getPillarTheme(pillarValue));
     const mediaKind = getPostMediaKind(hydrated);
@@ -9253,6 +9401,7 @@ function renderLedger() {
               <span class="publishing-chip ${mediaKind === "missing" ? "text-red-300" : "text-gray-300"}">
                 <i class="ph-bold ${mediaKind === "video" ? "ph-video-camera" : mediaKind === "carousel" ? "ph-images" : mediaKind === "image" ? "ph-image" : mediaKind === "text" ? "ph-text-t" : "ph-warning-circle"}"></i>${escapeHtml(mediaLabel)}
               </span>
+              ${renderPlatformChips(post)}
               <span class="text-gray-500 text-[10px] font-medium">${escapeHtml(formatLedgerDate(post))}</span>
             </div>
             <h3 class="text-white font-bold text-base mb-2 wrap-safe" title="${escapeHtml(displayTitle)}">${escapeHtml(displayTitle)}</h3>
@@ -10661,7 +10810,7 @@ function getSocialCardState() {
   const detected = selectedPlatform === "auto" ? (detectSourcePlatform(sourceUrl) || "external") : selectedPlatform;
   const fallback = String(mediaLinkCaptionFallbackInput?.value || "").trim();
   const title = String(mediaLinkNameInput?.value || "").trim();
-  const likelyBlocked = ["linkedin", "instagram", "threads", "bluesky"].includes(detected);
+  const likelyBlocked = ["linkedin", "instagram", "threads", "bluesky", "tiktok", "youtube", "facebook"].includes(detected);
   const externalPreview = /\.(png|jpe?g|webp|gif)$/i.test(sourceUrl);
   const imageUrl = socialCardUpload?.previewUrl || String(currentSocialImportResult?.metadata?.image || currentSocialImportResult?.metadata?.media_url || currentSocialImportResult?.image || "").trim() || (externalPreview ? sourceUrl : "");
   return {
@@ -10689,7 +10838,7 @@ function inferSocialImportMode(state) {
   if (account?.accessStatus === "connected" && account.importSupported) return "authenticated_import";
   if (platform === "external") return "open_graph";
   if (platform === "instagram" && socialImportCapabilities?.instagramOEmbed?.configured) return "instagram_oembed";
-  if (["linkedin", "instagram", "threads", "bluesky"].includes(platform)) return "manual_social_card";
+  if (["linkedin", "instagram", "threads", "bluesky", "tiktok", "youtube", "facebook"].includes(platform)) return "manual_social_card";
   return "unsupported";
 }
 
@@ -10722,7 +10871,7 @@ function getConnectedAccountMissingSetupKeys(platform) {
 }
 
 function filterLegacyRedirectKeys(keys) {
-  return (keys || []).filter(key => !["LINKEDIN_REDIRECT_URI", "INSTAGRAM_REDIRECT_URI", "THREADS_REDIRECT_URI", "TIKTOK_REDIRECT_URI"].includes(key));
+  return (keys || []).filter(key => !["LINKEDIN_REDIRECT_URI", "INSTAGRAM_REDIRECT_URI", "THREADS_REDIRECT_URI", "TIKTOK_REDIRECT_URI", "YOUTUBE_REDIRECT_URI", "FACEBOOK_REDIRECT_URI"].includes(key));
 }
 
 // ===== BLUESKY FRONTEND =====
@@ -10892,7 +11041,7 @@ async function connectSocialAccount(platform) {
 	        || String(auth.derivedRedirectUri || "").includes("metaCallback");
 	      var safeDiag = {
 	        platform: auth.platform || platform,
-	        actionCalled: platform === "instagram" ? "startInstagramAuth" : platform === "threads" ? "startThreadsAuth" : "startLinkedInAuth",
+	        actionCalled: platform === "instagram" ? "startInstagramAuth" : platform === "threads" ? "startThreadsAuth" : platform === "tiktok" ? "startTikTokAuth" : platform === "youtube" ? "startYouTubeAuth" : platform === "facebook" ? "startFacebookAuth" : "startLinkedInAuth",
 	        hasAuthUrl: !!auth.authUrl,
 	        authUrlPreview: auth.authUrlPreview || "",
 	        derivedRedirectUri: auth.derivedRedirectUri || "",
@@ -11101,7 +11250,7 @@ function renderConnectedAccountActions(state) {
   const account = getConnectedAccount(platform);
   const mode = inferSocialImportMode(state);
   const buttons = [];
-  if (["linkedin", "instagram", "threads", "bluesky", "tiktok"].includes(platform)) {
+  if (["linkedin", "instagram", "threads", "bluesky", "tiktok", "youtube", "facebook"].includes(platform)) {
     if (account?.accessStatus === "connected") {
       buttons.push(`
         <button type="button" onclick="importConnectedSocialPost()" class="px-3 py-2 rounded-xl bg-[#120c1d] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">
@@ -11618,6 +11767,7 @@ function getConnectedAccountsMarkup(options = {}) {
 
 function renderWorkspaceConnectionCards() {
   const providers = WORKSPACE_CONNECTION_PROVIDERS;
+  var mondayBoardId = (WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active && WORKSPACE_RUNTIME_CONFIG.active.monday_board_id) || "";
   return providers.map((provider) => {
     const conn = getWorkspaceConnection(provider);
     const providerLabel = toTitleCase(provider.replace(/_/g, " "));
@@ -11644,7 +11794,17 @@ function renderWorkspaceConnectionCards() {
       if (conn.last_connected_at) detailParts.push("Connected: " + conn.last_connected_at);
       if (conn.config && conn.config.sheet_name) detailParts.push("Sheet: " + conn.config.sheet_name);
       if (provider === "google_drive") detailParts = ["Google Drive asset sync is configured by StellarSync for managed/hybrid workspaces."];
-      if (provider === "monday") detailParts = ["Monday sync is handled through Supabase backend setup."];
+      if (provider === "monday") {
+        if (conn.config && conn.config.board_name) {
+          detailParts = ["Board: " + conn.config.board_name];
+        } else if (mondayBoardId) {
+          detailParts = ["Board ID: " + mondayBoardId];
+        } else {
+          detailParts = ["Board not yet configured"];
+        }
+        if (conn.last_sync_at) detailParts.push("Last sync: " + conn.last_sync_at);
+        if (conn.last_error) detailParts.push("Last error: " + conn.last_error);
+      }
 
       if (provider === "google_sheets" && conn.config && conn.config.apps_script_url) {
         actions = '<button type="button" onclick="showToast(\'Google Sheets is active as the backend provider.\', \'info\')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Connected</button>';
@@ -11653,7 +11813,11 @@ function renderWorkspaceConnectionCards() {
       } else if (provider === "google_drive") {
         actions = '<button type="button" onclick="openSupportModal(\'Integration setup\')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Request Drive Setup</button>';
       } else if (provider === "monday") {
-        actions = '<button type="button" onclick="openSupportModal(\'Integration setup\')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Request Monday Setup</button>';
+        actions = '';
+        if (mondayBoardId) {
+          actions += '<button type="button" onclick="testMondayConnection()" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Test Connection</button>';
+        }
+        actions += '<button type="button" onclick="openSupportModal(\'Integration setup\')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Request Monday Setup</button>';
       } else {
         actions = '<button type="button" onclick="openSupportModal(\'Integration setup\')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Request Setup</button>';
       }
@@ -11663,13 +11827,19 @@ function renderWorkspaceConnectionCards() {
       chipLabel = "Setup Required";
       detailParts = ["No connection record found in workspace"];
       if (provider === "google_drive") detailParts = ["Google Drive asset sync is configured by StellarSync for managed/hybrid workspaces."];
-      if (provider === "monday") detailParts = ["Monday sync is handled through Supabase backend setup."];
+      if (provider === "monday") {
+        detailParts = mondayBoardId ? ["Board ID: " + mondayBoardId + " — test connection to verify"] : ["Board not yet configured"];
+      }
       if (provider === "google_sheets") {
         actions = '<button type="button" onclick="openSupportModal(\'Integration setup\')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Request Setup</button>';
       } else if (provider === "google_drive") {
         actions = '<button type="button" onclick="openSupportModal(\'Integration setup\')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Request Drive Setup</button>';
       } else if (provider === "monday") {
-        actions = '<button type="button" onclick="openSupportModal(\'Integration setup\')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Request Monday Setup</button>';
+        actions = '';
+        if (mondayBoardId) {
+          actions += '<button type="button" onclick="testMondayConnection()" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Test Connection</button>';
+        }
+        actions += '<button type="button" onclick="openSupportModal(\'Integration setup\')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Request Monday Setup</button>';
       } else {
         actions = '<button type="button" onclick="openSupportModal(\'Integration setup\')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Request Setup</button>';
       }
@@ -11689,6 +11859,90 @@ function renderWorkspaceConnectionCards() {
       '</div>'
     );
   }).join("");
+}
+
+async function testMondayConnection() {
+  try {
+    showToast("Testing Monday connection...", "info");
+    var boardId = (WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active && WORKSPACE_RUNTIME_CONFIG.active.monday_board_id) || "";
+    if (!boardId) { showToast("No Monday board ID configured", "error"); return; }
+    var meta = getWorkspaceRequestMetadata();
+    var result = await callSupabaseEdgeFunction("monday-sync", {
+      action: "test",
+      workspace_id: meta.workspace_id || meta.workspace_slug,
+      board_id: boardId
+    });
+    if (result.ok) {
+      showToast("Monday connection successful!", "success");
+      refreshConnectionCards();
+    } else {
+      showToast("Monday connection failed: " + (result.error || "Unknown error"), "error");
+    }
+  } catch (e) {
+    showToast("Monday connection error: " + (e.message || String(e)), "error");
+  }
+}
+
+async function syncPostToMonday() {
+  try {
+    var boardId = (WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active && WORKSPACE_RUNTIME_CONFIG.active.monday_board_id) || "";
+    if (!boardId) { showToast("No Monday board configured", "error"); return; }
+    var existing = window.__currentModalPostData || null;
+    if (!existing) { showToast("Save the post first before syncing to Monday", "error"); return; }
+    var postDate = existing?.date || existing?.scheduledAt || existing?.scheduled_at || existing?.queueDateLabel || "";
+    var postStatus = existing?.status || existing?.publishStatus || "draft";
+    showToast("Syncing post to Monday...", "info");
+    var meta = getWorkspaceRequestMetadata();
+    var result = await callSupabaseEdgeFunction("monday-sync", {
+      action: "sync_post",
+      workspace_id: meta.workspace_id || meta.workspace_slug,
+      board_id: boardId,
+      post_title: existing?.title || "",
+      post_description: existing?.description || "",
+      post_date: postDate,
+      post_platform: ((existing?.platforms || existing?.platform || [])[0]) || "",
+      post_status: postStatus,
+      post_url: existing?.publishedUrl || existing?.published_url || "",
+      monday_item_id: existing?.mondayItemId || existing?.monday_item_id || ""
+    });
+    if (result.ok && result.monday_item_id) {
+      showToast("Post synced to Monday! Item ID: " + result.monday_item_id, "success");
+      setModalMondayFields(result.monday_item_id, result.synced_at);
+    } else {
+      showToast("Monday sync failed: " + (result.error || "Unknown error"), "error");
+    }
+  } catch (e) {
+    showToast("Monday sync error: " + (e.message || String(e)), "error");
+  }
+}
+
+function setModalMondayFields(itemId, syncedAt) {
+  var statusEl = document.getElementById("modal-monday-sync-status");
+  if (statusEl) {
+    statusEl.textContent = "Synced to Monday (ID: " + itemId + ")";
+    statusEl.className = "text-[11px] text-emerald-400 leading-relaxed";
+  }
+  var itemIdInput = document.getElementById("modal-monday-item-id");
+  if (itemIdInput) itemIdInput.value = itemId;
+  var syncTimeInput = document.getElementById("modal-monday-synced-at");
+  if (syncTimeInput) syncTimeInput.value = syncedAt || new Date().toISOString();
+  if (window.__currentModalPostData) {
+    window.__currentModalPostData.mondayItemId = itemId;
+    window.__currentModalPostData.monday_item_id = itemId;
+    window.__currentModalPostData.mondayLastSyncedAt = syncedAt || new Date().toISOString();
+    window.__currentModalPostData.monday_last_synced_at = syncedAt || new Date().toISOString();
+  }
+}
+
+function refreshConnectionCards() {
+  var container = document.getElementById("workspace-connections-cards");
+  if (container && typeof renderWorkspaceConnectionCards === "function") {
+    container.innerHTML = renderWorkspaceConnectionCards();
+  }
+  var accountsPanel = document.querySelector('[data-settings-panel="accounts"]');
+  if (accountsPanel && typeof getConnectedAccountsMarkup === "function") {
+    accountsPanel.innerHTML = getConnectedAccountsMarkup();
+  }
 }
 
 function renderConnectedAccounts() {
@@ -12347,6 +12601,7 @@ function renderMobileFilterSheet() {
         <select id="mobile-ledger-filter-campaign" class="form-input text-sm">${['<option value="all">All Campaigns</option>'].concat(getAvailableCampaignRecords().filter((item) => !item.isArchived).map((item) => `<option value="${escapeHtml(item.campaignId)}">${escapeHtml(formatCampaignDisplayName(item.campaignName))}</option>`)).join("")}</select>
         <select id="mobile-ledger-filter-type" class="form-input text-sm">${['all', 'image', 'carousel', 'video', 'article', 'text', 'poll'].map((value) => `<option value="${value}">${value === 'all' ? 'All Types' : toTitleCase(value)}</option>`).join("")}</select>
         <select id="mobile-ledger-filter-status" class="form-input text-sm">${['all', 'draft', 'scheduled', 'published'].map((value) => `<option value="${value}">${value === 'all' ? 'All Statuses' : toTitleCase(value)}</option>`).join("")}</select>
+        <select id="mobile-ledger-filter-platform" class="form-input text-sm">${['all'].concat(SUPPORTED_POST_PLATFORMS).map((value) => `<option value="${value}">${value === 'all' ? 'All Platforms' : toTitleCase(value)}</option>`).join("")}</select>
         <div class="flex gap-2">
           <button type="button" id="mobile-ledger-filter-apply" class="flex-1 px-4 py-3 rounded-xl bg-[#2d1b4e] text-white text-xs uppercase tracking-wider font-bold">Apply</button>
           <button type="button" id="mobile-ledger-filter-reset" class="flex-1 px-4 py-3 rounded-xl bg-[#181125] text-gray-300 text-xs uppercase tracking-wider font-bold border border-white/5">Reset</button>
@@ -12357,17 +12612,19 @@ function renderMobileFilterSheet() {
     document.getElementById("mobile-ledger-filter-campaign").value = ledgerFilters.campaign || "all";
     document.getElementById("mobile-ledger-filter-type").value = ledgerFilters.type || "all";
     document.getElementById("mobile-ledger-filter-status").value = ledgerFilters.status || "all";
+    document.getElementById("mobile-ledger-filter-platform").value = ledgerFilters.platform || "all";
     document.getElementById("mobile-ledger-filter-apply")?.addEventListener("click", () => {
       ledgerFilters.pillar = document.getElementById("mobile-ledger-filter-pillar")?.value || "all";
       ledgerFilters.campaign = document.getElementById("mobile-ledger-filter-campaign")?.value || "all";
       ledgerFilters.type = document.getElementById("mobile-ledger-filter-type")?.value || "all";
       ledgerFilters.status = document.getElementById("mobile-ledger-filter-status")?.value || "all";
+      ledgerFilters.platform = document.getElementById("mobile-ledger-filter-platform")?.value || "all";
       updateLedgerFilterLabels();
       renderLedger();
       closeMobileSheet(mobileFilterSheet);
     });
     document.getElementById("mobile-ledger-filter-reset")?.addEventListener("click", () => {
-      ledgerFilters = { pillar: "all", campaign: "all", type: "all", status: "all" };
+      ledgerFilters = { pillar: "all", campaign: "all", type: "all", status: "all", platform: "all" };
       updateLedgerFilterLabels();
       renderLedger();
       closeMobileSheet(mobileFilterSheet);
@@ -12419,6 +12676,11 @@ function renderMobileFilterSheet() {
           <option value="all">All Platforms</option>
           <option value="linkedin">LinkedIn</option>
           <option value="instagram">Instagram</option>
+          <option value="threads">Threads</option>
+          <option value="bluesky">Bluesky</option>
+          <option value="tiktok">TikTok</option>
+          <option value="youtube">YouTube</option>
+          <option value="facebook">Facebook</option>
           <option value="both">Both</option>
         </select>
         <button type="button" id="mobile-performance-filter-apply" class="w-full px-4 py-3 rounded-xl bg-[#2d1b4e] text-white text-xs uppercase tracking-wider font-bold">Apply</button>
@@ -12442,7 +12704,11 @@ function renderMobileFilterSheet() {
           <option value="all">All Platforms</option>
           <option value="linkedin">LinkedIn</option>
           <option value="instagram">Instagram</option>
-          <option value="both">Both</option>
+          <option value="threads">Threads</option>
+          <option value="bluesky">Bluesky</option>
+          <option value="tiktok">TikTok</option>
+          <option value="youtube">YouTube</option>
+          <option value="facebook">Facebook</option>
         </select>
         <select id="mobile-calendar-filter-status" class="form-input text-sm">
           <option value="all">All Statuses</option>
@@ -12500,6 +12766,11 @@ function renderMobileFilterSheet() {
         <option value="all">All Platforms</option>
         <option value="linkedin">LinkedIn</option>
         <option value="instagram">Instagram</option>
+        <option value="threads">Threads</option>
+        <option value="bluesky">Bluesky</option>
+        <option value="tiktok">TikTok</option>
+        <option value="youtube">YouTube</option>
+        <option value="facebook">Facebook</option>
         <option value="both">Both</option>
       </select>
       <select id="mobile-notes-filter-pillar" class="form-input text-sm">${['<option value="all">All Pillars</option>'].concat(getAvailableContentPillars().map((pillar) => `<option value="${escapeHtml(pillar)}">${escapeHtml(formatContentPillarLabel(pillar))}</option>`)).join("")}</select>
@@ -14509,6 +14780,7 @@ function updateLedgerFilterLabels() {
   const campaignLabel = document.getElementById("ledger-filter-campaignlbl");
   const typeLabel = document.getElementById("ledger-filter-typelbl");
   const statusLabel = document.getElementById("ledger-filter-statuslbl");
+  const platformLabel = document.getElementById("ledger-filter-platformlbl");
 
   if (pillarLabel) {
     pillarLabel.textContent = ledgerFilters.pillar === "all" ? "All" : formatContentPillarLabel(normalizePillarLabel(ledgerFilters.pillar));
@@ -14541,6 +14813,10 @@ function updateLedgerFilterLabels() {
       published: "Published"
     };
     statusLabel.textContent = labelMaps[ledgerFilters.status] || "All";
+  }
+
+  if (platformLabel) {
+    platformLabel.textContent = ledgerFilters.platform === "all" ? "All" : toTitleCase(ledgerFilters.platform);
   }
 }
 
@@ -14588,6 +14864,17 @@ function setupModalControls() {
     if (e.key === "Escape" && modal.classList.contains("active")) {
       closeModal();
     }
+  });
+
+  document.querySelectorAll("#modal-platform-targets [data-platform-target]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const selected = getSelectedModalPlatforms();
+      if (platSelect) platSelect.value = selected[0] || "";
+      renderPublishingReadiness({
+        platformTargets: selected,
+        status: statusSelect?.value || "draft"
+      });
+    });
   });
 }
 
@@ -14667,7 +14954,8 @@ function setupLedgerControls() {
       pillar: "all",
       campaign: "all",
       type: "all",
-      status: "all"
+      status: "all",
+      platform: "all"
     };
     updateLedgerFilterLabels();
     renderLedger();
@@ -14827,7 +15115,8 @@ function openPostModal(
   const initialDateValue = planning.queueDateLabel || matched?.date || date || "";
 
   if (titleInput) titleInput.value = matched?.title || title || "";
-  if (platSelect) platSelect.value = matched?.platform || platform || "linkedin";
+  const modalTargets = setModalTargetPlatforms(getPostTargetPlatforms(matched || { platform }));
+  if (platSelect) platSelect.value = modalTargets[0] || matched?.platform || platform || "linkedin";
   if (dateInput) dateInput.value = formatDateInputValue(initialDateValue);
   if (timeInput) timeInput.value = planning.hasUserSelectedTime ? formatTimeInputValue(buildScheduledAtFromPlanningFields(planning.queueDateLabel, planning.queueTimeLabel)) : "";
   if (statusSelect) statusSelect.value = matched?.status || status || "draft";
@@ -14883,6 +15172,29 @@ function openPostModal(
   modalAiInlineHelper?.classList.add("hidden");
   renderModalCarouselPreview();
   renderPublishingReadiness(matched);
+  if (scheduleSocialEnabledInput) scheduleSocialEnabledInput.checked = false;
+  if (socialScheduleStatusEl) socialScheduleStatusEl.textContent = "Creates one scheduled_social_posts row per selected platform when saved.";
+
+  var mondaySection = document.getElementById("modal-monday-section");
+  var mondayStatusEl = document.getElementById("modal-monday-sync-status");
+  var mondayItemIdInput = document.getElementById("modal-monday-item-id");
+  var mondaySyncedAtInput = document.getElementById("modal-monday-synced-at");
+  var mondayBoardId = (WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active && WORKSPACE_RUNTIME_CONFIG.active.monday_board_id) || "";
+  if (mondayBoardId && mondaySection) {
+    mondaySection.classList.remove("hidden");
+    var itemId = matched?.mondayItemId || matched?.monday_item_id || "";
+    var syncedAt = matched?.mondayLastSyncedAt || matched?.monday_last_synced_at || "";
+    if (itemId && mondayItemIdInput) mondayItemIdInput.value = itemId;
+    if (syncedAt && mondaySyncedAtInput) mondaySyncedAtInput.value = syncedAt;
+    if (mondayStatusEl) {
+      mondayStatusEl.textContent = itemId ? "Synced to Monday (ID: " + itemId + ")" : "Not synced to Monday";
+      if (itemId) mondayStatusEl.className = "text-[11px] text-emerald-400 leading-relaxed";
+      else mondayStatusEl.className = "text-[11px] text-gray-500 leading-relaxed";
+    }
+  } else if (mondaySection) {
+    mondaySection.classList.add("hidden");
+  }
+  window.__currentModalPostData = matched || null;
 
   modalEl?.classList.add("active");
   document.body.style.overflow = "hidden";
@@ -15006,6 +15318,8 @@ function closeModal() {
   if (importCaptionFallbackInput) importCaptionFallbackInput.value = "";
   if (importDiagnosticsEl) importDiagnosticsEl.textContent = "";
   if (modalAiOutput) modalAiOutput.textContent = "AI assist output will appear here.";
+  if (scheduleSocialEnabledInput) scheduleSocialEnabledInput.checked = false;
+  if (socialScheduleStatusEl) socialScheduleStatusEl.textContent = "Creates one scheduled_social_posts row per selected platform when saved.";
   modalAiInlineHelper?.classList.add("hidden");
   renderModalCarouselPreview();
   updateModalCampaignPreview();
@@ -15040,10 +15354,18 @@ function setupSaveHandler() {
       ? selectedStatus
       : (selectedStatus === "published" || selectedStatus === "needs_review" ? selectedStatus : "draft");
 
+    const selectedPlatforms = getSelectedModalPlatforms();
+    if (!selectedPlatforms.length) {
+      showToast("Missing platform", "Select at least one target platform.", "ph-warning-circle", "text-yellow-400");
+      return;
+    }
+
     const payload = {
       id: currentEditingPostId || generateId("post"),
       title: titleInput?.value.trim() || "",
-      platform: platSelect?.value || "linkedin",
+      platform: selectedPlatforms[0],
+      platforms: selectedPlatforms,
+      platform_targets: selectedPlatforms.join(","),
       pillar: selectedContentPillar,
       date: hasValidSchedule ? planning.scheduledAt : "",
       status: resolvedStatus,
@@ -15057,9 +15379,9 @@ function setupSaveHandler() {
       mediaAltText: currentModalAsset?.mediaAltText || currentModalAsset?.media_alt_text || currentModalAsset?.altText || existing?.mediaAltText || existing?.media_alt_text || "",
       mediaSource: currentModalAsset?.mediaSource || currentModalAsset?.media_source || currentModalAsset?.sourceType || existing?.mediaSource || existing?.media_source || "",
       storagePath: currentModalAsset?.storagePath || currentModalAsset?.storage_path || existing?.storagePath || existing?.storage_path || "",
-      mondayItemId: existing?.mondayItemId || existing?.monday_item_id || "",
+      mondayItemId: document.getElementById("modal-monday-item-id")?.value || existing?.mondayItemId || existing?.monday_item_id || "",
       mondayGroupId: existing?.mondayGroupId || existing?.monday_group_id || "",
-      mondayLastSyncedAt: existing?.mondayLastSyncedAt || existing?.monday_last_synced_at || "",
+      mondayLastSyncedAt: document.getElementById("modal-monday-synced-at")?.value || existing?.mondayLastSyncedAt || existing?.monday_last_synced_at || "",
       mondaySyncStatus: existing?.mondaySyncStatus || existing?.monday_sync_status || "",
       carouselAssetIds: currentModalCarouselAssets.length
         ? currentModalCarouselAssets.map(asset => asset.assetId || asset.id).filter(Boolean)
@@ -15090,9 +15412,7 @@ function setupSaveHandler() {
       sourceTitle: existing?.sourceTitle || titleInput?.value.trim() || "",
       sourceImportStatus: existing?.sourceImportStatus || "",
       sourceMetadata: existing?.sourceMetadata || "",
-      platformTargets: Array.isArray(existing?.platformTargets) && existing.platformTargets.length
-        ? existing.platformTargets
-        : [platSelect?.value || "linkedin"].filter(value => value && value !== "both").concat((platSelect?.value || "") === "both" ? ["linkedin", "instagram"] : []),
+      platformTargets: selectedPlatforms,
       publishStatus: existing?.publishStatus || "draft",
       publishedUrl: existing?.publishedUrl || "",
       publishedAt: existing?.publishedAt || "",
@@ -15139,6 +15459,20 @@ function setupSaveHandler() {
         }
         if (inspoIdToConvert) {
           await apiArchiveInspo(inspoIdToConvert, result?.post?.postId || result?.postId || payload.id);
+        }
+        if (scheduleSocialEnabledInput?.checked) {
+          try {
+            const schedulePayload = {
+              ...payload,
+              postId: result?.post?.postId || result?.postId || payload.id,
+              id: result?.post?.postId || result?.postId || payload.id
+            };
+            const socialResults = await scheduleSocialPostsForTargets(schedulePayload);
+            if (socialScheduleStatusEl) socialScheduleStatusEl.textContent = `Social schedule rows created: ${socialResults.length}`;
+          } catch (socialErr) {
+            console.warn("[social] schedule failed", socialErr);
+            if (socialScheduleStatusEl) socialScheduleStatusEl.textContent = "Social scheduling failed: " + (socialErr.message || "Unknown error");
+          }
         }
         await syncRemoteIfConfigured();
         closeModal();
@@ -15199,6 +15533,15 @@ function setupSaveHandler() {
     }
 
     persistLocalState();
+    if (scheduleSocialEnabledInput?.checked) {
+      try {
+        const socialResults = await scheduleSocialPostsForTargets(payload);
+        if (socialScheduleStatusEl) socialScheduleStatusEl.textContent = `Social schedule rows created: ${socialResults.length}`;
+      } catch (socialErr) {
+        console.warn("[social] schedule failed", socialErr);
+        if (socialScheduleStatusEl) socialScheduleStatusEl.textContent = "Social scheduling failed: " + (socialErr.message || "Unknown error");
+      }
+    }
     rerenderAll();
     closeModal();
     showToast("Saved locally", "Backend sync is not configured; this post is stored in local browser data only.", "ph-check", "text-[#00ffaa]");
@@ -17800,6 +18143,25 @@ async function apiPost(action, payload = {}) {
   return result;
 }
 
+async function callSupabaseEdgeFunction(functionName, payload = {}) {
+  if (!STELLARSYNC_SUPABASE_CLIENT || !SUPABASE_URL) throw new Error("Supabase is not configured.");
+  const sessionResult = await STELLARSYNC_SUPABASE_CLIENT.auth.getSession();
+  const token = sessionResult?.data?.session?.access_token || "";
+  if (!token) throw new Error("Supabase session is missing.");
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/${functionName}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+      "apikey": SUPABASE_ANON_KEY
+    },
+    body: JSON.stringify(payload || {})
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || result.ok === false) throw new Error(result.error || `Supabase function failed: ${functionName}`);
+  return result;
+}
+
 async function apiGetPosts() {
   console.log("[data] getPosts request started");
   try {
@@ -17869,6 +18231,46 @@ async function apiGetConnectedAccountsStatus() {
 
 async function apiGetConnectedAccounts() {
   return apiGetConnectedAccountsStatus();
+}
+
+function getSocialAccountForPlatform(platform) {
+  const normalized = normalizePlatformTarget(platform);
+  return (connectedAccounts || []).find((account) => {
+    return normalizePlatformTarget(account.platform || account.provider) === normalized &&
+      (account.connected || account.accessStatus === "connected" || account.access_status === "connected");
+  }) || null;
+}
+
+async function scheduleSocialPostsForTargets(post) {
+  const config = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active || {};
+  const workspaceId = config.workspace_id || config.id || getWorkspaceRequestMetadata().workspace_id || "";
+  const targets = getPostTargetPlatforms(post);
+  if (!workspaceId || !targets.length) return [];
+  const scheduledFor = post.scheduledAt || post.scheduled_at || post.date || "";
+  const results = [];
+  for (const provider of targets) {
+    const account = getSocialAccountForPlatform(provider);
+    const result = await callSupabaseEdgeFunction("social-schedule-post", {
+      workspace_id: workspaceId,
+      source_id: post.postId || post.post_id || post.id || "",
+      provider,
+      social_account_id: account?.id || null,
+      post_payload: {
+        title: post.title || "",
+        description: post.description || post.caption || "",
+        platform: provider,
+        readiness: account ? "publishing_not_implemented" : "missing_account"
+      },
+      media_payload: {
+        media_id: post.mediaId || post.media_id || post.assetId || "",
+        media_url: post.mediaUrl || post.media_url || ""
+      },
+      scheduled_for: scheduledFor || null
+    });
+    results.push({ provider, readiness: account ? "publishing_not_implemented" : "missing_account", result });
+  }
+  console.log("[social] schedule created", results.map((item) => ({ provider: item.provider, readiness: item.readiness })));
+  return results;
 }
 
 async function apiStartPlatformAuth(platform) {
@@ -19480,7 +19882,7 @@ async function promoteCurrentAIDraftToPosts(targetStatus = "Draft") {
         hasUserSelectedTime: false,
         status: isScheduled ? "scheduled" : "draft",
         pillar: "authority",
-        platformTargets: promotionPayload.post.platform === "both" ? ["linkedin", "instagram"] : [promotionPayload.post.platform],
+        platformTargets: getPostTargetPlatforms(promotionPayload.post),
         sourceAiDraftId: aiDraftId
       };
       createdPostId = localPost.id;
@@ -19586,6 +19988,7 @@ function normalizeRemotePost(post, campaigns = [], mediaItems = [], index = 0) {
   const carouselAssetIds = Array.isArray(post?.carouselAssetIds)
     ? post.carouselAssetIds
     : String(pickRemoteValue(post?.carousel_asset_ids, post?.carouselAssetIds, "")).split(/[|,\n]/).map(value => String(value || "").trim()).filter(Boolean);
+  const targetPlatforms = getPostTargetPlatforms(post);
   const normalizedPost = {
     id: postId || frontendId,
     postId: postId || frontendId,
@@ -19595,7 +19998,8 @@ function normalizeRemotePost(post, campaigns = [], mediaItems = [], index = 0) {
     sheetRow: getRemotePostSheetRow(post),
     title,
     displayTitle: title || "Untitled",
-    platform: String(pickRemoteValue(post?.platform, "linkedin")).trim() || "linkedin",
+    platform: targetPlatforms[0] || String(pickRemoteValue(post?.platform, "linkedin")).trim() || "linkedin",
+    platforms: targetPlatforms,
     pillar: getCanonicalPillarValue(pickRemoteValue(post?.pillar, post?.hubPillarLabel, post?.hub_pillar_label, matchedCampaign?.pillar), (appState.settings?.pillars || [])[0] || "authority") || ((appState.settings?.pillars || [])[0] || "authority"),
     date: planning.scheduledAt || scheduledAt,
     publish_date: publishDate,
@@ -19701,12 +20105,8 @@ function normalizeRemotePost(post, campaigns = [], mediaItems = [], index = 0) {
     repostCommentary: String(pickRemoteValue(post?.repostCommentary, post?.repost_commentary, "")).trim(),
     originalAuthor: String(pickRemoteValue(post?.originalAuthor, post?.original_author, "")).trim(),
     originalPostExcerpt: String(pickRemoteValue(post?.originalPostExcerpt, post?.original_post_excerpt, "")).trim(),
-    platformTargets: (Array.isArray(post?.platformTargets)
-      ? post.platformTargets
-      : String(pickRemoteValue(post?.platform_targets, post?.platformTargets, post?.platform, "")).split(/[|,\n]/))
-      .map(value => String(value || "").trim().toLowerCase())
-      .flatMap(value => value === "both" ? ["linkedin", "instagram"] : [value])
-      .filter(Boolean),
+    platform_targets: targetPlatforms,
+    platformTargets: targetPlatforms,
     publishStatus: String(pickRemoteValue(post?.publishStatus, post?.publish_status, "draft")).trim() || "draft",
     publishedUrl: String(pickRemoteValue(post?.publishedUrl, post?.published_url, "")).trim(),
     publishedAt: String(pickRemoteValue(post?.publishedAt, post?.published_at, "")).trim(),
@@ -20164,15 +20564,11 @@ async function apiImportExistingPostAsIdea(payload) {
 async function apiSavePost(post) {
   const hydratedPost = hydratePostCampaign(post);
   const planning = normalizePostPlanningFields(hydratedPost, hydratedPost);
-  const platformTargets = Array.isArray(hydratedPost.platformTargets) && hydratedPost.platformTargets.length
-    ? hydratedPost.platformTargets
-    : hydratedPost.platform === "both"
-    ? ["linkedin", "instagram"]
-    : [hydratedPost.platform || "linkedin"];
+  const platformTargets = getPostTargetPlatforms(hydratedPost);
   return apiPost("savePost", {
     postId: hydratedPost.id || null,
     title: hydratedPost.title || "",
-    platform: hydratedPost.platform || "linkedin",
+    platform: platformTargets[0] || hydratedPost.platform || "linkedin",
     pillar: normalizePillar(hydratedPost.pillar || hydratedPost.hubPillarLabel || (appState.settings?.pillars || [])[0] || "authority"),
     scheduledAt: planning.scheduledAt || hydratedPost.date || "",
     queueDateLabel: planning.queueDateLabel,
@@ -20218,6 +20614,8 @@ async function apiSavePost(post) {
     sourceMetadata: hydratedPost.sourceMetadata || "",
     sourceImportStatus: hydratedPost.sourceImportStatus || "",
     platformTargets,
+    platform_targets: platformTargets.join(","),
+    platforms: platformTargets,
     publishStatus: hydratedPost.publishStatus || "draft",
     publishedUrl: hydratedPost.publishedUrl || "",
     publishedAt: hydratedPost.publishedAt || "",
@@ -20349,12 +20747,7 @@ function renderQueue(queueItems) {
     const color = getCampaignColor(hydrated, hydrated.pillar);
     const pillarColor = getPillarTheme(hydrated.pillar);
 
-    const platformIcons =
-      item.platform === "both"
-        ? `<div class="flex gap-0.5 text-gray-400"><i class="ph-fill ph-linkedin-logo"></i><i class="ph-fill ph-instagram-logo"></i></div>`
-        : item.platform === "instagram"
-        ? `<div class="text-gray-400"><i class="ph-fill ph-instagram-logo"></i></div>`
-        : `<div class="text-gray-400"><i class="ph-fill ph-linkedin-logo"></i></div>`;
+    const platformIcons = `<div class="flex gap-1 text-gray-400">${renderPlatformChips(item, { compact: true })}</div>`;
 
     const badgeDate = getQueueBadgeParts(item.queueDateLabel, item.scheduledAt);
     const month = badgeDate.month;
@@ -20816,7 +21209,7 @@ window.openModal = function(
   let matched = appState.posts.find((post) => {
     return (
       post.title === title &&
-      post.platform === platform &&
+      getPostTargetPlatforms(post).includes(normalizePlatformTarget(platform)) &&
       getPostContentPillar(post) === pillarClass &&
       post.date === date &&
       post.status === status
@@ -21046,14 +21439,17 @@ function normalizePerformanceFilterKey(value) {
 function postMatchesPerformancePlatform(post, selectedPlatform) {
   const selected = normalizePerformanceFilterKey(selectedPlatform || "all");
   if (!selected || selected === "all") return true;
-  const values = [
-    post?.platform,
-    post?.sourcePlatform,
-    post?.source_platform,
-    ...(Array.isArray(post?.platformTargets) ? post.platformTargets : [])
-  ].map(normalizePerformanceFilterKey).filter(Boolean);
-  if (selected === "both") return values.includes("both") || (values.includes("linkedin") && values.includes("instagram"));
-  return values.includes(selected);
+  return getPostTargetPlatforms(post).includes(selected);
+}
+
+function countPostsByTargetPlatform(posts = []) {
+  const counts = new Map();
+  (posts || []).forEach((post) => {
+    getPostTargetPlatforms(post).forEach((platform) => {
+      counts.set(platform, (counts.get(platform) || 0) + 1);
+    });
+  });
+  return Array.from(counts.entries()).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 }
 
 function getPerformanceFilteredPosts() {
@@ -21214,7 +21610,7 @@ function renderPerformanceView() {
   };
   renderComparison("performance-campaign-comparison", countPostsBy(posts, (post) => getCampaignName(post, "Uncategorized")));
   renderComparison("performance-pillar-comparison", countPostsBy(posts, (post) => getPostContentPillar(post)));
-  renderComparison("performance-platform-comparison", countPostsBy(posts, (post) => post.platform || "linkedin"));
+  renderComparison("performance-platform-comparison", countPostsBy(posts, (post) => post.platform || "linkedin").concat(countPostsByTargetPlatform(posts).map(([label, count]) => [`Targets: ${label}`, count])));
   console.log("[render] renderPerformanceView done", {
     kpisFound: !!document.getElementById("performance-kpis"),
     kpiHtmlLength: document.getElementById("performance-kpis")?.innerHTML.length || 0,

@@ -2354,7 +2354,7 @@ function normalizePostRow_(row) {
     scheduledAt: scheduledAt,
     posted_at: postedAt,
     postedAt: postedAt,
-    platform: String(pickFirstDefined_(row.platform, "linkedin")).trim() || "linkedin",
+    platform: (parsePlatformTargets_(pickFirstDefined_(row.platform_targets, row.platformTargets, row.platform))[0] || String(pickFirstDefined_(row.platform, "linkedin")).trim() || "linkedin"),
     campaign_name: String(pickFirstDefined_(row.campaign_name, row.campaignName, row.campaign, "")).trim(),
     campaignName: String(pickFirstDefined_(row.campaignName, row.campaign_name, row.campaign, "")).trim(),
     campaign_id: String(pickFirstDefined_(row.campaign_id, row.campaignId, "")).trim(),
@@ -3928,7 +3928,7 @@ function getPosts() {
     return normalizePostRow_(Object.assign({}, row, {
       postId: postId,
       title: title,
-      platform: String(row.platform || "linkedin").trim() || "linkedin",
+      platform: (parsePlatformTargets_(pickFirstDefined_(row.platform_targets, row.platformTargets, row.platform))[0] || String(row.platform || "linkedin").trim() || "linkedin"),
       postType: String(pickFirstDefined_(row.post_type, row.postType, row.format, "text")).trim() || "text",
       pillar: canonicalPillar,
       scheduledAt: scheduledAt,
@@ -3987,6 +3987,8 @@ function getPosts() {
       repostCommentary: String(pickFirstDefined_(row.repost_commentary, row.repostCommentary)).trim(),
       originalAuthor: String(pickFirstDefined_(row.original_author, row.originalAuthor)).trim(),
       originalPostExcerpt: String(pickFirstDefined_(row.original_post_excerpt, row.originalPostExcerpt)).trim(),
+      platform_targets: parsePlatformTargets_(pickFirstDefined_(row.platform_targets, row.platformTargets, row.platform)),
+      platforms: parsePlatformTargets_(pickFirstDefined_(row.platform_targets, row.platformTargets, row.platform)),
       platformTargets: parsePlatformTargets_(pickFirstDefined_(row.platform_targets, row.platformTargets, row.platform)),
       publishStatus: String(pickFirstDefined_(row.publish_status, row.publishStatus)).trim() || "draft",
       publishedUrl: String(pickFirstDefined_(row.published_url, row.publishedUrl)).trim(),
@@ -4795,6 +4797,7 @@ function savePost(payload) {
   );
   const carouselAssetIds = parseAssetIdList_(pickFirstDefined_(payload.carouselAssetIds, payload.carousel_asset_ids, finalExisting && finalExisting.carousel_asset_ids));
   const platformTargets = parsePlatformTargets_(pickFirstDefined_(payload.platformTargets, payload.platform_targets, finalExisting && finalExisting.platform_targets, payload.platform));
+  const primaryPlatform = platformTargets[0] || String(pickFirstDefined_(payload.platform, payload.channel, existing && existing.platform, "linkedin")).trim() || "linkedin";
   const sourceMetadataValue = normalizeMetadataString_(pickFirstDefined_(payload.sourceMetadata, payload.source_metadata, finalExisting && finalExisting.source_metadata));
   const aiPrompt = String(pickFirstDefined_(payload.aiPrompt, payload.ai_prompt, finalExisting && finalExisting.ai_prompt, "")).trim();
   const aiGenerationMode = String(pickFirstDefined_(payload.aiGenerationMode, payload.ai_generation_mode, finalExisting && finalExisting.ai_generation_mode, "")).trim();
@@ -4805,7 +4808,7 @@ function savePost(payload) {
   const normalized = {
     post_id: String(pickFirstDefined_(payload.postId, payload.id, existing && existing.post_id, existing && existing.postId, createPostId_())).trim(),
     title: String(pickFirstDefined_(payload.title, payload.postTitle, existing && existing.title, "")).trim(),
-    platform: String(pickFirstDefined_(payload.platform, payload.channel, existing && existing.platform, "linkedin")).trim() || "linkedin",
+    platform: primaryPlatform,
     post_type: postType,
     format: postType,
     pillar: canonicalPillar,
@@ -4925,6 +4928,8 @@ function savePost(payload) {
     postId: normalized.post_id,
     title: normalized.title,
     platform: normalized.platform,
+    platform_targets: platformTargets,
+    platforms: platformTargets,
     postType: normalized.post_type,
     format: normalized.format,
     pillar: normalized.pillar,
@@ -7209,6 +7214,12 @@ function assistantPostTitle_(post) {
 
 function buildAssistantContext_() {
   var posts = getPosts();
+  var rawPostRows = [];
+  try {
+    rawPostRows = getPostsData_().map(normalizePostSchemaAliases_);
+  } catch (_) {
+    rawPostRows = [];
+  }
   var notes = getNotes();
   var inspo = getInspo();
   var drafts = getAIDrafts();
@@ -7748,7 +7759,7 @@ function normalizePathStyle_(value) {
 
 function parsePlatformTargets_(value) {
   const list = Array.isArray(value) ? value : String(value || "").split(/[|,\n]/);
-  const allowed = ["instagram", "linkedin", "threads", "bluesky"];
+  const allowed = ["instagram", "linkedin", "threads", "bluesky", "tiktok"];
   return list
     .map(function(item) { return detectSourcePlatform_(item); })
     .filter(function(item) { return allowed.indexOf(item) !== -1; })
@@ -10974,7 +10985,8 @@ function findCapturedImportDuplicate_(normalized, existingPosts) {
     if (normalizedHash && normalizedHash === postHash) return post;
     var postDate = String(post.publishedAt || post.scheduledAt || post.date || "").slice(0, 10);
     var postPrefix = normalizeImportComparableText_(post.description || post.title).slice(0, 120);
-    if (post.platform === normalized.platform && normalizedDate && postDate === normalizedDate && normalizedPrefix && postPrefix === normalizedPrefix) return post;
+    var postTargets = post.platformTargets && post.platformTargets.length ? post.platformTargets : parsePlatformTargets_(post.platform);
+    if (postTargets.indexOf(normalized.platform) !== -1 && normalizedDate && postDate === normalizedDate && normalizedPrefix && postPrefix === normalizedPrefix) return post;
   }
   return null;
 }
@@ -13371,20 +13383,43 @@ function getDiagnostics(payload) {
   });
   var publishingStateIssues = posts.filter(function(post) {
     var invalidTarget = (post.platformTargets || []).some(function(target) {
-      return ["instagram", "linkedin", "threads", "bluesky"].indexOf(String(target || "").toLowerCase()) === -1;
+      return ["instagram", "linkedin", "threads", "bluesky", "tiktok"].indexOf(String(target || "").toLowerCase()) === -1;
     });
+    var blankTargets = !(post.platformTargets || []).length;
     var publishedMissingUrl = post.publishStatus === "published" && !post.publishedUrl;
     var failedMissingError = String(post.publishStatus || "").indexOf("failed") !== -1 && !post.apiError;
-    return invalidTarget || publishedMissingUrl || failedMissingError;
+    return invalidTarget || blankTargets || publishedMissingUrl || failedMissingError;
   }).map(function(post) {
     return {
       postId: post.postId,
       publishStatus: post.publishStatus,
       platformTargets: post.platformTargets,
+      blankPlatformTargets: !(post.platformTargets || []).length,
       publishedUrl: post.publishedUrl,
       apiError: post.apiError
     };
   });
+  var invalidPlatformTargetRows = rawPostRows.map(function(row, index) {
+    var rawTargets = String(pickFirstDefined_(row.platform_targets, row.platformTargets, row.platform, "") || "").split(/[|,\n]/).map(function(value) {
+      return String(value || "").trim();
+    }).filter(Boolean);
+    var invalid = rawTargets.filter(function(value) {
+      return !detectSourcePlatform_(value) || ["instagram", "linkedin", "threads", "bluesky", "tiktok"].indexOf(detectSourcePlatform_(value)) === -1;
+    });
+    return invalid.length ? {
+      rowNumber: index + 2,
+      postId: String(pickFirstDefined_(row.post_id, row.postId, "")).trim(),
+      platformTargetsRaw: String(pickFirstDefined_(row.platform_targets, row.platformTargets, "") || "").trim(),
+      invalidTargets: invalid
+    } : null;
+  }).filter(Boolean);
+  var blankPlatformTargetRows = rawPostRows.map(function(row, index) {
+    return !String(pickFirstDefined_(row.platform_targets, row.platformTargets, "") || "").trim() ? {
+      rowNumber: index + 2,
+      postId: String(pickFirstDefined_(row.post_id, row.postId, "")).trim(),
+      fallbackPlatform: String(row.platform || "").trim()
+    } : null;
+  }).filter(Boolean);
   var importIssues = posts.filter(function(post) {
     return post.sourceImportStatus && !post.sourceUrl;
   }).map(function(post) {
@@ -13591,6 +13626,8 @@ function getDiagnostics(payload) {
     carouselMissingAssets: carouselMissingAssets,
     noteFieldIssues: noteFieldIssues,
     publishingStateIssues: publishingStateIssues,
+    invalidPlatformTargetRows: invalidPlatformTargetRows,
+    blankPlatformTargetRows: blankPlatformTargetRows,
     importIssues: importIssues,
     dateMismatchRows: dateMismatchRows,
     campaignLayoutIssues: campaignLayoutIssues,
