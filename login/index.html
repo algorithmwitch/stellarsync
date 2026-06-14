@@ -928,7 +928,7 @@ video {
             <p class="text-gray-500 text-xs font-medium tracking-widest uppercase" vid="22">Where content meets the cosmos</p>
         </div>
 
-        <form id="login-form" method="post" action="" class="space-y-4" vid="23">
+        <form id="login-form" method="post" action="javascript:void(0)" onsubmit="return false;" class="space-y-4" vid="23">
             <div class="input-group" vid="24">
                 <i class="ph-bold ph-at input-icon" vid="25"></i>
                 <input type="email" id="login-email" name="email" autocomplete="email" placeholder="Signal frequency (Email)" class="form-input" required="" vid="26">
@@ -953,8 +953,8 @@ video {
 
             <p id="login-error" class="login-error" role="alert" aria-live="polite" vid="37a"></p>
 
-            <button type="submit" id="login-submit" class="btn-primary" vid="38">
-                Enter the Void
+            <button type="button" id="login-button" class="btn-primary" vid="38">
+                Login
             </button>
         </form>
 
@@ -995,35 +995,30 @@ video {
             }
         }
 
-        const SUPABASE_URL = "https://szdlvyzjeqkfxsoqltwg.supabase.co";
-        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN6ZGx2eXpqZXFrZnhzb3FsdHdnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyOTE1NjcsImV4cCI6MjA5Njg2NzU2N30.9GT0oJqPcmrc9VSb-ZN0FtWy6i7SLTHBuzRQ9gvxnX0";
-        const supabase = SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase
-            ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-            : {
-                auth: {
-                    signInWithPassword: async () => ({
-                        data: null,
-                        error: { message: "Login is not configured. Add the Supabase anon key to login/index.html." }
-                    })
-                }
-            };
-
         document.addEventListener("DOMContentLoaded", () => {
+          const SUPABASE_URL = "https://szdlvyzjeqkfxsoqltwg.supabase.co";
+          const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN6ZGx2eXpqZXFrZnhzb3FsdHdnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyOTE1NjcsImV4cCI6MjA5Njg2NzU2N30.9GT0oJqPcmrc9VSb-ZN0FtWy6i7SLTHBuzRQ9gvxnX0";
+          const supabase = SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase
+            ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+            : null;
           const form = document.getElementById("login-form");
           const emailInput = document.getElementById("login-email");
           const passwordInput = document.getElementById("login-password");
+          const loginButton = document.getElementById("login-button");
           const errorEl = document.getElementById("login-error");
+          let loginInFlight = false;
 
-          console.log("[login] script loaded", { form, emailInput, passwordInput, errorEl });
+          console.log("[login] script loaded");
 
-          if (!form || !emailInput || !passwordInput) {
+          if (!form || !emailInput || !passwordInput || !loginButton || !errorEl) {
             console.error("[login] Missing login form elements");
             return;
           }
+          console.log("[login] elements found", { form, emailInput, passwordInput, loginButton, errorEl });
 
-          form.addEventListener("submit", async (event) => {
-            event.preventDefault();
-            console.log("[login] submit triggered");
+          async function handleLogin(event) {
+            event?.preventDefault();
+            event?.stopPropagation();
 
             if (errorEl) errorEl.textContent = "";
 
@@ -1035,21 +1030,70 @@ video {
               return;
             }
 
-            const { data, error } = await supabase.auth.signInWithPassword({
-              email,
-              password,
-            });
-            console.log("[login] auth result", { hasUser: Boolean(data?.user), error });
-
-            if (error) {
-              console.error("[login] auth error", error);
-              if (errorEl) errorEl.textContent = error.message || "Login failed.";
+            if (!supabase) {
+              console.error("[login] auth error", "Supabase client unavailable");
+              if (errorEl) errorEl.textContent = "Login is not configured. Please contact support.";
               return;
             }
 
-            console.log("[login] success", data?.user?.email);
-            window.location.href = "/app/";
+            if (loginInFlight) return;
+            loginInFlight = true;
+            loginButton.disabled = true;
+            loginButton.textContent = "Logging in...";
+
+            try {
+              console.log("[login] auth started");
+              const { data, error } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+              });
+
+              if (error) {
+                console.error("[login] auth error", error);
+                if (errorEl) errorEl.textContent = error.message || "Login failed.";
+                return;
+              }
+
+              console.log("[login] auth success", data?.user?.email);
+              window.location.assign("/app/");
+            } catch (error) {
+              console.error("[login] auth error", error);
+              if (errorEl) errorEl.textContent = error?.message || "Login failed.";
+            } finally {
+              loginInFlight = false;
+              loginButton.disabled = false;
+              loginButton.textContent = "Login";
+            }
+          }
+
+          loginButton.addEventListener("click", (event) => {
+            console.log("[login] button clicked");
+            handleLogin(event);
           });
+
+          form.addEventListener("submit", (event) => {
+            console.log("[login] submit intercepted");
+            handleLogin(event);
+          });
+
+          [emailInput, passwordInput].forEach((input) => {
+            input.addEventListener("keydown", (event) => {
+              if (event.key !== "Enter") return;
+              event.preventDefault();
+              event.stopPropagation();
+              console.log("[login] enter intercepted");
+              handleLogin(event);
+            });
+          });
+
+          document.addEventListener("submit", (event) => {
+            if (event.target && event.target.id === "login-form") {
+              event.preventDefault();
+              event.stopPropagation();
+              console.log("[login] submit intercepted");
+              handleLogin(event);
+            }
+          }, true);
         });
     </script>
 
