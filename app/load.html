@@ -221,51 +221,43 @@
         } catch (_) {}
       }
 
-      // 4. Multi-step lookup: user_id, then auth_user_id
+      // 4. Query workspace_members by user_id
       var _membershipFound = false;
-      var lookupSteps = [
-        { column: "user_id", value: userId, label: "user_id" },
-        { column: "auth_user_id", value: userId, label: "auth_user_id" }
-      ];
-
-      for (var s = 0; s < lookupSteps.length; s++) {
-        var step = lookupSteps[s];
-        try {
-          var memUrl = "/rest/v1/workspace_members?select=role,workspace_id&" + step.column + "=eq." + encodeURIComponent(step.value);
-          var memResp = await sbGet(memUrl);
-          var members = Array.isArray(memResp) ? memResp : (memResp.data && Array.isArray(memResp.data) ? memResp.data : []);
-          console.log("[load] member rows by " + step.label, members.length);
-          if (members.length) {
-            _membershipFound = true;
-            var wsIds = [];
-            var rolesById = {};
-            for (var i = 0; i < members.length; i++) {
-              var m = members[i];
-              if (m && m.workspace_id) {
-                wsIds.push(m.workspace_id);
-                rolesById[String(m.workspace_id)] = String(m.role || "");
-              }
+      try {
+        var memUrl = "/rest/v1/workspace_members?select=role,workspace_id&user_id=eq." + encodeURIComponent(userId);
+        var memResp = await sbGet(memUrl);
+        var members = Array.isArray(memResp) ? memResp : (memResp.data && Array.isArray(memResp.data) ? memResp.data : []);
+        console.log("[load] member rows by user_id", members.length);
+        if (members.length) {
+          _membershipFound = true;
+          var wsIds = [];
+          var rolesById = {};
+          for (var i = 0; i < members.length; i++) {
+            var m = members[i];
+            if (m && m.workspace_id) {
+              wsIds.push(m.workspace_id);
+              rolesById[String(m.workspace_id)] = String(m.role || "");
             }
-            if (wsIds.length) {
-              var wsUrl = "/rest/v1/workspaces?select=id,slug,name,plan,subscription_status,apps_script_url,sheet_id,monday_board_id,backend_type,supabase_media_enabled,media_bucket&id=in.(" + wsIds.map(encodeURIComponent).join(",") + ")";
-              var wsResp = await sbGet(wsUrl);
-              var workspaces = Array.isArray(wsResp) ? wsResp : (wsResp.data && Array.isArray(wsResp.data) ? wsResp.data : []);
-              console.log("[load] workspace rows", workspaces.length);
-              for (var i = 0; i < workspaces.length; i++) {
-                var w = workspaces[i];
-                if (w && w.slug) {
-                  var cfg = normalizeConfig(w);
-                  cfg.role = rolesById[String(w.id)] || "";
-                  sessionStorage.setItem(ACTIVE_WORKSPACE_KEY, JSON.stringify(cfg));
-                  setStatus("Found workspace: " + (cfg.name || cfg.slug));
-                  redirect("/app/index.html?workspace=" + encodeURIComponent(cfg.slug));
-                  return;
-                }
+          }
+          if (wsIds.length) {
+            var wsUrl = "/rest/v1/workspaces?select=id,slug,name,plan,subscription_status,apps_script_url,sheet_id,monday_board_id,backend_type,supabase_media_enabled,media_bucket&id=in.(" + wsIds.map(encodeURIComponent).join(",") + ")";
+            var wsResp = await sbGet(wsUrl);
+            var workspaces = Array.isArray(wsResp) ? wsResp : (wsResp.data && Array.isArray(wsResp.data) ? wsResp.data : []);
+            console.log("[load] workspace rows", workspaces.length);
+            for (var i = 0; i < workspaces.length; i++) {
+              var w = workspaces[i];
+              if (w && w.slug) {
+                var cfg = normalizeConfig(w);
+                cfg.role = rolesById[String(w.id)] || "";
+                sessionStorage.setItem(ACTIVE_WORKSPACE_KEY, JSON.stringify(cfg));
+                setStatus("Found workspace: " + (cfg.name || cfg.slug));
+                redirect("/app/index.html?workspace=" + encodeURIComponent(cfg.slug));
+                return;
               }
             }
           }
-        } catch (_) {}
-      }
+        }
+      } catch (_) {}
 
       // 5. Email fallback
       if (userEmail) {
