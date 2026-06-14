@@ -4381,10 +4381,19 @@ const APP_CONFIG = {
 };
 
 const SUPABASE_URL = "https://szdlvyzjeqkfxsoqltwg.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN6ZGx2eXpqZXFrZnhzb3FsdHdnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyOTE1NjcsImV4cCI6MjA5Njg2NzU2N30.9GT0oJqPcmrc9VSb-ZN0FtWy6i7SLTHBuzRQ9gvxnX0";
-const STELLARSYNC_SUPABASE_CLIENT = window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY
+const SUPABASE_ANON_KEY = "PASTE_ANON_PUBLIC_KEY_HERE";
+const SUPABASE_ANON_KEY_CONFIGURED = Boolean(
+  SUPABASE_ANON_KEY &&
+  SUPABASE_ANON_KEY !== "PASTE_ANON_PUBLIC_KEY_HERE" &&
+  !SUPABASE_ANON_KEY.includes("PASTE_")
+);
+const STELLARSYNC_SUPABASE_CLIENT = window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY_CONFIGURED
   ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   : null;
+let STELLARSYNC_AUTH_USER = null;
+let STELLARSYNC_LOOKUP_WORKSPACES = [];
+const SUBSCRIPTION_ALLOWED_STATUSES = new Set(["active", "trialing", "custom", "manual", "comped", "permanent_free"]);
+const SUBSCRIPTION_BLOCKED_STATUSES = new Set(["expired", "canceled", "cancelled", "past_due", "payment_required", "inactive"]);
 
 // Phase 1 Workspace Adapter Layer.
 const WORKSPACE_RUNTIME_CONFIG = {
@@ -4438,14 +4447,18 @@ function getSessionWorkspaceConfig() {
 	      id: String(parsed.id || "").trim(),
 	      slug: String(parsed.slug || "").trim(),
 	      name: String(parsed.name || "").trim(),
+	      role: String(parsed.role || "").trim(),
+	      created_at: parsed.created_at || null,
+	      updated_at: parsed.updated_at || null,
 	      subscription_status: String(parsed.subscription_status || "").trim(),
 	      backend_type: String(parsed.backend_type || "client_google_sheets").trim(),
 	      apps_script_url: String(parsed.apps_script_url || "").trim(),
 	      sheet_id: String(parsed.sheet_id || "").trim(),
 	      monday_board_id: String(parsed.monday_board_id || "").trim(),
 	      supabase_media_enabled: Boolean(parsed.supabase_media_enabled),
-      plan: String(parsed.plan || "").trim()
-    };
+	      media_bucket: String(parsed.media_bucket || parsed.storage_bucket || "media").trim(),
+	      plan: String(parsed.plan || "").trim()
+	    };
   } catch (_) {
     return null;
   }
@@ -4472,15 +4485,18 @@ function loadWorkspaceConfig() {
   const slug = requestedSlug || WORKSPACE_RUNTIME_CONFIG.default_workspace_slug;
   const masterConfig = WORKSPACE_RUNTIME_CONFIG.workspaces.master || {};
 
-  // Priority 1: sessionStorage config when slug matches URL workspace param.
+  // Priority 1: sessionStorage config when slug matches URL workspace param, or no URL param exists.
   const sessionConfig = getSessionWorkspaceConfig();
-  if (sessionConfig && sessionConfig.slug && requestedSlug && sessionConfig.slug === requestedSlug) {
+  if (sessionConfig && sessionConfig.slug && (!requestedSlug || sessionConfig.slug === requestedSlug)) {
 	    const active = {
 	      ...masterConfig,
 	      workspace_slug: sessionConfig.slug,
 	      workspace_id: sessionConfig.id || sessionConfig.slug,
 	      name: sessionConfig.name || sessionConfig.slug,
 	      plan: sessionConfig.plan || "",
+	      role: sessionConfig.role || "",
+	      created_at: sessionConfig.created_at || null,
+	      updated_at: sessionConfig.updated_at || null,
 	      subscription_status: sessionConfig.subscription_status || "",
 	      backend_type: sessionConfig.backend_type || "client_google_sheets",
 	      apps_script_url: sessionConfig.apps_script_url || "",
@@ -4489,7 +4505,7 @@ function loadWorkspaceConfig() {
 	      supabase_media_enabled: sessionConfig.supabase_media_enabled,
 	      supabase_url: SUPABASE_URL,
 	      supabase_anon_key: SUPABASE_ANON_KEY,
-	      storage_bucket: masterConfig.storage_bucket || "media"
+	      storage_bucket: sessionConfig.media_bucket || masterConfig.storage_bucket || "media"
 	    };
     if (!WORKSPACE_RUNTIME_CONFIG.backend_types.includes(active.backend_type)) {
       active.backend_type = "client_google_sheets";
@@ -4540,11 +4556,22 @@ function normalizeSupabaseWorkspaceConfig(workspace) {
     name: String(source.name || slug || "Workspace").trim(),
     plan: String(source.plan || "").trim(),
     subscription_status: String(source.subscription_status || "").trim(),
+    role: String(source.role || "").trim(),
     apps_script_url: String(source.apps_script_url || "").trim(),
     sheet_id: String(source.sheet_id || "").trim(),
     monday_board_id: String(source.monday_board_id || "").trim(),
     backend_type: String(source.backend_type || "client_google_sheets").trim(),
-    supabase_media_enabled: Boolean(source.supabase_media_enabled)
+    supabase_media_enabled: Boolean(source.supabase_media_enabled),
+    media_bucket: String(source.media_bucket || source.storage_bucket || "media").trim(),
+    created_at: source.created_at || null,
+    updated_at: source.updated_at || null
+  };
+}
+
+function mergeWorkspaceRole(workspace, role) {
+  return {
+    ...normalizeSupabaseWorkspaceConfig(workspace),
+    role: String(role || workspace?.role || "").trim()
   };
 }
 
@@ -4571,35 +4598,41 @@ async function fetchWorkspaceMembershipsByUserId(userId) {
     sheet_id,
     monday_board_id,
     backend_type,
-    supabase_media_enabled
+    supabase_media_enabled,
+    media_bucket,
+    created_at,
+    updated_at
   `;
 
   const joined = await STELLARSYNC_SUPABASE_CLIENT
     .from("workspace_members")
-    .select(`workspace_id, workspaces (${workspaceFields})`)
+    .select(`role, workspace_id, workspaces (${workspaceFields})`)
     .eq("user_id", userId);
 
   if (!joined.error && Array.isArray(joined.data)) {
     const joinedWorkspaces = joined.data
       .flatMap(row => {
         const related = row && row.workspaces;
-        return Array.isArray(related) ? related : [related];
+        return (Array.isArray(related) ? related : [related])
+          .filter(Boolean)
+          .map(workspace => mergeWorkspaceRole(workspace, row.role));
       })
-      .filter(Boolean)
-      .map(normalizeSupabaseWorkspaceConfig)
       .filter(workspace => workspace.slug);
     if (joinedWorkspaces.length) return joinedWorkspaces;
   }
 
   const membershipQueries = [
-    STELLARSYNC_SUPABASE_CLIENT.from("workspace_members").select("workspace_id").eq("user_id", userId),
-    STELLARSYNC_SUPABASE_CLIENT.from("workspace_members").select("workspace_id").eq("auth_user_id", userId)
+    STELLARSYNC_SUPABASE_CLIENT.from("workspace_members").select("role, workspace_id").eq("user_id", userId),
+    STELLARSYNC_SUPABASE_CLIENT.from("workspace_members").select("role, workspace_id").eq("auth_user_id", userId)
   ];
 
   for (const query of membershipQueries) {
     const result = await query;
     if (result.error || !Array.isArray(result.data) || !result.data.length) continue;
     const workspaceIds = [...new Set(result.data.map(row => row && row.workspace_id).filter(Boolean))];
+    const rolesByWorkspaceId = Object.fromEntries(result.data
+      .filter(row => row && row.workspace_id)
+      .map(row => [String(row.workspace_id), String(row.role || "")]));
     if (!workspaceIds.length) continue;
 
     const workspacesResult = await STELLARSYNC_SUPABASE_CLIENT
@@ -4609,7 +4642,7 @@ async function fetchWorkspaceMembershipsByUserId(userId) {
 
     if (!workspacesResult.error && Array.isArray(workspacesResult.data)) {
       return workspacesResult.data
-        .map(normalizeSupabaseWorkspaceConfig)
+        .map(workspace => mergeWorkspaceRole(workspace, rolesByWorkspaceId[String(workspace.id)] || ""))
         .filter(workspace => workspace.slug);
     }
   }
@@ -4621,9 +4654,121 @@ async function fetchWorkspaceMembershipsByUserId(userId) {
   return [];
 }
 
+function showAppRouterState({ title, message, detail = "", ctaHref = "", ctaLabel = "" }) {
+  const existing = document.getElementById("app-router-state");
+  if (existing) existing.remove();
+  const overlay = document.createElement("div");
+  overlay.id = "app-router-state";
+  overlay.className = "fixed inset-0 z-[10000] flex items-center justify-center p-6";
+  overlay.style.background = "#0a0514";
+  overlay.innerHTML = `
+    <div class="w-full max-w-xl bg-[#120c1d] border border-white/10 rounded-2xl p-8 text-center shadow-2xl">
+      <div class="w-14 h-14 rounded-2xl bg-[#231738] flex items-center justify-center mx-auto mb-6 text-[#c77dff]">
+        <i class="ph-bold ph-warning text-2xl"></i>
+      </div>
+      <h1 class="text-2xl font-extrabold text-white mb-3">${escapeHtml(title || "Workspace setup needed")}</h1>
+      <p class="text-sm text-gray-300 leading-relaxed mb-4">${escapeHtml(message || "")}</p>
+      ${detail ? `<p class="text-xs text-gray-500 leading-relaxed mb-6">${escapeHtml(detail)}</p>` : ""}
+      ${ctaHref ? `<a href="${escapeHtml(ctaHref)}" class="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-[#2d1b4e] hover:bg-[#3d2b5e] text-white text-xs uppercase tracking-widest font-bold transition-colors">${escapeHtml(ctaLabel || "Continue")}</a>` : ""}
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+function storeActiveWorkspaceConfig(config) {
+  const normalized = normalizeSupabaseWorkspaceConfig(config);
+  sessionStorage.setItem("STELLARSYNC_ACTIVE_WORKSPACE", JSON.stringify(normalized));
+  return normalized;
+}
+
+function isSubscriptionBlocked(workspace) {
+  const status = String(workspace?.subscription_status || "").trim().toLowerCase();
+  if (!status) return false;
+  if (SUBSCRIPTION_ALLOWED_STATUSES.has(status)) return false;
+  return SUBSCRIPTION_BLOCKED_STATUSES.has(status);
+}
+
+function showWorkspacePicker(workspaces) {
+  return new Promise((resolve) => {
+    const existing = document.getElementById("app-router-workspace-picker");
+    if (existing) existing.remove();
+    const overlay = document.createElement("div");
+    overlay.id = "app-router-workspace-picker";
+    overlay.className = "fixed inset-0 z-[10000] flex items-center justify-center p-6";
+    overlay.style.background = "#0a0514";
+    overlay.innerHTML = `
+      <div class="w-full max-w-2xl bg-[#120c1d] border border-white/10 rounded-2xl p-8 shadow-2xl">
+        <div class="text-center mb-8">
+          <p class="text-[10px] uppercase tracking-[0.28em] text-[#c77dff] font-bold mb-3">Workspace</p>
+          <h1 class="text-2xl font-extrabold text-white">Choose a workspace</h1>
+          <p class="text-sm text-gray-400 mt-2">Select the workspace you want to open.</p>
+        </div>
+        <div class="space-y-3">
+          ${workspaces.map((workspace, index) => `
+            <button type="button" data-router-workspace-index="${index}" class="w-full text-left p-5 rounded-2xl bg-[#181125] border border-white/5 hover:border-[#c77dff]/40 transition-colors">
+              <div class="flex items-start justify-between gap-4">
+                <div>
+                  <div class="text-white font-bold">${escapeHtml(workspace.name || workspace.slug)}</div>
+                  <div class="text-xs text-gray-500 mt-1">${escapeHtml(workspace.slug || "")}</div>
+                </div>
+                <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${escapeHtml(workspace.role || workspace.plan || "")}</div>
+              </div>
+            </button>
+          `).join("")}
+        </div>
+      </div>
+    `;
+    overlay.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-router-workspace-index]");
+      if (!button) return;
+      const selected = workspaces[Number(button.dataset.routerWorkspaceIndex)];
+      overlay.remove();
+      resolve(selected || null);
+    });
+    document.body.appendChild(overlay);
+  });
+}
+
+async function pickWorkspaceForUser(workspaces, requestedSlug) {
+  if (requestedSlug) {
+    const match = workspaces.find(workspace => workspace.slug === requestedSlug);
+    if (!match) {
+      console.warn("[app-router] requested workspace denied", requestedSlug);
+      showAppRouterState({
+        title: "No access to this workspace",
+        message: "Your account is not a member of the requested workspace.",
+        detail: requestedSlug,
+        ctaHref: "/contact/?topic=support",
+        ctaLabel: "Contact Support"
+      });
+      return null;
+    }
+    return match;
+  }
+  if (workspaces.length === 1) return workspaces[0];
+  return showWorkspacePicker(workspaces);
+}
+
 async function ensureSupabaseWorkspaceBeforeBoot() {
+  if (!SUPABASE_ANON_KEY_CONFIGURED) {
+    console.warn("[app-router] missing anon key");
+    showAppRouterState({
+      title: "Supabase setup needed",
+      message: "The app is missing its Supabase anon public key, so workspace lookup cannot start.",
+      detail: "Set SUPABASE_ANON_KEY in /app/index.html.",
+      ctaHref: "/contact/?topic=setup",
+      ctaLabel: "Contact Setup"
+    });
+    return null;
+  }
   if (!STELLARSYNC_SUPABASE_CLIENT) {
-    throw new Error("Supabase client is not configured for workspace routing.");
+    showAppRouterState({
+      title: "Supabase setup needed",
+      message: "Supabase could not initialize in this browser session.",
+      ctaHref: "/contact/?topic=setup",
+      ctaLabel: "Contact Setup"
+    });
+    return null;
   }
 
   const { data: sessionData, error: sessionError } = await STELLARSYNC_SUPABASE_CLIENT.auth.getSession();
@@ -4631,24 +4776,59 @@ async function ensureSupabaseWorkspaceBeforeBoot() {
 
   const session = sessionData && sessionData.session;
   if (!session || !session.user) {
+    console.log("[app-router] session missing");
     window.location.replace("/login/");
     return null;
   }
+  STELLARSYNC_AUTH_USER = session.user;
+  console.log("[app-router] session found", session.user.email || session.user.id);
 
   const workspaces = await fetchWorkspaceMembershipsByUserId(session.user.id);
+  STELLARSYNC_LOOKUP_WORKSPACES = workspaces;
+  console.log("[app-router] workspace memberships count", workspaces.length);
   if (!workspaces.length) {
-    window.location.replace("/onboarding/");
+    showAppRouterState({
+      title: "No workspace found",
+      message: "Your account does not have a StellarSync workspace yet.",
+      ctaHref: "/onboarding/",
+      ctaLabel: "Create Workspace"
+    });
+    setTimeout(() => window.location.replace("/onboarding/"), 600);
     return null;
   }
 
   const requestedSlug = getCurrentWorkspaceSlug();
-  const activeWorkspace = selectWorkspaceForRoute(workspaces, requestedSlug);
+  const activeWorkspace = await pickWorkspaceForUser(workspaces, requestedSlug);
   if (!activeWorkspace) {
-    window.location.replace("/onboarding/");
+    return null;
+  }
+  console.log("[app-router] selected workspace slug", activeWorkspace.slug);
+
+  if (isSubscriptionBlocked(activeWorkspace)) {
+    console.warn("[app-router] subscription blocked", activeWorkspace.slug, activeWorkspace.subscription_status);
+    showAppRouterState({
+      title: "Subscription required",
+      message: "This workspace needs billing attention before it can be opened.",
+      detail: `Status: ${activeWorkspace.subscription_status || "inactive"}`,
+      ctaHref: `/contact/?topic=billing`,
+      ctaLabel: "Contact Support"
+    });
     return null;
   }
 
-  sessionStorage.setItem("STELLARSYNC_ACTIVE_WORKSPACE", JSON.stringify(activeWorkspace));
+  if (!activeWorkspace.apps_script_url) {
+    console.warn("[app-router] missing apps_script_url", activeWorkspace.slug);
+    showAppRouterState({
+      title: "Workspace setup needed",
+      message: "This workspace is missing an Apps Script backend URL.",
+      detail: activeWorkspace.slug,
+      ctaHref: "/contact/?topic=setup",
+      ctaLabel: "Contact Setup"
+    });
+    return null;
+  }
+
+  storeActiveWorkspaceConfig(activeWorkspace);
 
   if (!requestedSlug || requestedSlug !== activeWorkspace.slug) {
     window.location.replace(`/app/?workspace=${encodeURIComponent(activeWorkspace.slug)}`);
@@ -4733,9 +4913,15 @@ async function uploadMediaToSupabaseStorage(file, options = {}) {
 
 function getWorkspaceRequestMetadata() {
   const config = WORKSPACE_RUNTIME_CONFIG.active || loadWorkspaceConfig();
+  const user = STELLARSYNC_AUTH_USER || {};
   return {
     workspace_id: config.workspace_id || config.workspace_slug || "master",
     workspace_slug: config.workspace_slug || "master",
+    workspace_name: config.name || config.workspace_slug || "Workspace",
+    user_id: user.id || "",
+    user_email: user.email || "",
+    plan: config.plan || "",
+    role: config.role || "",
     backend_type: config.backend_type || "master_google_sheets",
     sheet_id: config.sheet_id || "",
     monday_board_id: config.monday_board_id || "",
@@ -16741,11 +16927,13 @@ function isRemoteConfigured() {
 }
 
 async function apiGet(action, params = {}) {
+  const apiUrl = getWorkspaceApiUrl();
+  if (!apiUrl) throw new Error("Workspace setup needed: missing Apps Script backend URL.");
   const search = new URLSearchParams({ action });
   Object.entries(withWorkspaceRequestMetadata(params || {})).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== "") search.set(key, String(value));
   });
-  const response = await fetch(`${getWorkspaceApiUrl()}?${search.toString()}`, {
+  const response = await fetch(`${apiUrl}?${search.toString()}`, {
     method: "GET",
     mode: "cors"
   });
@@ -16757,7 +16945,9 @@ async function apiGet(action, params = {}) {
 }
 
 async function apiPost(action, payload = {}) {
-  const response = await fetch(getWorkspaceApiUrl(), {
+  const apiUrl = getWorkspaceApiUrl();
+  if (!apiUrl) throw new Error("Workspace setup needed: missing Apps Script backend URL.");
+  const response = await fetch(apiUrl, {
     method: "POST",
     mode: "cors",
     headers: { "Content-Type": "text/plain;charset=utf-8" },
