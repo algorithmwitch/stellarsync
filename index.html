@@ -20,7 +20,7 @@
             --gradient-primary: linear-gradient(135deg, #9d4edd 0%, #c77dff 100%);
         }
 
-        html { scroll-behavior: smooth; }
+        html { scroll-behavior: smooth; width: 100%; max-width: 100%; overflow-x: hidden; }
 
         body {
             background-color: var(--color-bg);
@@ -29,7 +29,10 @@
             margin: 0;
             overflow-x: hidden;
             width: 100%;
+            max-width: 100%;
         }
+
+        img, svg, video, canvas, .glass-card, .glass-panel, .mockup-layer { max-width: 100%; }
 
         .stars { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
         .star { position: absolute; background: white; border-radius: 50%; opacity: 0; animation: twinkle var(--duration) ease-in-out infinite; animation-delay: var(--delay); }
@@ -114,11 +117,19 @@
             justify-content: center;
             line-height: 1.1;
         }
+        @media (max-width: 767px) {
+            nav { padding-left: 1rem !important; padding-right: 1rem !important; gap: 0.75rem; }
+            nav > div:first-child span { font-size: 1rem; }
+            nav > div:last-child { gap: 0.75rem; flex-wrap: wrap; justify-content: flex-end; }
+            nav a, nav button { white-space: normal; text-align: center; }
+            .mockup-perspective, .mockup-layer { max-width: 100%; overflow: hidden; }
+        }
         @media (max-width: 640px) {
             .index-cta {
                 width: 100%;
                 max-width: 22rem;
             }
+            .pricing-cta { white-space: normal; padding-left: 0.75rem; padding-right: 0.75rem; }
         }
     </style>
 
@@ -1882,11 +1893,12 @@ video {
                         <span class="text-gray-500" vid="296">/month</span>
                     </div>
                     <ul class="space-y-4 mb-8" vid="297">
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="298"><i class="ph-bold ph-check" style="color:#00f0ff" vid="299"></i> 3-day free trial</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="302"><i class="ph-bold ph-check" style="color:#00f0ff" vid="303"></i> 1 workspace</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="304"><i class="ph-bold ph-check" style="color:#00f0ff" vid="305"></i> Calendar, campaigns, notes</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="298"><i class="ph-bold ph-check" style="color:#00f0ff" vid="299"></i> <a href="/legal/#terms-free-trial" class="hover:text-white underline underline-offset-2">3-day free trial</a></li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="302"><i class="ph-bold ph-check" style="color:#00f0ff" vid="303"></i> No charge today</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="304"><i class="ph-bold ph-check" style="color:#00f0ff" vid="305"></i> 1 workspace</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="305a"><i class="ph-bold ph-check" style="color:#00f0ff" vid="305b"></i> Core planning, calendar, campaigns</li>
                     </ul>
-                    <a href="/onboarding/?plan=starter" class="pricing-cta w-full rounded-2xl border border-white/10 bg-white/5 text-white font-bold hover:bg-white/10 transition-all" vid="308">Start Trial</a>
+                    <a href="/onboarding/?plan=starter" class="pricing-cta w-full rounded-2xl border border-white/10 bg-white/5 text-white font-bold hover:bg-white/10 transition-all" vid="308">Start Starter</a>
                 </div>
 
                 <div class="glass-card p-8 rounded-3xl reveal pricing-card" vid="309">
@@ -1896,11 +1908,12 @@ video {
                         <span class="text-gray-500" vid="314">/month</span>
                     </div>
                     <ul class="space-y-4 mb-8" vid="315">
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="318"><i class="ph-bold ph-check" style="color:#c77dff" vid="319"></i> 3-day free trial</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="324"><i class="ph-bold ph-check" style="color:#c77dff" vid="325"></i> Team collaboration</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="326"><i class="ph-bold ph-check" style="color:#c77dff" vid="327"></i> Media and publishing readiness</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="318"><i class="ph-bold ph-check" style="color:#c77dff" vid="319"></i> <a href="/legal/#terms-free-trial" class="hover:text-white underline underline-offset-2">3-day free trial</a></li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="324"><i class="ph-bold ph-check" style="color:#c77dff" vid="325"></i> No charge today</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="326"><i class="ph-bold ph-check" style="color:#c77dff" vid="327"></i> Team collaboration</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="327a"><i class="ph-bold ph-check" style="color:#c77dff" vid="327b"></i> Media and publishing readiness</li>
                     </ul>
-                    <a href="/onboarding/?plan=growth" class="pricing-cta w-full rounded-2xl border border-white/10 bg-white/5 text-white font-bold hover:bg-white/10 transition-all" vid="328">Start Trial</a>
+                    <a href="/onboarding/?plan=growth" class="pricing-cta w-full rounded-2xl border border-white/10 bg-white/5 text-white font-bold hover:bg-white/10 transition-all" vid="328">Start Growth</a>
                 </div>
 
                 <div class="glass-card p-8 rounded-3xl border-purple-500/50 shadow-[0_0_40px_rgba(157,78,221,0.2)] relative reveal pricing-card" vid="329">
@@ -1911,11 +1924,12 @@ video {
                         <span class="text-gray-500" vid="333">/month</span>
                     </div>
                     <ul class="space-y-4 mb-8" vid="334">
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="335"><i class="ph-bold ph-check" style="color:#ff7a59" vid="336"></i> 3-day free trial</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="337"><i class="ph-bold ph-check" style="color:#ff7a59" vid="338"></i> Multiple workspaces</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="343"><i class="ph-bold ph-check" style="color:#ff7a59" vid="344"></i> Client management</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="335"><i class="ph-bold ph-check" style="color:#ff7a59" vid="336"></i> <a href="/legal/#terms-free-trial" class="hover:text-white underline underline-offset-2">3-day free trial</a></li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="337"><i class="ph-bold ph-check" style="color:#ff7a59" vid="338"></i> No charge today</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="343"><i class="ph-bold ph-check" style="color:#ff7a59" vid="344"></i> Multiple workspaces</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="344a"><i class="ph-bold ph-check" style="color:#ff7a59" vid="344b"></i> Client management and templates</li>
                     </ul>
-                    <a href="/onboarding/?plan=agency" class="pricing-cta glow-btn w-full rounded-2xl text-white font-bold" vid="345">Start Trial</a>
+                    <a href="/onboarding/?plan=agency" class="pricing-cta glow-btn w-full rounded-2xl text-white font-bold" vid="345">Start Agency</a>
                 </div>
 
                 <div class="glass-card p-8 rounded-3xl reveal pricing-card" vid="345a">
@@ -1925,13 +1939,14 @@ video {
                         <span class="text-gray-500" vid="345e">for pricing</span>
                     </div>
                     <ul class="space-y-4 mb-8" vid="345f">
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="345g"><i class="ph-bold ph-check" style="color:#00ffaa" vid="345h"></i> Custom setup and support</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="345g"><i class="ph-bold ph-check" style="color:#00ffaa" vid="345h"></i> Managed setup and support</li>
                         <li class="flex items-center gap-3 text-sm text-gray-300" vid="345i"><i class="ph-bold ph-check" style="color:#00ffaa" vid="345j"></i> Workflow migration</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="345m"><i class="ph-bold ph-check" style="color:#00ffaa" vid="345n"></i> Contact setup request</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="345m"><i class="ph-bold ph-check" style="color:#00ffaa" vid="345n"></i> No self-serve checkout</li>
                     </ul>
-                    <a href="/onboarding/?plan=managed" class="pricing-cta w-full rounded-2xl border border-white/10 bg-white/5 text-white font-bold hover:bg-white/10 transition-all" vid="345o">Request Setup</a>
+                    <a href="mailto:support@stellarsync.app?subject=Managed%20StellarSync%20Setup" class="pricing-cta w-full rounded-2xl border border-white/10 bg-white/5 text-white font-bold hover:bg-white/10 transition-all" vid="345o">Request Setup</a>
                 </div>
             </div>
+            <p class="mt-8 text-center text-xs text-gray-500 max-w-3xl mx-auto" vid="345p">Payment information is collected during setup for Starter, Growth, and Agency. Cancel before the 3-day trial ends to avoid billing. Managed uses a setup request.</p>
         </section>
 
         <section class="py-32 px-8 max-w-5xl mx-auto" vid="346">
@@ -1941,7 +1956,7 @@ video {
                 <p class="text-xl text-gray-400 mb-12 relative z-10 max-w-2xl mx-auto" vid="350">Bring planning, creation, collaboration, publishing, and analytics into one celestial workspace.</p>
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-4 relative z-10" vid="351">
                     <a href="/sign-up/" class="index-cta index-cta-lg glow-btn px-8 rounded-2xl text-white font-bold uppercase tracking-widest text-sm" vid="352">Create Workspace</a>
-                    <button class="index-cta index-cta-lg px-8 rounded-2xl border border-white/10 bg-white/5 text-white font-bold uppercase tracking-widest text-sm hover:bg-white/10 transition-all" vid="353">Book a Demo</button>
+                    <a href="mailto:support@stellarsync.app?subject=StellarSync%20Demo" class="index-cta index-cta-lg px-8 rounded-2xl border border-white/10 bg-white/5 text-white font-bold uppercase tracking-widest text-sm hover:bg-white/10 transition-all" vid="353">Book a Demo</a>
                 </div>
             </div>
         </section>
