@@ -22,12 +22,17 @@
 
         html, body {
             height: 100%;
+            width: 100%;
+            max-width: 100%;
             margin: 0;
             background-color: var(--color-bg);
             color: #e2e8f0;
             font-family: 'Inter', sans-serif;
             overflow: hidden;
+            overflow-x: hidden;
         }
+
+        img, svg, video, canvas, .glass-card, .glass-panel { max-width: 100%; }
 
         .stars { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
         .star { position: absolute; background: white; border-radius: 50%; opacity: 0; animation: twinkle var(--duration) ease-in-out infinite; animation-delay: var(--delay); }
@@ -67,10 +72,10 @@
         .step-line {
             width: 2px;
             background: rgba(255, 255, 255, 0.05);
-            height: 100%;
             position: absolute;
             left: 15px;
             top: 30px;
+            bottom: 30px;
             z-index: 0;
         }
 
@@ -114,6 +119,13 @@
         }
         .stage-container.active {
             display: block;
+        }
+
+        @media (max-width: 767px) {
+            aside { max-width: 100vw; }
+            button, a { white-space: normal; text-align: center; }
+            .glass-card, .glass-panel { overflow-wrap: anywhere; }
+            .glow-btn, button[class*="tracking-widest"], a[class*="tracking-widest"] { letter-spacing: 0.08em; }
         }
 
         @keyframes fadeInSlide {
@@ -1529,7 +1541,7 @@ video {
                         <i class="ph-bold ph-compass text-sm" vid="33"></i>
                     </div>
                     <div class="pt-1" vid="34">
-                        <p class="text-xs font-bold text-gray-600 uppercase tracking-widest" vid="35">Campaign Structure</p>
+                        <p class="text-xs font-bold text-gray-600 uppercase tracking-widest" vid="35">Structure</p>
                         <p class="text-[10px] text-gray-600 font-medium" vid="36">Strategic framework</p>
                     </div>
                 </div>
@@ -1551,6 +1563,26 @@ video {
                     <div class="pt-1" vid="46">
                         <p class="text-xs font-bold text-gray-600 uppercase tracking-widest" vid="47">Starting Point</p>
                         <p class="text-[10px] text-gray-600 font-medium" vid="48">Launch initialization</p>
+                    </div>
+                </div>
+
+                <div class="flex items-start gap-4 relative" vid="49">
+                    <div id="dot-5" class="step-dot" vid="50">
+                        <i class="ph-bold ph-tag text-sm" vid="51"></i>
+                    </div>
+                    <div class="pt-1" vid="52">
+                        <p class="text-xs font-bold text-gray-600 uppercase tracking-widest" vid="53">Pricing</p>
+                        <p class="text-[10px] text-gray-600 font-medium" vid="54">Plan selection</p>
+                    </div>
+                </div>
+
+                <div class="flex items-start gap-4 relative" vid="55">
+                    <div id="dot-6" class="step-dot" vid="56">
+                        <i class="ph-bold ph-credit-card text-sm" vid="57"></i>
+                    </div>
+                    <div class="pt-1" vid="58">
+                        <p class="text-xs font-bold text-gray-600 uppercase tracking-widest" vid="59">Payment</p>
+                        <p class="text-[10px] text-gray-600 font-medium" vid="60">Checkout setup</p>
                     </div>
                 </div>
             </div>
@@ -1704,62 +1736,9 @@ video {
             
             <div id="stage-3" class="stage-container" vid="148">
                 <h1 class="text-4xl font-extrabold text-white mb-4" vid="149">Connect your workflow.</h1>
-                <p class="text-gray-400 text-lg mb-10" vid="150">Link the tools you already use. Technical setup happens later.</p>
+                <p class="text-gray-400 text-lg mb-10" vid="150">Review what is available for your selected plan. Technical setup happens later.</p>
 
-                <div class="grid grid-cols-2 gap-4" vid="151">
-                    <div onclick="toggleConnection(this, 'Google Sheets')" class="glass-card p-6 rounded-2xl border-white/5 cursor-pointer relative" vid="152">
-                        <div class="flex items-center justify-between mb-4" vid="153">
-                            <div class="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-500" vid="154"><i class="ph-fill ph-table text-2xl" vid="155"></i></div>
-                            <span class="status-badge px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-white/5 text-gray-500" vid="156">Disconnected</span>
-                        </div>
-                        <h3 class="text-sm font-bold text-white mb-1" vid="157">Google Sheets</h3>
-                        <p class="text-[11px] text-gray-500 leading-relaxed" vid="158">Content database and planning source.</p>
-                    </div>
-
-                    <div onclick="toggleConnection(this, 'Monday')" class="glass-card p-6 rounded-2xl border-white/5 cursor-pointer relative" vid="159">
-                        <div class="flex items-center justify-between mb-4" vid="160">
-                            <div class="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500" vid="161"><i class="ph-fill ph-circles-three text-2xl" vid="162"></i></div>
-                            <span class="status-badge px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-white/5 text-gray-500" vid="163">Disconnected</span>
-                        </div>
-                        <h3 class="text-sm font-bold text-white mb-1" vid="164">Monday.com</h3>
-                        <p class="text-[11px] text-gray-500 leading-relaxed" vid="165">Team planning and approval workflows.</p>
-                    </div>
-
-                    <div class="glass-card p-6 rounded-2xl border-white/5 opacity-60 cursor-not-allowed" vid="166">
-                        <div class="flex items-center justify-between mb-4" vid="167">
-                            <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500" vid="168"><i class="ph-fill ph-folder text-2xl" vid="169"></i></div>
-                            <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-purple-500/20 text-purple-400" vid="170">Pro</span>
-                        </div>
-                        <h3 class="text-sm font-bold text-white mb-1" vid="171">Google Drive</h3>
-                        <p class="text-[11px] text-gray-500 leading-relaxed" vid="172">Creative assets and source folders.</p>
-                    </div>
-
-                    <div onclick="toggleConnection(this, 'LinkedIn')" class="glass-card p-6 rounded-2xl border-white/5 cursor-pointer relative" vid="173">
-                        <div class="flex items-center justify-between mb-4" vid="174">
-                            <div class="w-10 h-10 rounded-xl bg-blue-600/10 flex items-center justify-center text-blue-600" vid="175"><i class="ph-fill ph-linkedin-logo text-2xl" vid="176"></i></div>
-                            <span class="status-badge px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-white/5 text-gray-500" vid="177">Disconnected</span>
-                        </div>
-                        <h3 class="text-sm font-bold text-white mb-1" vid="178">LinkedIn</h3>
-                        <p class="text-[11px] text-gray-500 leading-relaxed" vid="179">Direct publishing and analytics sync.</p>
-                    </div>
-
-                    <div onclick="toggleConnection(this, 'Instagram')" class="glass-card p-6 rounded-2xl border-white/5 cursor-pointer relative" vid="180">
-                        <div class="flex items-center justify-between mb-4" vid="181">
-                            <div class="w-10 h-10 rounded-xl bg-pink-500/10 flex items-center justify-center text-pink-500" vid="182"><i class="ph-fill ph-instagram-logo text-2xl" vid="183"></i></div>
-                            <span class="status-badge px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-white/5 text-gray-500" vid="184">Disconnected</span>
-                        </div>
-                        <h3 class="text-sm font-bold text-white mb-1" vid="185">Instagram</h3>
-                        <p class="text-[11px] text-gray-500 leading-relaxed" vid="186">Visual story management and performance.</p>
-                    </div>
-
-                    <div class="glass-card p-6 rounded-2xl border-white/5 opacity-60" vid="187">
-                        <div class="flex items-center justify-between mb-4" vid="188">
-                            <div class="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center text-yellow-500" vid="189"><i class="ph-fill ph-broadcast text-2xl" vid="190"></i></div>
-                            <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-yellow-500/20 text-yellow-500" vid="191">Managed</span>
-                        </div>
-                        <h3 class="text-sm font-bold text-white mb-1" vid="192">Email Platforms</h3>
-                        <p class="text-[11px] text-gray-500 leading-relaxed" vid="193">Managed setup for Mailchimp, Substack, etc.</p>
-                    </div>
+                <div id="connection-availability" class="grid grid-cols-1 md:grid-cols-2 gap-4" vid="151">
                 </div>
 
                 <div class="mt-16 flex justify-between" vid="194">
@@ -1825,14 +1804,118 @@ video {
                         </div>
                         <div vid="235">
                             <p class="text-[10px] text-gray-600 font-bold uppercase mb-1" vid="236">Selected Plan</p>
-                            <p class="text-sm text-purple-400 font-bold" vid="237">Growth Trial</p>
+                            <p id="summary-plan" class="text-sm text-purple-400 font-bold" vid="237">Starter - $49/month</p>
                         </div>
                     </div>
                 </div>
 
                 <div class="mt-12 flex justify-between" vid="238">
                     <button onclick="goToStage(3)" class="text-gray-500 font-bold uppercase tracking-widest text-xs hover:text-white transition-all flex items-center gap-2" vid="239"><i class="ph-bold ph-arrow-left" vid="240"></i> Back</button>
-                    <button onclick="launchWorkspace()" class="glow-btn px-10 py-4 rounded-2xl text-white font-bold uppercase tracking-widest text-sm shadow-[0_0_30px_rgba(157,78,221,0.3)]" vid="241">Launch Workspace</button>
+                    <button onclick="goToStage(5)" class="glow-btn px-10 py-4 rounded-2xl text-white font-bold uppercase tracking-widest text-sm shadow-[0_0_30px_rgba(157,78,221,0.3)]" vid="241">Choose Plan</button>
+                </div>
+            </div>
+
+            
+            <div id="stage-5" class="stage-container" vid="300">
+                <h1 class="text-4xl font-extrabold text-white mb-4" vid="301">Choose the plan that fits.</h1>
+                <p class="text-gray-400 text-lg mb-10" vid="302">Paid self-serve plans start with a 3-day free trial. No charge today; payment information is collected during setup. Cancel before the trial ends to avoid billing. Managed routes to setup request.</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-stretch" vid="303">
+                    <div onclick="selectPlan(this, 'starter')" class="plan-card glass-card p-5 rounded-3xl border-purple-500/30 bg-purple-500/5 cursor-pointer transition-all flex flex-col" vid="304">
+                        <div class="flex items-start justify-between mb-6" vid="305">
+                            <div class="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-300" vid="306">
+                                <i class="ph-fill ph-sparkle text-2xl" vid="307"></i>
+                            </div>
+                            <span class="plan-check w-6 h-6 rounded-full border-4 border-purple-500 shadow-[0_0_10px_rgba(199,125,255,0.5)]" vid="308"></span>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2" vid="309">Starter</h3>
+                        <p class="text-xs text-gray-500 leading-relaxed mb-5 flex-1" vid="310">Basic workspace for calendar, campaigns, inspo, and notes.</p>
+                        <p class="text-sm font-bold text-purple-300" vid="311">$49/month</p>
+                    </div>
+
+                    <div onclick="selectPlan(this, 'growth')" class="plan-card glass-card p-5 rounded-3xl border-white/5 cursor-pointer hover:border-purple-500/30 transition-all flex flex-col" vid="312">
+                        <div class="flex items-start justify-between mb-6" vid="313">
+                            <div class="w-12 h-12 rounded-2xl bg-cyan-500/10 flex items-center justify-center text-cyan-300" vid="314">
+                                <i class="ph-fill ph-chart-line-up text-2xl" vid="315"></i>
+                            </div>
+                            <span class="plan-check w-6 h-6 rounded-full border-2 border-white/10" vid="316"></span>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2" vid="317">Growth</h3>
+                        <p class="text-xs text-gray-500 leading-relaxed mb-5 flex-1" vid="318">Adds Sheets, media readiness, publishing readiness, and team collaboration.</p>
+                        <p class="text-sm font-bold text-cyan-300" vid="319">$149/month</p>
+                    </div>
+
+                    <div onclick="selectPlan(this, 'agency')" class="plan-card glass-card p-5 rounded-3xl border-white/5 cursor-pointer hover:border-purple-500/30 transition-all flex flex-col" vid="320">
+                        <div class="flex items-start justify-between mb-6" vid="321">
+                            <div class="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-300" vid="322">
+                                <i class="ph-fill ph-briefcase text-2xl" vid="323"></i>
+                            </div>
+                            <span class="plan-check w-6 h-6 rounded-full border-2 border-white/10" vid="324"></span>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2" vid="325">Agency</h3>
+                        <p class="text-xs text-gray-500 leading-relaxed mb-5 flex-1" vid="326">Adds multiple workspaces, client management, and advanced permissions.</p>
+                        <p class="text-sm font-bold text-blue-300" vid="327">$399/month</p>
+                    </div>
+
+                    <div onclick="selectPlan(this, 'managed')" class="plan-card glass-card p-5 rounded-3xl border-white/5 cursor-pointer hover:border-purple-500/30 transition-all flex flex-col" vid="328">
+                        <div class="flex items-start justify-between mb-6" vid="329">
+                            <div class="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-300" vid="330">
+                                <i class="ph-fill ph-handshake text-2xl" vid="331"></i>
+                            </div>
+                            <span class="plan-check w-6 h-6 rounded-full border-2 border-white/10" vid="332"></span>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2" vid="333">Managed</h3>
+                        <p class="text-xs text-gray-500 leading-relaxed mb-5 flex-1" vid="334">Managed setup and support for migration-heavy workflows. No self-serve checkout.</p>
+                        <p class="text-sm font-bold text-amber-300" vid="335">Contact for pricing</p>
+                    </div>
+                </div>
+
+                <p id="pricing-action-note" class="mt-6 text-xs text-gray-500 min-h-[1rem]" vid="336"></p>
+
+                <div class="mt-12 flex justify-between" vid="337">
+                    <button onclick="goToStage(4)" class="text-gray-500 font-bold uppercase tracking-widest text-xs hover:text-white transition-all flex items-center gap-2" vid="338"><i class="ph-bold ph-arrow-left" vid="339"></i> Back</button>
+                    <button onclick="continueFromPricing()" id="pricing-continue-button" class="glow-btn px-10 py-4 rounded-2xl text-white font-bold uppercase tracking-widest text-sm" vid="340">Continue to Payment</button>
+                </div>
+            </div>
+
+            
+            <div id="stage-6" class="stage-container" vid="350">
+                <h1 class="text-4xl font-extrabold text-white mb-4" vid="351">Complete your workspace setup.</h1>
+                <p class="text-gray-400 text-lg mb-10" vid="352">Secure checkout links can be added later without changing this flow.</p>
+
+                <div class="glass-panel rounded-3xl border-white/5 p-8" vid="353">
+                    <div class="flex items-start justify-between gap-6 mb-8" vid="354">
+                        <div vid="355">
+                            <p class="text-[10px] text-gray-600 font-bold uppercase tracking-widest mb-2" vid="356">Selected Plan</p>
+                            <h2 id="payment-selected-plan" class="text-2xl font-extrabold text-white" vid="357">Starter</h2>
+                            <p id="payment-selected-price" class="text-sm font-bold text-purple-300 mt-2" vid="357a">$49/month</p>
+                        </div>
+                        <button onclick="goToStage(5)" class="text-xs font-bold uppercase tracking-widest text-gray-500 hover:text-white transition-all" vid="358">Change Plan</button>
+                    </div>
+
+                    <div id="payment-trial-state" vid="358a">
+                        <p class="text-sm text-gray-300 leading-relaxed mb-5" vid="358b">Start your 3-day free trial. You won't be charged today.</p>
+                        <p class="text-xs text-gray-500 leading-relaxed mb-6" vid="358c">Payment info is collected during setup. Review the <a href="/legal/#privacy-introduction" class="text-purple-400 hover:text-white underline underline-offset-2">Privacy Policy</a> and <a href="/legal/#terms-acceptance" class="text-purple-400 hover:text-white underline underline-offset-2">Terms of Service</a> before continuing.</p>
+                    </div>
+
+                    <div id="payment-managed-state" class="hidden" vid="358d">
+                        <p class="text-sm text-gray-300 leading-relaxed mb-5" vid="358e">Managed does not go through self-serve checkout.</p>
+                        <p class="text-xs text-gray-500 leading-relaxed mb-6" vid="358f">Request setup and we will coordinate <a href="/legal/#privacy-data-storage" class="text-purple-400 hover:text-white underline underline-offset-2">Google Sheets</a>, Monday, <a href="/legal/#privacy-data-storage" class="text-purple-400 hover:text-white underline underline-offset-2">Drive</a>, and workflow migration.</p>
+                    </div>
+
+                    <button id="checkout-button" onclick="startPlaceholderCheckout()" class="glow-btn w-full px-10 py-4 rounded-2xl text-white font-bold uppercase tracking-widest text-sm flex items-center justify-center gap-3" vid="359">
+                        <i class="ph-bold ph-lock-key" vid="360"></i>
+                        Secure Checkout
+                    </button>
+                    <a id="managed-setup-button" href="/contact/?topic=managed" class="hidden glow-btn w-full px-10 py-4 rounded-2xl text-white font-bold uppercase tracking-widest text-sm items-center justify-center gap-3" vid="360a">
+                        <i class="ph-bold ph-handshake" vid="360b"></i>
+                        Request Managed Setup
+                    </a>
+                    <p id="payment-placeholder-note" class="mt-5 text-xs text-gray-500 leading-relaxed" vid="361">Secure checkout is almost ready. Contact <a href="/contact/" class="text-purple-400 hover:text-white underline underline-offset-2">Contact</a> to activate this plan.</p>
+                </div>
+
+                <div class="mt-12 flex justify-between" vid="362">
+                    <button onclick="goToStage(5)" class="text-gray-500 font-bold uppercase tracking-widest text-xs hover:text-white transition-all flex items-center gap-2" vid="363"><i class="ph-bold ph-arrow-left" vid="364"></i> Back</button>
                 </div>
             </div>
         </main>
@@ -1935,6 +2018,51 @@ video {
         }
 
         let currentStage = 1;
+        const STAGE_ICONS = ['ph-buildings', 'ph-compass', 'ph-arrows-merge', 'ph-rocket-launch', 'ph-tag', 'ph-credit-card'];
+        const PLAN_LABELS = {
+            starter: 'Starter',
+            growth: 'Growth',
+            agency: 'Agency',
+            managed: 'Managed'
+        };
+        const PLAN_PRICES = {
+            starter: '$49/month',
+            growth: '$149/month',
+            agency: '$399/month',
+            managed: 'Contact for pricing'
+        };
+        const PAYMENT_LINKS = {
+            starter: "",
+            growth: "",
+            agency: "",
+            managed: ""
+        };
+        const CONNECTIONS_BY_PLAN = {
+            starter: [
+                ['Basic workspace', 'Calendar, campaigns, inspo, and notes are included.', 'ph-squares-four'],
+                ['Content calendar', 'Plan upcoming content across your core platforms.', 'ph-calendar-check'],
+                ['Campaign planning', 'Track campaign ideas, launches, and evergreen work.', 'ph-megaphone'],
+                ['Inspo and notes', 'Capture references, reminders, and content prompts.', 'ph-notebook']
+            ],
+            growth: [
+                ['Everything in Starter', 'Basic workspace, calendar, campaigns, inspo, and notes.', 'ph-sparkle'],
+                ['Google Sheets readiness', 'Prepare content databases and planning sources for setup.', 'ph-table'],
+                ['Media and publishing readiness', 'Organize assets and prepare publishing workflows.', 'ph-folder-open'],
+                ['Team collaboration', 'Support shared planning and review workflows.', 'ph-users-three']
+            ],
+            agency: [
+                ['Everything in Growth', 'Sheets, media readiness, publishing readiness, and collaboration.', 'ph-chart-line-up'],
+                ['Multiple workspaces', 'Separate client or initiative spaces under one operating system.', 'ph-stack'],
+                ['Client management', 'Manage client-facing planning and shared assets.', 'ph-briefcase'],
+                ['Advanced permissions', 'Prepare role-based access for broader teams.', 'ph-lock-key']
+            ],
+            managed: [
+                ['Google Sheets setup', 'Setup is handled for Sheets-based content operations.', 'ph-table'],
+                ['Monday setup', 'Workflow mapping and migration support for Monday.com.', 'ph-circles-three'],
+                ['Drive organization', 'Source folders and assets are structured during setup.', 'ph-folder'],
+                ['Workflow migration', 'Hands-on migration from existing planning systems.', 'ph-arrows-clockwise']
+            ]
+        };
         let formData = {
             orgName: '',
             workspaceSlug: '',
@@ -1943,12 +2071,15 @@ video {
             campaigns: [],
             pillars: [],
             connections: [],
-            startOption: 'Sample'
+            startOption: 'Sample',
+            selectedPlan: 'starter'
         };
 
         function goToStage(stage) {
             document.querySelectorAll('.stage-container').forEach(s => s.classList.remove('active'));
-            document.getElementById(`stage-${stage}`).classList.add('active');
+            const targetStage = document.getElementById(`stage-${stage}`);
+            if (!targetStage) return;
+            targetStage.classList.add('active');
             
             
             document.querySelectorAll('.step-dot').forEach((dot, idx) => {
@@ -1959,16 +2090,16 @@ video {
                     dot.innerHTML = '<i class="ph-bold ph-check"></i>';
                 } else if (i === stage) {
                     dot.classList.add('active');
-                    const icons = ['ph-buildings', 'ph-compass', 'ph-arrows-merge', 'ph-rocket-launch'];
-                    dot.innerHTML = `<i class="ph-bold ${icons[i-1]} text-sm"></i>`;
+                    dot.innerHTML = `<i class="ph-bold ${STAGE_ICONS[i-1]} text-sm"></i>`;
                 } else {
-                    const icons = ['ph-buildings', 'ph-compass', 'ph-arrows-merge', 'ph-rocket-launch'];
-                    dot.innerHTML = `<i class="ph-bold ${icons[i-1]} text-sm"></i>`;
+                    dot.innerHTML = `<i class="ph-bold ${STAGE_ICONS[i-1]} text-sm"></i>`;
                 }
             });
 
             currentStage = stage;
             updateSummary();
+            if (stage === 3) renderConnectionAvailability();
+            if (stage === 6) renderPaymentState();
         }
 
         function updateWorkspaceSlug(val) {
@@ -2160,10 +2291,143 @@ video {
             formData.startOption = type;
         }
 
+        function normalizePlan(plan) {
+            const value = String(plan || '').toLowerCase().replace(/[-\s]/g, '_');
+            if (value === 'free' || value === 'trial' || value === 'free_trial' || value === 'starter') return 'starter';
+            if (value === 'pro' || value === 'growth') return 'growth';
+            if (value === 'agency') return 'agency';
+            if (value === 'managed') return 'managed';
+            return 'starter';
+        }
+
+        function selectPlan(el, plan) {
+            formData.selectedPlan = normalizePlan(plan);
+            document.querySelectorAll('#stage-5 .plan-card').forEach(card => {
+                card.classList.remove('border-purple-500/30', 'bg-purple-500/5');
+                card.classList.add('border-white/5');
+                const check = card.querySelector('.plan-check');
+                if (check) check.className = 'plan-check w-6 h-6 rounded-full border-2 border-white/10';
+            });
+
+            if (el) {
+                el.classList.add('border-purple-500/30', 'bg-purple-500/5');
+                el.classList.remove('border-white/5');
+                const check = el.querySelector('.plan-check');
+                if (check) check.className = 'plan-check w-6 h-6 rounded-full border-4 border-purple-500 shadow-[0_0_10px_rgba(199,125,255,0.5)]';
+            }
+
+            const continueButton = document.getElementById('pricing-continue-button');
+            const note = document.getElementById('pricing-action-note');
+            if (continueButton) {
+                if (formData.selectedPlan === 'managed') continueButton.innerText = 'Request Managed Setup';
+                else continueButton.innerText = 'Continue to Payment';
+            }
+            if (note) {
+                note.innerText = formData.selectedPlan === 'managed'
+                    ? 'Managed setup uses a contact or scheduling flow. No payment is collected here.'
+                    : 'Payment info is collected during setup. You can cancel before your 3-day trial ends.'
+            }
+            updateSummary();
+            renderConnectionAvailability();
+            renderPaymentState();
+        }
+
+        function selectPlanByValue(plan) {
+            const normalized = normalizePlan(plan);
+            const cards = Array.from(document.querySelectorAll('#stage-5 .plan-card'));
+            const target = cards.find(card => (card.getAttribute('onclick') || '').includes(`'${normalized}'`));
+            selectPlan(target, normalized);
+        }
+
+        function applyPlanFromQuery() {
+            const params = new URLSearchParams(window.location.search);
+            if (params.has('plan')) {
+                selectPlanByValue(params.get('plan'));
+            } else {
+                selectPlanByValue(formData.selectedPlan);
+            }
+        }
+
+        function continueFromPricing() {
+            goToStage(6);
+        }
+
+        function requestManagedSetup() {
+            const pricingNote = document.getElementById('pricing-action-note');
+            const paymentNote = document.getElementById('payment-placeholder-note');
+            if (pricingNote) {
+                pricingNote.innerHTML = 'Managed setup request placeholder. Contact <a href="/contact/" class="text-purple-400 hover:text-white underline underline-offset-2">Contact</a> when ready.';
+            }
+            if (paymentNote) {
+                paymentNote.innerHTML = 'Managed setup request placeholder. Contact <a href="/contact/" class="text-purple-400 hover:text-white underline underline-offset-2">Contact</a> when ready.';
+            }
+        }
+
+        function renderConnectionAvailability() {
+            const container = document.getElementById('connection-availability');
+            if (!container) return;
+            const plan = normalizePlan(formData.selectedPlan);
+            const items = CONNECTIONS_BY_PLAN[plan] || CONNECTIONS_BY_PLAN.starter;
+            container.innerHTML = items.map(([title, description, icon]) => `
+                <div class="glass-card p-6 rounded-2xl border-white/5 relative">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-300"><i class="ph-fill ${icon} text-2xl"></i></div>
+                        <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-purple-500/20 text-purple-300">${PLAN_LABELS[plan]}</span>
+                    </div>
+                    <h3 class="text-sm font-bold text-white mb-1">${title}</h3>
+                    <p class="text-[11px] text-gray-500 leading-relaxed">${description}</p>
+                </div>
+            `).join('');
+            formData.connections = items.map(([title]) => title);
+            updateConnectionPreview();
+        }
+
+        function renderPaymentState() {
+            const plan = normalizePlan(formData.selectedPlan);
+            const isManaged = plan === 'managed';
+            const trialState = document.getElementById('payment-trial-state');
+            const managedState = document.getElementById('payment-managed-state');
+            const checkoutButton = document.getElementById('checkout-button');
+            const managedButton = document.getElementById('managed-setup-button');
+            const note = document.getElementById('payment-placeholder-note');
+            const price = document.getElementById('payment-selected-price');
+
+            if (trialState) trialState.classList.toggle('hidden', isManaged);
+            if (managedState) managedState.classList.toggle('hidden', !isManaged);
+            if (checkoutButton) checkoutButton.classList.toggle('hidden', isManaged);
+            if (managedButton) {
+                managedButton.classList.toggle('hidden', !isManaged);
+                managedButton.classList.toggle('flex', isManaged);
+            }
+            if (price) price.innerText = PLAN_PRICES[plan] || PLAN_PRICES.starter;
+            if (note) {
+                note.innerHTML = isManaged
+                    ? 'Managed setup is handled through a contact or scheduling flow.'
+                    : 'Secure checkout is almost ready. Contact <a href="/contact/" class="text-purple-400 hover:text-white underline underline-offset-2">Contact</a> to activate this plan.';
+            }
+        }
+
+        function startPlaceholderCheckout() {
+            const link = PAYMENT_LINKS[formData.selectedPlan];
+            const note = document.getElementById('payment-placeholder-note');
+            if (link) {
+                window.location.href = link;
+                return;
+            }
+            if (note) {
+                note.innerHTML = 'Secure checkout is almost ready. Contact <a href="/contact/" class="text-purple-400 hover:text-white underline underline-offset-2">Contact</a> to activate this plan.';
+            }
+        }
+
         function updateSummary() {
             document.getElementById('summary-workspace').innerText = formData.orgName || 'New Workspace';
             document.getElementById('summary-type').innerText = formData.orgType || 'Not specified';
             document.getElementById('summary-structure').innerText = `${formData.campaigns.length} Campaigns, ${formData.pillars.length} Pillars`;
+            const planLabel = PLAN_LABELS[formData.selectedPlan] || 'Starter';
+            const summaryPlan = document.getElementById('summary-plan');
+            const paymentPlan = document.getElementById('payment-selected-plan');
+            if (summaryPlan) summaryPlan.innerText = `${planLabel} - ${PLAN_PRICES[formData.selectedPlan] || PLAN_PRICES.starter}`;
+            if (paymentPlan) paymentPlan.innerText = planLabel;
         }
 
         function launchWorkspace() {
@@ -2180,7 +2444,7 @@ video {
         
         window.addEventListener('load', () => {
             updateConstellation();
-            
+            applyPlanFromQuery();
         });
     </script>
 

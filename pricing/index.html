@@ -20,7 +20,7 @@
             --gradient-primary: linear-gradient(135deg, #9d4edd 0%, #c77dff 100%);
         }
 
-        html { scroll-behavior: smooth; }
+        html { scroll-behavior: smooth; width: 100%; max-width: 100%; overflow-x: hidden; }
 
         body {
             background-color: var(--color-bg);
@@ -29,7 +29,10 @@
             margin: 0;
             overflow-x: hidden;
             width: 100%;
+            max-width: 100%;
         }
+
+        img, svg, video, canvas, .glass-card, .glass-panel { max-width: 100%; }
 
         .stars { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
         .star { position: absolute; background: white; border-radius: 50%; opacity: 0; animation: twinkle var(--duration) ease-in-out infinite; animation-delay: var(--delay); }
@@ -90,6 +93,16 @@
         ::-webkit-scrollbar-thumb { background: #2d1b4e; border-radius: 10px; }
 
         .constellation-svg { pointer-events: none; }
+
+        @media (max-width: 767px) {
+            nav { padding-left: 1rem !important; padding-right: 1rem !important; gap: 0.75rem; }
+            nav > div:first-child span { font-size: 1rem; }
+            nav > div:last-child { gap: 0.75rem; flex-wrap: wrap; justify-content: flex-end; }
+            nav > div:last-child .glow-btn { display: none; }
+            nav a, nav button { white-space: normal; text-align: center; }
+            .orbit-path, .orbit-container, .constellation-svg { max-width: 100%; }
+            .glow-btn, a[class*="tracking-widest"], button[class*="tracking-widest"] { letter-spacing: 0.08em; }
+        }
     </style>
 
   <style type="text/css">
@@ -1327,15 +1340,16 @@ video {
         </div>
         
         <div class="hidden md:flex items-center gap-10" vid="22">
-            <a href="/#features" class="text-sm font-medium text-gray-400 hover:text-white transition-colors" vid="23">Features</a>
+            <a href="/#campaign-planning" class="text-sm font-medium text-gray-400 hover:text-white transition-colors" vid="23">Features</a>
             <a href="/pricing/" class="text-sm font-medium text-white" vid="24">Pricing</a>
-            <a href="#" class="text-sm font-medium text-gray-400 hover:text-white transition-colors" vid="25">Integrations</a>
+            <a href="/#integrations" class="text-sm font-medium text-gray-400 hover:text-white transition-colors" vid="25">Integrations</a>
             <a href="/about/" class="text-sm font-medium text-gray-400 hover:text-white transition-colors" vid="26">About</a>
+            <a href="/contact/" class="text-sm font-medium text-gray-400 hover:text-white transition-colors" vid="26a">Contact</a>
         </div>
 
         <div class="flex items-center gap-6" vid="27">
             <a href="/login/" class="text-sm font-semibold text-gray-400 hover:text-white transition-colors" vid="28">Login</a>
-            <a href="/sign-up/" class="glow-btn px-6 py-2.5 rounded-xl text-white text-xs font-bold uppercase tracking-wider" vid="29">Start Free Trial</a>
+            <a href="/sign-up/" class="glow-btn px-6 py-2.5 rounded-xl text-white text-xs font-bold uppercase tracking-wider" vid="29">Create Workspace</a>
         </div>
     </nav>
 
@@ -1368,16 +1382,16 @@ video {
                 </p>
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-6" vid="46">
                     <a href="/sign-up/" class="glow-btn px-10 py-4 rounded-2xl text-white font-bold uppercase tracking-widest text-sm" vid="47">Create Workspace</a>
-                    <button class="px-10 py-4 rounded-2xl border border-white/10 bg-white/5 text-white font-bold uppercase tracking-widest text-sm hover:bg-white/10 transition-all flex items-center gap-2" vid="48">
+                    <a href="/contact/?topic=demo" class="px-10 py-4 rounded-2xl border border-white/10 bg-white/5 text-white font-bold uppercase tracking-widest text-sm hover:bg-white/10 transition-all flex items-center gap-2" vid="48">
                         Book a Demo
-                    </button>
+                    </a>
                 </div>
             </div>
         </section>
 
         
         <section class="py-20 px-8 max-w-7xl mx-auto" vid="49">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 items-stretch" vid="50">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch" vid="50">
                 
                 
                 <div class="glass-card p-10 rounded-3xl flex flex-col reveal" vid="51">
@@ -1386,16 +1400,15 @@ video {
                         <div class="flex items-baseline gap-1" vid="54">
                             <span class="text-4xl font-extrabold text-white" vid="55">$49</span>
                         </div>
-                        <p class="text-gray-500 text-xs mt-2" vid="56">Good for exploring the system.</p>
+                        <p class="text-gray-500 text-xs mt-2" vid="56"><a href="/legal/#terms-free-trial" class="hover:text-white underline underline-offset-2">3-day free trial</a>. No charge today.</p>
                     </div>
                     <ul class="space-y-4 mb-10 flex-1" vid="57">
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="58"><i class="ph-bold ph-check text-purple-500" vid="59"></i> Calendar</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="60"><i class="ph-bold ph-check text-purple-500" vid="61"></i> Campaign Planning</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="62"><i class="ph-bold ph-check text-purple-500" vid="63"></i> Constellation</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="64"><i class="ph-bold ph-check text-purple-500" vid="65"></i> Notes</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="66"><i class="ph-bold ph-check text-purple-500" vid="67"></i> Inspo Vault</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="58"><i class="ph-bold ph-check text-purple-500" vid="59"></i> 1 workspace</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="60"><i class="ph-bold ph-check text-purple-500" vid="61"></i> Core planning, calendar, campaigns</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="62"><i class="ph-bold ph-check text-purple-500" vid="63"></i> Notes, inspo, basic media references</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="64"><i class="ph-bold ph-check text-purple-500" vid="65"></i> Email support</li>
                     </ul>
-                    <a href="/sign-up/" class="block text-center w-full py-4 rounded-2xl border border-white/10 bg-white/5 text-white font-bold hover:bg-white/10 transition-all text-sm uppercase tracking-widest" vid="68">Create Workspace</a>
+                    <a href="/onboarding/?plan=starter" class="block text-center w-full py-4 rounded-2xl border border-white/10 bg-white/5 text-white font-bold hover:bg-white/10 transition-all text-sm uppercase tracking-widest" vid="68">Start Starter</a>
                 </div>
 
                 
@@ -1406,17 +1419,15 @@ video {
                             <span class="text-4xl font-extrabold text-white" vid="73">$149</span>
                             <span class="text-gray-500 text-sm" vid="74">/mo</span>
                         </div>
-                        <p class="text-gray-500 text-xs mt-2" vid="75">For active organizations.</p>
+                        <p class="text-gray-500 text-xs mt-2" vid="75"><a href="/legal/#terms-free-trial" class="hover:text-white underline underline-offset-2">3-day free trial</a>. No charge today.</p>
                     </div>
                     <ul class="space-y-4 mb-10 flex-1" vid="76">
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="77"><i class="ph-bold ph-check text-purple-500" vid="78"></i> Everything in Free</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="79"><i class="ph-bold ph-check text-purple-500" vid="80"></i> Team Members</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="81"><i class="ph-bold ph-check text-purple-500" vid="82"></i> Media Library</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="83"><i class="ph-bold ph-check text-purple-500" vid="84"></i> Google Sheets</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="85"><i class="ph-bold ph-check text-purple-500" vid="86"></i> Publishing Connections</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="87"><i class="ph-bold ph-check text-purple-500" vid="88"></i> Reporting</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="77"><i class="ph-bold ph-check text-purple-500" vid="78"></i> Everything in Starter</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="79"><i class="ph-bold ph-check text-purple-500" vid="80"></i> Team collaboration</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="81"><i class="ph-bold ph-check text-purple-500" vid="82"></i> Media library and storage</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="83"><i class="ph-bold ph-check text-purple-500" vid="84"></i> Google Sheets and publishing readiness</li>
                     </ul>
-                    <a href="/sign-up/" class="block text-center glow-btn w-full py-4 rounded-2xl text-white font-bold text-sm uppercase tracking-widest" vid="89">Start Pro</a>
+                    <a href="/onboarding/?plan=growth" class="block text-center glow-btn w-full py-4 rounded-2xl text-white font-bold text-sm uppercase tracking-widest" vid="89">Start Growth</a>
                 </div>
 
                 
@@ -1428,17 +1439,15 @@ video {
                             <span class="text-4xl font-extrabold text-white" vid="95">$399</span>
                             <span class="text-gray-500 text-sm" vid="96">/mo</span>
                         </div>
-                        <p class="text-gray-500 text-xs mt-2" vid="97">For consultants and agencies.</p>
+                        <p class="text-gray-500 text-xs mt-2" vid="97"><a href="/legal/#terms-free-trial" class="hover:text-white underline underline-offset-2">3-day free trial</a>. No charge today.</p>
                     </div>
                     <ul class="space-y-4 mb-10 flex-1" vid="98">
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="99"><i class="ph-bold ph-check text-purple-500" vid="100"></i> Everything in Pro</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="101"><i class="ph-bold ph-check text-purple-500" vid="102"></i> Multiple Workspaces</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="103"><i class="ph-bold ph-check text-purple-500" vid="104"></i> Client Management</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="105"><i class="ph-bold ph-check text-purple-500" vid="106"></i> Shared Assets</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="107"><i class="ph-bold ph-check text-purple-500" vid="108"></i> Advanced Permissions</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="109"><i class="ph-bold ph-check text-purple-500" vid="110"></i> Priority Support</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="99"><i class="ph-bold ph-check text-purple-500" vid="100"></i> Everything in Growth</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="101"><i class="ph-bold ph-check text-purple-500" vid="102"></i> Multiple workspaces</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="103"><i class="ph-bold ph-check text-purple-500" vid="104"></i> Client management and templates</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="105"><i class="ph-bold ph-check text-purple-500" vid="106"></i> Advanced permissions and priority support</li>
                     </ul>
-                    <a href="/sign-up/" class="block text-center glow-btn w-full py-5 rounded-2xl text-white font-bold text-sm uppercase tracking-widest" vid="111">Start Agency</a>
+                    <a href="/onboarding/?plan=agency" class="block text-center glow-btn w-full py-5 rounded-2xl text-white font-bold text-sm uppercase tracking-widest" vid="111">Start Agency</a>
                 </div>
 
                 
@@ -1447,19 +1456,21 @@ video {
                         <h3 class="text-xl font-bold text-white mb-2" vid="114">Managed</h3>
                         <div class="flex items-baseline gap-1" vid="115">
                             <span class="text-3xl font-extrabold text-white" vid="116">Contact</span>
+                            <span class="text-gray-500 text-sm" vid="116a">for pricing</span>
                         </div>
-                        <p class="text-gray-500 text-xs mt-2" vid="117">For organizations wanting support.</p>
+                        <p class="text-gray-500 text-xs mt-2" vid="117">No self-serve checkout.</p>
                     </div>
                     <ul class="space-y-4 mb-10 flex-1" vid="118">
                         <li class="flex items-center gap-3 text-sm text-gray-300" vid="119"><i class="ph-bold ph-check text-purple-500" vid="120"></i> Everything in Agency</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="121"><i class="ph-bold ph-check text-purple-500" vid="122"></i> Monday Setup</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="123"><i class="ph-bold ph-check text-purple-500" vid="124"></i> Migration</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="125"><i class="ph-bold ph-check text-purple-500" vid="126"></i> Team Training</li>
-                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="127"><i class="ph-bold ph-check text-purple-500" vid="128"></i> Strategic Support</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="121"><i class="ph-bold ph-check text-purple-500" vid="122"></i> Managed setup and support</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="123"><i class="ph-bold ph-check text-purple-500" vid="124"></i> Google Sheets, Monday, and Drive setup</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="125"><i class="ph-bold ph-check text-purple-500" vid="126"></i> Migration and workflow design</li>
+                        <li class="flex items-center gap-3 text-sm text-gray-300" vid="127"><i class="ph-bold ph-check text-purple-500" vid="128"></i> Team training and strategic support</li>
                     </ul>
-                    <a href="/sign-up/" class="block text-center w-full py-4 rounded-2xl border border-white/10 bg-white/5 text-white font-bold hover:bg-white/10 transition-all text-sm uppercase tracking-widest" vid="129">Contact Us</a>
+                    <a href="/contact/?topic=managed" class="block text-center w-full py-4 rounded-2xl border border-white/10 bg-white/5 text-white font-bold hover:bg-white/10 transition-all text-sm uppercase tracking-widest" vid="129">Request Setup</a>
                 </div>
             </div>
+            <p class="mt-8 text-center text-xs text-gray-500 max-w-3xl mx-auto" vid="129a">Payment information is collected during setup for Starter, Growth, and Agency. Cancel before the <a href="/legal/#terms-free-trial" class="text-purple-400 hover:text-white underline underline-offset-2">3-day trial</a> ends to avoid billing. Managed plans use a setup request instead of self-serve checkout. Review <a href="/legal/#terms-subscription-plans" class="text-purple-400 hover:text-white underline underline-offset-2">Subscription Plans</a>.</p>
         </section>
 
         
@@ -1474,90 +1485,49 @@ video {
                     <thead vid="136">
                         <tr class="border-b border-white/5" vid="137">
                             <th class="sticky-col text-left py-8 px-10 text-xs font-bold text-gray-500 uppercase tracking-widest" vid="138">Capability</th>
-                            <th class="py-8 px-6 text-sm font-bold text-white" vid="139">Free</th>
-                            <th class="py-8 px-6 text-sm font-bold text-white" vid="140">Pro</th>
+                            <th class="py-8 px-6 text-sm font-bold text-white" vid="139">Starter</th>
+                            <th class="py-8 px-6 text-sm font-bold text-white" vid="140">Growth</th>
                             <th class="py-8 px-6 text-sm font-bold text-white" vid="141">Agency</th>
                             <th class="py-8 px-6 text-sm font-bold text-white" vid="142">Managed</th>
                         </tr>
                     </thead>
                     <tbody vid="143">
-                        
-                        <tr class="bg-white/5" vid="144">
-                            <td colspan="5" class="py-4 px-10 text-[10px] font-extrabold text-purple-400 uppercase tracking-widest" vid="145">Planning</td>
-                        </tr>
-                        <tr class="comparison-row border-b border-white/5" vid="146">
-                            <td class="sticky-col py-5 px-10 text-sm font-medium text-gray-300" vid="147">Campaigns</td>
-                            <td class="text-center py-5 px-6" vid="148"><span class="text-xs text-gray-400" vid="149">Basic</span></td>
-                            <td class="text-center py-5 px-6" vid="150"><i class="ph-bold ph-check text-purple-500" vid="151"></i></td>
-                            <td class="text-center py-5 px-6" vid="152"><i class="ph-bold ph-check text-purple-500" vid="153"></i></td>
-                            <td class="text-center py-5 px-6" vid="154"><i class="ph-bold ph-check text-purple-500" vid="155"></i></td>
-                        </tr>
-                        <tr class="comparison-row border-b border-white/5" vid="156">
-                            <td class="sticky-col py-5 px-10 text-sm font-medium text-gray-300" vid="157">Constellation View</td>
-                            <td class="text-center py-5 px-6" vid="158"><i class="ph-bold ph-check text-purple-500" vid="159"></i></td>
-                            <td class="text-center py-5 px-6" vid="160"><i class="ph-bold ph-check text-purple-500" vid="161"></i></td>
-                            <td class="text-center py-5 px-6" vid="162"><i class="ph-bold ph-check text-purple-500" vid="163"></i></td>
-                            <td class="text-center py-5 px-6" vid="164"><i class="ph-bold ph-check text-purple-500" vid="165"></i></td>
-                        </tr>
-                        <tr class="comparison-row border-b border-white/5" vid="166">
-                            <td class="sticky-col py-5 px-10 text-sm font-medium text-gray-300" vid="167">Content Calendar</td>
-                            <td class="text-center py-5 px-6" vid="168"><i class="ph-bold ph-check text-purple-500" vid="169"></i></td>
-                            <td class="text-center py-5 px-6" vid="170"><i class="ph-bold ph-check text-purple-500" vid="171"></i></td>
-                            <td class="text-center py-5 px-6" vid="172"><i class="ph-bold ph-check text-purple-500" vid="173"></i></td>
-                            <td class="text-center py-5 px-6" vid="174"><i class="ph-bold ph-check text-purple-500" vid="175"></i></td>
-                        </tr>
-                        
-                        
-                        <tr class="bg-white/5" vid="176">
-                            <td colspan="5" class="py-4 px-10 text-[10px] font-extrabold text-purple-400 uppercase tracking-widest" vid="177">Content</td>
-                        </tr>
-                        <tr class="comparison-row border-b border-white/5" vid="178">
-                            <td class="sticky-col py-5 px-10 text-sm font-medium text-gray-300" vid="179">Notes &amp; Briefs</td>
-                            <td class="text-center py-5 px-6" vid="180"><i class="ph-bold ph-check text-purple-500" vid="181"></i></td>
-                            <td class="text-center py-5 px-6" vid="182"><i class="ph-bold ph-check text-purple-500" vid="183"></i></td>
-                            <td class="text-center py-5 px-6" vid="184"><i class="ph-bold ph-check text-purple-500" vid="185"></i></td>
-                            <td class="text-center py-5 px-6" vid="186"><i class="ph-bold ph-check text-purple-500" vid="187"></i></td>
-                        </tr>
-                        <tr class="comparison-row border-b border-white/5" vid="188">
-                            <td class="sticky-col py-5 px-10 text-sm font-medium text-gray-300" vid="189">Media Library</td>
-                            <td class="text-center py-5 px-6" vid="190"><span class="text-gray-600" vid="191">—</span></td>
-                            <td class="text-center py-5 px-6" vid="192"><span class="text-xs text-gray-400" vid="193">10GB</span></td>
-                            <td class="text-center py-5 px-6" vid="194"><span class="text-xs text-gray-400" vid="195">100GB</span></td>
-                            <td class="text-center py-5 px-6" vid="196"><span class="text-xs text-purple-400 font-bold" vid="197">Unlimited</span></td>
-                        </tr>
-                        <tr class="comparison-row border-b border-white/5" vid="198">
-                            <td class="sticky-col py-5 px-10 text-sm font-medium text-gray-300" vid="199">Inspo Vault</td>
-                            <td class="text-center py-5 px-6" vid="200"><i class="ph-bold ph-check text-purple-500" vid="201"></i></td>
-                            <td class="text-center py-5 px-6" vid="202"><i class="ph-bold ph-check text-purple-500" vid="203"></i></td>
-                            <td class="text-center py-5 px-6" vid="204"><i class="ph-bold ph-check text-purple-500" vid="205"></i></td>
-                            <td class="text-center py-5 px-6" vid="206"><i class="ph-bold ph-check text-purple-500" vid="207"></i></td>
-                        </tr>
+                        <tr class="bg-white/5"><td colspan="5" class="py-4 px-10 text-[10px] font-extrabold text-purple-400 uppercase tracking-widest">Core Planning</td></tr>
+                        <tr class="comparison-row border-b border-white/5"><td class="sticky-col py-5 px-10 text-sm font-medium text-gray-300">Campaign planning</td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td></tr>
+                        <tr class="comparison-row border-b border-white/5"><td class="sticky-col py-5 px-10 text-sm font-medium text-gray-300">Content calendar</td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td></tr>
+                        <tr class="comparison-row border-b border-white/5"><td class="sticky-col py-5 px-10 text-sm font-medium text-gray-300">Constellation view</td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td></tr>
+                        <tr class="comparison-row border-b border-white/5"><td class="sticky-col py-5 px-10 text-sm font-medium text-gray-300">Notes and Inspo Vault</td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td></tr>
 
-                        
-                        <tr class="bg-white/5" vid="208">
-                            <td colspan="5" class="py-4 px-10 text-[10px] font-extrabold text-purple-400 uppercase tracking-widest" vid="209">Integrations</td>
-                        </tr>
-                        <tr class="comparison-row border-b border-white/5" vid="210">
-                            <td class="sticky-col py-5 px-10 text-sm font-medium text-gray-300" vid="211">LinkedIn &amp; Instagram</td>
-                            <td class="text-center py-5 px-6" vid="212"><span class="text-gray-600" vid="213">—</span></td>
-                            <td class="text-center py-5 px-6" vid="214"><i class="ph-bold ph-check text-purple-500" vid="215"></i></td>
-                            <td class="text-center py-5 px-6" vid="216"><i class="ph-bold ph-check text-purple-500" vid="217"></i></td>
-                            <td class="text-center py-5 px-6" vid="218"><i class="ph-bold ph-check text-purple-500" vid="219"></i></td>
-                        </tr>
-                        <tr class="comparison-row border-b border-white/5" vid="220">
-                            <td class="sticky-col py-5 px-10 text-sm font-medium text-gray-300" vid="221">Monday.com Sync</td>
-                            <td class="text-center py-5 px-6" vid="222"><span class="text-gray-600" vid="223">—</span></td>
-                            <td class="text-center py-5 px-6" vid="224"><span class="text-gray-600" vid="225">—</span></td>
-                            <td class="text-center py-5 px-6" vid="226"><i class="ph-bold ph-check text-purple-500" vid="227"></i></td>
-                            <td class="text-center py-5 px-6" vid="228"><i class="ph-bold ph-check text-purple-500" vid="229"></i></td>
-                        </tr>
-                        <tr class="comparison-row border-b border-white/5" vid="230">
-                            <td class="sticky-col py-5 px-10 text-sm font-medium text-gray-300" vid="231">Google Sheets</td>
-                            <td class="text-center py-5 px-6" vid="232"><span class="text-gray-600" vid="233">—</span></td>
-                            <td class="text-center py-5 px-6" vid="234"><i class="ph-bold ph-check text-purple-500" vid="235"></i></td>
-                            <td class="text-center py-5 px-6" vid="236"><i class="ph-bold ph-check text-purple-500" vid="237"></i></td>
-                            <td class="text-center py-5 px-6" vid="238"><i class="ph-bold ph-check text-purple-500" vid="239"></i></td>
-                        </tr>
+                        <tr class="bg-white/5"><td colspan="5" class="py-4 px-10 text-[10px] font-extrabold text-purple-400 uppercase tracking-widest">Content &amp; Media</td></tr>
+                        <tr class="comparison-row border-b border-white/5"><td class="sticky-col py-5 px-10 text-sm font-medium text-gray-300">Media library</td><td class="text-center py-5 px-6"><span class="text-xs text-gray-400">Basic references</span></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td></tr>
+                        <tr class="comparison-row border-b border-white/5"><td class="sticky-col py-5 px-10 text-sm font-medium text-gray-300">Supabase media storage</td><td class="text-center py-5 px-6"><span class="text-gray-600">-</span></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td></tr>
+                        <tr class="comparison-row border-b border-white/5"><td class="sticky-col py-5 px-10 text-sm font-medium text-gray-300">Google Drive links and brand assets</td><td class="text-center py-5 px-6"><span class="text-gray-600">-</span></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><span class="text-xs text-purple-400 font-bold">Setup handled</span></td></tr>
+                        <tr class="comparison-row border-b border-white/5"><td class="sticky-col py-5 px-10 text-sm font-medium text-gray-300">Content drafts</td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td></tr>
+
+                        <tr class="bg-white/5"><td colspan="5" class="py-4 px-10 text-[10px] font-extrabold text-purple-400 uppercase tracking-widest">Team &amp; Workflow</td></tr>
+                        <tr class="comparison-row border-b border-white/5"><td class="sticky-col py-5 px-10 text-sm font-medium text-gray-300">Team members and collaboration</td><td class="text-center py-5 px-6"><span class="text-gray-600">-</span></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td></tr>
+                        <tr class="comparison-row border-b border-white/5"><td class="sticky-col py-5 px-10 text-sm font-medium text-gray-300">Approval workflows</td><td class="text-center py-5 px-6"><span class="text-gray-600">-</span></td><td class="text-center py-5 px-6"><span class="text-xs text-gray-400">Basic</span></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td></tr>
+                        <tr class="comparison-row border-b border-white/5"><td class="sticky-col py-5 px-10 text-sm font-medium text-gray-300">Workspace roles and client review workflows</td><td class="text-center py-5 px-6"><span class="text-gray-600">-</span></td><td class="text-center py-5 px-6"><span class="text-gray-600">-</span></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td></tr>
+
+                        <tr class="bg-white/5"><td colspan="5" class="py-4 px-10 text-[10px] font-extrabold text-purple-400 uppercase tracking-widest">Integrations</td></tr>
+                        <tr class="comparison-row border-b border-white/5"><td class="sticky-col py-5 px-10 text-sm font-medium text-gray-300">Google Sheets connection</td><td class="text-center py-5 px-6"><span class="text-gray-600">-</span></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><span class="text-xs text-purple-400 font-bold">Setup handled</span></td></tr>
+                        <tr class="comparison-row border-b border-white/5"><td class="sticky-col py-5 px-10 text-sm font-medium text-gray-300">Monday.com connection</td><td class="text-center py-5 px-6"><span class="text-gray-600">-</span></td><td class="text-center py-5 px-6"><span class="text-gray-600">-</span></td><td class="text-center py-5 px-6"><span class="text-xs text-gray-400">Ready</span></td><td class="text-center py-5 px-6"><span class="text-xs text-purple-400 font-bold">Setup handled</span></td></tr>
+                        <tr class="comparison-row border-b border-white/5"><td class="sticky-col py-5 px-10 text-sm font-medium text-gray-300">Social publishing and LinkedIn/Instagram readiness</td><td class="text-center py-5 px-6"><span class="text-gray-600">-</span></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td></tr>
+                        <tr class="comparison-row border-b border-white/5"><td class="sticky-col py-5 px-10 text-sm font-medium text-gray-300">Custom webhooks</td><td class="text-center py-5 px-6"><span class="text-gray-600">-</span></td><td class="text-center py-5 px-6"><span class="text-gray-600">-</span></td><td class="text-center py-5 px-6"><span class="text-xs text-gray-400">Advanced</span></td><td class="text-center py-5 px-6"><span class="text-xs text-purple-400 font-bold">Workflow design</span></td></tr>
+
+                        <tr class="bg-white/5"><td colspan="5" class="py-4 px-10 text-[10px] font-extrabold text-purple-400 uppercase tracking-widest">Reporting</td></tr>
+                        <tr class="comparison-row border-b border-white/5"><td class="sticky-col py-5 px-10 text-sm font-medium text-gray-300">Performance dashboard and campaign reporting</td><td class="text-center py-5 px-6"><span class="text-gray-600">-</span></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td></tr>
+                        <tr class="comparison-row border-b border-white/5"><td class="sticky-col py-5 px-10 text-sm font-medium text-gray-300">Cross-workspace reporting</td><td class="text-center py-5 px-6"><span class="text-gray-600">-</span></td><td class="text-center py-5 px-6"><span class="text-gray-600">-</span></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td></tr>
+
+                        <tr class="bg-white/5"><td colspan="5" class="py-4 px-10 text-[10px] font-extrabold text-purple-400 uppercase tracking-widest">Workspace Scale</td></tr>
+                        <tr class="comparison-row border-b border-white/5"><td class="sticky-col py-5 px-10 text-sm font-medium text-gray-300">Number of workspaces</td><td class="text-center py-5 px-6"><span class="text-xs text-gray-400">1</span></td><td class="text-center py-5 px-6"><span class="text-xs text-gray-400">1 team workspace</span></td><td class="text-center py-5 px-6"><span class="text-xs text-gray-400">Multiple</span></td><td class="text-center py-5 px-6"><span class="text-xs text-purple-400 font-bold">Multiple + migration</span></td></tr>
+                        <tr class="comparison-row border-b border-white/5"><td class="sticky-col py-5 px-10 text-sm font-medium text-gray-300">Client workspace management and templates</td><td class="text-center py-5 px-6"><span class="text-gray-600">-</span></td><td class="text-center py-5 px-6"><span class="text-gray-600">-</span></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td></tr>
+                        <tr class="comparison-row border-b border-white/5"><td class="sticky-col py-5 px-10 text-sm font-medium text-gray-300">Advanced permissions</td><td class="text-center py-5 px-6"><span class="text-gray-600">-</span></td><td class="text-center py-5 px-6"><span class="text-gray-600">-</span></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td></tr>
+
+                        <tr class="bg-white/5"><td colspan="5" class="py-4 px-10 text-[10px] font-extrabold text-purple-400 uppercase tracking-widest">Support</td></tr>
+                        <tr class="comparison-row border-b border-white/5"><td class="sticky-col py-5 px-10 text-sm font-medium text-gray-300">Email support</td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td></tr>
+                        <tr class="comparison-row border-b border-white/5"><td class="sticky-col py-5 px-10 text-sm font-medium text-gray-300">Priority support</td><td class="text-center py-5 px-6"><span class="text-gray-600">-</span></td><td class="text-center py-5 px-6"><span class="text-gray-600">-</span></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td></tr>
+                        <tr class="comparison-row border-b border-white/5"><td class="sticky-col py-5 px-10 text-sm font-medium text-gray-300">Managed onboarding, workflow migration, and strategic setup</td><td class="text-center py-5 px-6"><span class="text-gray-600">-</span></td><td class="text-center py-5 px-6"><span class="text-gray-600">-</span></td><td class="text-center py-5 px-6"><span class="text-gray-600">-</span></td><td class="text-center py-5 px-6"><i class="ph-bold ph-check text-purple-500"></i></td></tr>
                     </tbody>
                 </table>
             </div>
@@ -1651,8 +1621,8 @@ video {
                         We'll configure your workspace, migrate your systems, connect your tools, and train your team. Get your command center running in record time.
                     </p>
                     <div class="flex flex-col sm:flex-row items-center justify-center gap-6" vid="308">
-                        <a href="/sign-up/" class="glow-btn px-12 py-5 rounded-2xl text-white font-bold uppercase tracking-widest text-sm" vid="309">Request Managed Setup</a>
-                        <a href="/sign-up/" class="px-12 py-5 rounded-2xl border border-white/10 bg-white/5 text-white font-bold uppercase tracking-widest text-sm hover:bg-white/10 transition-all" vid="310">Schedule a Call</a>
+                        <a href="/contact/?topic=managed" class="glow-btn px-12 py-5 rounded-2xl text-white font-bold uppercase tracking-widest text-sm" vid="309">Request Managed Setup</a>
+                        <a href="/contact/?topic=managed" class="px-12 py-5 rounded-2xl border border-white/10 bg-white/5 text-white font-bold uppercase tracking-widest text-sm hover:bg-white/10 transition-all" vid="310">Schedule a Call</a>
                     </div>
                 </div>
             </div>
@@ -1728,7 +1698,7 @@ video {
                         <i class="ph-bold ph-plus faq-icon transition-transform duration-300" vid="344"></i>
                     </div>
                     <div class="faq-content text-gray-400 text-sm leading-relaxed" vid="345">
-                        We certainly do. Verified 501(c)(3) and international equivalent organizations are eligible for a 20% discount on all monthly plans. Contact us to apply.
+                        We certainly do. Verified 501(c)(3) and international equivalent organizations are eligible for a 20% discount on all monthly plans. <a href="/contact/" class="text-purple-400 hover:text-white underline underline-offset-2">Contact us</a> to apply.
                     </div>
                 </div>
 
@@ -1765,9 +1735,9 @@ video {
                 <div vid="366">
                     <h4 class="text-sm font-bold text-white uppercase tracking-widest mb-6" vid="367">Product</h4>
                     <ul class="space-y-4" vid="368">
-                        <li vid="369"><a href="/#features" class="text-sm text-gray-500 hover:text-purple-400" vid="370">Features</a></li>
-                        <li vid="371"><a href="#" class="text-sm text-gray-500 hover:text-purple-400" vid="372">Integrations</a></li>
-                        <li vid="373"><a href="#" class="text-sm text-gray-500 hover:text-purple-400" vid="374">AI Assistant</a></li>
+                        <li vid="369"><a href="/#campaign-planning" class="text-sm text-gray-500 hover:text-purple-400" vid="370">Features</a></li>
+                        <li vid="371"><a href="/#integrations" class="text-sm text-gray-500 hover:text-purple-400" vid="372">Integrations</a></li>
+                        <li vid="373"><a href="/#team-collaboration" class="text-sm text-gray-500 hover:text-purple-400" vid="374">Team Collaboration</a></li>
                         <li vid="375"><a href="/pricing/" class="text-sm text-gray-500 hover:text-purple-400" vid="376">Pricing</a></li>
                     </ul>
                 </div>
@@ -1775,17 +1745,16 @@ video {
                     <h4 class="text-sm font-bold text-white uppercase tracking-widest mb-6" vid="378">Company</h4>
                     <ul class="space-y-4" vid="379">
                         <li vid="380"><a href="/about/" class="text-sm text-gray-500 hover:text-purple-400" vid="381">About Us</a></li>
-                        <li vid="382"><a href="#" class="text-sm text-gray-500 hover:text-purple-400" vid="383">Blog</a></li>
-                        <li vid="384"><a href="#" class="text-sm text-gray-500 hover:text-purple-400" vid="385">Careers</a></li>
-                        <li vid="386"><a href="#" class="text-sm text-gray-500 hover:text-purple-400" vid="387">Contact</a></li>
+                        <li vid="382"><a href="https://thealgorithmwitch.com/blog" class="text-sm text-gray-500 hover:text-purple-400" vid="383">Blog</a></li>
+                        <li vid="384"><a href="https://thealgorithmwitch.com/resources/jobs" class="text-sm text-gray-500 hover:text-purple-400" vid="385">Mission-Driven Careers</a></li>
+                        <li vid="386"><a href="/contact/" class="text-sm text-gray-500 hover:text-purple-400" vid="387">Contact</a></li>
                     </ul>
                 </div>
                 <div vid="388">
                     <h4 class="text-sm font-bold text-white uppercase tracking-widest mb-6" vid="389">Legal</h4>
                     <ul class="space-y-4" vid="390">
-                        <li vid="391"><a href="/privacy/" class="text-sm text-gray-500 hover:text-purple-400" vid="392">Privacy Policy</a></li>
-                        <li vid="393"><a href="/terms/" class="text-sm text-gray-500 hover:text-purple-400" vid="394">Terms of Service</a></li>
-                        <li vid="395"><a href="#" class="text-sm text-gray-500 hover:text-purple-400" vid="396">Security</a></li>
+                        <li vid="391"><a href="/legal/" class="text-sm text-gray-500 hover:text-purple-400" vid="392">Privacy &amp; Terms</a></li>
+                        <li vid="395"><a href="/legal/#privacy-data-security" class="text-sm text-gray-500 hover:text-purple-400" vid="396">Security</a></li>
                     </ul>
                 </div>
             </div>

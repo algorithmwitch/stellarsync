@@ -20,18 +20,26 @@
             --glow-purple: rgba(157, 78, 221, 0.3);
         }
 
+        html, body {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+
         body {
             background-color: var(--color-bg);
             color: #e2e8f0;
             font-family: 'Inter', sans-serif;
             margin: 0;
             overflow: hidden;
-            width: 100vw;
+            width: 100%;
             height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
         }
+
+        img, svg, video, canvas, .login-card { max-width: 100%; }
 
         .stars { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
         .star { position: absolute; background: white; border-radius: 50%; opacity: 0; animation: twinkle var(--duration) ease-in-out infinite; animation-delay: var(--delay); }
@@ -159,6 +167,12 @@
 
         .logo-glow {
             filter: drop-shadow(0 0 10px rgba(199, 125, 255, 0.5));
+        }
+
+        @media (max-width: 640px) {
+            body { padding: 1rem; }
+            .login-card { padding: 1.5rem; }
+            button, a { white-space: normal; text-align: center; }
         }
     </style>
 
@@ -921,7 +935,7 @@ video {
                     </div>
                     <span class="text-xs text-gray-400 font-medium" vid="36">Remember this constellation</span>
                 </label>
-                <a href="mailto:support@stellarsync.app" class="text-xs text-[#c77dff] font-semibold hover:text-white transition-colors" vid="37">Forgot passphrase?</a>
+                <a href="/contact/" class="text-xs text-[#c77dff] font-semibold hover:text-white transition-colors" vid="37">Forgot passphrase?</a>
             </div>
 
             <button type="submit" class="btn-primary" vid="38">
