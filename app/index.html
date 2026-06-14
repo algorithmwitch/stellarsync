@@ -1109,6 +1109,52 @@
             backdrop-filter: blur(14px);
         }
 
+        .workspace-menu-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 0.85rem 0.5rem;
+            margin-bottom: 0.25rem;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .workspace-menu-avatar {
+            width: 2.25rem;
+            height: 2.25rem;
+            border-radius: 0.75rem;
+            background: #231738;
+            border: 1px solid rgba(255,255,255,0.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 0.7rem;
+            color: #c77dff;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            flex-shrink: 0;
+        }
+
+        .workspace-menu-name {
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: white;
+            line-height: 1.2;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .workspace-menu-slug {
+            font-size: 0.65rem;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
         .workspace-menu {
             position: absolute;
             top: calc(100% + 0.75rem);
@@ -1864,6 +1910,13 @@
             <div id="stars-container" class="stars absolute inset-0" vid="16"></div>
         </div>
 
+    <div id="boot-loading" class="fixed inset-0 z-[9998] flex flex-col items-center justify-center p-6 gap-4" style="background:#0a0514;">
+      <div class="w-12 h-12 rounded-2xl bg-[#231738] flex items-center justify-center text-white text-sm font-bold border border-white/10">
+        <i class="ph-bold ph-spinner-gap text-2xl animate-spin"></i>
+      </div>
+      <div class="text-gray-400 text-xs uppercase tracking-widest font-bold">Connecting to workspace</div>
+    </div>
+
     <div id="boot-diagnostics" class="hidden fixed inset-0 z-[9999] flex items-center justify-center p-6" style="background:#0a0514;">
       <div class="w-full max-w-xl bg-[#120c1d] border border-white/10 rounded-2xl p-6 space-y-4">
         <div class="flex items-center gap-3">
@@ -1923,9 +1976,16 @@
             </button>
             <div class="relative">
               <button id="avatar-menu-btn" type="button" title="Workspace and Settings" class="w-10 h-10 rounded-xl bg-[#1e152d] border border-white/5 flex items-center justify-center text-xs font-bold cursor-pointer text-gray-300 hover:text-white transition-colors shrink-0" vid="28">
-                  AW
+                  <span id="avatar-initials">WS</span>
               </button>
               <div id="profile-menu" class="workspace-menu">
+                <div id="profile-menu-header" class="workspace-menu-header">
+                  <div id="profile-menu-avatar" class="workspace-menu-avatar">WS</div>
+                  <div class="min-w-0 flex-1">
+                    <div id="profile-menu-name" class="workspace-menu-name">Workspace</div>
+                    <div id="profile-menu-slug" class="workspace-menu-slug">loading...</div>
+                  </div>
+                </div>
                 <button type="button" class="workspace-menu-btn" data-workspace-action="workspace">
                   <span class="flex items-center gap-3"><i class="ph-bold ph-user-circle text-[#c77dff]"></i> Profile / Workspace</span>
                   <i class="ph-bold ph-caret-right text-gray-500"></i>
@@ -4794,6 +4854,8 @@ async function fetchWorkspaceMembershipsByUserId(userId, userEmail) {
 function showAppRouterState({ title, message, detail = "", ctaHref = "", ctaLabel = "" }) {
   const existing = document.getElementById("app-router-state");
   if (existing) existing.remove();
+  const loadingEl = document.getElementById("boot-loading");
+  if (loadingEl) loadingEl.classList.add("hidden");
   const overlay = document.createElement("div");
   overlay.id = "app-router-state";
   overlay.className = "fixed inset-0 z-[10000] flex items-center justify-center p-6";
@@ -4829,6 +4891,8 @@ function showWorkspacePicker(workspaces) {
   return new Promise((resolve) => {
     const existing = document.getElementById("app-router-workspace-picker");
     if (existing) existing.remove();
+    const loadingEl = document.getElementById("boot-loading");
+    if (loadingEl) loadingEl.classList.add("hidden");
     const overlay = document.createElement("div");
     overlay.id = "app-router-workspace-picker";
     overlay.className = "fixed inset-0 z-[10000] flex items-center justify-center p-6";
@@ -6813,6 +6877,7 @@ function rerenderAll() {
   safeRender(() => {
     if (!workspaceHubModal?.classList.contains("opacity-0")) renderWorkspaceHub();
   }, "renderWorkspaceHub");
+  safeRender(renderWorkspaceBranding, "renderWorkspaceBranding");
 }
 
 function inspoTypeLabel(type) {
@@ -21077,13 +21142,78 @@ function initApp() {
   }
 }
 
+function getWorkspaceInitials(workspace) {
+  if (!workspace) return "WS";
+  var name = workspace.short_name || workspace.name || workspace.slug || "";
+  name = String(name).trim();
+  if (!name) return "WS";
+  if (name.toLowerCase() === "algorithm witch" || name.toLowerCase() === "algorithmwitch" || name.toLowerCase() === "aw") return "AW";
+  var cleaned = name.replace(/[^a-zA-Z0-9\s\-\.]/g, " ").replace(/\s+/g, " ").trim();
+  var words = cleaned.split(/[\s\-\.]+/).filter(function(w) { return w.length > 0; });
+  if (words.length === 0) return name.slice(0, 2).toUpperCase() || "WS";
+  if (words.length === 1) {
+    var w = words[0];
+    if (w.length <= 2) return w.toUpperCase();
+    var parts = w.split(/(?=[A-Z])/).filter(function(p) { return p.length > 0; });
+    if (parts.length >= 2) return parts.map(function(p) { return p[0].toUpperCase(); }).join("").slice(0, 4);
+    var vowels = w.match(/[aeiou]/gi) || [];
+    var consonants = w.match(/[bcdfghjklmnpqrstvwxyz]/gi) || [];
+    if (consonants.length >= 2) return (consonants[0] + consonants[consonants.length - 1]).toUpperCase();
+    return w.slice(0, 2).toUpperCase();
+  }
+  return words.map(function(w) { return w[0].toUpperCase(); }).join("").slice(0, 4);
+}
+
+function renderWorkspaceBranding() {
+  var config = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active;
+  if (!config) {
+    var sessionConfig = getSessionWorkspaceConfig();
+    if (sessionConfig) {
+      config = {
+        workspace_slug: sessionConfig.slug,
+        name: sessionConfig.name,
+        slug: sessionConfig.slug
+      };
+    }
+  }
+  var name = config && (config.name || "");
+  var slug = config && (config.workspace_slug || config.slug || "");
+  var initials = getWorkspaceInitials({ name: name, slug: slug, short_name: config && config.short_name });
+  var avatarEl = document.getElementById("avatar-initials");
+  var profileAvatarEl = document.getElementById("profile-menu-avatar");
+  var profileNameEl = document.getElementById("profile-menu-name");
+  var profileSlugEl = document.getElementById("profile-menu-slug");
+  var badgeEl = document.getElementById("app-header-workspace-badge");
+  if (avatarEl) avatarEl.textContent = initials;
+  if (profileAvatarEl) profileAvatarEl.textContent = initials;
+  if (profileNameEl) profileNameEl.textContent = name || slug || "Workspace";
+  if (profileSlugEl) profileSlugEl.textContent = slug || "";
+  if (badgeEl) {
+    if (slug && slug !== "master") {
+      badgeEl.textContent = initials;
+      badgeEl.classList.remove("hidden");
+    } else {
+      badgeEl.classList.add("hidden");
+      badgeEl.textContent = "";
+    }
+  }
+}
+
 async function bootAppWithWorkspaceRouter() {
   try {
+    var loadingEl = document.getElementById("boot-loading");
+    if (loadingEl) loadingEl.classList.remove("hidden");
+
     const activeWorkspace = await ensureSupabaseWorkspaceBeforeBoot();
     if (!activeWorkspace) return;
     loadWorkspaceConfig();
+    renderWorkspaceBranding();
     initApp();
+
+    if (loadingEl) loadingEl.classList.add("hidden");
   } catch (error) {
+    var loadEl = document.getElementById("boot-loading");
+    if (loadEl) loadEl.classList.add("hidden");
     showBootFailurePanel(error);
     reportFrontendError("boot/call", error);
     if (window.__BOOT_STARTED) {
