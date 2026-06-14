@@ -928,7 +928,7 @@ video {
             <p class="text-gray-500 text-xs font-medium tracking-widest uppercase" vid="22">Where content meets the cosmos</p>
         </div>
 
-        <form id="login-form" class="space-y-4" vid="23">
+        <form id="login-form" method="post" action="" class="space-y-4" vid="23">
             <div class="input-group" vid="24">
                 <i class="ph-bold ph-at input-icon" vid="25"></i>
                 <input type="email" id="login-email" name="email" autocomplete="email" placeholder="Signal frequency (Email)" class="form-input" required="" vid="26">
@@ -1039,6 +1039,7 @@ video {
               email,
               password,
             });
+            console.log("[login] auth result", { hasUser: Boolean(data?.user), error });
 
             if (error) {
               console.error("[login] auth error", error);
