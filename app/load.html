@@ -99,8 +99,41 @@
 
     function getAccessToken() {
       try {
-        var token = JSON.parse(sessionStorage.getItem("supabase.auth.token") || "{}");
-        return token?.access_token || token?.currentSession?.access_token || "";
+        var found = [];
+        // Search localStorage and sessionStorage for Supabase auth tokens
+        [localStorage, sessionStorage].forEach(function(store) {
+          try {
+            for (var i = 0; i < store.length; i++) {
+              var key = store.key(i);
+              if (!key) continue;
+              if (key.indexOf("sb-") === 0 && key.indexOf("-auth-token") > 0) {
+                found.push({ key: key, value: store.getItem(key), storage: "localStorage" });
+              }
+              if (key === "supabase.auth.token") {
+                found.push({ key: key, value: store.getItem(key), storage: "localStorage" });
+              }
+            }
+          } catch (_) {}
+        });
+        // Try sessionStorage for legacy key
+        try {
+          var legacyVal = sessionStorage.getItem("supabase.auth.token");
+          if (legacyVal) found.push({ key: "supabase.auth.token", value: legacyVal, storage: "sessionStorage" });
+        } catch (_) {}
+
+        console.log("[load] auth storage keys found", found.length);
+        for (var f = 0; f < found.length; f++) {
+          try {
+            var parsed = JSON.parse(found[f].value);
+            var token = parsed?.access_token || parsed?.currentSession?.access_token || parsed?.session?.access_token || "";
+            if (token) {
+              console.log("[load] access token found", true);
+              return token;
+            }
+          } catch (_) {}
+        }
+        console.log("[load] access token found", false);
+        return "";
       } catch (_) { return ""; }
     }
 
@@ -166,6 +199,7 @@
         }
         userId = userResp.id;
         userEmail = userResp.email || "";
+        console.log("[load] verified user email", userEmail);
         setStatus("Session active, looking up workspace...");
       } catch (_) {
         setStatus("Session check failed.");
