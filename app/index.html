@@ -20,6 +20,14 @@
   html,
   body {
     height: 100%;
+    min-height: 100%;
+    background: #0a0612;
+  }
+
+  #boot-loading,
+  #boot-diagnostics {
+    width: 100vw;
+    min-height: 100vh;
   }
 
   main {
@@ -777,7 +785,7 @@
             overflow-x: hidden;
             overflow-y: auto;
             width: 100vw;
-            height: 100vh;
+            min-height: 100vh;
         }
 
         .font-magical { font-family: 'Inter', sans-serif; font-weight: 700; letter-spacing: -0.02em; }
@@ -1925,11 +1933,15 @@
             <div id="stars-container" class="stars absolute inset-0" vid="16"></div>
         </div>
 
-    <div id="boot-loading" class="fixed inset-0 z-[9998] flex flex-col items-center justify-center p-6 gap-4" style="background:#0a0514;">
-      <div class="w-12 h-12 rounded-2xl bg-[#231738] flex items-center justify-center text-white text-sm font-bold border border-white/10">
-        <i class="ph-bold ph-spinner-gap text-2xl animate-spin"></i>
+    <div id="boot-loading" class="fixed inset-0 z-[9998] flex flex-col items-center justify-center p-6 gap-5" style="background:#0a0514;width:100vw;min-height:100vh;">
+      <img src="../icon/stellarsync-192.png" alt="StellarSync" class="w-14 h-14 rounded-2xl shadow-[0_0_28px_rgba(199,125,255,0.32)]">
+      <div class="flex flex-col items-center gap-2">
+        <div class="w-12 h-12 rounded-2xl bg-[#231738] flex items-center justify-center text-white text-sm font-bold border border-white/10">
+          <i class="ph-bold ph-spinner-gap text-2xl animate-spin"></i>
+        </div>
+        <div class="text-gray-400 text-xs uppercase tracking-widest font-bold">Connecting to workspace</div>
       </div>
-      <div class="text-gray-400 text-xs uppercase tracking-widest font-bold">Connecting to workspace</div>
+      <div class="text-gray-500 text-[11px] text-center max-w-[280px] leading-relaxed">StellarSync is preparing your workspace.</div>
     </div>
 
     <div id="boot-diagnostics" class="hidden fixed inset-0 z-[9999] flex items-center justify-center p-6" style="background:#0a0514;">
@@ -5417,6 +5429,128 @@ async function uploadMediaToSupabaseStorage(file, options = {}) {
   };
 }
 
+async function loadSupabaseMediaAssets(workspace) {
+  console.log("[media-backend] loadSupabaseMediaAssets started", workspace?.workspace_slug || "unknown");
+  var result = { assets: [], source: "none", error: null };
+  if (!STELLARSYNC_SUPABASE_CLIENT) {
+    console.log("[media-backend] no supabase client available");
+    return result;
+  }
+  
+  var config = workspace || WORKSPACE_RUNTIME_CONFIG.active || loadWorkspaceConfig();
+  var bucket = config.media_bucket || config.storage_bucket || config.bucket || "media";
+  
+  console.log("[media-backend] attempting table query");
+  try {
+    var tableResult = await STELLARSYNC_SUPABASE_CLIENT
+      .from("media_assets")
+      .select("*")
+      .eq("workspace_id", config.workspace_id || config.workspace_slug || "master")
+      .order("created_at", { ascending: false })
+      .limit(100)
+      .maybeSingle();
+    
+    if (tableResult.error && tableResult.error.code !== "PGRST100") {
+      throw tableResult.error;
+    }
+    
+    if (tableResult.data && Array.isArray(tableResult.data)) {
+      console.log("[media-backend] table query success", tableResult.data.length);
+      result.assets = tableResult.data.map(function(asset) {
+        var url = asset.media_url || asset.url || asset.file_url || "";
+        if (!url && asset.storage_path && bucket) {
+          url = `${String(config.supabase_url || "").replace(/\/+$/, "")}/storage/v1/object/public/${bucket}/${asset.storage_path}`;
+        }
+        return {
+          id: asset.asset_id || asset.id || "",
+          asset_id: asset.asset_id || asset.id || "",
+          title: asset.title || asset.media_title || asset.mediaFilename || asset.asset_name || "Untitled media",
+          media_title: asset.title || asset.media_title || "",
+          asset_title: asset.title || asset.asset_title || "",
+          assetName: asset.title || asset.asset_name || asset.mediaFilename || "Untitled media",
+          media_url: url,
+          url: url,
+          fileUrl: url,
+          sourceUrl: url,
+          thumbnail_url: asset.thumbnail_url || asset.thumbnailUrl || "",
+          thumbnailUrl: asset.thumbnail_url || asset.thumbnailUrl || "",
+          storage_path: asset.storage_path || "",
+          storagePath: asset.storage_path || "",
+          bucket: asset.bucket || bucket,
+          media_type: asset.media_type || asset.type || "image",
+          mimeType: asset.mime_type || asset.mime_type || "",
+          source: "supabase",
+          importedMediaSource: "supabase"
+        };
+      });
+      result.source = "table";
+      console.log("[media-backend] merged media count", result.assets.length);
+      return result;
+    }
+  } catch (err) {
+    console.log("[media-backend] table query error", err?.message || err);
+  }
+  
+  console.log("[media-backend] attempting storage list");
+  try {
+    var listResult = await STELLARSYNC_SUPABASE_CLIENT.storage.from(bucket).list("", { limit: 100, sortBy: { column: "created_at", direction: "desc" } });
+    if (listResult.data && Array.isArray(listResult.data)) {
+      console.log("[media-backend] storage list success", listResult.data.length);
+      var files = listResult.data.map(function(file) {
+        var filePath = file.name;
+        var publicUrl = `${String(config.supabase_url || "").replace(/\/+$/, "")}/storage/v1/object/public/${bucket}/${filePath}`;
+        var ext = filePath.split(".").pop()?.toLowerCase() || "";
+        var isVideo = ["mp4", "webm", "mov", "avi", "mkv"].includes(ext);
+        var isImage = ["png", "jpg", "jpeg", "gif", "webp", "svg"].includes(ext);
+        return {
+          id: `sb-${filePath}`,
+          asset_id: `sb-${filePath}`,
+          title: filePath.replace(/\.[^/.]+$/, ""),
+          media_title: filePath.replace(/\.[^/.]+$/, ""),
+          asset_title: filePath.replace(/\.[^/.]+$/, ""),
+          assetName: filePath.replace(/\.[^/.]+$/, ""),
+          media_url: publicUrl,
+          url: publicUrl,
+          fileUrl: publicUrl,
+          sourceUrl: publicUrl,
+          thumbnail_url: "",
+          thumbnailUrl: "",
+          storage_path: filePath,
+          storagePath: filePath,
+          bucket: bucket,
+          media_type: isVideo ? "video" : isImage ? "image" : "file",
+          mimeType: file.mime_type || file.mime_type || "",
+          source: "supabase",
+          importedMediaSource: "supabase"
+        };
+      });
+      result.assets = files;
+      result.source = "storage";
+      console.log("[media-backend] merged media count", result.assets.length);
+      return result;
+    }
+  } catch (err) {
+    console.log("[media-backend] storage list error", err?.message || err);
+  }
+  
+  console.log("[media-backend] fallback to google_sheets only");
+  result.source = "google_sheets";
+  return result;
+}
+
+function countRenderableMediaCount(mediaList) {
+  var renderable = 0;
+  var missingUrl = 0;
+  (mediaList || []).forEach(function(m) {
+    var hasUrl = !!(m.url || m.media_url || m.source_url || m.fileUrl || m.file_url || m.thumbnail_url || m.thumbnailUrl || m.storage_path || m.storagePath);
+    if (hasUrl) renderable++;
+    else missingUrl++;
+  });
+  console.log("[media-backend] renderable count", renderable);
+  console.log("[media-backend] missing url count", missingUrl);
+  return { renderable: renderable, missingUrl: missingUrl };
+}
+
 function getWorkspaceRequestMetadata() {
   const config = WORKSPACE_RUNTIME_CONFIG.active || loadWorkspaceConfig();
   const user = STELLARSYNC_AUTH_USER || {};
@@ -5736,6 +5870,58 @@ function getMediaTitle(asset, fallback = "Untitled media") {
     } catch (_) {}
   }
   return String(candidate || fallback).trim() || fallback;
+}
+
+function isUntitledArtifact(value, type) {
+  var str = String(value || "").trim().toLowerCase();
+  var patterns = {
+    post: ["untitled", "untitled post"],
+    note: ["untitled", "untitled note"],
+    media: ["untitled", "untitled media"],
+    inspo: ["untitled", "untitled inspo"],
+    draft: ["untitled", "untitled draft"]
+  };
+  var check = patterns[type] || [type.replace(/([A-Z])/g, " $1").trim().toLowerCase()];
+  return str && check.some(function(p) { return str === p || str === p.replace(/\s+/g, ""); });
+}
+
+function isRenderableArtifact(record, type) {
+  if (!record) return false;
+  var title, body, hasUrl, hasPath;
+  switch (type) {
+    case "post":
+      title = pickRemoteValue(record?.title, record?.post_title, record?.postTitle, record?.queue_title, record?.queueTitle, record?.headline, "");
+      body = pickRemoteValue(record?.description, record?.body, record?.caption, record?.content, record?.copy, "");
+      return !isUntitledArtifact(title, "post") || !isBlankPostTextValue(body);
+    case "note":
+      title = record?.title || record?.note_title || record?.noteTitle || "";
+      body = record?.body || record?.note_body || record?.content || record?.summary || "";
+      return !isUntitledArtifact(title, "note") || String(body || "").trim().length > 0;
+    case "media":
+      title = record?.title || record?.media_title || record?.mediaTitle || record?.asset_title || record?.assetTitle || record?.assetName || record?.asset_name || "";
+      hasUrl = !!(record?.url || record?.media_url || record?.source_url || record?.fileUrl || record?.file_url || record?.thumbnail_url || record?.thumbnailUrl);
+      hasPath = !!(record?.storage_path || record?.storagePath);
+      return !isUntitledArtifact(title, "media") || hasUrl || hasPath;
+    case "inspo":
+      title = record?.title || record?.inspo_title || record?.inspoTitle || record?.source_title || record?.sourceTitle || record?.headline || "";
+      body = record?.summary || record?.description || record?.source_url || record?.sourceUrl || record?.url || "";
+      return !isUntitledArtifact(title, "inspo") || String(body || "").trim().length > 0;
+    case "aiDraft":
+      title = record?.title || record?.draft_title || record?.draftTitle || "";
+      body = record?.draft_text || record?.generated_output || record?.generatedOutput || record?.body || record?.content || "";
+      return !isUntitledArtifact(title, "draft") || String(body || "").trim().length > 0;
+    default:
+      return true;
+  }
+}
+
+function filterRenderableArtifacts(list, type) {
+  if (!Array.isArray(list)) return [];
+  var before = list.length;
+  var filtered = list.filter(function(item) { return isRenderableArtifact(item, type); });
+  var removed = before - filtered.length;
+  console.log("[data-filter] " + type + " before/after/removed", before, filtered.length, removed);
+  return filtered;
 }
 
 function getCampaignName(item, fallback = "") {
@@ -14421,6 +14607,7 @@ function renderMedia() {
   }
 
   let items = buildMediaVaultItems();
+  items = filterRenderableArtifacts(items, "media");
 
   if (currentMediaFilter !== "all") {
     items = items.filter(item => String(item.type || "").toLowerCase() === currentMediaFilter);
@@ -14671,7 +14858,8 @@ function createPostFromMediaItem(item, linkedPost = null) {
 async function refreshMediaFromRemote() {
   const media = await apiGetMedia();
 
-  appState.media = media.map(asset => normalizeRemoteMedia(asset));
+  var normalizedMedia = media.map(asset => normalizeRemoteMedia(asset));
+  appState.media = filterRenderableArtifacts(normalizedMedia, "media");
 
   appState.posts = (appState.posts || []).map((post) => {
     const linkedAsset = findLinkedAssetForPost(post, appState.media);
@@ -17778,6 +17966,7 @@ function renderInspo() {
     const flowState = String(item.flowState || item.status || "active").trim().toLowerCase();
     return flowState !== "converted_to_post" && flowState !== "archived" && String(item.status || "").trim().toLowerCase() !== "archived";
   });
+  items = filterRenderableArtifacts(items, "inspo");
   if ((filters.type || "all") !== "all") {
     items = items.filter((item) => String(item.type || "").toLowerCase() === String(filters.type || "").toLowerCase());
   }
@@ -17882,6 +18071,7 @@ function renderNotes() {
 
   const filters = mobileFilterState.notes || {};
   let items = [...(appState.notes || [])].filter((item) => String(item.flowState || item.status || "active").trim().toLowerCase() !== "archived");
+  items = filterRenderableArtifacts(items, "note");
   if ((filters.platform || "all") !== "all") {
     items = items.filter((item) => String(item.suggestedPlatform || "").toLowerCase() === String(filters.platform || "").toLowerCase());
   }
@@ -18033,7 +18223,28 @@ async function syncRemoteIfConfigured() {
     }
 
     if (Array.isArray(media)) {
-      appState.media = media.map(asset => normalizeRemoteMedia(asset));
+      var normalizedMedia = media.map(asset => normalizeRemoteMedia(asset));
+      var filteredMedia = filterRenderableArtifacts(normalizedMedia, "media");
+      if (isSupabaseMediaEnabled()) {
+        try {
+          var supabaseMediaResult = await loadSupabaseMediaAssets(activeCfg);
+          console.log("[media-backend] source", supabaseMediaResult.source);
+          if (Array.isArray(supabaseMediaResult.assets) && supabaseMediaResult.assets.length > 0) {
+            var seenKeys = new Set();
+            supabaseMediaResult.assets.forEach(function(asset) {
+              var key = asset.asset_id || asset.storage_path || asset.url || "";
+              if (key && !seenKeys.has(key)) {
+                seenKeys.add(key);
+                filteredMedia.push(asset);
+              }
+            });
+          }
+          console.log("[media-backend] merged media count", filteredMedia.length);
+        } catch (err) {
+          console.log("[media-backend] load error", err?.message || err);
+        }
+      }
+      appState.media = filteredMedia;
     }
 
     if (Array.isArray(posts)) {
@@ -18069,14 +18280,17 @@ async function syncRemoteIfConfigured() {
     }
 
     if (Array.isArray(inspo)) {
-      appState.inspo = inspo.map(item => normalizeRemoteInspo(item));
+      var normalizedInspo = inspo.map(item => normalizeRemoteInspo(item));
+      appState.inspo = filterRenderableArtifacts(normalizedInspo, "inspo");
     }
 
     if (Array.isArray(notes)) {
-      appState.notes = notes.map(item => normalizeRemoteNote(item));
+      var normalizedNotes = notes.map(item => normalizeRemoteNote(item));
+      appState.notes = filterRenderableArtifacts(normalizedNotes, "note");
     }
     if (Array.isArray(aiDrafts)) {
-      appState.aiDrafts = aiDrafts.map(item => normalizeRemoteAIDraft(item));
+      var normalizedAIDrafts = aiDrafts.map(item => normalizeRemoteAIDraft(item));
+      appState.aiDrafts = filterRenderableArtifacts(normalizedAIDrafts, "aiDraft");
     }
     if (Array.isArray(brandFramework)) {
       appState.brandFramework = brandFramework.map(item => normalizeRemoteBrandFrameworkItem(item));
@@ -19456,7 +19670,7 @@ function renderAIWorkspaceControls() {
 
 function renderAIDraftList() {
   if (!aiDraftList) return;
-  const drafts = appState.aiDrafts || [];
+  const drafts = filterRenderableArtifacts(appState.aiDrafts || [], "aiDraft");
   if (!drafts.length) {
     aiDraftList.innerHTML = makeEmptyState("No AI drafts", "Save structured fallback drafts here before creating posts from them.", "ph-sparkle");
     return;
