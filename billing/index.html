@@ -1180,22 +1180,21 @@ video {
 
     <nav id="main-nav" class="fixed top-0 left-0 w-full h-20 z-[100] glass-panel border-none border-b border-white/5 px-8 flex justify-between items-center transition-all duration-300" vid="16">
         <div class="max-w-7xl mx-auto w-full flex justify-between items-center" vid="17">
-            <div class="flex items-center gap-3" vid="18">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-[#9d4edd] to-[#c77dff] flex items-center justify-center shadow-lg" vid="19">
-                    <i class="ph-fill ph-planet text-white text-2xl" vid="20"></i>
-                </div>
-                <span class="font-bold text-xl text-white tracking-wide" vid="21">StellarSync</span>
-            </div>
+            <a href="/" class="flex items-center gap-3">
+                <img src="../icon/stellarsync-192.png" alt="StellarSync" class="w-10 h-10 rounded-xl">
+                <span class="font-bold text-xl text-white tracking-wide">StellarSync</span>
+            </a>
             
             <div class="hidden md:flex items-center gap-10" vid="22">
-                <a href="#" class="text-sm font-medium text-gray-400 hover:text-white transition-colors" vid="23">Home</a>
-                <a href="#" class="text-sm font-medium text-gray-400 hover:text-white transition-colors" vid="24">Pricing</a>
-                <a href="#" class="text-sm font-medium text-gray-400 hover:text-white transition-colors" vid="25">About</a>
+                <a href="/" class="text-sm font-medium text-gray-400 hover:text-white transition-colors" vid="23">Home</a>
+                <a href="/pricing/" class="text-sm font-medium text-gray-400 hover:text-white transition-colors" vid="24">Pricing</a>
+                <a href="/about/" class="text-sm font-medium text-gray-400 hover:text-white transition-colors" vid="25">About</a>
+                <a href="/contact/" class="text-sm font-medium text-gray-400 hover:text-white transition-colors">Contact</a>
             </div>
 
             <div class="flex items-center gap-6" vid="26">
-                <a href="#" class="text-sm font-semibold text-gray-400 hover:text-white transition-colors" vid="27">Login</a>
-                <button class="glow-btn px-6 py-2.5 rounded-xl text-white text-xs font-bold uppercase tracking-wider" vid="28">Create Workspace</button>
+                <a href="/login/" class="text-sm font-semibold text-gray-400 hover:text-white transition-colors" vid="27">Login</a>
+                <a href="/sign-up/" class="glow-btn px-6 py-2.5 rounded-xl text-white text-xs font-bold uppercase tracking-wider" vid="28">Create Workspace</a>
             </div>
         </div>
     </nav>
@@ -1265,10 +1264,10 @@ video {
                     <p class="text-3xl font-bold text-white" vid="66">$149<span class="text-gray-500 text-sm font-medium" vid="67">/month</span></p>
                 </div>
                 
-                <button class="glow-btn w-full py-5 rounded-2xl text-white text-xs font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-3 mb-6" vid="68">
+                <a href="/checkout/?plan=growth" class="glow-btn w-full py-5 rounded-2xl text-white text-xs font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-3 mb-6" vid="68">
                     <i class="ph-bold ph-credit-card text-lg" vid="69"></i>
                     Activate Subscription
-                </button>
+                </a>
                 
                 <p class="text-xs text-gray-600" vid="70">Redirects to secure Stripe checkout</p>
             </div>
@@ -1288,7 +1287,7 @@ video {
                         <li class="flex items-center gap-3 text-sm text-gray-500" vid="79"><i class="ph ph-check text-purple-400" vid="80"></i> 1 Project</li>
                         <li class="flex items-center gap-3 text-sm text-gray-500" vid="81"><i class="ph ph-check text-purple-400" vid="82"></i> Basic Analytics</li>
                     </ul>
-                    <button class="w-full py-3 rounded-xl border border-white/10 bg-white/5 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 transition-all" vid="83">Select Plan</button>
+                    <a href="/checkout/?plan=starter" class="w-full py-3 rounded-xl border border-white/10 bg-white/5 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 transition-all block text-center" vid="83">Select Plan</a>
                 </div>
 
                 
@@ -1304,7 +1303,7 @@ video {
                         <li class="flex items-center gap-3 text-sm text-gray-500" vid="91"><i class="ph ph-check text-purple-400" vid="92"></i> 5 Projects</li>
                         <li class="flex items-center gap-3 text-sm text-gray-500" vid="93"><i class="ph ph-check text-purple-400" vid="94"></i> Advanced AI</li>
                     </ul>
-                    <button class="glow-btn w-full py-3 rounded-xl text-white text-[10px] font-bold uppercase tracking-widest" vid="95">Reactivate</button>
+                    <a href="/checkout/?plan=growth" class="glow-btn w-full py-3 rounded-xl text-white text-[10px] font-bold uppercase tracking-widest block text-center" vid="95">Reactivate</a>
                 </div>
 
                 
@@ -1317,7 +1316,7 @@ video {
                         <li class="flex items-center gap-3 text-sm text-gray-500" vid="101"><i class="ph ph-check text-purple-400" vid="102"></i> Unlimited Projects</li>
                         <li class="flex items-center gap-3 text-sm text-gray-500" vid="103"><i class="ph ph-check text-purple-400" vid="104"></i> White-labeling</li>
                     </ul>
-                    <button class="w-full py-3 rounded-xl border border-white/10 bg-white/5 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 transition-all" vid="105">Select Plan</button>
+                    <a href="/checkout/?plan=agency" class="w-full py-3 rounded-xl border border-white/10 bg-white/5 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 transition-all block text-center" vid="105">Select Plan</a>
                 </div>
             </div>
         </section>
@@ -1372,13 +1371,13 @@ video {
         
         <section class="py-12 border-t border-white/5" vid="139">
             <div class="max-w-2xl mx-auto px-8 flex flex-wrap items-center justify-center gap-x-12 gap-y-6 reveal" vid="140">
-                <a href="#" class="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-xs font-medium underline underline-offset-4" vid="141">
+                <a href="/contact/?topic=billing" class="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-xs font-medium underline underline-offset-4" vid="141">
                     <i class="ph ph-envelope" vid="142"></i> Contact Support
                 </a>
-                <a href="#" class="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-xs font-medium underline underline-offset-4" vid="143">
+                <a href="/pricing/" class="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-xs font-medium underline underline-offset-4" vid="143">
                     <i class="ph ph-currency-dollar" vid="144"></i> View Pricing
                 </a>
-                <a href="#" class="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-xs font-medium underline underline-offset-4" vid="145">
+                <a href="/" class="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-xs font-medium underline underline-offset-4" vid="145">
                     <i class="ph ph-house" vid="146"></i> Return Home
                 </a>
             </div>
@@ -1388,12 +1387,10 @@ video {
         <footer class="py-20 px-8 border-t border-white/5 bg-[#0a0612]" vid="147">
             <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12" vid="148">
                 <div vid="149">
-                    <div class="flex items-center gap-3 mb-6" vid="150">
-                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-[#9d4edd] to-[#c77dff] flex items-center justify-center" vid="151">
-                            <i class="ph-fill ph-planet text-white text-xl" vid="152"></i>
-                        </div>
-                        <span class="font-bold text-lg text-white" vid="153">StellarSync</span>
-                    </div>
+                    <a href="/" class="flex items-center gap-3 mb-6">
+                        <img src="../icon/stellarsync-192.png" alt="StellarSync" class="w-8 h-8 rounded-lg">
+                        <span class="font-bold text-lg text-white">StellarSync</span>
+                    </a>
                     <p class="text-sm text-gray-500 leading-relaxed mb-6" vid="154">The content operating system for organizations changing the world. Powered by intelligence, built for strategy.</p>
                     <div class="flex gap-4" vid="155">
                         <a href="#" class="text-gray-500 hover:text-white transition-colors" vid="156"><i class="ph-bold ph-linkedin-logo text-xl" vid="157"></i></a>
@@ -1404,25 +1401,24 @@ video {
                 <div vid="162">
                     <h4 class="text-sm font-bold text-white uppercase tracking-widest mb-6" vid="163">Product</h4>
                     <ul class="space-y-4" vid="164">
-                        <li vid="165"><a href="#" class="text-sm text-gray-500 hover:text-purple-400" vid="166">Features</a></li>
-                        <li vid="167"><a href="#" class="text-sm text-gray-500 hover:text-purple-400" vid="168">Integrations</a></li>
-                        <li vid="169"><a href="#" class="text-sm text-gray-500 hover:text-purple-400" vid="170">AI Assistant</a></li>
+                        <li vid="165"><a href="/#campaign-planning" class="text-sm text-gray-500 hover:text-purple-400" vid="166">Features</a></li>
+                        <li vid="167"><a href="/#campaign-planning" class="text-sm text-gray-500 hover:text-purple-400" vid="168">Integrations</a></li>
+                        <li vid="169"><a href="/#campaign-planning" class="text-sm text-gray-500 hover:text-purple-400" vid="170">AI Assistant</a></li>
                     </ul>
                 </div>
                 <div vid="171">
                     <h4 class="text-sm font-bold text-white uppercase tracking-widest mb-6" vid="172">Company</h4>
                     <ul class="space-y-4" vid="173">
-                        <li vid="174"><a href="#" class="text-sm text-gray-500 hover:text-purple-400" vid="175">About Us</a></li>
-                        <li vid="176"><a href="#" class="text-sm text-gray-500 hover:text-purple-400" vid="177">Blog</a></li>
-                        <li vid="178"><a href="#" class="text-sm text-gray-500 hover:text-purple-400" vid="179">Careers</a></li>
+                        <li vid="174"><a href="/about/" class="text-sm text-gray-500 hover:text-purple-400" vid="175">About</a></li>
+                        <li vid="176"><a href="https://thealgorithmwitch.com/blog" class="text-sm text-gray-500 hover:text-purple-400" vid="177">Blog</a></li>
+                        <li vid="178"><a href="https://thealgorithmwitch.com/resources/jobs" class="text-sm text-gray-500 hover:text-purple-400" vid="179">Mission-Driven Careers</a></li>
                     </ul>
                 </div>
                 <div vid="180">
                     <h4 class="text-sm font-bold text-white uppercase tracking-widest mb-6" vid="181">Legal</h4>
                     <ul class="space-y-4" vid="182">
-                        <li vid="183"><a href="#" class="text-sm text-gray-500 hover:text-purple-400" vid="184">Privacy Policy</a></li>
-                        <li vid="185"><a href="#" class="text-sm text-gray-500 hover:text-purple-400" vid="186">Terms of Service</a></li>
-                        <li vid="187"><a href="#" class="text-sm text-gray-500 hover:text-purple-400" vid="188">Security</a></li>
+                        <li vid="183"><a href="/legal/" class="text-sm text-gray-500 hover:text-purple-400" vid="184">Privacy &amp; Terms</a></li>
+                        <li vid="187"><a href="/legal/#privacy-data-security" class="text-sm text-gray-500 hover:text-purple-400" vid="188">Security</a></li>
                     </ul>
                 </div>
             </div>

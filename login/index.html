@@ -1055,7 +1055,7 @@ video {
               }
 
               console.log("[login] auth success", data?.user?.email);
-              window.location.assign("/app/");
+              window.location.assign("/app/load.html");
             } catch (error) {
               console.error("[login] auth error", error);
               if (errorEl) errorEl.textContent = error?.message || "Login failed.";

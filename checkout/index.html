@@ -1167,22 +1167,21 @@ video {
 
     <nav id="main-nav" class="fixed top-0 left-0 w-full h-20 z-[100] glass-panel border-none border-b border-white/5 px-8 flex justify-between items-center transition-all duration-300" vid="16">
         <div class="max-w-7xl mx-auto w-full flex justify-between items-center" vid="17">
-            <div class="flex items-center gap-3" vid="18">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-[#9d4edd] to-[#c77dff] flex items-center justify-center shadow-lg" vid="19">
-                    <i class="ph-fill ph-planet text-white text-2xl" vid="20"></i>
-                </div>
-                <span class="font-bold text-xl text-white tracking-wide" vid="21">StellarSync</span>
-            </div>
+            <a href="/" class="flex items-center gap-3">
+                <img src="../icon/stellarsync-192.png" alt="StellarSync" class="w-10 h-10 rounded-xl">
+                <span class="font-bold text-xl text-white tracking-wide">StellarSync</span>
+            </a>
             
             <div class="hidden md:flex items-center gap-10" vid="22">
-                <a href="#" class="text-sm font-medium text-gray-400 hover:text-white transition-colors" vid="23">Home</a>
-                <a href="#" class="text-sm font-medium text-gray-400 hover:text-white transition-colors" vid="24">Pricing</a>
-                <a href="#" class="text-sm font-medium text-gray-400 hover:text-white transition-colors" vid="25">About</a>
+                <a href="/" class="text-sm font-medium text-gray-400 hover:text-white transition-colors" vid="23">Home</a>
+                <a href="/pricing/" class="text-sm font-medium text-gray-400 hover:text-white transition-colors" vid="24">Pricing</a>
+                <a href="/about/" class="text-sm font-medium text-gray-400 hover:text-white transition-colors" vid="25">About</a>
+                <a href="/contact/" class="text-sm font-medium text-gray-400 hover:text-white transition-colors">Contact</a>
             </div>
 
             <div class="flex items-center gap-6" vid="26">
-                <a href="#" class="text-sm font-semibold text-gray-400 hover:text-white transition-colors" vid="27">Login</a>
-                <button class="glow-btn px-6 py-2.5 rounded-xl text-white text-xs font-bold uppercase tracking-wider" vid="28">Create Workspace</button>
+                <a href="/login/" class="text-sm font-semibold text-gray-400 hover:text-white transition-colors" vid="27">Login</a>
+                <a href="/sign-up/" class="glow-btn px-6 py-2.5 rounded-xl text-white text-xs font-bold uppercase tracking-wider" vid="28">Create Workspace</a>
             </div>
         </div>
     </nav>
@@ -1265,7 +1264,7 @@ video {
                         </div>
                         <h2 class="text-3xl font-bold text-white mb-4" vid="75">Choose a plan to continue.</h2>
                         <p class="text-gray-400 mb-8" vid="76">Select the right operational scale for your organization.</p>
-                        <a href="#" class="text-purple-400 font-bold hover:text-purple-300 transition-colors flex items-center justify-center lg:justify-start gap-2" vid="77">
+                        <a href="/pricing/" class="text-purple-400 font-bold hover:text-purple-300 transition-colors flex items-center justify-center lg:justify-start gap-2" vid="77">
                             View Pricing <i class="ph-bold ph-arrow-right" vid="78"></i>
                         </a>
                     </div>
@@ -1277,7 +1276,7 @@ video {
                         </div>
                         <h2 class="text-3xl font-bold text-white mb-4" vid="82">Managed plans are custom.</h2>
                         <p class="text-gray-400 mb-8" vid="83">White-glove implementation requires a discovery call with our mission team.</p>
-                        <a href="#" class="text-purple-400 font-bold hover:text-purple-300 transition-colors flex items-center justify-center lg:justify-start gap-2" vid="84">
+                        <a href="/contact/?topic=managed" class="text-purple-400 font-bold hover:text-purple-300 transition-colors flex items-center justify-center lg:justify-start gap-2" vid="84">
                             Contact Us <i class="ph-bold ph-arrow-right" vid="85"></i>
                         </a>
                     </div>
@@ -1311,6 +1310,7 @@ video {
                                     <i class="ph-bold ph-credit-card text-4xl text-gray-700" vid="101"></i>
                                     <p class="text-sm text-gray-500 font-medium" vid="102">Stripe embedded payment form renders here</p>
                                 </div>
+                                <button id="continue-btn" onclick="handleContinue()" class="glow-btn w-full py-5 rounded-2xl text-white text-xs font-bold uppercase tracking-widest">Continue</button>
                             </div>
                         </div>
 
@@ -1387,9 +1387,8 @@ video {
             };
 
             if (plan === 'managed') {
-                planContent.classList.add('hidden');
-                noPlanContent.classList.add('hidden');
-                managedContent.classList.remove('hidden');
+                window.location.href = '/managed/';
+                return;
             } else if (plans[plan]) {
                 planContent.classList.remove('hidden');
                 noPlanContent.classList.add('hidden');
@@ -1416,6 +1415,20 @@ video {
                 }, 500);
             }
         }, 2500);
+
+        
+        window.handleContinue = function() {
+            const setupMsg = document.getElementById('setup-needed-message') || (function() {
+                const el = document.createElement('div');
+                el.id = 'setup-needed-message';
+                el.className = 'text-center p-8 border border-amber-500/20 rounded-2xl bg-amber-500/10 mb-10';
+                el.innerHTML = '<p class="text-amber-500 font-bold mb-4">Setup required</p><p class="text-sm text-gray-400 mb-6">Your checkout needs additional configuration. Please contact support to complete setup.</p><a href="/contact/?topic=checkout-help" class="text-purple-400 font-bold hover:text-purple-300">Contact Support &rarr;</a>';
+                document.getElementById('stripe-form').after(el);
+                return el;
+            })();
+            setupMsg.classList.remove('hidden');
+            document.getElementById('continue-btn').classList.add('hidden');
+        };
 
         
         configurePage();

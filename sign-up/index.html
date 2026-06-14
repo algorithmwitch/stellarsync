@@ -1131,7 +1131,7 @@ video {
                     <span class="text-[10px] font-bold text-purple-500 uppercase tracking-widest" vid="44">Step 1 of 2</span>
                 </div>
 
-                <form id="createAccountForm" class="space-y-5" onsubmit="return handleContinue(event)" vid="45">
+                <form id="createAccountForm" method="post" class="space-y-5" onsubmit="return handleContinue(event)" vid="45">
                     <div class="grid grid-cols-2 gap-4" vid="46">
                         <div class="space-y-1.5" vid="47">
                             <label class="text-[11px] font-bold text-gray-500 uppercase tracking-wider ml-1" vid="48">First Name</label>
@@ -1261,6 +1261,9 @@ video {
             }, 3000);
         }
 
+        const SUPABASE_URL = "https://szdlvyzjeqkfxsoqltwg.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN6ZGx2eXpqZXFrZnhzb3FsdHdnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyOTE1NjcsImV4cCI6MjA5Njg2NzU2N30.9GT0oJqPcmrc9VSb-ZN0FtWy6i7SLTHBuzRQ9gvxnX0";
+
         function handleContinue(e) {
             e.preventDefault();
             const btn = e.target.querySelector('button[type="submit"]');
@@ -1284,7 +1287,7 @@ video {
             
             setTimeout(() => {
                 
-                window.location.href = '/onboarding/';
+                window.location.href = '/app/load.html';
             }, 1500);
             
             return false;
