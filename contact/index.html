@@ -99,10 +99,12 @@
         .faq-item.active .faq-toggle-icon { transform: rotate(45deg); color: var(--color-accent); }
 
         .toast {
+            display: none;
             transform: translateY(100px);
             transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         .toast.show {
+            display: flex;
             transform: translateY(0);
         }
 
@@ -2069,6 +2071,16 @@ video {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalContent;
             }
+        });
+
+        // Clear stale toast when user edits the form
+        contactForm.querySelectorAll('input, select, textarea').forEach(function(el) {
+            el.addEventListener('input', function() {
+                toast.classList.remove('show');
+            });
+            el.addEventListener('change', function() {
+                toast.classList.remove('show');
+            });
         });
     </script>
 

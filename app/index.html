@@ -1197,6 +1197,19 @@
             color: white;
         }
 
+        .pw-tab-btn.active {
+            background: #2d1b4e !important;
+            color: white !important;
+            border-color: rgba(199,125,255,0.35) !important;
+        }
+
+        .pw-icon-btn.active,
+        .pw-ws-icon-btn.active {
+            background: #2d1b4e !important;
+            color: white !important;
+            border-color: rgba(199,125,255,0.5) !important;
+        }
+
         .settings-tab-btn.active,
         .mobile-sheet-tab.active {
             background: #2d1b4e;
@@ -2518,7 +2531,7 @@
               <button type="button" class="write-idea-action-btn" data-write-idea-output="create_campaign"><span class="write-idea-action-icon">🌌</span> Create Campaign</button>
               <button type="button" class="write-idea-action-btn" data-write-idea-output="add_to_notes"><span class="write-idea-action-icon">📝</span> Save to Notes</button>
               <button type="button" class="write-idea-action-btn" data-write-idea-output="add_to_inspo"><span class="write-idea-action-icon">💡</span> Save to Inspo</button>
-              <a id="write-idea-open-ai-settings-link" href="#" class="write-idea-action-btn" style="display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;text-decoration:none"><span class="write-idea-action-icon">⚙️</span> AI Providers</a>
+              <button type="button" id="write-idea-open-ai-settings-link" class="write-idea-action-btn" style="display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;text-decoration:none;cursor:pointer"><span class="write-idea-action-icon">⚙️</span> AI Providers</button>
             </div>
           </div>
 
@@ -4364,6 +4377,144 @@
   </div>
 </div>
 
+<div id="profile-workspace-modal" class="fixed inset-0 z-[135] sheet-backdrop opacity-0 pointer-events-none transition-opacity duration-200">
+  <div class="w-full h-full flex items-center justify-center p-4">
+    <div id="profile-workspace-card" class="w-full max-w-3xl h-[85vh] bg-[#120c1d] border border-white/10 rounded-2xl shadow-2xl transform scale-95 transition-transform duration-200 overflow-hidden flex flex-col">
+      <div class="flex items-center justify-between px-6 py-5 border-b border-white/5 shrink-0">
+        <div>
+          <h3 class="text-white font-bold text-lg">Profile &amp; Workspace</h3>
+          <p class="text-xs text-gray-500 mt-1">Manage your account, workspace branding, billing, and connections.</p>
+        </div>
+        <button id="close-profile-workspace-btn" type="button" class="w-10 h-10 rounded-xl bg-[#1a1128] hover:bg-[#231738] text-gray-400 hover:text-white border border-white/5 transition-colors flex items-center justify-center">
+          <i class="ph-bold ph-x"></i>
+        </button>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-[200px_minmax(0,1fr)] flex-1 min-h-0">
+        <aside class="p-4 border-r border-white/5 overflow-y-auto custom-scrollbar space-y-1">
+          <button type="button" class="pw-tab-btn w-full text-left px-4 py-2.5 rounded-xl bg-[#2d1b4e] text-white text-xs font-bold uppercase tracking-wider active" data-pw-tab="profile">Profile</button>
+          <button type="button" class="pw-tab-btn w-full text-left px-4 py-2.5 rounded-xl bg-[#181125] text-gray-300 text-xs font-bold uppercase tracking-wider" data-pw-tab="workspace">Workspace</button>
+          <button type="button" class="pw-tab-btn w-full text-left px-4 py-2.5 rounded-xl bg-[#181125] text-gray-300 text-xs font-bold uppercase tracking-wider" data-pw-tab="billing">Billing</button>
+          <button type="button" class="pw-tab-btn w-full text-left px-4 py-2.5 rounded-xl bg-[#181125] text-gray-300 text-xs font-bold uppercase tracking-wider" data-pw-tab="connections">Connections</button>
+          <button type="button" class="pw-tab-btn w-full text-left px-4 py-2.5 rounded-xl bg-[#181125] text-gray-300 text-xs font-bold uppercase tracking-wider" data-pw-tab="security">Security</button>
+        </aside>
+        <div class="p-6 overflow-y-auto custom-scrollbar min-h-0 space-y-6">
+          <!-- Profile Tab -->
+          <section data-pw-panel="profile" class="space-y-5">
+            <div class="platform-card">
+              <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3">Account</div>
+              <div class="space-y-3">
+                <div>
+                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Email</div>
+                  <div id="pw-profile-email" class="text-sm text-white bg-[#0a0612] rounded-xl px-3 py-2.5 border border-white/5">—</div>
+                </div>
+                <div>
+                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Display Name</div>
+                  <input id="pw-profile-display-name" type="text" placeholder="Your display name" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50">
+                </div>
+              </div>
+            </div>
+            <div class="platform-card">
+              <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3">Avatar / Initials</div>
+              <div class="flex items-center gap-4 mb-3">
+                <div id="pw-profile-avatar-preview" class="w-12 h-12 rounded-xl bg-[#231738] border border-white/10 flex items-center justify-center text-white text-sm font-bold">WS</div>
+                <div class="flex-1">
+                  <input id="pw-profile-initials" type="text" maxlength="4" placeholder="AB" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 uppercase tracking-widest font-bold">
+                </div>
+              </div>
+              <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Icon</div>
+              <div id="pw-profile-icon-grid" class="flex flex-wrap gap-2">
+                <button type="button" class="pw-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg active" data-icon="sparkle"><i class="ph-fill ph-sparkle"></i></button>
+                <button type="button" class="pw-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="leaf"><i class="ph-fill ph-leaf"></i></button>
+                <button type="button" class="pw-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="planet"><i class="ph-fill ph-planet"></i></button>
+                <button type="button" class="pw-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="star"><i class="ph-fill ph-star"></i></button>
+                <button type="button" class="pw-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="heart"><i class="ph-fill ph-heart"></i></button>
+                <button type="button" class="pw-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="megaphone"><i class="ph-fill ph-megaphone"></i></button>
+                <button type="button" class="pw-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="lightning"><i class="ph-fill ph-lightning"></i></button>
+                <button type="button" class="pw-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="users"><i class="ph-fill ph-users"></i></button>
+                <button type="button" class="pw-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="notebook"><i class="ph-fill ph-notebook"></i></button>
+                <button type="button" class="pw-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="calendar"><i class="ph-fill ph-calendar-blank"></i></button>
+              </div>
+            </div>
+            <button id="pw-profile-save-btn" type="button" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all">Save Profile</button>
+            <div id="pw-profile-status" class="text-xs text-gray-400 hidden"></div>
+          </section>
+          <!-- Workspace Tab -->
+          <section data-pw-panel="workspace" class="hidden space-y-5">
+            <div class="platform-card">
+              <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3">Workspace</div>
+              <div class="space-y-3">
+                <div>
+                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Workspace Name</div>
+                  <input id="pw-workspace-name" type="text" placeholder="Workspace name" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50">
+                </div>
+                <div>
+                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Slug</div>
+                  <div id="pw-workspace-slug" class="text-sm text-gray-400 bg-[#0a0612] rounded-xl px-3 py-2.5 border border-white/5">—</div>
+                </div>
+                <div>
+                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Short Name</div>
+                  <input id="pw-workspace-short-name" type="text" maxlength="8" placeholder="Short name or initials" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50">
+                </div>
+                <div>
+                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Workspace Icon</div>
+                  <div id="pw-workspace-icon-grid" class="flex flex-wrap gap-2">
+                    <button type="button" class="pw-ws-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg active" data-icon="sparkle"><i class="ph-fill ph-sparkle"></i></button>
+                    <button type="button" class="pw-ws-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="leaf"><i class="ph-fill ph-leaf"></i></button>
+                    <button type="button" class="pw-ws-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="planet"><i class="ph-fill ph-planet"></i></button>
+                    <button type="button" class="pw-ws-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="star"><i class="ph-fill ph-star"></i></button>
+                    <button type="button" class="pw-ws-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="heart"><i class="ph-fill ph-heart"></i></button>
+                    <button type="button" class="pw-ws-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="megaphone"><i class="ph-fill ph-megaphone"></i></button>
+                    <button type="button" class="pw-ws-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="lightning"><i class="ph-fill ph-lightning"></i></button>
+                    <button type="button" class="pw-ws-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="users"><i class="ph-fill ph-users"></i></button>
+                    <button type="button" class="pw-ws-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="notebook"><i class="ph-fill ph-notebook"></i></button>
+                    <button type="button" class="pw-ws-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="calendar"><i class="ph-fill ph-calendar-blank"></i></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <button id="pw-workspace-save-btn" type="button" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all">Save Workspace</button>
+            <div id="pw-workspace-status" class="text-xs text-gray-400 hidden"></div>
+          </section>
+          <!-- Billing Tab -->
+          <section data-pw-panel="billing" class="hidden space-y-5">
+            <div class="platform-card">
+              <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3">Subscription</div>
+              <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Plan</div>
+                  <div id="pw-billing-plan" class="text-lg font-bold text-white">—</div>
+                </div>
+                <div>
+                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Status</div>
+                  <div id="pw-billing-status" class="text-lg font-bold text-gray-300">—</div>
+                </div>
+              </div>
+              <div id="pw-billing-cta-container" class="mt-4"></div>
+            </div>
+            <div id="pw-billing-stripe-status" class="hidden platform-card">
+              <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Payment Provider</div>
+              <div id="pw-billing-stripe-detail" class="text-sm text-gray-300"></div>
+            </div>
+          </section>
+          <!-- Connections Tab -->
+          <section data-pw-panel="connections" class="hidden space-y-4">
+            <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Connected Services</div>
+            <div id="pw-connections-list" class="space-y-3"></div>
+          </section>
+          <!-- Security Tab -->
+          <section data-pw-panel="security" class="hidden space-y-5">
+            <div class="platform-card">
+              <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3">Password</div>
+              <p class="text-sm text-gray-300 mb-4">Send a password reset email to your account.</p>
+              <button id="pw-security-reset-btn" type="button" class="px-5 py-2.5 rounded-xl bg-[#2d1b4e] hover:bg-[#3d2b5e] text-white text-xs font-bold uppercase tracking-widest transition-colors">Send Reset Email</button>
+              <div id="pw-security-status" class="text-xs text-gray-400 hidden mt-3"></div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 <div id="mobile-more-sheet" class="mobile-sheet">
   <div class="absolute inset-0 sheet-backdrop"></div>
   <div class="mobile-sheet-card">
@@ -6060,7 +6211,7 @@ let mobileFilterState = {
 };
 let activeConnectionSetupPlatform = "";
 const CONNECTED_ACCOUNT_PLATFORMS = ["linkedin", "instagram", "threads", "bluesky", "tiktok"];
-const WORKSPACE_CONNECTION_PROVIDERS = ["google_sheets", "google_drive", "monday", "stripe"];
+const WORKSPACE_CONNECTION_PROVIDERS = ["google_sheets", "google_drive", "monday"]; // stripe removed — belongs in Billing tab, not Connections
 let installContext = {
   isIos: /iphone|ipad|ipod/i.test(navigator.userAgent || ""),
   isStandalone: false
@@ -7382,7 +7533,7 @@ function setupWorkspaceUI() {
     const action = button.dataset.workspaceAction;
     if (action === "workspace") {
       toggleProfileMenu(false);
-      switchView("calendar");
+      openProfileWorkspaceModal();
       return;
     }
     if (action === "settings") return openWorkspaceHub("settings");
@@ -7398,12 +7549,38 @@ function setupWorkspaceUI() {
     }
     if (action === "contact") {
       toggleProfileMenu(false);
-      window.location.href = "/contact/?topic=support";
+      openSupportModal("Billing/account");
     }
   });
   document.addEventListener("click", (event) => {
     if (!event.target.closest("#profile-menu") && !event.target.closest("#avatar-menu-btn") && !event.target.closest("#profile-menu-trigger")) toggleProfileMenu(false);
   });
+  document.getElementById("close-profile-workspace-btn")?.addEventListener("click", closeProfileWorkspaceModal);
+  document.getElementById("profile-workspace-modal")?.addEventListener("click", function(event) {
+    if (event.target === document.getElementById("profile-workspace-modal")) closeProfileWorkspaceModal();
+  });
+  document.querySelectorAll(".pw-tab-btn").forEach(function(btn) {
+    btn.addEventListener("click", function() { switchPWTab(btn.dataset.pwTab || "profile"); });
+  });
+  document.querySelectorAll("#pw-profile-icon-grid .pw-icon-btn").forEach(function(btn) {
+    btn.addEventListener("click", function() {
+      document.querySelectorAll("#pw-profile-icon-grid .pw-icon-btn").forEach(function(b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+    });
+  });
+  document.querySelectorAll("#pw-workspace-icon-grid .pw-ws-icon-btn").forEach(function(btn) {
+    btn.addEventListener("click", function() {
+      document.querySelectorAll("#pw-workspace-icon-grid .pw-ws-icon-btn").forEach(function(b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+    });
+  });
+  document.getElementById("pw-profile-save-btn")?.addEventListener("click", savePWProfile);
+  document.getElementById("pw-workspace-save-btn")?.addEventListener("click", savePWWorkspace);
+  document.getElementById("pw-security-reset-btn")?.addEventListener("click", doPWResetPassword);
+  document.getElementById("write-idea-open-ai-settings-link")?.addEventListener("click", function() {
+    openWorkspaceHub("providers");
+  });
+
   closeWorkspaceHubBtn?.addEventListener("click", closeWorkspaceHub);
   workspaceHubModal?.addEventListener("click", (event) => {
     if (event.target === workspaceHubModal) closeWorkspaceHub();
@@ -11009,6 +11186,10 @@ async function submitSupportReport() {
       diagnostics
     ].join("\n");
 
+    if (typeof SUPABASE_URL === "undefined" || !SUPABASE_URL) {
+      throw new Error("Support reporting is not configured. Please use the contact page instead.");
+    }
+
     var payload = {
       name: (user.email || "StellarSync User").split("@")[0] || "User",
       organization: config.workspace_slug || config.slug || "",
@@ -11037,7 +11218,7 @@ async function submitSupportReport() {
     closeSupportModal();
   } catch (err) {
     if (statusEl) {
-      statusEl.textContent = "Failed to send: " + (err.message || "Unknown error") + ". Please try again or email us directly.";
+      statusEl.innerHTML = "Failed to send: " + (err.message || "Unknown error") + '. <a href="/contact/?topic=support" class="text-[#c77dff] underline">Contact us directly</a>.';
       statusEl.classList.remove("hidden");
     }
   } finally {
@@ -11361,23 +11542,35 @@ function renderWorkspaceConnectionCards() {
       if (conn.last_error) detailParts.push("Last error: " + conn.last_error);
       if (conn.last_connected_at) detailParts.push("Connected: " + conn.last_connected_at);
       if (conn.config && conn.config.sheet_name) detailParts.push("Sheet: " + conn.config.sheet_name);
+      if (provider === "google_drive") detailParts = ["Google Drive asset sync is configured by StellarSync for managed/hybrid workspaces."];
+      if (provider === "monday") detailParts = ["Monday sync is handled through Supabase backend setup."];
 
       if (provider === "google_sheets" && conn.config && conn.config.apps_script_url) {
         actions = '<button type="button" onclick="showToast(\'Google Sheets is active as the backend provider.\', \'info\')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Connected</button>';
       } else if (provider === "google_sheets") {
-        actions = '<a href="/contact/?topic=setup" class="inline-block px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Contact Setup</a>';
+        actions = '<button type="button" onclick="openSupportModal(\'Integration setup\')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Request Setup</button>';
+      } else if (provider === "google_drive") {
+        actions = '<button type="button" onclick="openSupportModal(\'Integration setup\')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Request Drive Setup</button>';
+      } else if (provider === "monday") {
+        actions = '<button type="button" onclick="openSupportModal(\'Integration setup\')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Request Monday Setup</button>';
       } else {
-        actions = '<a href="/contact/?topic=integration" class="inline-block px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">OAuth setup coming soon</a>';
+        actions = '<button type="button" onclick="openSupportModal(\'Integration setup\')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Request Setup</button>';
       }
     } else {
       statusLabel = "Not connected";
       statusTone = "text-gray-300";
       chipLabel = "Setup Required";
       detailParts = ["No connection record found in workspace"];
+      if (provider === "google_drive") detailParts = ["Google Drive asset sync is configured by StellarSync for managed/hybrid workspaces."];
+      if (provider === "monday") detailParts = ["Monday sync is handled through Supabase backend setup."];
       if (provider === "google_sheets") {
-        actions = '<a href="/contact/?topic=setup" class="inline-block px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Contact Setup</a>';
+        actions = '<button type="button" onclick="openSupportModal(\'Integration setup\')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Request Setup</button>';
+      } else if (provider === "google_drive") {
+        actions = '<button type="button" onclick="openSupportModal(\'Integration setup\')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Request Drive Setup</button>';
+      } else if (provider === "monday") {
+        actions = '<button type="button" onclick="openSupportModal(\'Integration setup\')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Request Monday Setup</button>';
       } else {
-        actions = '<a href="/contact/?topic=integration" class="inline-block px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">OAuth setup coming soon</a>';
+        actions = '<button type="button" onclick="openSupportModal(\'Integration setup\')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Request Setup</button>';
       }
     }
 
@@ -16850,6 +17043,7 @@ function setupPWAInstall() {
     event.preventDefault();
     deferredInstallPrompt = event;
     setInstallButtonVisibility(true);
+    console.log("[install] beforeinstallprompt captured");
   });
 
   window.addEventListener("appinstalled", () => {
@@ -16863,6 +17057,7 @@ function setupPWAInstall() {
   const handleInstallAction = async () => {
     if (installContext.isStandalone) return;
     if (!deferredInstallPrompt) {
+      console.log("[install] unavailable");
       if (installContext.isIos) {
         showToast("Install tip", "On iPhone or iPad, use Share then Add to Home Screen.", "ph-device-mobile", "text-[#38bdf8]");
       } else {
@@ -16870,6 +17065,7 @@ function setupPWAInstall() {
       }
       return false;
     }
+    console.log("[install] prompt opened");
     deferredInstallPrompt.prompt();
     try {
       await deferredInstallPrompt.userChoice;
@@ -17274,6 +17470,11 @@ async function apiUpdateCampaign(campaign) {
 
 async function syncRemoteIfConfigured() {
   console.log("[boot] syncRemoteIfConfigured start");
+  var activeCfg = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active;
+  console.log("[data] active workspace", activeCfg ? (activeCfg.workspace_slug || activeCfg.slug) : "none");
+  console.log("[data] backend_type", activeCfg ? (activeCfg.backend_type || "unknown") : "unknown");
+  var gsUrl = activeCfg ? (activeCfg.apps_script_url || "") : "";
+  console.log("[data] google_sheets apps_script_url present", gsUrl ? "true" : "false");
   if (!APP_CONFIG.ENABLE_REMOTE_SYNC || !isRemoteConfigured()) {
     offlineMode = true;
     backendReachable = false;
@@ -17318,6 +17519,12 @@ async function syncRemoteIfConfigured() {
 
     try { await loadAIProviders(); } catch (err) { /* silent */ }
 
+    // Remove any stale sync error overlay
+    var staleErr = document.getElementById("sync-error-state");
+    if (staleErr) staleErr.remove();
+    var staleZero = document.getElementById("zero-posts-state");
+    if (staleZero) staleZero.remove();
+
     appState.settings = normalizeRemoteSettings(settings);
 
     if (Array.isArray(campaigns)) {
@@ -17336,6 +17543,28 @@ async function syncRemoteIfConfigured() {
         displayTitle: post.displayTitle || getPostDisplayTitle(post),
         description: post.description || ""
       })));
+      if (posts.length === 0) {
+        console.log("[data] 0 posts received from backend");
+        showToast("No posts found", "No posts found in connected sheet.", "ph-file-text", "text-gray-400");
+        var zeroEl = document.getElementById("zero-posts-state");
+        if (!zeroEl) {
+          zeroEl = document.createElement("div");
+          zeroEl.id = "zero-posts-state";
+          zeroEl.className = "fixed inset-0 z-[130] sheet-backdrop flex items-center justify-center p-6";
+          zeroEl.style.background = "rgba(10,5,20,0.92)";
+          zeroEl.innerHTML =
+            '<div class="w-full max-w-lg bg-[#120c1d] border border-white/10 rounded-2xl p-8 text-center shadow-2xl">' +
+            '<div class="w-14 h-14 rounded-2xl bg-[#231738] flex items-center justify-center mx-auto mb-6 text-gray-400"><i class="ph-bold ph-file-text text-2xl"></i></div>' +
+            '<h2 class="text-lg font-extrabold text-white mb-3">No posts found in connected sheet</h2>' +
+            '<p class="text-sm text-gray-300 leading-relaxed mb-6">Your sheet is connected, but no posts were returned.</p>' +
+            '<div class="flex flex-wrap gap-3 justify-center">' +
+            '<button onclick="var z=document.getElementById(\'zero-posts-state\');if(z)z.remove();syncRemoteIfConfigured()" class="px-5 py-2.5 rounded-xl bg-[#2d1b4e] hover:bg-[#3d2b5e] text-white text-xs uppercase tracking-widest font-bold transition-colors">Retry Sync</button>' +
+            '<button onclick="openSupportModal(\'Integration setup\')" class="px-5 py-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white text-xs uppercase tracking-widest font-bold transition-colors">Report Issue</button>' +
+            '<button onclick="var z=document.getElementById(\'zero-posts-state\');if(z)z.remove()" class="px-5 py-2.5 rounded-xl border border-white/5 bg-transparent text-gray-500 text-xs uppercase tracking-widest font-bold transition-colors hover:text-white">Dismiss</button>' +
+            '</div></div>';
+          document.body.appendChild(zeroEl);
+        }
+      }
     }
 
     if (Array.isArray(inspo)) {
@@ -17368,7 +17597,25 @@ async function syncRemoteIfConfigured() {
     lastSyncError = err && err.message ? err.message : String(err);
     console.log("[data]", getAppStateCounts());
     rerenderAll();
-    showToast("Offline mode", "Using local data. Remote fetch failed.", "ph-warning", "text-yellow-400");
+    showToast("Google Sheets sync issue", "Your workspace is connected, but posts could not be loaded.", "ph-warning", "text-yellow-400");
+    var syncErrEl = document.getElementById("sync-error-state");
+    if (!syncErrEl) {
+      syncErrEl = document.createElement("div");
+      syncErrEl.id = "sync-error-state";
+      syncErrEl.className = "fixed inset-0 z-[130] sheet-backdrop flex items-center justify-center p-6";
+      syncErrEl.style.background = "rgba(10,5,20,0.92)";
+      syncErrEl.innerHTML =
+        '<div class="w-full max-w-lg bg-[#120c1d] border border-white/10 rounded-2xl p-8 text-center shadow-2xl">' +
+        '<div class="w-14 h-14 rounded-2xl bg-[#231738] flex items-center justify-center mx-auto mb-6 text-yellow-400"><i class="ph-bold ph-cloud-slash text-2xl"></i></div>' +
+        '<h2 class="text-lg font-extrabold text-white mb-3">Google Sheets sync issue</h2>' +
+        '<p class="text-sm text-gray-300 leading-relaxed mb-6">Your workspace is connected, but posts could not be loaded.</p>' +
+        '<div class="flex flex-wrap gap-3 justify-center">' +
+        '<button onclick="syncRemoteIfConfigured()" class="px-5 py-2.5 rounded-xl bg-[#2d1b4e] hover:bg-[#3d2b5e] text-white text-xs uppercase tracking-widest font-bold transition-colors">Retry Sync</button>' +
+        '<button onclick="openSupportModal(\'Integration setup\')" class="px-5 py-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white text-xs uppercase tracking-widest font-bold transition-colors">Report Issue</button>' +
+        '<button onclick="var e=document.getElementById(\'sync-error-state\');if(e)e.remove()" class="px-5 py-2.5 rounded-xl border border-white/5 bg-transparent text-gray-500 text-xs uppercase tracking-widest font-bold transition-colors hover:text-white">Dismiss</button>' +
+        '</div></div>';
+      document.body.appendChild(syncErrEl);
+    }
   }
 }
 
@@ -17420,8 +17667,18 @@ async function apiPost(action, payload = {}) {
 }
 
 async function apiGetPosts() {
-  const result = await apiGet("getPosts");
-  return result.items || result.posts || result.data || [];
+  console.log("[data] getPosts request started");
+  try {
+    const result = await apiGet("getPosts");
+    console.log("[data] getPosts response status", result.ok ? "ok" : "error");
+    console.log("[data] getPosts response keys", Object.keys(result));
+    const posts = result.items || result.posts || result.data || [];
+    console.log("[data] posts count", Array.isArray(posts) ? posts.length : 0);
+    return posts;
+  } catch (err) {
+    console.log("[data] getPosts error", err && err.message ? err.message : String(err));
+    throw err;
+  }
 }
 
 async function apiGetMedia() {
@@ -20385,6 +20642,8 @@ window.openAIProviderSupportModal = openAIProviderSupportModal;
 window.openWorkspaceSetupSupportModal = openWorkspaceSetupSupportModal;
 window.openPublishIssueSupportModal = openPublishIssueSupportModal;
 window.openSupportModalFromDiagnostics = openSupportModalFromDiagnostics;
+window.openProfileWorkspaceModal = openProfileWorkspaceModal;
+window.closeProfileWorkspaceModal = closeProfileWorkspaceModal;
 window.openLinkedInCaptureImporter = openLinkedInCaptureImporter;
 window.openExistingPostImportModal = openExistingPostImportModal;
 window.aiGenerate = aiGenerate;
@@ -21142,6 +21401,178 @@ function initApp() {
   }
 }
 
+function openProfileWorkspaceModal() {
+  var modal = document.getElementById("profile-workspace-modal");
+  var card = document.getElementById("profile-workspace-card");
+  if (!modal) return;
+  toggleProfileMenu(false);
+  modal.classList.remove("opacity-0", "pointer-events-none");
+  if (card) { card.classList.remove("scale-95"); card.classList.add("scale-100"); }
+  populatePWModal();
+}
+
+function closeProfileWorkspaceModal() {
+  var modal = document.getElementById("profile-workspace-modal");
+  var card = document.getElementById("profile-workspace-card");
+  if (modal) modal.classList.add("opacity-0", "pointer-events-none");
+  if (card) { card.classList.remove("scale-100"); card.classList.add("scale-95"); }
+}
+
+function switchPWTab(tab) {
+  var allowed = ["profile", "workspace", "billing", "connections", "security"];
+  if (allowed.indexOf(tab) === -1) return;
+  document.querySelectorAll(".pw-tab-btn").forEach(function(btn) {
+    var isActive = (btn.dataset.pwTab === tab);
+    btn.classList.toggle("active", isActive);
+    btn.classList.toggle("bg-[#2d1b4e]", isActive);
+    btn.classList.toggle("text-white", isActive);
+    btn.classList.toggle("bg-[#181125]", !isActive);
+    btn.classList.toggle("text-gray-300", !isActive);
+  });
+  document.querySelectorAll("[data-pw-panel]").forEach(function(panel) {
+    panel.classList.toggle("hidden", panel.dataset.pwPanel !== tab);
+  });
+}
+
+function populatePWModal() {
+  var config = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active;
+  var user = STELLARSYNC_AUTH_USER || {};
+  var emailEl = document.getElementById("pw-profile-email");
+  var initialsEl = document.getElementById("pw-profile-initials");
+  var previewEl = document.getElementById("pw-profile-avatar-preview");
+  var displayNameEl = document.getElementById("pw-profile-display-name");
+  var wsNameEl = document.getElementById("pw-workspace-name");
+  var wsSlugEl = document.getElementById("pw-workspace-slug");
+  var wsShortEl = document.getElementById("pw-workspace-short-name");
+  var planEl = document.getElementById("pw-billing-plan");
+  var statusEl = document.getElementById("pw-billing-status");
+  var ctaContainer = document.getElementById("pw-billing-cta-container");
+  var stripeStatusEl = document.getElementById("pw-billing-stripe-status");
+  var stripeDetailEl = document.getElementById("pw-billing-stripe-detail");
+  var connectionsList = document.getElementById("pw-connections-list");
+
+  if (emailEl) emailEl.textContent = user.email || "—";
+  var name = config && (config.name || "");
+  var slug = config && (config.workspace_slug || config.slug || "");
+  var initials = getWorkspaceInitials(config || {});
+  if (previewEl) previewEl.textContent = initials;
+  if (initialsEl) initialsEl.value = initials;
+  if (displayNameEl) displayNameEl.value = user.user_metadata && user.user_metadata.display_name || user.email && user.email.split("@")[0] || "";
+  if (wsNameEl) wsNameEl.value = name;
+  if (wsSlugEl) wsSlugEl.textContent = slug;
+  if (wsShortEl) wsShortEl.value = config && config.short_name || initials;
+
+  // Billing tab
+  var plan = config && (config.plan || "");
+  var subStatus = config && (config.subscription_status || "");
+  if (planEl) planEl.textContent = plan || "Free";
+  if (statusEl) statusEl.textContent = subStatus || "Active";
+  if (ctaContainer) {
+    if (plan === "Managed") {
+      ctaContainer.innerHTML = '<a href="/contact/?topic=billing" class="inline-block px-5 py-2.5 rounded-xl bg-[#2d1b4e] hover:bg-[#3d2b5e] text-white text-xs font-bold uppercase tracking-widest transition-colors">Contact Billing Support</a>';
+    } else {
+      var checkoutPlan = plan || "growth";
+      ctaContainer.innerHTML = '<a href="/checkout/?plan=' + encodeURIComponent(checkoutPlan.toLowerCase()) + '" class="inline-block px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all">Manage Billing</a>';
+    }
+  }
+
+  // Stripe status from workspace_connections
+  var stripeConn = Array.isArray(WORKSPACE_CONNECTIONS) ? WORKSPACE_CONNECTIONS.find(function(c) { return c && c.provider === "stripe"; }) : null;
+  if (stripeConn && stripeStatusEl && stripeDetailEl) {
+    stripeStatusEl.classList.remove("hidden");
+    stripeDetailEl.textContent = "Connected: " + (stripeConn.last_connected_at || stripeConn.status || "Active");
+  } else if (stripeStatusEl) {
+    stripeStatusEl.classList.add("hidden");
+  }
+
+  // Connections tab
+  if (connectionsList) {
+    var providers = typeof WORKSPACE_CONNECTION_PROVIDERS !== "undefined" ? WORKSPACE_CONNECTION_PROVIDERS : [];
+    connectionsList.innerHTML = providers.map(function(provider) {
+      var conn = typeof getWorkspaceConnection === "function" ? getWorkspaceConnection(provider) : null;
+      var label = provider.replace(/_/g, " ").replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+      var status = conn ? "Connected" : "Setup Needed";
+      var tone = conn ? "text-emerald-300" : "text-gray-300";
+      var chip = conn ? "Connected" : "Setup Required";
+      var cta = conn
+        ? '<button type="button" onclick="showToast(\'' + label + ' is connected.\', \'info\')" class="px-3 py-1.5 rounded-lg bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Connected</button>'
+        : '<button type="button" onclick="openSupportModal(\'Integration setup\')" class="px-3 py-1.5 rounded-lg bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Request Setup</button>';
+      return '<div class="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#181125] border border-white/5"><div><div class="text-xs text-gray-500 font-bold uppercase tracking-wider">' + label + '</div><div class="text-sm font-bold ' + tone + '">' + status + '</div></div><span class="diagnostic-chip">' + chip + '</span><div class="flex gap-2 shrink-0">' + cta + '</div></div>';
+    }).join("");
+  }
+}
+
+async function savePWProfile() {
+  var statusEl = document.getElementById("pw-profile-status");
+  if (statusEl) { statusEl.classList.add("hidden"); statusEl.textContent = ""; }
+  try {
+    var initials = (document.getElementById("pw-profile-initials") || {}).value || "";
+    var displayName = (document.getElementById("pw-profile-display-name") || {}).value || "";
+    var selectedIcon = document.querySelector("#pw-profile-icon-grid .pw-icon-btn.active");
+    var icon = selectedIcon ? selectedIcon.dataset.icon : "sparkle";
+    if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase client not available");
+    var user = STELLARSYNC_AUTH_USER;
+    if (user && displayName) {
+      await STELLARSYNC_SUPABASE_CLIENT.auth.updateUser({ data: { display_name: displayName, avatar_initials: initials, icon: icon } });
+    }
+    if (statusEl) { statusEl.textContent = "Profile saved."; statusEl.className = "text-xs text-emerald-400"; statusEl.classList.remove("hidden"); }
+    renderWorkspaceBranding();
+    setTimeout(function() { if (statusEl) statusEl.classList.add("hidden"); }, 3000);
+  } catch (err) {
+    console.warn("[workspace-settings] save failed", err);
+    if (statusEl) { statusEl.textContent = "Save failed. Settings are local-only."; statusEl.className = "text-xs text-yellow-400"; statusEl.classList.remove("hidden"); }
+  }
+}
+
+async function savePWWorkspace() {
+  var statusEl = document.getElementById("pw-workspace-status");
+  if (statusEl) { statusEl.classList.add("hidden"); statusEl.textContent = ""; }
+  try {
+    var name = (document.getElementById("pw-workspace-name") || {}).value || "";
+    var shortName = (document.getElementById("pw-workspace-short-name") || {}).value || "";
+    var selectedIcon = document.querySelector("#pw-workspace-icon-grid .pw-ws-icon-btn.active");
+    var icon = selectedIcon ? selectedIcon.dataset.icon : "sparkle";
+    if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase client not available");
+    var slug = (WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active && (WORKSPACE_RUNTIME_CONFIG.active.workspace_slug || WORKSPACE_RUNTIME_CONFIG.active.slug)) || "";
+    if (slug) {
+      var existing = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").select("id").eq("workspace_slug", slug).maybeSingle();
+      if (existing && existing.data && existing.data.id) {
+        await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").update({ display_name: name, short_name: shortName, avatar_initials: shortName || getWorkspaceInitials(WORKSPACE_RUNTIME_CONFIG.active), icon: icon, updated_at: new Date().toISOString() }).eq("id", existing.data.id);
+      } else {
+        await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").insert({ workspace_slug: slug, display_name: name, short_name: shortName, avatar_initials: shortName || getWorkspaceInitials(WORKSPACE_RUNTIME_CONFIG.active), icon: icon });
+      }
+    }
+    if (statusEl) { statusEl.textContent = "Workspace saved."; statusEl.className = "text-xs text-emerald-400"; statusEl.classList.remove("hidden"); }
+    renderWorkspaceBranding();
+    setTimeout(function() { if (statusEl) statusEl.classList.add("hidden"); }, 3000);
+  } catch (err) {
+    console.warn("[workspace-settings] save failed", err);
+    if (statusEl) { statusEl.textContent = "Workspace save unavailable. Supabase workspace_settings schema may be missing."; statusEl.className = "text-xs text-yellow-400"; statusEl.classList.remove("hidden"); }
+  }
+}
+
+async function doPWResetPassword() {
+  var statusEl = document.getElementById("pw-security-status");
+  if (!statusEl) return;
+  statusEl.classList.add("hidden");
+  try {
+    var user = STELLARSYNC_AUTH_USER;
+    if (!user || !user.email) throw new Error("No authenticated user email");
+    if (STELLARSYNC_SUPABASE_CLIENT && typeof STELLARSYNC_SUPABASE_CLIENT.auth.resetPasswordForEmail === "function") {
+      await STELLARSYNC_SUPABASE_CLIENT.auth.resetPasswordForEmail(user.email, { redirectTo: "https://stellarsync.app/login/" });
+    } else {
+      throw new Error("Supabase password reset not available");
+    }
+    statusEl.textContent = "Password reset email sent.";
+    statusEl.className = "text-xs text-emerald-400 mt-3";
+    statusEl.classList.remove("hidden");
+  } catch (err) {
+    statusEl.textContent = "Could not send reset email. " + (err.message || "Unknown error");
+    statusEl.className = "text-xs text-yellow-400 mt-3";
+    statusEl.classList.remove("hidden");
+  }
+}
+
 function getWorkspaceInitials(workspace) {
   if (!workspace) return "WS";
   var name = workspace.short_name || workspace.name || workspace.slug || "";
@@ -21207,6 +21638,10 @@ async function bootAppWithWorkspaceRouter() {
     const activeWorkspace = await ensureSupabaseWorkspaceBeforeBoot();
     if (!activeWorkspace) return;
     loadWorkspaceConfig();
+    var cfg = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active;
+    console.log("[data] active workspace", cfg ? (cfg.workspace_slug || cfg.slug) : "none");
+    console.log("[data] backend_type", cfg ? (cfg.backend_type || "unknown") : "unknown");
+    console.log("[data] google_sheets apps_script_url present", (cfg && cfg.apps_script_url) ? "true" : "false");
     renderWorkspaceBranding();
     initApp();
 
