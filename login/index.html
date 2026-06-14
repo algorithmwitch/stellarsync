@@ -115,6 +115,21 @@
         .btn-primary:active {
             transform: translateY(0);
         }
+        .btn-primary:disabled {
+            cursor: wait;
+            opacity: 0.75;
+            transform: none;
+        }
+        .login-error {
+            display: none;
+            margin: -0.35rem 0 0.85rem;
+            color: #fca5a5;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        .login-error.visible {
+            display: block;
+        }
 
         .checkbox-container {
             display: flex;
@@ -915,15 +930,15 @@ video {
             <p class="text-gray-500 text-xs font-medium tracking-widest uppercase" vid="22">Where content meets the cosmos</p>
         </div>
 
-        <form onsubmit="event.preventDefault();" class="space-y-4" vid="23">
+        <form id="login-form" class="space-y-4" vid="23">
             <div class="input-group" vid="24">
                 <i class="ph-bold ph-at input-icon" vid="25"></i>
-                <input type="email" placeholder="Signal frequency (Email)" class="form-input" required="" vid="26">
+                <input type="email" id="email-input" name="email" autocomplete="email" placeholder="Signal frequency (Email)" class="form-input" required="" vid="26">
             </div>
 
             <div class="input-group" vid="27">
                 <i class="ph-bold ph-lock input-icon" vid="28"></i>
-                <input type="password" id="password-input" placeholder="Secure passphrase" class="form-input" required="" vid="29">
+                <input type="password" id="password-input" name="password" autocomplete="current-password" placeholder="Secure passphrase" class="form-input" required="" vid="29">
                 <i class="ph-bold ph-eye toggle-password" id="password-toggle" onclick="togglePasswordVisibility()" vid="30"></i>
             </div>
 
@@ -938,7 +953,9 @@ video {
                 <a href="/contact/" class="text-xs text-[#c77dff] font-semibold hover:text-white transition-colors" vid="37">Forgot passphrase?</a>
             </div>
 
-            <button type="submit" class="btn-primary" vid="38">
+            <p id="login-error" class="login-error" role="alert" aria-live="polite" vid="37a"></p>
+
+            <button type="submit" id="login-submit" class="btn-primary" vid="38">
                 Enter the Void
             </button>
         </form>
@@ -979,6 +996,42 @@ video {
                 passwordToggle.classList.add('ph-eye');
             }
         }
+
+        const loginForm = document.getElementById('login-form');
+        const loginError = document.getElementById('login-error');
+        const loginSubmit = document.getElementById('login-submit');
+        const emailInput = document.getElementById('email-input');
+        const passwordInput = document.getElementById('password-input');
+
+        function showLoginError(message) {
+            loginError.textContent = message;
+            loginError.classList.add('visible');
+        }
+
+        loginForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            loginError.classList.remove('visible');
+
+            const email = emailInput.value.trim();
+            const password = passwordInput.value;
+
+            if (!email || !password) {
+                showLoginError('Enter your email and passphrase to continue.');
+                return;
+            }
+
+            loginSubmit.disabled = true;
+            loginSubmit.textContent = 'Entering...';
+
+            try {
+                sessionStorage.setItem('stellarsync_login_email', email);
+                window.location.href = '/app/load.html';
+            } catch (error) {
+                loginSubmit.disabled = false;
+                loginSubmit.textContent = 'Enter the Void';
+                showLoginError('We could not start your session. Please try again or contact support.');
+            }
+        });
     </script>
 
 </body></html>
