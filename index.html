@@ -55,7 +55,6 @@
         }
         .glass-card:hover {
             border-color: rgba(199, 125, 255, 0.3);
-            transform: translateY(-8px);
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 20px rgba(168, 85, 247, 0.1);
         }
 
@@ -124,6 +123,7 @@
             nav > div:last-child .glow-btn { display: none; }
             nav a, nav button { white-space: normal; text-align: center; }
             .mockup-perspective, .mockup-layer { max-width: 100%; overflow: hidden; }
+            .glow-btn, a[class*="tracking-widest"], button[class*="tracking-widest"] { letter-spacing: 0.08em; }
         }
         @media (max-width: 640px) {
             .index-cta {
@@ -1881,7 +1881,7 @@ video {
             </div>
         </section>
 
-        <section id="pricing-preview" class="py-32 px-8 max-w-7xl mx-auto" vid="287">
+        <section id="pricing-preview" class="py-20 px-8 max-w-7xl mx-auto" vid="287">
             <div class="text-center mb-16 reveal" vid="288">
                 <h2 class="text-4xl font-bold text-white mb-4" vid="289">Simple, Transparent Pricing</h2>
                 <p class="text-gray-400" vid="290">Choose the plan that fits your organization's orbit.</p>
