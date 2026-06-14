@@ -4731,7 +4731,11 @@ function getSessionWorkspaceConfig() {
 	      monday_board_id: String(parsed.monday_board_id || "").trim(),
 	      supabase_media_enabled: Boolean(parsed.supabase_media_enabled),
 	      media_bucket: String(parsed.media_bucket || parsed.storage_bucket || "media").trim(),
-	      plan: String(parsed.plan || "").trim()
+	      plan: String(parsed.plan || "").trim(),
+	      short_name: String(parsed.short_name || "").trim(),
+	      avatar_initials: String(parsed.avatar_initials || "").trim(),
+	      avatar_mode: String(parsed.avatar_mode || parsed.avatarMode || "").trim(),
+	      icon: String(parsed.icon || parsed.avatar_icon || "").trim()
 	    };
   } catch (_) {
     return null;
@@ -4779,7 +4783,11 @@ function loadWorkspaceConfig() {
 	      supabase_media_enabled: sessionConfig.supabase_media_enabled,
 	      supabase_url: SUPABASE_URL,
 	      supabase_anon_key: SUPABASE_ANON_KEY,
-	      storage_bucket: sessionConfig.media_bucket || masterConfig.storage_bucket || "media"
+	      storage_bucket: sessionConfig.media_bucket || masterConfig.storage_bucket || "media",
+	      short_name: sessionConfig.short_name || "",
+	      avatar_initials: sessionConfig.avatar_initials || "",
+	      avatar_mode: sessionConfig.avatar_mode || "",
+	      icon: sessionConfig.icon || ""
 	    };
     if (!WORKSPACE_RUNTIME_CONFIG.backend_types.includes(active.backend_type)) {
       active.backend_type = "client_google_sheets";
@@ -4805,7 +4813,11 @@ function loadWorkspaceConfig() {
     apps_script_url: String(workspaceConfig.apps_script_url || masterConfig.apps_script_url || APP_CONFIG.APP_SCRIPT_URL || "").trim(),
     sheet_id: String(workspaceConfig.sheet_id || masterConfig.sheet_id || "").trim(),
     monday_board_id: String(workspaceConfig.monday_board_id || masterConfig.monday_board_id || "").trim(),
-    storage_bucket: String(workspaceConfig.storage_bucket || masterConfig.storage_bucket || "media").trim()
+    storage_bucket: String(workspaceConfig.storage_bucket || masterConfig.storage_bucket || "media").trim(),
+    short_name: String(workspaceConfig.short_name || masterConfig.short_name || "").trim(),
+    avatar_initials: String(workspaceConfig.avatar_initials || masterConfig.avatar_initials || "").trim(),
+    avatar_mode: String(workspaceConfig.avatar_mode || workspaceConfig.avatarMode || masterConfig.avatar_mode || "").trim(),
+    icon: String(workspaceConfig.icon || workspaceConfig.avatar_icon || masterConfig.icon || "").trim()
   };
   if (!WORKSPACE_RUNTIME_CONFIG.backend_types.includes(active.backend_type)) {
     active.backend_type = requestedSlug ? "client_google_sheets" : "master_google_sheets";
@@ -4837,9 +4849,51 @@ function normalizeSupabaseWorkspaceConfig(workspace) {
     backend_type: String(source.backend_type || "client_google_sheets").trim(),
     supabase_media_enabled: Boolean(source.supabase_media_enabled),
     media_bucket: String(source.media_bucket || source.storage_bucket || "media").trim(),
+    short_name: String(source.short_name || source.shortName || "").trim(),
+    avatar_initials: String(source.avatar_initials || source.avatarInitials || "").trim(),
+    avatar_mode: String(source.avatar_mode || source.avatarMode || "").trim(),
+    icon: String(source.icon || source.avatar_icon || source.avatarIcon || "").trim(),
     created_at: source.created_at || null,
     updated_at: source.updated_at || null
   };
+}
+
+function mergeWorkspaceSettings(workspace, settings) {
+  if (!workspace || !settings) return workspace;
+  const displayName = String(settings.display_name || settings.displayName || "").trim();
+  const shortName = String(settings.short_name || settings.shortName || "").trim();
+  const avatarInitials = String(settings.avatar_initials || settings.avatarInitials || "").trim();
+  const avatarMode = String(settings.avatar_mode || settings.avatarMode || "").trim();
+  const icon = String(settings.icon || settings.avatar_icon || settings.avatarIcon || "").trim();
+  return {
+    ...workspace,
+    name: displayName || workspace.name,
+    short_name: shortName || workspace.short_name || "",
+    avatar_initials: avatarInitials || workspace.avatar_initials || "",
+    avatar_mode: avatarMode || workspace.avatar_mode || "",
+    icon: icon || workspace.icon || ""
+  };
+}
+
+async function loadWorkspaceSettingsForWorkspace(workspace) {
+  if (!STELLARSYNC_SUPABASE_CLIENT || !workspace) return workspace;
+  const slug = String(workspace.slug || workspace.workspace_slug || "").trim();
+  if (!slug) return workspace;
+  try {
+    const result = await STELLARSYNC_SUPABASE_CLIENT
+      .from("workspace_settings")
+      .select("*")
+      .eq("workspace_slug", slug)
+      .maybeSingle();
+    if (result && result.error) {
+      console.warn("[workspace-settings] load unavailable", result.error);
+      return workspace;
+    }
+    return mergeWorkspaceSettings(workspace, result && result.data);
+  } catch (err) {
+    console.warn("[workspace-settings] load failed", err);
+    return workspace;
+  }
 }
 
 function mergeWorkspaceRole(workspace, role) {
@@ -5059,9 +5113,12 @@ function showWorkspacePicker(workspaces) {
           ${workspaces.map((workspace, index) => `
             <button type="button" data-router-workspace-index="${index}" class="w-full text-left p-5 rounded-2xl bg-[#181125] border border-white/5 hover:border-[#c77dff]/40 transition-colors">
               <div class="flex items-start justify-between gap-4">
-                <div>
-                  <div class="text-white font-bold">${escapeHtml(workspace.name || workspace.slug)}</div>
-                  <div class="text-xs text-gray-500 mt-1">${escapeHtml(workspace.slug || "")}</div>
+                <div class="flex items-center gap-3 min-w-0">
+                  <div class="workspace-menu-avatar">${renderWorkspaceAvatar(workspace)}</div>
+                  <div class="min-w-0">
+                    <div class="text-white font-bold truncate">${escapeHtml(workspace.name || workspace.slug)}</div>
+                    <div class="text-xs text-gray-500 mt-1 truncate">${escapeHtml(workspace.slug || "")}</div>
+                  </div>
                 </div>
                 <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${escapeHtml(workspace.role || workspace.plan || "")}</div>
               </div>
@@ -5136,7 +5193,8 @@ async function ensureSupabaseWorkspaceBeforeBoot() {
   console.log("[app-router] session found", session.user.email || session.user.id);
   console.log("[app-router] user email", session.user.email || "(none)");
 
-  const workspaces = await fetchWorkspaceMembershipsByUserId(session.user.id, session.user.email || "");
+  let workspaces = await fetchWorkspaceMembershipsByUserId(session.user.id, session.user.email || "");
+  workspaces = await Promise.all((Array.isArray(workspaces) ? workspaces : []).map(loadWorkspaceSettingsForWorkspace));
   STELLARSYNC_LOOKUP_WORKSPACES = workspaces;
   console.log("[app-router] workspace memberships count", workspaces.length);
   if (!workspaces.length) {
@@ -5151,10 +5209,11 @@ async function ensureSupabaseWorkspaceBeforeBoot() {
   }
 
   const requestedSlug = getCurrentWorkspaceSlug();
-  const activeWorkspace = await pickWorkspaceForUser(workspaces, requestedSlug);
+  let activeWorkspace = await pickWorkspaceForUser(workspaces, requestedSlug);
   if (!activeWorkspace) {
     return null;
   }
+  activeWorkspace = await loadWorkspaceSettingsForWorkspace(activeWorkspace);
   console.log("[app-router] selected workspace slug", activeWorkspace.slug);
 
   if (isSubscriptionBlocked(activeWorkspace)) {
@@ -5675,7 +5734,45 @@ function getDisplayTitle(item, fallback = "Untitled", maxLength = 0) {
 }
 
 function isUntitledValue(value) {
-  return /^untitled(\s+inspo)?$/i.test(String(value || '').trim());
+  return /^(untitled|untitled\s+post|untitled\s+inspo)$/i.test(String(value || '').trim());
+}
+
+function isBlankPostTextValue(value) {
+  const text = String(value ?? "").trim();
+  return !text || /^untitled(?:\s+post)?$/i.test(text);
+}
+
+function postHasVisibleContent(post) {
+  const title = pickRemoteValue(post?.title, post?.post_title, post?.postTitle, post?.queue_title, post?.queueTitle, post?.headline, "");
+  const body = pickRemoteValue(post?.description, post?.body, post?.caption, post?.content, post?.copy, "");
+  return !isBlankPostTextValue(title) || !isBlankPostTextValue(body);
+}
+
+function getRemotePostSheetRow(post) {
+  return String(pickRemoteValue(post?.row_number, post?.rowNumber, post?.sheetRow, post?.sheet_row, post?.rowIndex, post?.row_index, "")).trim();
+}
+
+function ensureFrontendPostId(post, index = 0) {
+  const existingId = String(pickRemoteValue(post?.postId, post?.post_id, post?.id, "")).trim();
+  if (existingId) return existingId;
+  const sheetRow = getRemotePostSheetRow(post);
+  return sheetRow ? `row_${sheetRow}` : `index_${index}`;
+}
+
+function filterBlankPostsForRender(posts) {
+  const list = Array.isArray(posts) ? posts : [];
+  console.log("[data] posts received", list.length);
+  const filtered = list.filter(postHasVisibleContent);
+  console.log("[data] posts after blank filter", filtered.length);
+  console.log("[data] blank posts filtered", list.length - filtered.length);
+  return filtered;
+}
+
+function extractPostsFromGetPostsResult(result) {
+  const candidates = [result?.posts, result?.items, result?.data, result?.records, result?.rows];
+  const populated = candidates.find(value => Array.isArray(value) && value.length > 0);
+  if (populated) return populated;
+  return candidates.find(Array.isArray) || [];
 }
 
 function firstNonEmpty(...args) {
@@ -7566,12 +7663,16 @@ function setupWorkspaceUI() {
     btn.addEventListener("click", function() {
       document.querySelectorAll("#pw-profile-icon-grid .pw-icon-btn").forEach(function(b) { b.classList.remove("active"); });
       btn.classList.add("active");
+      var previewEl = document.getElementById("pw-profile-avatar-preview");
+      if (previewEl) previewEl.innerHTML = renderWorkspaceAvatar({ avatar_mode: "icon", icon: btn.dataset.icon, avatar_initials: (document.getElementById("pw-profile-initials") || {}).value || "" });
     });
   });
   document.querySelectorAll("#pw-workspace-icon-grid .pw-ws-icon-btn").forEach(function(btn) {
     btn.addEventListener("click", function() {
       document.querySelectorAll("#pw-workspace-icon-grid .pw-ws-icon-btn").forEach(function(b) { b.classList.remove("active"); });
       btn.classList.add("active");
+      var previewEl = document.getElementById("pw-profile-avatar-preview");
+      if (previewEl) previewEl.innerHTML = renderWorkspaceAvatar({ avatar_mode: "icon", icon: btn.dataset.icon, avatar_initials: (document.getElementById("pw-workspace-short-name") || {}).value || "" });
     });
   });
   document.getElementById("pw-profile-save-btn")?.addEventListener("click", savePWProfile);
@@ -14490,20 +14591,47 @@ function setupModalControls() {
   });
 }
 
-function openModalById(postId) {
-  const matched = (appState.posts || []).find(post => post.id === postId);
-  if (!matched) return;
+function getPostModalElement() {
+  return modal || document.getElementById("scheduling-modal") || document.querySelector("[data-post-modal], .post-modal");
+}
 
+function findPostByAnyId(postId) {
+  const target = String(postId || "").trim();
+  if (!target) return null;
+  return (appState.posts || []).find(post => {
+    return [post.id, post.postId, post.post_id, post.frontendId, post.sheetRow ? `row_${post.sheetRow}` : ""]
+      .map(value => String(value || "").trim())
+      .includes(target);
+  }) || null;
+}
+
+function openPostObjectModal(post, source = "unknown") {
+  console.log("[post-modal] open requested", source);
+  console.log("[post-modal] post id", post?.id || post?.postId || post?.post_id || post?.frontendId || "");
+  console.log("[post-modal] modal element found", !!getPostModalElement());
+  if (!post) return;
   openPostModal(
-    matched.title,
-    matched.platform,
-    getPostContentPillar(matched),
-    matched.date,
-    matched.status,
-    matched.description,
-    matched.postType,
-    matched.id
+    post.title || getPostDisplayTitle(post, ""),
+    post.platform || "linkedin",
+    getPostContentPillar(post),
+    post.date || post.scheduledAt || post.scheduled_at || "",
+    post.status || "draft",
+    post.description || post.body || post.caption || "",
+    post.postType || post.post_type || "text",
+    post.id || post.postId || post.frontendId || null,
+    post
   );
+}
+
+function openModalById(postId) {
+  const matched = findPostByAnyId(postId);
+  if (!matched) {
+    console.log("[post-modal] open requested", "openModalById");
+    console.log("[post-modal] post id", postId || "");
+    console.log("[post-modal] modal element found", !!getPostModalElement());
+    return;
+  }
+  openPostObjectModal(matched, "openModalById");
 }
 
 function setupLedgerControls() {
@@ -14662,14 +14790,19 @@ function openPostModal(
   status = "draft",
   description = "",
   postType = "text",
-  postId = null
+  postId = null,
+  postObject = null
 ) {
+  const modalEl = getPostModalElement();
+  console.log("[post-modal] open requested", postObject ? "openPostModal:object" : "openPostModal");
+  console.log("[post-modal] post id", postId || postObject?.id || postObject?.postId || postObject?.post_id || postObject?.frontendId || "");
+  console.log("[post-modal] modal element found", !!modalEl);
   currentEditingPostId = postId;
   currentModalAsset = null;
   currentModalCarouselAssets = [];
 
   const matched = hydratePostCampaign(
-    (appState.posts || []).find(post => post.id === postId) || {
+    postObject || findPostByAnyId(postId) || {
       id: postId,
       title,
       platform,
@@ -14693,12 +14826,12 @@ function openPostModal(
   const planning = normalizePostPlanningFields(matched, matched);
   const initialDateValue = planning.queueDateLabel || matched?.date || date || "";
 
-  if (titleInput) titleInput.value = title;
-  if (platSelect) platSelect.value = platform || "linkedin";
+  if (titleInput) titleInput.value = matched?.title || title || "";
+  if (platSelect) platSelect.value = matched?.platform || platform || "linkedin";
   if (dateInput) dateInput.value = formatDateInputValue(initialDateValue);
   if (timeInput) timeInput.value = planning.hasUserSelectedTime ? formatTimeInputValue(buildScheduledAtFromPlanningFields(planning.queueDateLabel, planning.queueTimeLabel)) : "";
-  if (statusSelect) statusSelect.value = status || "draft";
-  if (postTypeSelect) postTypeSelect.value = postType || "text";
+  if (statusSelect) statusSelect.value = matched?.status || status || "draft";
+  if (postTypeSelect) postTypeSelect.value = matched?.postType || matched?.post_type || postType || "text";
   if (descInput) descInput.value = matched?.description || description || "";
   if (sourceUrlInput) sourceUrlInput.value = matched?.sourceUrl || "";
   if (importCaptionFallbackInput) importCaptionFallbackInput.value = "";
@@ -14751,8 +14884,9 @@ function openPostModal(
   renderModalCarouselPreview();
   renderPublishingReadiness(matched);
 
-  modal?.classList.add("active");
+  modalEl?.classList.add("active");
   document.body.style.overflow = "hidden";
+  console.log("[post-modal] render complete");
 }
 
 function populateLedgerCampaignMenu() {
@@ -16703,7 +16837,7 @@ async function refreshPostsAfterImportBatch(jobId = "") {
   if (!APP_CONFIG.ENABLE_REMOTE_SYNC || !isRemoteConfigured()) return;
   const posts = await apiGetPosts();
   if (Array.isArray(posts) && posts.length) {
-    appState.posts = posts.map((post) => normalizeRemotePost(post, getAvailableCampaignRecords(), appState.media || []));
+    appState.posts = posts.map((post, index) => normalizeRemotePost(post, getAvailableCampaignRecords(), appState.media || [], index));
     persistLocalState();
   }
   if (jobId) {
@@ -17536,7 +17670,7 @@ async function syncRemoteIfConfigured() {
     }
 
     if (Array.isArray(posts)) {
-      appState.posts = posts.map(post => normalizeRemotePost(post, getAvailableCampaignRecords(), appState.media || []));
+      appState.posts = posts.map((post, index) => normalizeRemotePost(post, getAvailableCampaignRecords(), appState.media || [], index));
       console.log("[sync] normalized posts first 5", appState.posts.slice(0, 5).map(post => ({
         postId: post.id || "",
         title: post.title || "",
@@ -17672,9 +17806,10 @@ async function apiGetPosts() {
     const result = await apiGet("getPosts");
     console.log("[data] getPosts response status", result.ok ? "ok" : "error");
     console.log("[data] getPosts response keys", Object.keys(result));
-    const posts = result.items || result.posts || result.data || [];
-    console.log("[data] posts count", Array.isArray(posts) ? posts.length : 0);
-    return posts;
+    const posts = extractPostsFromGetPostsResult(result);
+    const filteredPosts = filterBlankPostsForRender(posts);
+    console.log("[data] posts count", Array.isArray(filteredPosts) ? filteredPosts.length : 0);
+    return filteredPosts;
   } catch (err) {
     console.log("[data] getPosts error", err && err.message ? err.message : String(err));
     throw err;
@@ -19427,11 +19562,12 @@ function normalizeRemoteSettings(settings) {
   };
 }
 
-function normalizeRemotePost(post, campaigns = [], mediaItems = []) {
+function normalizeRemotePost(post, campaigns = [], mediaItems = [], index = 0) {
   const campaignId = String(pickRemoteValue(post?.campaignId, post?.campaign_id, post?.campaignID, "")).trim();
   const incomingCampaignName = normalizeCampaignName(pickRemoteValue(post?.campaignName, post?.campaign_name, ""));
   const matchedCampaign = getCampaignById(campaignId, campaigns) || getCampaignByName(incomingCampaignName, campaigns);
   const postId = String(pickRemoteValue(post?.postId, post?.post_id, post?.id, "")).trim();
+  const frontendId = ensureFrontendPostId(post, index);
   const rawDescription = String(pickRemoteValue(post?.description, post?.caption, post?.body, post?.content, post?.copy, "")).trim();
   const title = getPostDisplayTitle({ ...post, description: rawDescription }, "");
   const scheduledAt = String(pickRemoteValue(post?.scheduledAt, post?.scheduled_at, post?.date, "")).trim();
@@ -19451,7 +19587,12 @@ function normalizeRemotePost(post, campaigns = [], mediaItems = []) {
     ? post.carouselAssetIds
     : String(pickRemoteValue(post?.carousel_asset_ids, post?.carouselAssetIds, "")).split(/[|,\n]/).map(value => String(value || "").trim()).filter(Boolean);
   const normalizedPost = {
-    id: postId || `remote-${normalizeLookupValue(title || "post")}-${scheduledAt || "undated"}`,
+    id: postId || frontendId,
+    postId: postId || frontendId,
+    post_id: postId,
+    frontendId,
+    isTemporaryFrontendId: !postId,
+    sheetRow: getRemotePostSheetRow(post),
     title,
     displayTitle: title || "Untitled",
     platform: String(pickRemoteValue(post?.platform, "linkedin")).trim() || "linkedin",
@@ -20218,10 +20359,11 @@ function renderQueue(queueItems) {
     const badgeDate = getQueueBadgeParts(item.queueDateLabel, item.scheduledAt);
     const month = badgeDate.month;
     const day = badgeDate.day;
+    const postOpenId = item.id || item.postId || item.post_id || item.frontendId || "";
 
     return `
       <div class="bg-[#181125] border border-white/5 rounded-xl p-4 flex gap-4 items-center cursor-pointer hover:border-white/10 transition-colors"
-           onclick="openModalById('${escapeHtml(item.postId)}')"
+           onclick="openModalById('${escapeHtml(postOpenId)}')"
            title="${escapeHtml(item.title || "")}">
         <div class="bg-[#120c1d] rounded-lg w-12 h-12 flex flex-col items-center justify-center shrink-0"
              style="color:${color}; border:1px solid ${color}33;">
@@ -21455,12 +21597,18 @@ function populatePWModal() {
   var name = config && (config.name || "");
   var slug = config && (config.workspace_slug || config.slug || "");
   var initials = getWorkspaceInitials(config || {});
-  if (previewEl) previewEl.textContent = initials;
+  if (previewEl) previewEl.innerHTML = renderWorkspaceAvatar(config || {});
   if (initialsEl) initialsEl.value = initials;
   if (displayNameEl) displayNameEl.value = user.user_metadata && user.user_metadata.display_name || user.email && user.email.split("@")[0] || "";
   if (wsNameEl) wsNameEl.value = name;
   if (wsSlugEl) wsSlugEl.textContent = slug;
   if (wsShortEl) wsShortEl.value = config && config.short_name || initials;
+  document.querySelectorAll("#pw-profile-icon-grid .pw-icon-btn").forEach(function(btn) {
+    btn.classList.toggle("active", btn.dataset.icon === (config && config.icon || "sparkle"));
+  });
+  document.querySelectorAll("#pw-workspace-icon-grid .pw-ws-icon-btn").forEach(function(btn) {
+    btn.classList.toggle("active", btn.dataset.icon === (config && config.icon || "sparkle"));
+  });
 
   // Billing tab
   var plan = config && (config.plan || "");
@@ -21513,7 +21661,7 @@ async function savePWProfile() {
     if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase client not available");
     var user = STELLARSYNC_AUTH_USER;
     if (user && displayName) {
-      await STELLARSYNC_SUPABASE_CLIENT.auth.updateUser({ data: { display_name: displayName, avatar_initials: initials, icon: icon } });
+      await STELLARSYNC_SUPABASE_CLIENT.auth.updateUser({ data: { display_name: displayName, avatar_initials: initials, avatar_mode: "icon", icon: icon } });
     }
     if (statusEl) { statusEl.textContent = "Profile saved."; statusEl.className = "text-xs text-emerald-400"; statusEl.classList.remove("hidden"); }
     renderWorkspaceBranding();
@@ -21532,15 +21680,18 @@ async function savePWWorkspace() {
     var shortName = (document.getElementById("pw-workspace-short-name") || {}).value || "";
     var selectedIcon = document.querySelector("#pw-workspace-icon-grid .pw-ws-icon-btn.active");
     var icon = selectedIcon ? selectedIcon.dataset.icon : "sparkle";
+    var avatarMode = "icon";
     if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase client not available");
     var slug = (WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active && (WORKSPACE_RUNTIME_CONFIG.active.workspace_slug || WORKSPACE_RUNTIME_CONFIG.active.slug)) || "";
     if (slug) {
       var existing = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").select("id").eq("workspace_slug", slug).maybeSingle();
       if (existing && existing.data && existing.data.id) {
-        await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").update({ display_name: name, short_name: shortName, avatar_initials: shortName || getWorkspaceInitials(WORKSPACE_RUNTIME_CONFIG.active), icon: icon, updated_at: new Date().toISOString() }).eq("id", existing.data.id);
+        await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").update({ display_name: name, short_name: shortName, avatar_initials: shortName || getWorkspaceInitials(WORKSPACE_RUNTIME_CONFIG.active), avatar_mode: avatarMode, icon: icon, updated_at: new Date().toISOString() }).eq("id", existing.data.id);
       } else {
-        await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").insert({ workspace_slug: slug, display_name: name, short_name: shortName, avatar_initials: shortName || getWorkspaceInitials(WORKSPACE_RUNTIME_CONFIG.active), icon: icon });
+        await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").insert({ workspace_slug: slug, display_name: name, short_name: shortName, avatar_initials: shortName || getWorkspaceInitials(WORKSPACE_RUNTIME_CONFIG.active), avatar_mode: avatarMode, icon: icon });
       }
+      WORKSPACE_RUNTIME_CONFIG.active = mergeWorkspaceSettings(WORKSPACE_RUNTIME_CONFIG.active, { display_name: name, short_name: shortName, avatar_initials: shortName || getWorkspaceInitials(WORKSPACE_RUNTIME_CONFIG.active), avatar_mode: avatarMode, icon: icon });
+      storeActiveWorkspaceConfig(WORKSPACE_RUNTIME_CONFIG.active);
     }
     if (statusEl) { statusEl.textContent = "Workspace saved."; statusEl.className = "text-xs text-emerald-400"; statusEl.classList.remove("hidden"); }
     renderWorkspaceBranding();
@@ -21575,7 +21726,7 @@ async function doPWResetPassword() {
 
 function getWorkspaceInitials(workspace) {
   if (!workspace) return "WS";
-  var name = workspace.short_name || workspace.name || workspace.slug || "";
+  var name = workspace.avatar_initials || workspace.avatarInitials || workspace.short_name || workspace.shortName || workspace.name || workspace.slug || "";
   name = String(name).trim();
   if (!name) return "WS";
   if (name.toLowerCase() === "algorithm witch" || name.toLowerCase() === "algorithmwitch" || name.toLowerCase() === "aw") return "AW";
@@ -21595,6 +21746,42 @@ function getWorkspaceInitials(workspace) {
   return words.map(function(w) { return w[0].toUpperCase(); }).join("").slice(0, 4);
 }
 
+function getWorkspaceAvatarIconClass(icon) {
+  var value = String(icon || "").trim().toLowerCase().replace(/_/g, "-");
+  if (!value) return "";
+  if (value.indexOf("ph-") === 0) return value;
+  var iconMap = {
+    calendar: "ph-calendar-blank",
+    lightning: "ph-lightning",
+    megaphone: "ph-megaphone",
+    notebook: "ph-notebook",
+    users: "ph-users",
+    sparkle: "ph-sparkle",
+    planet: "ph-planet",
+    leaf: "ph-leaf",
+    star: "ph-star",
+    heart: "ph-heart"
+  };
+  return iconMap[value] || ("ph-" + value.replace(/[^a-z0-9-]/g, ""));
+}
+
+function renderWorkspaceAvatar(workspace) {
+  var source = workspace || {};
+  var avatarMode = String(source.avatar_mode || source.avatarMode || "").trim().toLowerCase();
+  var icon = String(source.icon || source.avatar_icon || source.avatarIcon || "").trim();
+  if (avatarMode === "icon") {
+    var iconClass = getWorkspaceAvatarIconClass(icon);
+    if (iconClass) {
+      return '<i class="ph-fill ' + escapeHtml(iconClass) + ' text-base leading-none" aria-hidden="true"></i>';
+    }
+    console.warn("[workspace-avatar] fallback initials used", {
+      workspace: source.workspace_slug || source.slug || source.name || "",
+      avatar_mode: avatarMode
+    });
+  }
+  return '<span class="workspace-avatar-initials">' + escapeHtml(getWorkspaceInitials(source)) + '</span>';
+}
+
 function renderWorkspaceBranding() {
   var config = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active;
   if (!config) {
@@ -21603,29 +21790,33 @@ function renderWorkspaceBranding() {
       config = {
         workspace_slug: sessionConfig.slug,
         name: sessionConfig.name,
-        slug: sessionConfig.slug
+        slug: sessionConfig.slug,
+        short_name: sessionConfig.short_name,
+        avatar_initials: sessionConfig.avatar_initials,
+        avatar_mode: sessionConfig.avatar_mode,
+        icon: sessionConfig.icon
       };
     }
   }
   var name = config && (config.name || "");
   var slug = config && (config.workspace_slug || config.slug || "");
-  var initials = getWorkspaceInitials({ name: name, slug: slug, short_name: config && config.short_name });
+  var avatarHtml = renderWorkspaceAvatar(config || { name: name, slug: slug });
   var avatarEl = document.getElementById("avatar-initials");
   var profileAvatarEl = document.getElementById("profile-menu-avatar");
   var profileNameEl = document.getElementById("profile-menu-name");
   var profileSlugEl = document.getElementById("profile-menu-slug");
   var badgeEl = document.getElementById("app-header-workspace-badge");
-  if (avatarEl) avatarEl.textContent = initials;
-  if (profileAvatarEl) profileAvatarEl.textContent = initials;
+  if (avatarEl) avatarEl.innerHTML = avatarHtml;
+  if (profileAvatarEl) profileAvatarEl.innerHTML = avatarHtml;
   if (profileNameEl) profileNameEl.textContent = name || slug || "Workspace";
   if (profileSlugEl) profileSlugEl.textContent = slug || "";
   if (badgeEl) {
     if (slug && slug !== "master") {
-      badgeEl.textContent = initials;
+      badgeEl.innerHTML = avatarHtml;
       badgeEl.classList.remove("hidden");
     } else {
       badgeEl.classList.add("hidden");
-      badgeEl.textContent = "";
+      badgeEl.innerHTML = "";
     }
   }
 }
