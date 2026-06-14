@@ -9209,7 +9209,7 @@ function renderMobileDayCalendar() {
   list.innerHTML = `<div class="calendar-day-shell">${posts.map((post) => {
     const badge = getPublishingBadge(post);
     return `
-      <button type="button" class="mobile-day-post calendar-day-post-card" onclick="openModalById('${escapeHtml(post.id)}')">
+      <button type="button" class="mobile-day-post calendar-day-post-card" onclick="openCalendarPost(this)" data-post-id="${escapeHtml(post.id || post.post_id || post.postId || post.frontendId || post._frontendId || '')}" data-post-title="${escapeHtml(getPostDisplayTitle(post, 'Untitled post'))}" data-post-date="${escapeHtml(selectedCalendarDateKey || normalizePostCalendarDateKey(post) || '')}">
         <div class="flex items-start justify-between gap-3 mb-2">
           <div>
             <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${escapeHtml(post.queueTimeLabel || "No time")}</div>
@@ -9252,7 +9252,7 @@ function renderCalendarPill(post, isWeekMode = false) {
   }
   if (compactMonth) {
     return `
-      <button type="button" class="post-pill compact-month mt-1 text-left" onclick="event.stopPropagation();openModalById('${escapeHtml(post.id)}')" title="${escapeHtml(buildDateDiagnosticTitle(post))}" style="background:${campaignColor}14;border:1px solid ${campaignColor}30;box-shadow:inset 2px 0 0 ${campaignColor};">
+      <button type="button" class="post-pill compact-month mt-1 text-left" onclick="event.stopPropagation();openCalendarPost(this)" title="${escapeHtml(buildDateDiagnosticTitle(post))}" style="background:${campaignColor}14;border:1px solid ${campaignColor}30;box-shadow:inset 2px 0 0 ${campaignColor};" data-post-id="${escapeHtml(post.id || post.post_id || post.postId || post.frontendId || post._frontendId || '')}" data-post-title="${escapeHtml(displayTitle)}" data-post-date="${escapeHtml(getPostCalendarDateKey(post) || normalizePostCalendarDateKey(post) || '')}">
         <span class="compact-month-icons">
           <span class="calendar-mobile-dot" style="background:${campaignColor};box-shadow:0 0 10px ${campaignColor}66;"></span>
           ${iconBlock}
@@ -9264,7 +9264,7 @@ function renderCalendarPill(post, isWeekMode = false) {
   }
 
   return `
-    <button type="button" class="post-pill mt-1 text-left" onclick="event.stopPropagation();openModalById('${escapeHtml(post.id)}')" title="${escapeHtml(buildDateDiagnosticTitle(post))}" style="background:${campaignColor}14;border:1px solid ${campaignColor}30;box-shadow:inset 3px 0 0 ${campaignColor};">
+    <button type="button" class="post-pill mt-1 text-left" onclick="event.stopPropagation();openCalendarPost(this)" title="${escapeHtml(buildDateDiagnosticTitle(post))}" style="background:${campaignColor}14;border:1px solid ${campaignColor}30;box-shadow:inset 3px 0 0 ${campaignColor};" data-post-id="${escapeHtml(post.id || post.post_id || post.postId || post.frontendId || post._frontendId || '')}" data-post-title="${escapeHtml(displayTitle)}" data-post-date="${escapeHtml(getPostCalendarDateKey(post) || normalizePostCalendarDateKey(post) || '')}">
       <div class="flex items-center gap-1.5 w-full">
         <span class="w-2 h-2 rounded-full shrink-0" style="background:${campaignColor};box-shadow:0 0 10px ${campaignColor}66;"></span>
         ${iconBlock}
@@ -14886,10 +14886,34 @@ function findPostByAnyId(postId) {
   const target = String(postId || "").trim();
   if (!target) return null;
   return (appState.posts || []).find(post => {
-    return [post.id, post.postId, post.post_id, post.frontendId, post.sheetRow ? `row_${post.sheetRow}` : ""]
+    return [post.id, post.postId, post.post_id, post.frontendId, post._frontendId, post.sheetRow ? `row_${post.sheetRow}` : ""]
       .map(value => String(value || "").trim())
       .includes(target);
   }) || null;
+}
+
+function openCalendarPost(btn) {
+  console.log("[calendar-post] click");
+  if (!btn) return;
+  var postId = btn.dataset.postId || "";
+  var postTitle = btn.dataset.postTitle || "";
+  var postDateKey = btn.dataset.postDate || "";
+  var post = postId ? findPostByAnyId(postId) : null;
+  console.log("[calendar-post] resolved post " + (!!post));
+  if (!post && postTitle && postDateKey) {
+    post = (appState.posts || []).find(function(p) {
+      var titleMatch = getPostDisplayTitle(p) === postTitle;
+      var dateMatch = normalizePostCalendarDateKey(p) === postDateKey;
+      return titleMatch && dateMatch;
+    }) || null;
+    console.log("[calendar-post] fallback match " + (!!post));
+  }
+  if (post) {
+    console.log("[calendar-post] id", post.id || post.post_id || post.postId || post.frontendId || "");
+    openPostObjectModal(post, "calendar");
+  } else {
+    console.log("[calendar-post] could not resolve post", { postId: postId, title: postTitle, dateKey: postDateKey });
+  }
 }
 
 function openPostObjectModal(post, source = "unknown") {
