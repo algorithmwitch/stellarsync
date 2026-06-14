@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your trial has ended | StellarSync</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="apple-touch-icon" href="../icon/stellarsync-apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="../icon/stellarsync-192.png">
+    <link rel="shortcut icon" href="../icon/stellarsync-192.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg: #05020a;
+            --panel: rgba(18, 12, 29, 0.78);
+            --panel-border: rgba(255, 255, 255, 0.08);
+            --purple: #9d4edd;
+            --purple-light: #c77dff;
+        }
+
+        html {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+
+        body {
+            width: 100%;
+            max-width: 100%;
+            min-height: 100vh;
+            margin: 0;
+            overflow-x: hidden;
+            background: var(--bg);
+            color: white;
+            font-family: 'Inter', sans-serif;
+        }
+
+        img, svg, video, canvas, .glass-card {
+            max-width: 100%;
+        }
+
+        .glass-card {
+            background: var(--panel);
+            border: 1px solid var(--panel-border);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(18px);
+        }
+
+        .glow-btn {
+            background: linear-gradient(135deg, var(--purple), var(--purple-light));
+            box-shadow: 0 0 30px rgba(157, 78, 221, 0.3);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+        }
+
+        .glow-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 0 42px rgba(157, 78, 221, 0.42);
+        }
+
+        .secondary-btn {
+            transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+
+        .secondary-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.16);
+            color: white;
+        }
+
+        .stars {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            opacity: 0;
+            animation: twinkle var(--duration) ease-in-out infinite;
+            animation-delay: var(--delay);
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0; transform: scale(0.5); }
+            50% { opacity: var(--opacity); transform: scale(1.25); }
+        }
+
+        @media (max-width: 640px) {
+            main {
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+
+            .action-row {
+                flex-direction: column;
+            }
+
+            .action-row a {
+                width: 100%;
+                justify-content: center;
+                text-align: center;
+                white-space: normal;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="fixed inset-0 z-0 pointer-events-none">
+        <div class="absolute inset-0 bg-gradient-to-br from-[#0a0514] via-[#05020a] to-[#0a0514]"></div>
+        <div class="absolute top-[-12%] left-[-10%] w-[560px] h-[560px] bg-purple-600/10 rounded-full blur-[150px]"></div>
+        <div class="absolute bottom-[-15%] right-[-12%] w-[520px] h-[520px] bg-cyan-600/10 rounded-full blur-[150px]"></div>
+        <div id="stars-container" class="stars"></div>
+    </div>
+
+    <main class="relative z-10 min-h-screen flex items-center justify-center px-8 py-20">
+        <section class="glass-card w-full max-w-2xl rounded-[2rem] p-8 md:p-12 text-center">
+            <a href="/" class="inline-flex items-center gap-3 mb-10 text-gray-300 hover:text-white transition-colors">
+                <span class="w-11 h-11 rounded-2xl bg-[#231738] flex items-center justify-center overflow-hidden shadow-[0_0_20px_rgba(157,78,221,0.25)]">
+                    <img src="../icon/stellarsync-192.png" alt="StellarSync" class="w-full h-full object-cover">
+                </span>
+                <span class="text-sm font-bold tracking-widest uppercase">StellarSync</span>
+            </a>
+
+            <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight text-white mb-4">Your trial has ended</h1>
+            <p class="text-lg text-gray-400 mb-10">Continue using StellarSync by activating your subscription.</p>
+
+            <div class="glass-card rounded-3xl p-6 md:p-8 text-left mb-8">
+                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-6 mb-6">
+                    <div>
+                        <p class="text-[11px] font-bold text-purple-400 uppercase tracking-[0.3em] mb-3">Plan Summary</p>
+                        <h2 class="text-2xl font-extrabold text-white">Growth Plan</h2>
+                    </div>
+                    <div class="sm:text-right">
+                        <p class="text-3xl font-extrabold text-white">$149<span class="text-sm text-gray-500 font-semibold">/month</span></p>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 text-sm text-gray-300 leading-relaxed">
+                    <i class="ph-bold ph-lock-key-open text-purple-400 text-xl mt-0.5"></i>
+                    <p>Your workspace, campaigns, notes, media, and content remain available.</p>
+                </div>
+            </div>
+
+            <div class="action-row flex items-center justify-center gap-4 mb-8">
+                <a href="/onboarding/?plan=growth" class="glow-btn inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl text-white text-sm font-bold uppercase tracking-widest">
+                    Activate Subscription
+                </a>
+                <a href="/contact/" class="secondary-btn inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl border border-white/10 bg-white/5 text-gray-300 text-sm font-bold uppercase tracking-widest">
+                    Contact Support
+                </a>
+            </div>
+
+            <p class="text-sm text-gray-500 leading-relaxed max-w-lg mx-auto">
+                Need a nonprofit, agency, or enterprise setup?
+                <a href="/contact/" class="text-purple-400 hover:text-white underline underline-offset-4">Contact us</a>
+                and we'll help find the right plan.
+            </p>
+        </section>
+    </main>
+
+    <script>
+        const starsContainer = document.getElementById('stars-container');
+        for (let i = 0; i < 120; i++) {
+            const star = document.createElement('div');
+            star.className = 'star';
+            star.style.left = `${Math.random() * 100}%`;
+            star.style.top = `${Math.random() * 100}%`;
+            const size = Math.random() < 0.12 ? 3 : (Math.random() < 0.35 ? 2 : 1);
+            star.style.width = `${size}px`;
+            star.style.height = `${size}px`;
+            star.style.setProperty('--duration', `${2 + Math.random() * 5}s`);
+            star.style.setProperty('--delay', `${Math.random() * 5}s`);
+            star.style.setProperty('--opacity', `${0.12 + Math.random() * 0.45}`);
+            starsContainer.appendChild(star);
+        }
+    </script>
+</body>
+</html>

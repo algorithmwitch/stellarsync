@@ -15,6 +15,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" vid="7">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" vid="8">
     <script src="https://unpkg.com/@phosphor-icons/web" vid="9"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style vid="10">
   html,
   body {
@@ -4373,11 +4374,17 @@
 </div>
 <script>
 const APP_CONFIG = {
-  APP_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbxy363RJ6RElX5YBibLGtgOIRssgZkH_hN6JdUIqW3PAiHQIBjuwko5qk11zuK4ZCz_/exec",
+  APP_SCRIPT_URL: "",
   ENABLE_REMOTE_SYNC: true,
   STORAGE_KEY: "stellarsync_local_state_v5",
   SHELL_LAYOUT_KEY: "stellarsync_shell_layout_v2"
 };
+
+const SUPABASE_URL = "https://szdlvyzjeqkfxsoqltwg.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN6ZGx2eXpqZXFrZnhzb3FsdHdnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyOTE1NjcsImV4cCI6MjA5Njg2NzU2N30.9GT0oJqPcmrc9VSb-ZN0FtWy6i7SLTHBuzRQ9gvxnX0";
+const STELLARSYNC_SUPABASE_CLIENT = window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
 
 // Phase 1 Workspace Adapter Layer.
 const WORKSPACE_RUNTIME_CONFIG = {
@@ -4389,11 +4396,11 @@ const WORKSPACE_RUNTIME_CONFIG = {
       workspace_id: "master",
       workspace_slug: "master",
       backend_type: "master_google_sheets",
-      apps_script_url: APP_CONFIG.APP_SCRIPT_URL,
+      apps_script_url: "",
       sheet_id: "",
       monday_board_id: "",
-      supabase_url: "",
-      supabase_anon_key: "",
+      supabase_url: SUPABASE_URL,
+      supabase_anon_key: SUPABASE_ANON_KEY,
       storage_bucket: "media",
       supabase_media_enabled: false
     },
@@ -4404,8 +4411,8 @@ const WORKSPACE_RUNTIME_CONFIG = {
       apps_script_url: "",
       sheet_id: "",
       monday_board_id: "",
-      supabase_url: "",
-      supabase_anon_key: "",
+      supabase_url: SUPABASE_URL,
+      supabase_anon_key: SUPABASE_ANON_KEY,
       storage_bucket: "media",
       supabase_media_enabled: false
     }
@@ -4427,15 +4434,16 @@ function getSessionWorkspaceConfig() {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object") return null;
-    return {
-      id: String(parsed.id || "").trim(),
-      slug: String(parsed.slug || "").trim(),
-      name: String(parsed.name || "").trim(),
-      backend_type: String(parsed.backend_type || "client_google_sheets").trim(),
-      apps_script_url: String(parsed.apps_script_url || "").trim(),
-      sheet_id: String(parsed.sheet_id || "").trim(),
-      monday_board_id: String(parsed.monday_board_id || "").trim(),
-      supabase_media_enabled: Boolean(parsed.supabase_media_enabled),
+	    return {
+	      id: String(parsed.id || "").trim(),
+	      slug: String(parsed.slug || "").trim(),
+	      name: String(parsed.name || "").trim(),
+	      subscription_status: String(parsed.subscription_status || "").trim(),
+	      backend_type: String(parsed.backend_type || "client_google_sheets").trim(),
+	      apps_script_url: String(parsed.apps_script_url || "").trim(),
+	      sheet_id: String(parsed.sheet_id || "").trim(),
+	      monday_board_id: String(parsed.monday_board_id || "").trim(),
+	      supabase_media_enabled: Boolean(parsed.supabase_media_enabled),
       plan: String(parsed.plan || "").trim()
     };
   } catch (_) {
@@ -4467,17 +4475,22 @@ function loadWorkspaceConfig() {
   // Priority 1: sessionStorage config when slug matches URL workspace param.
   const sessionConfig = getSessionWorkspaceConfig();
   if (sessionConfig && sessionConfig.slug && requestedSlug && sessionConfig.slug === requestedSlug) {
-    const active = {
-      ...masterConfig,
-      workspace_slug: sessionConfig.slug,
-      workspace_id: sessionConfig.id || sessionConfig.slug,
-      backend_type: sessionConfig.backend_type || "client_google_sheets",
-      apps_script_url: sessionConfig.apps_script_url || "",
-      sheet_id: sessionConfig.sheet_id || "",
-      monday_board_id: sessionConfig.monday_board_id || "",
-      supabase_media_enabled: sessionConfig.supabase_media_enabled,
-      storage_bucket: masterConfig.storage_bucket || "media"
-    };
+	    const active = {
+	      ...masterConfig,
+	      workspace_slug: sessionConfig.slug,
+	      workspace_id: sessionConfig.id || sessionConfig.slug,
+	      name: sessionConfig.name || sessionConfig.slug,
+	      plan: sessionConfig.plan || "",
+	      subscription_status: sessionConfig.subscription_status || "",
+	      backend_type: sessionConfig.backend_type || "client_google_sheets",
+	      apps_script_url: sessionConfig.apps_script_url || "",
+	      sheet_id: sessionConfig.sheet_id || "",
+	      monday_board_id: sessionConfig.monday_board_id || "",
+	      supabase_media_enabled: sessionConfig.supabase_media_enabled,
+	      supabase_url: SUPABASE_URL,
+	      supabase_anon_key: SUPABASE_ANON_KEY,
+	      storage_bucket: masterConfig.storage_bucket || "media"
+	    };
     if (!WORKSPACE_RUNTIME_CONFIG.backend_types.includes(active.backend_type)) {
       active.backend_type = "client_google_sheets";
     }
@@ -4515,6 +4528,134 @@ function loadWorkspaceConfig() {
   APP_CONFIG.APP_SCRIPT_URL = active.apps_script_url || APP_CONFIG.APP_SCRIPT_URL;
   updateWorkspaceBadge(active);
   return active;
+}
+
+function normalizeSupabaseWorkspaceConfig(workspace) {
+  const source = workspace || {};
+  const id = String(source.id || source.workspace_id || "").trim();
+  const slug = String(source.slug || source.workspace_slug || id || "").trim();
+  return {
+    id,
+    slug,
+    name: String(source.name || slug || "Workspace").trim(),
+    plan: String(source.plan || "").trim(),
+    subscription_status: String(source.subscription_status || "").trim(),
+    apps_script_url: String(source.apps_script_url || "").trim(),
+    sheet_id: String(source.sheet_id || "").trim(),
+    monday_board_id: String(source.monday_board_id || "").trim(),
+    backend_type: String(source.backend_type || "client_google_sheets").trim(),
+    supabase_media_enabled: Boolean(source.supabase_media_enabled)
+  };
+}
+
+function selectWorkspaceForRoute(workspaces, requestedSlug) {
+  const list = Array.isArray(workspaces) ? workspaces.filter(workspace => workspace && workspace.slug) : [];
+  if (!list.length) return null;
+  if (requestedSlug) {
+    const match = list.find(workspace => workspace.slug === requestedSlug);
+    if (match) return match;
+  }
+  return list[0];
+}
+
+async function fetchWorkspaceMembershipsByUserId(userId) {
+  if (!STELLARSYNC_SUPABASE_CLIENT || !userId) return [];
+
+  const workspaceFields = `
+    id,
+    slug,
+    name,
+    plan,
+    subscription_status,
+    apps_script_url,
+    sheet_id,
+    monday_board_id,
+    backend_type,
+    supabase_media_enabled
+  `;
+
+  const joined = await STELLARSYNC_SUPABASE_CLIENT
+    .from("workspace_members")
+    .select(`workspace_id, workspaces (${workspaceFields})`)
+    .eq("user_id", userId);
+
+  if (!joined.error && Array.isArray(joined.data)) {
+    const joinedWorkspaces = joined.data
+      .flatMap(row => {
+        const related = row && row.workspaces;
+        return Array.isArray(related) ? related : [related];
+      })
+      .filter(Boolean)
+      .map(normalizeSupabaseWorkspaceConfig)
+      .filter(workspace => workspace.slug);
+    if (joinedWorkspaces.length) return joinedWorkspaces;
+  }
+
+  const membershipQueries = [
+    STELLARSYNC_SUPABASE_CLIENT.from("workspace_members").select("workspace_id").eq("user_id", userId),
+    STELLARSYNC_SUPABASE_CLIENT.from("workspace_members").select("workspace_id").eq("auth_user_id", userId)
+  ];
+
+  for (const query of membershipQueries) {
+    const result = await query;
+    if (result.error || !Array.isArray(result.data) || !result.data.length) continue;
+    const workspaceIds = [...new Set(result.data.map(row => row && row.workspace_id).filter(Boolean))];
+    if (!workspaceIds.length) continue;
+
+    const workspacesResult = await STELLARSYNC_SUPABASE_CLIENT
+      .from("workspaces")
+      .select(workspaceFields)
+      .in("id", workspaceIds);
+
+    if (!workspacesResult.error && Array.isArray(workspacesResult.data)) {
+      return workspacesResult.data
+        .map(normalizeSupabaseWorkspaceConfig)
+        .filter(workspace => workspace.slug);
+    }
+  }
+
+  if (joined.error) {
+    throw joined.error;
+  }
+
+  return [];
+}
+
+async function ensureSupabaseWorkspaceBeforeBoot() {
+  if (!STELLARSYNC_SUPABASE_CLIENT) {
+    throw new Error("Supabase client is not configured for workspace routing.");
+  }
+
+  const { data: sessionData, error: sessionError } = await STELLARSYNC_SUPABASE_CLIENT.auth.getSession();
+  if (sessionError) throw sessionError;
+
+  const session = sessionData && sessionData.session;
+  if (!session || !session.user) {
+    window.location.replace("/login/");
+    return null;
+  }
+
+  const workspaces = await fetchWorkspaceMembershipsByUserId(session.user.id);
+  if (!workspaces.length) {
+    window.location.replace("/onboarding/");
+    return null;
+  }
+
+  const requestedSlug = getCurrentWorkspaceSlug();
+  const activeWorkspace = selectWorkspaceForRoute(workspaces, requestedSlug);
+  if (!activeWorkspace) {
+    window.location.replace("/onboarding/");
+    return null;
+  }
+
+  sessionStorage.setItem("STELLARSYNC_ACTIVE_WORKSPACE", JSON.stringify(activeWorkspace));
+
+  if (!requestedSlug || requestedSlug !== activeWorkspace.slug) {
+    window.location.replace(`/app/?workspace=${encodeURIComponent(activeWorkspace.slug)}`);
+    return null;
+  }
+
+  return activeWorkspace;
 }
 
 function getWorkspaceApiUrl() {
@@ -4608,8 +4749,6 @@ function withWorkspaceRequestMetadata(payload = {}) {
     ...getWorkspaceRequestMetadata()
   };
 }
-
-loadWorkspaceConfig();
 
 // Client-safe mode: hides master-only/internal features.
 const CLIENT_SAFE_MODE = true;
@@ -20352,23 +20491,32 @@ function initApp() {
   }
 }
 
-try {
-  initApp();
-} catch (error) {
-  showBootFailurePanel(error);
-  reportFrontendError("boot/call", error);
-  bootMinimalApp();
-  reportFrontendError("boot/fallback", "initApp threw — bootMinimalApp activated");
-}
+async function bootAppWithWorkspaceRouter() {
+  try {
+    const activeWorkspace = await ensureSupabaseWorkspaceBeforeBoot();
+    if (!activeWorkspace) return;
+    loadWorkspaceConfig();
+    initApp();
+  } catch (error) {
+    showBootFailurePanel(error);
+    reportFrontendError("boot/call", error);
+    if (window.__BOOT_STARTED) {
+      bootMinimalApp();
+      reportFrontendError("boot/fallback", "initApp threw — bootMinimalApp activated");
+    }
+  }
 
-// If initApp completed but setup errors occurred, still ensure the app is visible
-if (window.__BOOT_STARTED && typeof document !== "undefined") {
-  var calView = document.getElementById("view-calendar");
-  if (calView && calView.classList.contains("hidden")) {
-    bootMinimalApp();
-    reportFrontendError("boot/fallback", "calendar hidden after initApp — bootMinimalApp activated");
+  // If initApp completed but setup errors occurred, still ensure the app is visible
+  if (window.__BOOT_STARTED && typeof document !== "undefined") {
+    var calView = document.getElementById("view-calendar");
+    if (calView && calView.classList.contains("hidden")) {
+      bootMinimalApp();
+      reportFrontendError("boot/fallback", "calendar hidden after initApp — bootMinimalApp activated");
+    }
   }
 }
+
+bootAppWithWorkspaceRouter();
 
 </script>
 </body>
