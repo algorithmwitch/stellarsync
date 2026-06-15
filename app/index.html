@@ -4508,6 +4508,7 @@
               </div>
               <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Icon</div>
               <div id="pw-profile-icon-grid" class="flex flex-wrap gap-2">
+                <button type="button" class="pw-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="none" title="No icon / Use initials"><span class="text-[9px] font-bold text-gray-400">AB</span></button>
                 <button type="button" class="pw-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg active" data-icon="sparkle"><i class="ph-fill ph-sparkle"></i></button>
                 <button type="button" class="pw-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="leaf"><i class="ph-fill ph-leaf"></i></button>
                 <button type="button" class="pw-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="planet"><i class="ph-fill ph-planet"></i></button>
@@ -4543,6 +4544,7 @@
                 <div>
                   <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Workspace Icon</div>
                   <div id="pw-workspace-icon-grid" class="flex flex-wrap gap-2">
+                    <button type="button" class="pw-ws-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="none" title="No icon / Use initials"><span class="text-[9px] font-bold text-gray-400">AB</span></button>
                     <button type="button" class="pw-ws-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg active" data-icon="sparkle"><i class="ph-fill ph-sparkle"></i></button>
                     <button type="button" class="pw-ws-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="leaf"><i class="ph-fill ph-leaf"></i></button>
                     <button type="button" class="pw-ws-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="planet"><i class="ph-fill ph-planet"></i></button>
@@ -7990,6 +7992,42 @@ function setupWorkspaceUI() {
   document.addEventListener("click", (event) => {
     if (!event.target.closest("#profile-menu") && !event.target.closest("#avatar-menu-btn") && !event.target.closest("#profile-menu-trigger")) toggleProfileMenu(false);
   });
+
+  document.addEventListener("click", (event) => {
+    var postEl = event.target.closest('[data-calendar-post-id], [data-post-id], .calendar-post, .calendar-pill, .calendar-post-pill, .mobile-calendar-post');
+    if (!postEl) return;
+    console.log("[calendar-post] document delegated click");
+    console.log("[calendar-post] element found", postEl);
+    console.log("[calendar-post] dataset", postEl.dataset);
+    event.preventDefault();
+    event.stopPropagation();
+    var postId = postEl.dataset.calendarPostId || postEl.dataset.postId || "";
+    var postTitle = postEl.dataset.postTitle || "";
+    var postDateKey = postEl.dataset.postDate || "";
+    var post = postId ? findPostByAnyId(postId) : null;
+    console.log("[calendar-post] resolved post by id", !!post);
+    if (!post && postTitle && postDateKey) {
+      post = (appState.posts || []).find(function(p) {
+        var titleMatch = getPostDisplayTitle(p) === postTitle;
+        var dateMatch = normalizePostCalendarDateKey(p) === postDateKey;
+        return titleMatch && dateMatch;
+      }) || null;
+      console.log("[calendar-post] fallback match by title+date", !!post);
+    }
+    if (!post && postEl.dataset.postId) {
+      var directId = postEl.dataset.postId;
+      post = (appState.posts || []).find(function(p) {
+        return String(p.id || p.postId || p.post_id || p.frontendId || p._frontendId || "") === directId;
+      }) || null;
+      console.log("[calendar-post] fallback match by direct id", !!post);
+    }
+    console.log("[calendar-post] resolved post", post ? (post.id || post.postId || post.post_id || post.frontendId || "") : "none");
+    if (post) {
+      console.log("[calendar-post] opening modal");
+      openPostObjectModal(post, "calendar-document-delegated");
+    }
+  });
+
   document.getElementById("close-profile-workspace-btn")?.addEventListener("click", closeProfileWorkspaceModal);
   document.getElementById("profile-workspace-modal")?.addEventListener("click", function(event) {
     if (event.target === document.getElementById("profile-workspace-modal")) closeProfileWorkspaceModal();
@@ -8002,7 +8040,8 @@ function setupWorkspaceUI() {
       document.querySelectorAll("#pw-profile-icon-grid .pw-icon-btn").forEach(function(b) { b.classList.remove("active"); });
       btn.classList.add("active");
       var previewEl = document.getElementById("pw-profile-avatar-preview");
-      if (previewEl) previewEl.innerHTML = renderWorkspaceAvatar({ avatar_mode: "icon", icon: btn.dataset.icon, avatar_initials: (document.getElementById("pw-profile-initials") || {}).value || "" });
+      var isInitials = btn.dataset.icon === "none";
+      if (previewEl) previewEl.innerHTML = renderWorkspaceAvatar({ avatar_mode: isInitials ? "initials" : "icon", icon: isInitials ? "" : btn.dataset.icon, avatar_initials: (document.getElementById("pw-profile-initials") || {}).value || "" });
     });
   });
   document.querySelectorAll("#pw-workspace-icon-grid .pw-ws-icon-btn").forEach(function(btn) {
@@ -8010,7 +8049,8 @@ function setupWorkspaceUI() {
       document.querySelectorAll("#pw-workspace-icon-grid .pw-ws-icon-btn").forEach(function(b) { b.classList.remove("active"); });
       btn.classList.add("active");
       var previewEl = document.getElementById("pw-profile-avatar-preview");
-      if (previewEl) previewEl.innerHTML = renderWorkspaceAvatar({ avatar_mode: "icon", icon: btn.dataset.icon, avatar_initials: (document.getElementById("pw-workspace-short-name") || {}).value || "" });
+      var isInitials = btn.dataset.icon === "none";
+      if (previewEl) previewEl.innerHTML = renderWorkspaceAvatar({ avatar_mode: isInitials ? "initials" : "icon", icon: isInitials ? "" : btn.dataset.icon, avatar_initials: (document.getElementById("pw-workspace-short-name") || {}).value || "" });
     });
   });
   document.getElementById("pw-profile-save-btn")?.addEventListener("click", savePWProfile);
@@ -11954,6 +11994,7 @@ function getConnectedAccountsMarkup(options = {}) {
 function renderWorkspaceConnectionCards() {
   const providers = WORKSPACE_CONNECTION_PROVIDERS;
   var mondayBoardId = (WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active && WORKSPACE_RUNTIME_CONFIG.active.monday_board_id) || "";
+  console.log("[monday] board id from workspace", mondayBoardId);
   return providers.map((provider) => {
     const conn = getWorkspaceConnection(provider);
     const providerLabel = toTitleCase(provider.replace(/_/g, " "));
@@ -11984,7 +12025,7 @@ function renderWorkspaceConnectionCards() {
         if (conn.config && conn.config.board_name) {
           detailParts = ["Board: " + conn.config.board_name];
         } else if (mondayBoardId) {
-          detailParts = ["Board ID: " + mondayBoardId];
+          detailParts = ["Board configured", "Board ID: " + mondayBoardId];
         } else {
           detailParts = ["Board not yet configured"];
         }
@@ -12001,7 +12042,12 @@ function renderWorkspaceConnectionCards() {
       } else if (provider === "monday") {
         actions = '';
         if (mondayBoardId) {
-          actions += '<button type="button" onclick="testMondayConnection()" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Test Connection</button>';
+          if (status !== "connected") {
+            statusLabel = "Board configured";
+            statusTone = "text-emerald-300";
+            chipLabel = "Board configured";
+          }
+          actions += '<button type="button" onclick="testMondayConnection()" class="px-3 py-2 rounded-xl bg-[#00a86b] hover:bg-[#00cc77] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Test Monday Connection</button>';
         }
         actions += '<button type="button" onclick="openSupportModal(\'Integration setup\')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Request Monday Setup</button>';
       } else {
@@ -12014,7 +12060,14 @@ function renderWorkspaceConnectionCards() {
       detailParts = ["No connection record found in workspace"];
       if (provider === "google_drive") detailParts = ["Google Drive asset sync is configured by StellarSync for managed/hybrid workspaces."];
       if (provider === "monday") {
-        detailParts = mondayBoardId ? ["Board ID: " + mondayBoardId + " — test connection to verify"] : ["Board not yet configured"];
+        if (mondayBoardId) {
+          statusLabel = "Board configured";
+          statusTone = "text-emerald-300";
+          chipLabel = "Board configured";
+          detailParts = ["Board configured", "Board ID: " + mondayBoardId + " — test connection to verify"];
+        } else {
+          detailParts = ["Board not yet configured"];
+        }
       }
       if (provider === "google_sheets") {
         actions = '<button type="button" onclick="openSupportModal(\'Integration setup\')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Request Setup</button>';
@@ -12023,7 +12076,7 @@ function renderWorkspaceConnectionCards() {
       } else if (provider === "monday") {
         actions = '';
         if (mondayBoardId) {
-          actions += '<button type="button" onclick="testMondayConnection()" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Test Connection</button>';
+          actions += '<button type="button" onclick="testMondayConnection()" class="px-3 py-2 rounded-xl bg-[#00a86b] hover:bg-[#00cc77] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Test Monday Connection</button>';
         }
         actions += '<button type="button" onclick="openSupportModal(\'Integration setup\')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Request Monday Setup</button>';
       } else {
@@ -12048,6 +12101,7 @@ function renderWorkspaceConnectionCards() {
 }
 
 async function testMondayConnection() {
+  console.log("[monday] test clicked");
   try {
     showToast("Testing Monday connection...", "info");
     var boardId = (WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active && WORKSPACE_RUNTIME_CONFIG.active.monday_board_id) || "";
@@ -12055,16 +12109,31 @@ async function testMondayConnection() {
     var meta = getWorkspaceRequestMetadata();
     var result = await callSupabaseEdgeFunction("monday-sync", {
       action: "test",
-      workspace_id: meta.workspace_id || meta.workspace_slug,
-      board_id: boardId
+      workspace_id: meta.workspace_id || meta.workspace_slug
     });
     if (result.ok) {
+      console.log("[monday] test success", result);
       showToast("Monday connection successful!", "success");
+      if (result.board_name) {
+        var conn = getWorkspaceConnection("monday");
+        if (conn) {
+          conn.config = conn.config || {};
+          conn.config.board_name = result.board_name;
+          conn.status = "connected";
+        }
+      }
       refreshConnectionCards();
     } else {
+      console.log("[monday] test error", result.error);
       showToast("Monday connection failed: " + (result.error || "Unknown error"), "error");
+      var conn = getWorkspaceConnection("monday");
+      if (conn) {
+        conn.last_error = result.error || "Unknown error";
+      }
+      refreshConnectionCards();
     }
   } catch (e) {
+    console.log("[monday] test error", e);
     showToast("Monday connection error: " + (e.message || String(e)), "error");
   }
 }
@@ -22237,11 +22306,12 @@ function populatePWModal() {
   if (wsNameEl) wsNameEl.value = name;
   if (wsSlugEl) wsSlugEl.textContent = slug;
   if (wsShortEl) wsShortEl.value = config && config.short_name || initials;
+  var activeIcon = (config && config.avatar_mode === "initials") ? "none" : (config && config.icon || "sparkle");
   document.querySelectorAll("#pw-profile-icon-grid .pw-icon-btn").forEach(function(btn) {
-    btn.classList.toggle("active", btn.dataset.icon === (config && config.icon || "sparkle"));
+    btn.classList.toggle("active", btn.dataset.icon === activeIcon);
   });
   document.querySelectorAll("#pw-workspace-icon-grid .pw-ws-icon-btn").forEach(function(btn) {
-    btn.classList.toggle("active", btn.dataset.icon === (config && config.icon || "sparkle"));
+    btn.classList.toggle("active", btn.dataset.icon === activeIcon);
   });
 
   // Billing tab
@@ -22285,54 +22355,75 @@ function populatePWModal() {
 }
 
 async function savePWProfile() {
+  console.log("[profile-modal] save clicked");
   var statusEl = document.getElementById("pw-profile-status");
+  var saveBtn = document.getElementById("pw-profile-save-btn");
   if (statusEl) { statusEl.classList.add("hidden"); statusEl.textContent = ""; }
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = "Saving..."; }
   try {
     var initials = (document.getElementById("pw-profile-initials") || {}).value || "";
     var displayName = (document.getElementById("pw-profile-display-name") || {}).value || "";
     var selectedIcon = document.querySelector("#pw-profile-icon-grid .pw-icon-btn.active");
     var icon = selectedIcon ? selectedIcon.dataset.icon : "sparkle";
+    var avatarMode = icon === "none" ? "initials" : "icon";
     if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase client not available");
     var user = STELLARSYNC_AUTH_USER;
     if (user && displayName) {
-      await STELLARSYNC_SUPABASE_CLIENT.auth.updateUser({ data: { display_name: displayName, avatar_initials: initials, avatar_mode: "icon", icon: icon } });
+      await STELLARSYNC_SUPABASE_CLIENT.auth.updateUser({ data: { display_name: displayName, avatar_initials: initials, avatar_mode: avatarMode, icon: icon } });
     }
+    console.log("[profile-modal] save success");
     if (statusEl) { statusEl.textContent = "Profile saved."; statusEl.className = "text-xs text-emerald-400"; statusEl.classList.remove("hidden"); }
     renderWorkspaceBranding();
     setTimeout(function() { if (statusEl) statusEl.classList.add("hidden"); }, 3000);
   } catch (err) {
-    console.warn("[workspace-settings] save failed", err);
-    if (statusEl) { statusEl.textContent = "Save failed. Settings are local-only."; statusEl.className = "text-xs text-yellow-400"; statusEl.classList.remove("hidden"); }
+    console.log("[profile-modal] save error", err);
+    if (statusEl) { statusEl.textContent = "Save failed: " + (err.message || String(err)); statusEl.className = "text-xs text-red-400"; statusEl.classList.remove("hidden"); }
+  } finally {
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "Save Profile"; }
   }
 }
 
 async function savePWWorkspace() {
+  console.log("[profile-modal] saving workspace");
   var statusEl = document.getElementById("pw-workspace-status");
+  var saveBtn = document.getElementById("pw-workspace-save-btn");
   if (statusEl) { statusEl.classList.add("hidden"); statusEl.textContent = ""; }
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = "Saving..."; }
   try {
     var name = (document.getElementById("pw-workspace-name") || {}).value || "";
     var shortName = (document.getElementById("pw-workspace-short-name") || {}).value || "";
     var selectedIcon = document.querySelector("#pw-workspace-icon-grid .pw-ws-icon-btn.active");
     var icon = selectedIcon ? selectedIcon.dataset.icon : "sparkle";
-    var avatarMode = "icon";
+    var avatarMode = icon === "none" ? "initials" : "icon";
+    var initials = shortName || getWorkspaceInitials(WORKSPACE_RUNTIME_CONFIG.active);
     if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase client not available");
     var slug = (WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active && (WORKSPACE_RUNTIME_CONFIG.active.workspace_slug || WORKSPACE_RUNTIME_CONFIG.active.slug)) || "";
     if (slug) {
+      console.log("[profile-modal] saving branding");
       var existing = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").select("id").eq("workspace_slug", slug).maybeSingle();
+      var payload = { workspace_slug: slug, display_name: name, short_name: shortName, avatar_initials: initials, avatar_mode: avatarMode, icon: icon, updated_at: new Date().toISOString() };
       if (existing && existing.data && existing.data.id) {
-        await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").update({ display_name: name, short_name: shortName, avatar_initials: shortName || getWorkspaceInitials(WORKSPACE_RUNTIME_CONFIG.active), avatar_mode: avatarMode, icon: icon, updated_at: new Date().toISOString() }).eq("id", existing.data.id);
+        await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").update(payload).eq("id", existing.data.id);
       } else {
-        await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").insert({ workspace_slug: slug, display_name: name, short_name: shortName, avatar_initials: shortName || getWorkspaceInitials(WORKSPACE_RUNTIME_CONFIG.active), avatar_mode: avatarMode, icon: icon });
+        await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").insert(payload);
       }
-      WORKSPACE_RUNTIME_CONFIG.active = mergeWorkspaceSettings(WORKSPACE_RUNTIME_CONFIG.active, { display_name: name, short_name: shortName, avatar_initials: shortName || getWorkspaceInitials(WORKSPACE_RUNTIME_CONFIG.active), avatar_mode: avatarMode, icon: icon });
+      console.log("[profile-modal] save success");
+      WORKSPACE_RUNTIME_CONFIG.active = mergeWorkspaceSettings(WORKSPACE_RUNTIME_CONFIG.active, { display_name: name, short_name: shortName, avatar_initials: initials, avatar_mode: avatarMode, icon: icon });
       storeActiveWorkspaceConfig(WORKSPACE_RUNTIME_CONFIG.active);
     }
     if (statusEl) { statusEl.textContent = "Workspace saved."; statusEl.className = "text-xs text-emerald-400"; statusEl.classList.remove("hidden"); }
     renderWorkspaceBranding();
+    console.log("[workspace-branding] refreshed");
     setTimeout(function() { if (statusEl) statusEl.classList.add("hidden"); }, 3000);
   } catch (err) {
-    console.warn("[workspace-settings] save failed", err);
-    if (statusEl) { statusEl.textContent = "Workspace save unavailable. Supabase workspace_settings schema may be missing."; statusEl.className = "text-xs text-yellow-400"; statusEl.classList.remove("hidden"); }
+    console.log("[profile-modal] save error", err);
+    var msg = "Workspace save failed: " + (err.message || String(err));
+    if (err.message && err.message.includes("row-level security")) {
+      msg = "Workspace name save blocked by permissions (RLS). Contact admin.";
+    }
+    if (statusEl) { statusEl.textContent = msg; statusEl.className = "text-xs text-red-400"; statusEl.classList.remove("hidden"); }
+  } finally {
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "Save Workspace"; }
   }
 }
 
