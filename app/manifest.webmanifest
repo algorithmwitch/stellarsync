@@ -1,0 +1,32 @@
+{
+  "name": "StellarSync",
+  "short_name": "StellarSync",
+  "description": "StellarSync content calendar and scheduling workspace.",
+  "id": "./index.html",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "browser"],
+  "start_url": "./index.html",
+  "scope": "./",
+  "background_color": "#0a0612",
+  "theme_color": "#0a0612",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "../icon/stellarsync-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "../icon/stellarsync-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "../icon/stellarsync-apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

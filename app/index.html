@@ -1767,15 +1767,64 @@
             #media-link-modal-card,
             #media-asset-modal-card,
             #install-helper-modal-card,
+            #support-modal-card,
+            #confirm-action-modal-card,
+            #ai-workspace-modal-card,
+            #brand-framework-modal-card,
+            #profile-workspace-card,
             #upload-staging-modal-card,
             #workspace-hub-card,
             #workspace-hub-modal-card,
             #connection-setup-modal-card {
-                width: 100% !important;
-                max-width: 100% !important;
-                max-height: calc(100dvh - 2rem) !important;
+                width: min(calc(100vw - 24px), 100%) !important;
+                max-width: calc(100vw - 24px) !important;
+                max-height: calc(100dvh - 24px) !important;
                 margin: 0 !important;
                 overflow: hidden !important;
+            }
+
+            #scheduling-modal {
+                align-items: stretch !important;
+                justify-content: center !important;
+                padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom)) !important;
+            }
+
+            #scheduling-modal .modal-content {
+                height: calc(100dvh - 24px) !important;
+                border-radius: 1rem !important;
+            }
+
+            #scheduling-modal .modal-content > div:first-child {
+                position: sticky !important;
+                top: 0 !important;
+                z-index: 3 !important;
+                background: #120c1d !important;
+                padding: 0.85rem !important;
+            }
+
+            #scheduling-modal .modal-content > div:first-child h2 {
+                font-size: 1rem !important;
+                line-height: 1.2 !important;
+            }
+
+            #scheduling-modal .modal-content > div:first-child button {
+                min-width: 2.5rem !important;
+                min-height: 2.5rem !important;
+            }
+
+            #scheduling-modal .modal-content > div:last-child {
+                position: sticky !important;
+                bottom: 0 !important;
+                z-index: 3 !important;
+                background: #120c1d !important;
+                padding: 0.85rem max(0.85rem, env(safe-area-inset-right)) max(0.85rem, env(safe-area-inset-bottom)) max(0.85rem, env(safe-area-inset-left)) !important;
+                gap: 0.75rem !important;
+            }
+
+            #modal-save-error-banner {
+                margin: 0.75rem !important;
+                max-height: 36dvh !important;
+                overflow: auto !important;
             }
 
             #scheduling-modal .modal-content > div:nth-child(2),
@@ -1783,11 +1832,32 @@
             #inspo-modal .modal-content > div:nth-child(2),
             #media-link-modal .p-6,
             #media-asset-modal .grid,
+            #ai-workspace-modal-card > div,
+            #brand-framework-modal-card > div,
             #workspace-hub-card,
             #workspace-hub-modal-card,
+            #profile-workspace-card,
             #upload-staging-modal-card,
             #connection-setup-modal-card {
                 overflow-y: auto !important;
+            }
+
+            #scheduling-modal .grid.grid-cols-2,
+            #scheduling-modal .flex.gap-6,
+            #modal-publish-readiness,
+            #modal-carousel-preview,
+            #modal-ai-inline-helper .grid {
+                grid-template-columns: 1fr !important;
+                flex-direction: column !important;
+            }
+
+            #scheduling-modal .w-32 {
+                width: 100% !important;
+            }
+
+            #modal-media-upload-trigger {
+                width: 100% !important;
+                height: 6rem !important;
             }
 
             #media-asset-modal .grid {
@@ -1904,6 +1974,7 @@
 
             #workspace-hub-card,
             #workspace-hub-modal-card,
+            #profile-workspace-card,
             #connection-setup-modal-card {
                 width: 100% !important;
                 max-width: 100% !important;
@@ -1913,8 +1984,36 @@
             }
 
             #workspace-hub-card .lg\\:grid-cols-\\[240px_minmax\\(0\\,1fr\\)\\],
-            #workspace-hub-modal-card .lg\\:grid-cols-\\[240px_minmax\\(0\\,1fr\\)\\] {
+            #workspace-hub-modal-card .lg\\:grid-cols-\\[240px_minmax\\(0\\,1fr\\)\\],
+            #profile-workspace-card .md\\:grid-cols-\\[200px_minmax\\(0\\,1fr\\)\\] {
                 grid-template-columns: 1fr !important;
+            }
+
+            #profile-workspace-modal > div {
+                padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom)) !important;
+            }
+
+            #profile-workspace-card > div:first-child {
+                position: sticky !important;
+                top: 0 !important;
+                z-index: 3 !important;
+                background: #120c1d !important;
+                padding: 0.85rem !important;
+            }
+
+            #profile-workspace-card aside {
+                border-right: 0 !important;
+                border-bottom: 1px solid rgba(255,255,255,0.05) !important;
+                display: flex !important;
+                overflow-x: auto !important;
+                overflow-y: hidden !important;
+                gap: 0.5rem !important;
+            }
+
+            #profile-workspace-card aside .pw-tab-btn {
+                flex: 0 0 auto !important;
+                width: auto !important;
+                white-space: nowrap !important;
             }
 
             #workspace-settings-sidebar {
@@ -3637,6 +3736,22 @@
                 </div>
             </div>
 
+            <div id="modal-save-error-banner" class="hidden mx-6 mt-4 p-4 rounded-2xl border border-red-400/20 bg-red-950/25 text-sm text-red-100 space-y-2">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <div class="text-[10px] uppercase tracking-widest font-bold text-red-300">Save Failed</div>
+                  <div id="modal-save-error-message" class="mt-1 text-sm text-red-100 wrap-safe">The post could not be saved.</div>
+                </div>
+                <button type="button" onclick="hidePostSaveErrorBanner()" class="w-8 h-8 rounded-lg bg-red-950/40 hover:bg-red-900/40 text-red-100 flex items-center justify-center">
+                  <i class="ph-bold ph-x"></i>
+                </button>
+              </div>
+              <details class="text-[11px] text-red-100/80">
+                <summary class="cursor-pointer font-bold uppercase tracking-wider text-red-200">Save Diagnostics</summary>
+                <div id="modal-save-error-details" class="mt-2 whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed"></div>
+              </details>
+            </div>
+
             <div class="p-6 border-t border-white/5 flex justify-end gap-4" vid="587">
                 <button onclick="closeModal()" class="px-6 py-2.5 rounded-xl text-xs font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-colors border border-transparent" vid="588">Cancel</button>
                     <button id="save-post-btn" type="button" class="px-6 py-2.5 bg-gradient-to-r from-[#9d4edd] to-[#c77dff] hover:opacity-90 text-white text-xs uppercase tracking-wider font-bold rounded-xl shadow-[0_0_20px_rgba(157,78,221,0.2)] transition-all flex items-center gap-2">
@@ -4401,7 +4516,7 @@
           <pre id="connection-setup-auth-diagnostics" class="text-xs text-gray-400 wrap-safe font-mono whitespace-pre-wrap" style="max-height:160px;overflow-y:auto"></pre>
         </div>
         <div class="text-xs text-yellow-200 border border-yellow-500/15 bg-yellow-500/10 rounded-xl px-3 py-3">
-          Do not enter client secrets or tokens here. Secrets must stay in Apps Script `PropertiesService` or another secure backend store.
+	          Do not enter client secrets or tokens here. Secrets must stay in Supabase backend configuration or another secure server-side store.
         </div>
       </div>
     </div>
@@ -4760,12 +4875,12 @@ const SUBSCRIPTION_BLOCKED_STATUSES = new Set(["expired", "canceled", "cancelled
 const WORKSPACE_RUNTIME_CONFIG = {
   default_workspace_slug: "master",
   active: null,
-  backend_types: ["master_google_sheets", "client_google_sheets", "hybrid", "supabase_private"],
+  backend_types: ["supabase_native", "google_sheets_hybrid", "managed_hybrid", "master_google_sheets", "client_google_sheets", "hybrid", "supabase_private"],
   workspaces: {
     master: {
       workspace_id: "master",
       workspace_slug: "master",
-      backend_type: "master_google_sheets",
+      backend_type: "supabase_native",
       apps_script_url: "",
       sheet_id: "",
       monday_board_id: "",
@@ -4777,7 +4892,7 @@ const WORKSPACE_RUNTIME_CONFIG = {
     "client-1": {
       workspace_id: "client-1",
       workspace_slug: "client-1",
-      backend_type: "client_google_sheets",
+      backend_type: "supabase_native",
       apps_script_url: "",
       sheet_id: "",
       monday_board_id: "",
@@ -4812,7 +4927,7 @@ function getSessionWorkspaceConfig() {
 	      created_at: parsed.created_at || null,
 	      updated_at: parsed.updated_at || null,
 	      subscription_status: String(parsed.subscription_status || "").trim(),
-	      backend_type: String(parsed.backend_type || "client_google_sheets").trim(),
+	      backend_type: String(parsed.backend_type || "supabase_native").trim(),
 	      apps_script_url: String(parsed.apps_script_url || "").trim(),
 	      sheet_id: String(parsed.sheet_id || "").trim(),
 	      monday_board_id: String(parsed.monday_board_id || "").trim(),
@@ -4863,7 +4978,7 @@ function loadWorkspaceConfig() {
 	      created_at: sessionConfig.created_at || null,
 	      updated_at: sessionConfig.updated_at || null,
 	      subscription_status: sessionConfig.subscription_status || "",
-	      backend_type: sessionConfig.backend_type || "client_google_sheets",
+	      backend_type: sessionConfig.backend_type || "supabase_native",
 	      apps_script_url: sessionConfig.apps_script_url || "",
 	      sheet_id: sessionConfig.sheet_id || "",
 	      monday_board_id: sessionConfig.monday_board_id || "",
@@ -4877,11 +4992,7 @@ function loadWorkspaceConfig() {
 	      icon: sessionConfig.icon || ""
 	    };
     if (!WORKSPACE_RUNTIME_CONFIG.backend_types.includes(active.backend_type)) {
-      active.backend_type = "client_google_sheets";
-    }
-    if (!active.apps_script_url) {
-      console.warn("[workspace] No apps_script_url in session config for:", requestedSlug);
-      try { showToast("Workspace Config", "No Apps Script URL for this workspace. Some features may be limited.", "ph-warning", "text-yellow-400"); } catch (_) {}
+      active.backend_type = "supabase_native";
     }
     WORKSPACE_RUNTIME_CONFIG.active = active;
     APP_CONFIG.APP_SCRIPT_URL = active.apps_script_url || APP_CONFIG.APP_SCRIPT_URL;
@@ -4896,7 +5007,7 @@ function loadWorkspaceConfig() {
     ...workspaceConfig,
     workspace_slug: String(workspaceConfig.workspace_slug || slug || masterConfig.workspace_slug || "master").trim(),
     workspace_id: String(workspaceConfig.workspace_id || workspaceConfig.workspace_slug || slug || masterConfig.workspace_id || "master").trim(),
-    backend_type: String(workspaceConfig.backend_type || masterConfig.backend_type || "master_google_sheets").trim(),
+    backend_type: String(workspaceConfig.backend_type || masterConfig.backend_type || "supabase_native").trim(),
     apps_script_url: String(workspaceConfig.apps_script_url || masterConfig.apps_script_url || APP_CONFIG.APP_SCRIPT_URL || "").trim(),
     sheet_id: String(workspaceConfig.sheet_id || masterConfig.sheet_id || "").trim(),
     monday_board_id: String(workspaceConfig.monday_board_id || masterConfig.monday_board_id || "").trim(),
@@ -4907,11 +5018,7 @@ function loadWorkspaceConfig() {
     icon: String(workspaceConfig.icon || workspaceConfig.avatar_icon || masterConfig.icon || "").trim()
   };
   if (!WORKSPACE_RUNTIME_CONFIG.backend_types.includes(active.backend_type)) {
-    active.backend_type = requestedSlug ? "client_google_sheets" : "master_google_sheets";
-  }
-  if (requestedSlug && requestedSlug !== "master" && !active.apps_script_url) {
-    console.warn("[workspace] No apps_script_url configured for workspace:", requestedSlug);
-    try { showToast("Workspace Config", "No Apps Script URL configured. Check workspace settings.", "ph-warning", "text-yellow-400"); } catch (_) {}
+    active.backend_type = "supabase_native";
   }
   WORKSPACE_RUNTIME_CONFIG.active = active;
   APP_CONFIG.APP_SCRIPT_URL = active.apps_script_url || APP_CONFIG.APP_SCRIPT_URL;
@@ -4933,7 +5040,7 @@ function normalizeSupabaseWorkspaceConfig(workspace) {
     apps_script_url: String(source.apps_script_url || "").trim(),
     sheet_id: String(source.sheet_id || "").trim(),
     monday_board_id: String(source.monday_board_id || "").trim(),
-    backend_type: String(source.backend_type || "client_google_sheets").trim(),
+    backend_type: String(source.backend_type || "supabase_native").trim(),
     supabase_media_enabled: Boolean(source.supabase_media_enabled),
     media_bucket: String(source.media_bucket || source.storage_bucket || "media").trim(),
     short_name: String(source.short_name || source.shortName || "").trim(),
@@ -4952,9 +5059,13 @@ function mergeWorkspaceSettings(workspace, settings) {
   const avatarInitials = String(settings.avatar_initials || settings.avatarInitials || "").trim();
   const avatarMode = String(settings.avatar_mode || settings.avatarMode || "").trim();
   const icon = String(settings.icon || settings.avatar_icon || settings.avatarIcon || "").trim();
+  const plan = String(settings.plan || settings.tier || "").trim();
   return {
     ...workspace,
     name: displayName || workspace.name,
+    plan: workspace.plan || plan,
+    tier: workspace.tier || plan,
+    settings_plan: plan,
     short_name: shortName || workspace.short_name || "",
     avatar_initials: avatarInitials || workspace.avatar_initials || "",
     avatar_mode: avatarMode || workspace.avatar_mode || "",
@@ -5328,25 +5439,25 @@ async function ensureSupabaseWorkspaceBeforeBoot() {
     WORKSPACE_CONNECTIONS = [];
   }
 
-  // Prefer google_sheets connection apps_script_url, fallback to workspace.apps_script_url
+  WORKSPACE_RUNTIME_CONFIG.active = activeWorkspace;
+
+  // Prefer google_sheets connection apps_script_url only when hybrid mode is selected.
   const gsConn = WORKSPACE_CONNECTIONS.find(c => c && c.provider === "google_sheets");
   const connAppsScriptUrl = gsConn && gsConn.config && String(gsConn.config.apps_script_url || "").trim();
   if (connAppsScriptUrl) {
     activeWorkspace.apps_script_url = connAppsScriptUrl;
     console.log("[app-router] using google_sheets connection apps_script_url");
   }
-
-  if (!activeWorkspace.apps_script_url) {
-    console.warn("[app-router] missing apps_script_url", activeWorkspace.slug);
-    showAppRouterState({
-      title: "Workspace connection needed",
-      message: "This workspace needs a Google Sheets backend connection before data can sync.",
-      detail: activeWorkspace.slug,
-      ctaHref: "/contact/?topic=setup",
-      ctaLabel: "Contact Setup"
-    });
-    return null;
+  const backendMode = getWorkspaceBackendMode(activeWorkspace, WORKSPACE_CONNECTIONS);
+  activeWorkspace.backend_mode = backendMode.mode;
+  activeWorkspace.backend_type = backendMode.mode;
+  if (backendMode.appsScriptUrl) {
+    activeWorkspace.apps_script_url = backendMode.appsScriptUrl;
+    APP_CONFIG.APP_SCRIPT_URL = backendMode.appsScriptUrl;
+  } else {
+    activeWorkspace.apps_script_url = "";
   }
+  ACTIVE_PLAN_FEATURES = getWorkspacePlanFeatures(activeWorkspace);
 
   storeActiveWorkspaceConfig(activeWorkspace);
 
@@ -5449,16 +5560,15 @@ async function loadSupabaseMediaAssets(workspace) {
       .select("*")
       .eq("workspace_id", config.workspace_id || config.workspace_slug || "master")
       .order("created_at", { ascending: false })
-      .limit(100)
-      .maybeSingle();
+      .limit(100);
     
     if (tableResult.error && tableResult.error.code !== "PGRST100") {
       throw tableResult.error;
     }
     
-    if (tableResult.data && Array.isArray(tableResult.data)) {
+    if (Array.isArray(tableResult.data)) {
       console.log("[media-backend] table query success", tableResult.data.length);
-      result.assets = tableResult.data.map(function(asset) {
+      result.assets = result.assets.concat(tableResult.data.map(function(asset) {
         var url = asset.media_url || asset.url || asset.file_url || "";
         if (!url && asset.storage_path && bucket) {
           url = `${String(config.supabase_url || "").replace(/\/+$/, "")}/storage/v1/object/public/${bucket}/${asset.storage_path}`;
@@ -5484,10 +5594,8 @@ async function loadSupabaseMediaAssets(workspace) {
           source: "supabase",
           importedMediaSource: "supabase"
         };
-      });
+      }));
       result.source = "table";
-      console.log("[media-backend] merged media count", result.assets.length);
-      return result;
     }
   } catch (err) {
     console.log("[media-backend] table query error", err?.message || err);
@@ -5526,15 +5634,26 @@ async function loadSupabaseMediaAssets(workspace) {
           importedMediaSource: "supabase"
         };
       });
-      result.assets = files;
-      result.source = "storage";
-      console.log("[media-backend] merged media count", result.assets.length);
-      return result;
+      result.assets = result.assets.concat(files);
+      result.source = result.source === "table" ? "table+storage" : "storage";
     }
   } catch (err) {
     console.log("[media-backend] storage list error", err?.message || err);
   }
-  
+
+  if (result.assets.length) {
+    var seen = new Set();
+    result.assets = result.assets.filter(function(asset) {
+      var key = String(asset.asset_id || asset.storage_path || asset.storagePath || asset.media_url || asset.url || "").trim();
+      if (!key) return true;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    console.log("[media-backend] merged media count", result.assets.length);
+    return result;
+  }
+
   console.log("[media-backend] fallback to google_sheets only");
   result.source = "google_sheets";
   return result;
@@ -5556,6 +5675,7 @@ function countRenderableMediaCount(mediaList) {
 function getWorkspaceRequestMetadata() {
   const config = WORKSPACE_RUNTIME_CONFIG.active || loadWorkspaceConfig();
   const user = STELLARSYNC_AUTH_USER || {};
+  const backendMode = getActiveWorkspaceBackendMode();
   return {
     workspace_id: config.workspace_id || config.workspace_slug || "master",
     workspace_slug: config.workspace_slug || "master",
@@ -5564,11 +5684,12 @@ function getWorkspaceRequestMetadata() {
     user_email: user.email || "",
     plan: config.plan || "",
     role: config.role || "",
-    backend_type: config.backend_type || "master_google_sheets",
+    backend_type: backendMode.mode || config.backend_type || "supabase_native",
+    backend_mode: backendMode.mode || config.backend_type || "supabase_native",
     sheet_id: config.sheet_id || "",
-    monday_board_id: config.monday_board_id || "",
+    monday_board_id: getMondayBoardId(config, WORKSPACE_CONNECTIONS) || "",
     supabase_media_enabled: !!config.supabase_media_enabled,
-    connection_provider: "google_sheets"
+    connection_provider: backendMode.provider || "supabase"
   };
 }
 
@@ -5876,6 +5997,7 @@ function getMediaTitle(asset, fallback = "Untitled media") {
 
 function isUntitledArtifact(value, type) {
   var str = String(value || "").trim().toLowerCase();
+  if (!str) return true;
   var patterns = {
     post: ["untitled", "untitled post"],
     note: ["untitled", "untitled note"],
@@ -5894,7 +6016,7 @@ function isRenderableArtifact(record, type) {
     case "post":
       title = pickRemoteValue(record?.title, record?.post_title, record?.postTitle, record?.queue_title, record?.queueTitle, record?.headline, "");
       body = pickRemoteValue(record?.description, record?.body, record?.caption, record?.content, record?.copy, "");
-      return !isUntitledArtifact(title, "post") || !isBlankPostTextValue(body);
+      return !isUntitledArtifact(title, "post") || String(body || "").trim().length > 0;
     case "note":
       title = record?.title || record?.note_title || record?.noteTitle || "";
       body = record?.body || record?.note_body || record?.content || record?.summary || "";
@@ -6616,6 +6738,16 @@ let socialCardUpload = null;
 let socialImportCapabilities = null;
 let connectedAccounts = [];
 let WORKSPACE_CONNECTIONS = [];
+let GOOGLE_SHEETS_CONNECTION_STATUS = {
+  source: "none",
+  connected: false,
+  lastSync: "",
+  postCount: 0,
+  error: "",
+  sheetName: "",
+  appsScriptUrl: ""
+};
+let ACTIVE_PLAN_FEATURES = null;
 let aiProviders = [];
 let aiProvidersLoading = false;
 let connectedAccountsStatusLoading = true;
@@ -6643,6 +6775,102 @@ let activeConnectionSetupPlatform = "";
 const SUPPORTED_POST_PLATFORMS = ["linkedin", "instagram", "threads", "bluesky", "tiktok", "youtube", "facebook"];
 const CONNECTED_ACCOUNT_PLATFORMS = ["linkedin", "instagram", "threads", "bluesky", "tiktok", "youtube", "facebook"];
 const WORKSPACE_CONNECTION_PROVIDERS = ["google_sheets", "google_drive", "monday"]; // stripe removed — belongs in Billing tab, not Connections
+function normalizeWorkspacePlan(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (["starter", "growth", "agency", "managed"].includes(normalized)) return normalized;
+  if (normalized === "free") return "starter";
+  if (normalized === "pro") return "growth";
+  if (normalized === "enterprise") return "managed";
+  return "starter";
+}
+
+function getWorkspacePlanFeatures(workspace = {}) {
+  const plan = normalizeWorkspacePlan(workspace.plan || workspace.tier || workspace.workspace_plan || workspace.workspace_tier || workspace.settings_plan);
+  const backendType = String(workspace.backend_type || "").trim().toLowerCase();
+  const gsConn = typeof getWorkspaceConnection === "function" ? getWorkspaceConnection("google_sheets") : null;
+  const explicitHybrid = ["google_sheets_hybrid", "managed_hybrid", "client_google_sheets", "master_google_sheets", "hybrid"].includes(backendType);
+  const hybridEnabled = explicitHybrid || (!!String(workspace.apps_script_url || "").trim() && !!gsConn && isWorkspaceConnectionEnabled(gsConn));
+  const base = {
+    plan,
+    calendar: true,
+    posts: true,
+    notes: true,
+    inspo: true,
+    basicMediaReferences: true,
+    campaigns: false,
+    mediaLibraryStorage: false,
+    publishingReadiness: false,
+    basicIntegrations: false,
+    agencyTools: false,
+    templates: false,
+    advancedPermissions: false,
+    prioritySupport: false,
+    googleSheetsHybrid: false,
+    googleDriveSetup: false,
+    mondaySetup: false,
+    migrationWorkflowSupport: false
+  };
+  if (plan === "growth" || plan === "agency" || plan === "managed") {
+    Object.assign(base, {
+      campaigns: true,
+      mediaLibraryStorage: true,
+      publishingReadiness: true,
+      basicIntegrations: true
+    });
+  }
+  if (plan === "agency" || plan === "managed") {
+    Object.assign(base, {
+      agencyTools: true,
+      templates: true,
+      advancedPermissions: true,
+      prioritySupport: true
+    });
+  }
+  if (plan === "managed") {
+    Object.assign(base, {
+      googleSheetsHybrid: true,
+      googleDriveSetup: true,
+      mondaySetup: true,
+      migrationWorkflowSupport: true
+    });
+  } else if (hybridEnabled && plan !== "starter") {
+    base.googleSheetsHybrid = true;
+  }
+  base.hybridEnabled = base.googleSheetsHybrid || (plan === "managed" && hybridEnabled);
+  console.log("[tier] active plan", plan);
+  console.log("[tier] enabled features", base);
+  return base;
+}
+
+function getFeatureGateForView(viewName) {
+  const features = ACTIVE_PLAN_FEATURES || getWorkspacePlanFeatures(WORKSPACE_RUNTIME_CONFIG?.active || {});
+  const view = String(viewName || "").trim();
+  const map = {
+    constellation: { enabled: features.campaigns, label: "Campaign constellation" },
+    performance: { enabled: features.publishingReadiness, label: "Publishing readiness" },
+    media: { enabled: features.basicMediaReferences, label: "Media references" }
+  };
+  return map[view] || { enabled: true, label: view };
+}
+
+function applyTierFeatureGates() {
+  const features = ACTIVE_PLAN_FEATURES || getWorkspacePlanFeatures(WORKSPACE_RUNTIME_CONFIG?.active || {});
+  const mondayAvailable = !!getMondayBoardId(WORKSPACE_RUNTIME_CONFIG?.active, WORKSPACE_CONNECTIONS) || !!getWorkspaceConnection("monday");
+  [
+    { selector: "#nav-constellation", enabled: features.campaigns, label: "Campaign tools" },
+    { selector: "#modal-add-campaign-btn", enabled: features.campaigns, label: "Campaigns" },
+    { selector: "#modal-schedule-social-enabled", enabled: features.publishingReadiness, label: "Publishing readiness" },
+    { selector: "#modal-sync-monday-btn", enabled: features.mondaySetup || mondayAvailable, label: "Monday sync" }
+  ].forEach((gate) => {
+    document.querySelectorAll(gate.selector).forEach((el) => {
+      el.classList.toggle("opacity-50", !gate.enabled);
+      el.classList.toggle("cursor-not-allowed", !gate.enabled);
+      el.disabled = !gate.enabled;
+      if (!gate.enabled) el.title = gate.label + " is available on a higher StellarSync tier.";
+    });
+  });
+}
+
 let installContext = {
   isIos: /iphone|ipad|ipod/i.test(navigator.userAgent || ""),
   isStandalone: false
@@ -6876,6 +7104,9 @@ const linkedInDownloadReportBtn = document.getElementById("modal-linkedin-downlo
 const publishReadinessEl = document.getElementById("modal-publish-readiness");
 const scheduleSocialEnabledInput = document.getElementById("modal-schedule-social-enabled");
 const socialScheduleStatusEl = document.getElementById("modal-social-schedule-status");
+const postSaveErrorBanner = document.getElementById("modal-save-error-banner");
+const postSaveErrorMessage = document.getElementById("modal-save-error-message");
+const postSaveErrorDetails = document.getElementById("modal-save-error-details");
 const validateLinkedInBtn = document.getElementById("modal-validate-linkedin-btn");
 const prepareLinkedInPayloadBtn = document.getElementById("modal-prepare-linkedin-payload-btn");
 const linkedInPublishOutputEl = document.getElementById("modal-linkedin-publish-output");
@@ -7463,6 +7694,7 @@ function rerenderAll() {
     if (!workspaceHubModal?.classList.contains("opacity-0")) renderWorkspaceHub();
   }, "renderWorkspaceHub");
   safeRender(renderWorkspaceBranding, "renderWorkspaceBranding");
+  safeRender(applyTierFeatureGates, "applyTierFeatureGates");
 }
 
 function inspoTypeLabel(type) {
@@ -7996,35 +8228,34 @@ function setupWorkspaceUI() {
   document.addEventListener("click", (event) => {
     var postEl = event.target.closest('[data-calendar-post-id], [data-post-id], .calendar-post, .calendar-pill, .calendar-post-pill, .mobile-calendar-post');
     if (!postEl) return;
-    console.log("[calendar-post] document delegated click");
-    console.log("[calendar-post] element found", postEl);
-    console.log("[calendar-post] dataset", postEl.dataset);
+    console.log("[calendar] clicked", { source: "document-delegated", dataset: Object.assign({}, postEl.dataset || {}) });
     event.preventDefault();
     event.stopPropagation();
     var postId = postEl.dataset.calendarPostId || postEl.dataset.postId || "";
     var postTitle = postEl.dataset.postTitle || "";
     var postDateKey = postEl.dataset.postDate || "";
     var post = postId ? findPostByAnyId(postId) : null;
-    console.log("[calendar-post] resolved post by id", !!post);
+    console.log("[calendar] resolved", { method: "id", ok: !!post, postId });
     if (!post && postTitle && postDateKey) {
       post = (appState.posts || []).find(function(p) {
         var titleMatch = getPostDisplayTitle(p) === postTitle;
         var dateMatch = normalizePostCalendarDateKey(p) === postDateKey;
         return titleMatch && dateMatch;
       }) || null;
-      console.log("[calendar-post] fallback match by title+date", !!post);
+      console.log("[calendar] resolved", { method: "title+date", ok: !!post, title: postTitle, date: postDateKey });
     }
     if (!post && postEl.dataset.postId) {
       var directId = postEl.dataset.postId;
       post = (appState.posts || []).find(function(p) {
         return String(p.id || p.postId || p.post_id || p.frontendId || p._frontendId || "") === directId;
       }) || null;
-      console.log("[calendar-post] fallback match by direct id", !!post);
+      console.log("[calendar] resolved", { method: "direct-id", ok: !!post, postId: directId });
     }
-    console.log("[calendar-post] resolved post", post ? (post.id || post.postId || post.post_id || post.frontendId || "") : "none");
     if (post) {
-      console.log("[calendar-post] opening modal");
+      console.log("[calendar] opened", { postId: post.id || post.postId || post.post_id || post.frontendId || "" });
       openPostObjectModal(post, "calendar-document-delegated");
+    } else {
+      console.error("[calendar] failed", { postId, title: postTitle, date: postDateKey });
     }
   });
 
@@ -8229,7 +8460,7 @@ function setupWorkspaceUI() {
       renderImportedLinkedInCleanupReport(err?.backend || { error: err.message || "Could not preview imported LinkedIn rewrite." }, "dryRun");
       const invalidAction = /invalid action/i.test(err?.backend?.error || err?.message || "");
       if (cleanupImportedLinkedInStatus) cleanupImportedLinkedInStatus.textContent = invalidAction
-        ? "Backend rewrite route is not deployed or APP_SCRIPT_URL points to the wrong Apps Script deployment."
+        ? "Backend rewrite route is not deployed or the configured backend URL points to the wrong deployment."
         : (err.message || "Could not preview imported LinkedIn rewrite.");
       showToast("Rewrite preview failed", err.message || "Could not preview imported LinkedIn rewrite.", "ph-warning", "text-yellow-400");
     }
@@ -8244,7 +8475,7 @@ function setupWorkspaceUI() {
       console.error(err);
       const invalidAction = /invalid action/i.test(err?.backend?.error || err?.message || "");
       if (linkedInRewriteRouteStatus) linkedInRewriteRouteStatus.textContent = invalidAction
-        ? "Backend rewrite route is not deployed or APP_SCRIPT_URL points to the wrong Apps Script deployment."
+        ? "Backend rewrite route is not deployed or the configured backend URL points to the wrong deployment."
         : (err.message || "Could not test rewrite route.");
       renderImportedLinkedInCleanupReport(err?.backend || { error: err.message || "Could not test rewrite route." }, "routeTest");
       showToast("Rewrite route failed", err.message || "Could not test rewrite route.", "ph-warning", "text-yellow-400");
@@ -8283,7 +8514,7 @@ function setupWorkspaceUI() {
       renderImportedLinkedInCleanupReport(err?.backend || { error: err.message || "Could not rewrite imported LinkedIn rows." }, "live");
       const invalidAction = /invalid action/i.test(err?.backend?.error || err?.message || "");
       if (cleanupImportedLinkedInStatus) cleanupImportedLinkedInStatus.textContent = invalidAction
-        ? "Backend rewrite route is not deployed or APP_SCRIPT_URL points to the wrong Apps Script deployment."
+        ? "Backend rewrite route is not deployed or the configured backend URL points to the wrong deployment."
         : (err.message || "Could not rewrite imported LinkedIn rows.");
       showToast("Rewrite failed", err.message || "Could not rewrite imported LinkedIn rows.", "ph-warning", "text-yellow-400");
     }
@@ -11058,6 +11289,92 @@ function getWorkspaceConnection(provider) {
   return (WORKSPACE_CONNECTIONS || []).find((item) => item.provider === provider) || null;
 }
 
+function upsertLocalWorkspaceConnection(provider, patch) {
+  const normalizedProvider = String(provider || "").trim();
+  if (!normalizedProvider) return null;
+  WORKSPACE_CONNECTIONS = Array.isArray(WORKSPACE_CONNECTIONS) ? WORKSPACE_CONNECTIONS : [];
+  let conn = getWorkspaceConnection(normalizedProvider);
+  if (!conn) {
+    conn = {
+      provider: normalizedProvider,
+      status: "setup_needed",
+      config: {},
+      metadata: {},
+      last_sync_at: "",
+      last_error: ""
+    };
+    WORKSPACE_CONNECTIONS.push(conn);
+  }
+  Object.assign(conn, patch || {});
+  if (patch && patch.config) conn.config = Object.assign({}, conn.config || {}, patch.config);
+  if (patch && patch.metadata) conn.metadata = Object.assign({}, conn.metadata || {}, patch.metadata);
+  return conn;
+}
+
+function isWorkspaceConnectionEnabled(conn) {
+  if (!conn) return false;
+  const status = String(conn.status || "").trim().toLowerCase();
+  if (["disabled", "inactive", "not_connected", "deleted"].includes(status)) return false;
+  if (["connected", "configured", "warning", "sync_issue", "setup_needed"].includes(status)) return true;
+  return true;
+}
+
+function getGoogleSheetsConnectionSource() {
+  const conn = getWorkspaceConnection("google_sheets");
+  const connUrl = String(conn?.config?.apps_script_url || "").trim();
+  if (connUrl) return { source: "workspace_connections.google_sheets.config.apps_script_url", url: connUrl, connection: conn };
+  const workspaceUrl = String(WORKSPACE_RUNTIME_CONFIG?.active?.apps_script_url || "").trim();
+  if (workspaceUrl) return { source: "workspaces.apps_script_url", url: workspaceUrl, connection: conn || null };
+  const activeUrl = String(WORKSPACE_RUNTIME_CONFIG?.active?.api_url || WORKSPACE_RUNTIME_CONFIG?.active?.backend_url || "").trim();
+  if (activeUrl) return { source: "active backend config", url: activeUrl, connection: conn || null };
+  return { source: "none", url: "", connection: conn || null };
+}
+
+function getMondayBoardId(workspace = WORKSPACE_RUNTIME_CONFIG?.active, connections = WORKSPACE_CONNECTIONS) {
+  const mondayConn = (connections || []).find((item) => item && item.provider === "monday") || null;
+  return String(
+    workspace?.monday_board_id ||
+    mondayConn?.config?.board_id ||
+    mondayConn?.metadata?.board_id ||
+    mondayConn?.config?.monday_board_id ||
+    ""
+  ).trim();
+}
+
+function getWorkspaceBackendMode(workspace = {}, connections = []) {
+  const activeWorkspace = workspace || {};
+  const gsConn = (connections || []).find((item) => item && item.provider === "google_sheets") || null;
+  const source = getGoogleSheetsConnectionSource();
+  const appsScriptUrl = String(source.url || activeWorkspace.apps_script_url || "").trim();
+  const plan = normalizeWorkspacePlan(activeWorkspace.plan || activeWorkspace.tier || activeWorkspace.settings_plan);
+  const backendType = String(activeWorkspace.backend_type || "").trim().toLowerCase();
+  const connectionEnabled = !!(gsConn && isWorkspaceConnectionEnabled(gsConn));
+  const explicitHybrid = ["google_sheets_hybrid", "managed_hybrid", "client_google_sheets", "master_google_sheets", "hybrid"].includes(backendType);
+  const managedHybrid = plan === "managed" && !!appsScriptUrl && (connectionEnabled || explicitHybrid);
+  const googleSheetsHybrid = !!appsScriptUrl && (connectionEnabled || explicitHybrid);
+  let mode = "supabase_native";
+  if (managedHybrid) mode = "managed_hybrid";
+  else if (googleSheetsHybrid) mode = "google_sheets_hybrid";
+  const result = {
+    mode,
+    backend_type: mode,
+    provider: mode === "supabase_native" ? "supabase" : "google_sheets",
+    appsScriptUrl: mode === "supabase_native" ? "" : appsScriptUrl,
+    apps_script_url: mode === "supabase_native" ? "" : appsScriptUrl,
+    googleSheetsEnabled: mode !== "supabase_native",
+    supabaseNative: mode === "supabase_native",
+    connectionStatus: gsConn?.status || "",
+    source: mode === "supabase_native" ? "supabase_native_default" : source.source,
+    plan
+  };
+  console.log("[backend] mode", result);
+  return result;
+}
+
+function getActiveWorkspaceBackendMode() {
+  return getWorkspaceBackendMode(WORKSPACE_RUNTIME_CONFIG?.active || {}, WORKSPACE_CONNECTIONS || []);
+}
+
 function inferSocialImportMode(state) {
   const platform = state?.detected || "external";
   const account = getConnectedAccount(platform);
@@ -11252,7 +11569,7 @@ function formatHistoricalEndpointSummary(entry) {
 async function connectSocialAccount(platform) {
   const missingSetupKeys = getConnectedAccountMissingSetupKeys(platform);
   if (missingSetupKeys.length) {
-    showToast("Setup required", `Add Script Properties: ${missingSetupKeys.join(", ")}`, "ph-warning", "text-yellow-400");
+    showToast("Setup required", `Managed through Supabase backend setup: ${missingSetupKeys.join(", ")}`, "ph-warning", "text-yellow-400");
     openConnectionSetupModal(platform, getConnectedAccount(platform) || {});
     return;
   }
@@ -11307,7 +11624,7 @@ async function disconnectConnectedAccount(platform) {
       delete connectedAccountsHistoricalAccess.linkedin;
     }
     await refreshSocialImportContext();
-    showToast("Disconnected", `${toTitleCase(platform)} access tokens were removed from Apps Script properties.`, "ph-check", "text-[#00ffaa]");
+    showToast("Disconnected", `${toTitleCase(platform)} access tokens were removed from backend storage.`, "ph-check", "text-[#00ffaa]");
   } catch (err) {
     console.error(err);
     showToast("Disconnect failed", err.message || "Could not disconnect the account.", "ph-warning", "text-yellow-400");
@@ -11789,7 +12106,7 @@ function getConnectedAccountsMarkup(options = {}) {
           </div>
           <span class="diagnostic-chip">Checking backend</span>
         </div>
-        <div class="text-sm text-gray-300 wrap-safe">Connected Accounts is hydrating from Apps Script Script Properties.</div>
+        <div class="text-sm text-gray-300 wrap-safe">Connected Accounts is hydrating from backend connection records.</div>
       </div>
     `).join("");
   }
@@ -11993,12 +12310,71 @@ function getConnectedAccountsMarkup(options = {}) {
 
 function renderWorkspaceConnectionCards() {
   const providers = WORKSPACE_CONNECTION_PROVIDERS;
-  var mondayBoardId = (WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active && WORKSPACE_RUNTIME_CONFIG.active.monday_board_id) || "";
+  var mondayBoardId = getMondayBoardId(WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active, WORKSPACE_CONNECTIONS);
+  var planFeatures = ACTIVE_PLAN_FEATURES || getWorkspacePlanFeatures(WORKSPACE_RUNTIME_CONFIG?.active || {});
+  var backendMode = getActiveWorkspaceBackendMode();
   console.log("[monday] board id from workspace", mondayBoardId);
   return providers.map((provider) => {
     const conn = getWorkspaceConnection(provider);
     const providerLabel = toTitleCase(provider.replace(/_/g, " "));
     var statusLabel, statusTone, chipLabel, detailParts, actions;
+    if (provider === "google_sheets") {
+      var sheetsSource = getGoogleSheetsConnectionSource();
+      var sheetsStatus = GOOGLE_SHEETS_CONNECTION_STATUS || {};
+      var hasUrl = !!sheetsSource.url;
+      console.log("[sheets] connection source", sheetsSource.source);
+      console.log("[sheets] connected", !!sheetsStatus.connected);
+      console.log("[sheets] last sync", sheetsStatus.lastSync || "none");
+      console.log("[sheets] post count", sheetsStatus.postCount || 0);
+      if (hasUrl && sheetsStatus.connected) {
+        statusLabel = "Connected";
+        statusTone = "text-emerald-300";
+        chipLabel = "Hybrid Enabled";
+        detailParts = ["Hybrid Google Sheets backend enabled"];
+        if (sheetsStatus.sheetName) detailParts.push("Sheet: " + sheetsStatus.sheetName);
+        if (sheetsStatus.lastSync) detailParts.push("Last sync: " + sheetsStatus.lastSync);
+        detailParts.push("Posts: " + (sheetsStatus.postCount || 0));
+        actions = '<button type="button" onclick="syncRemoteIfConfigured().then(function(){ refreshConnectionCards(); showToast(\'Google Sheets synced\', \'success\'); }).catch(function(err){ showToast(\'Sync issue: \' + (err.message || err), \'error\'); })" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Retry Sync</button>';
+      } else if (hasUrl && sheetsStatus.error) {
+        statusLabel = "Sync Issue";
+        statusTone = "text-yellow-300";
+        chipLabel = "Needs Retry";
+        detailParts = ["Apps Script URL found via " + sheetsSource.source, "Error: " + sheetsStatus.error];
+        actions = '<button type="button" onclick="syncRemoteIfConfigured().then(function(){ refreshConnectionCards(); showToast(\'Google Sheets synced\', \'success\'); }).catch(function(err){ showToast(\'Sync issue: \' + (err.message || err), \'error\'); })" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Retry Sync</button>';
+      } else if (hasUrl && backendMode.mode !== "supabase_native") {
+        statusLabel = "Setup available";
+        statusTone = "text-emerald-300";
+        chipLabel = "Configured";
+        detailParts = ["Google Sheets backend URL is configured", "Source: " + sheetsSource.source];
+        actions = '<button type="button" onclick="syncRemoteIfConfigured().then(function(){ refreshConnectionCards(); showToast(\'Google Sheets synced\', \'success\'); }).catch(function(err){ showToast(\'Sync issue: \' + (err.message || err), \'error\'); })" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Retry Sync</button>';
+      } else {
+        statusLabel = planFeatures.googleSheetsHybrid ? "Setup available" : "Optional";
+        statusTone = "text-gray-300";
+        chipLabel = planFeatures.googleSheetsHybrid ? "Setup available" : "Optional";
+        if (planFeatures.plan === "starter") {
+          statusLabel = "Not included in plan";
+          chipLabel = "Not included";
+          detailParts = ["Core app data uses Supabase. Google Sheets hybrid is not included on this workspace tier."];
+          actions = '<button type="button" onclick="openSupportModal(\'Upgrade support\')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Upgrade</button>';
+        } else {
+          detailParts = [planFeatures.googleSheetsHybrid ? "Managed Google Sheets backend is available but not configured." : "Core app data uses Supabase. Google Sheets hybrid is optional."];
+          actions = '<button type="button" onclick="openSupportModal(\'Integration setup\')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Request Setup</button>';
+        }
+      }
+      return (
+        '<div class="platform-card">' +
+          '<div class="flex items-start justify-between gap-3 mb-4">' +
+            '<div>' +
+              '<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">' + escapeHtml(providerLabel) + '</div>' +
+              '<div class="text-lg font-bold ' + statusTone + ' mt-1">' + escapeHtml(statusLabel) + '</div>' +
+            '</div>' +
+            '<span class="diagnostic-chip">' + escapeHtml(chipLabel) + '</span>' +
+          '</div>' +
+          '<div class="text-sm text-gray-400 wrap-safe">' + escapeHtml(detailParts.join(" • ")) + '</div>' +
+          '<div class="mt-4 flex flex-wrap gap-2">' + (actions || "") + '</div>' +
+        '</div>'
+      );
+    }
 
     if (conn) {
       const status = (conn.status || "setup_needed").toLowerCase();
@@ -12029,6 +12405,20 @@ function renderWorkspaceConnectionCards() {
         } else {
           detailParts = ["Board not yet configured"];
         }
+        if (!mondayBoardId && !planFeatures.mondaySetup) {
+          statusLabel = "Optional";
+          statusTone = "text-gray-300";
+          chipLabel = "Optional";
+          detailParts = ["Monday sync is optional and disabled until a board is configured."];
+        }
+        if (!mondayBoardId && planFeatures.plan === "starter") {
+          statusLabel = "Not included in plan";
+          chipLabel = "Not included";
+          detailParts = ["Monday sync is not included on this workspace tier."];
+        }
+        if (conn.config && Array.isArray(conn.config.columns_found)) detailParts.push("Columns found: " + conn.config.columns_found.length);
+        if (conn.config && conn.config.columns_used) detailParts.push("Columns mapped: " + Object.keys(conn.config.columns_used).filter(function(key) { return !!conn.config.columns_used[key]; }).join(", "));
+        if (conn.config && Array.isArray(conn.config.missing_columns) && conn.config.missing_columns.length) detailParts.push("Missing columns: " + conn.config.missing_columns.join(", "));
         if (conn.last_sync_at) detailParts.push("Last sync: " + conn.last_sync_at);
         if (conn.last_error) detailParts.push("Last error: " + conn.last_error);
       }
@@ -12048,6 +12438,7 @@ function renderWorkspaceConnectionCards() {
             chipLabel = "Board configured";
           }
           actions += '<button type="button" onclick="testMondayConnection()" class="px-3 py-2 rounded-xl bg-[#00a86b] hover:bg-[#00cc77] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Test Monday Connection</button>';
+          actions += '<button type="button" onclick="inspectMondayColumns()" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Inspect Monday Columns</button>';
         }
         actions += '<button type="button" onclick="openSupportModal(\'Integration setup\')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Request Monday Setup</button>';
       } else {
@@ -12065,7 +12456,20 @@ function renderWorkspaceConnectionCards() {
           statusTone = "text-emerald-300";
           chipLabel = "Board configured";
           detailParts = ["Board configured", "Board ID: " + mondayBoardId + " — test connection to verify"];
+        } else if (planFeatures.plan === "starter") {
+          statusLabel = "Not included in plan";
+          statusTone = "text-gray-300";
+          chipLabel = "Not included";
+          detailParts = ["Monday sync is not included on this workspace tier."];
+        } else if (!planFeatures.mondaySetup) {
+          statusLabel = "Optional";
+          statusTone = "text-gray-300";
+          chipLabel = "Optional";
+          detailParts = ["Monday sync is optional and disabled until a board is configured."];
         } else {
+          statusLabel = "Setup available";
+          statusTone = "text-gray-300";
+          chipLabel = "Setup available";
           detailParts = ["Board not yet configured"];
         }
       }
@@ -12077,6 +12481,7 @@ function renderWorkspaceConnectionCards() {
         actions = '';
         if (mondayBoardId) {
           actions += '<button type="button" onclick="testMondayConnection()" class="px-3 py-2 rounded-xl bg-[#00a86b] hover:bg-[#00cc77] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Test Monday Connection</button>';
+          actions += '<button type="button" onclick="inspectMondayColumns()" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Inspect Monday Columns</button>';
         }
         actions += '<button type="button" onclick="openSupportModal(\'Integration setup\')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Request Monday Setup</button>';
       } else {
@@ -12104,7 +12509,7 @@ async function testMondayConnection() {
   console.log("[monday] test clicked");
   try {
     showToast("Testing Monday connection...", "info");
-    var boardId = (WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active && WORKSPACE_RUNTIME_CONFIG.active.monday_board_id) || "";
+    var boardId = getMondayBoardId(WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active, WORKSPACE_CONNECTIONS);
     if (!boardId) { showToast("No Monday board ID configured", "error"); return; }
     var meta = getWorkspaceRequestMetadata();
     var result = await callSupabaseEdgeFunction("monday-sync", {
@@ -12115,21 +12520,17 @@ async function testMondayConnection() {
       console.log("[monday] test success", result);
       showToast("Monday connection successful!", "success");
       if (result.board_name) {
-        var conn = getWorkspaceConnection("monday");
-        if (conn) {
-          conn.config = conn.config || {};
-          conn.config.board_name = result.board_name;
-          conn.status = "connected";
-        }
+        upsertLocalWorkspaceConnection("monday", {
+          status: "connected",
+          last_error: "",
+          config: { board_name: result.board_name, board_id: result.board_id || getMondayBoardId() }
+        });
       }
       refreshConnectionCards();
     } else {
       console.log("[monday] test error", result.error);
       showToast("Monday connection failed: " + (result.error || "Unknown error"), "error");
-      var conn = getWorkspaceConnection("monday");
-      if (conn) {
-        conn.last_error = result.error || "Unknown error";
-      }
+      upsertLocalWorkspaceConnection("monday", { status: "error", last_error: result.error || "Unknown error" });
       refreshConnectionCards();
     }
   } catch (e) {
@@ -12138,9 +12539,57 @@ async function testMondayConnection() {
   }
 }
 
+async function inspectMondayColumns() {
+  console.log("[monday] inspect columns clicked");
+  try {
+    showToast("Inspecting Monday columns...", "info");
+    var meta = getWorkspaceRequestMetadata();
+    var result = await callSupabaseEdgeFunction("monday-sync", {
+      action: "inspect_columns",
+      workspace_id: meta.workspace_id || meta.workspace_slug
+    });
+    var columns = result.columns || result.columns_found || [];
+    var used = result.columns_used || {};
+    var missing = result.missing_columns || [];
+    console.log("[monday] inspect columns result", result);
+    showToast(
+      "Monday columns inspected",
+      columns.length + " columns found. " + (missing.length ? "Missing: " + missing.join(", ") : "Required aliases resolved."),
+      "ph-table",
+      missing.length ? "text-yellow-400" : "text-[#00ffaa]"
+    );
+    upsertLocalWorkspaceConnection("monday", {
+      status: missing.length ? "warning" : "connected",
+      last_error: missing.length ? "Missing columns: " + missing.join(", ") : "",
+      config: {
+        board_name: result.board_name || "",
+        board_id: result.board_id || getMondayBoardId(),
+        columns_found: columns,
+        columns_used: used,
+        missing_columns: missing
+      }
+    });
+    refreshConnectionCards();
+  } catch (e) {
+    console.log("[monday] inspect columns error", e);
+    var backend = e && e.backend || {};
+    upsertLocalWorkspaceConnection("monday", {
+      status: "error",
+      last_error: backend.monday_error || backend.error || e.message || String(e),
+      config: {
+        missing_columns: backend.missing_columns || [],
+        columns_found: backend.columns || backend.columns_found || [],
+        columns_used: backend.columns_used || {}
+      }
+    });
+    refreshConnectionCards();
+    showToast("Monday column inspection failed: " + (backend.monday_error || backend.error || e.message || String(e)), "error");
+  }
+}
+
 async function syncPostToMonday() {
   try {
-    var boardId = (WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active && WORKSPACE_RUNTIME_CONFIG.active.monday_board_id) || "";
+    var boardId = getMondayBoardId(WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active, WORKSPACE_CONNECTIONS);
     if (!boardId) { showToast("No Monday board configured", "error"); return; }
     var existing = window.__currentModalPostData || null;
     if (!existing) { showToast("Save the post first before syncing to Monday", "error"); return; }
@@ -12158,16 +12607,34 @@ async function syncPostToMonday() {
       post_platform: ((existing?.platforms || existing?.platform || [])[0]) || "",
       post_status: postStatus,
       post_url: existing?.publishedUrl || existing?.published_url || "",
+      post_campaign: existing?.campaignName || existing?.campaign_name || "",
       monday_item_id: existing?.mondayItemId || existing?.monday_item_id || ""
     });
     if (result.ok && result.monday_item_id) {
-      showToast("Post synced to Monday! Item ID: " + result.monday_item_id, "success");
+      var warningText = Array.isArray(result.missing_columns) && result.missing_columns.length ? " Missing columns: " + result.missing_columns.join(", ") : "";
+      showToast("Post synced to Monday", "Item ID: " + result.monday_item_id + warningText, "ph-check", warningText ? "text-yellow-400" : "text-[#00ffaa]");
       setModalMondayFields(result.monday_item_id, result.synced_at);
+      if (window.__currentModalPostData) {
+        window.__currentModalPostData.mondaySyncStatus = warningText ? "synced_with_warnings" : "synced";
+        window.__currentModalPostData.monday_sync_status = window.__currentModalPostData.mondaySyncStatus;
+        try {
+          await apiSavePost(window.__currentModalPostData);
+          await syncRemoteIfConfigured();
+        } catch (saveErr) {
+          console.log("[monday] post monday fields save error", saveErr);
+          showToast("Monday synced, save warning", saveErr.message || "Could not persist Monday fields to the backend.", "ph-warning", "text-yellow-400");
+        }
+      }
     } else {
-      showToast("Monday sync failed: " + (result.error || "Unknown error"), "error");
+      var resultMissing = Array.isArray(result.missing_columns) ? result.missing_columns : [];
+      var resultError = result.monday_error || result.error || "Unknown error";
+      showToast("Monday sync failed: " + resultError + (resultMissing.length ? " Missing columns: " + resultMissing.join(", ") : ""), "error");
     }
   } catch (e) {
-    showToast("Monday sync error: " + (e.message || String(e)), "error");
+    var backend = e && e.backend || {};
+    var missing = Array.isArray(backend.missing_columns) ? backend.missing_columns : [];
+    var mondayError = backend.monday_error || backend.error || e.message || String(e);
+    showToast("Monday sync error: " + mondayError + (missing.length ? " Missing columns: " + missing.join(", ") : ""), "error");
   }
 }
 
@@ -15150,26 +15617,26 @@ function findPostByAnyId(postId) {
 }
 
 function openCalendarPost(btn) {
-  console.log("[calendar-post] click");
+  console.log("[calendar] clicked", { source: "inline-handler" });
   if (!btn) return;
   var postId = btn.dataset.postId || "";
   var postTitle = btn.dataset.postTitle || "";
   var postDateKey = btn.dataset.postDate || "";
   var post = postId ? findPostByAnyId(postId) : null;
-  console.log("[calendar-post] resolved post " + (!!post));
+  console.log("[calendar] resolved", { method: "id", ok: !!post, postId });
   if (!post && postTitle && postDateKey) {
     post = (appState.posts || []).find(function(p) {
       var titleMatch = getPostDisplayTitle(p) === postTitle;
       var dateMatch = normalizePostCalendarDateKey(p) === postDateKey;
       return titleMatch && dateMatch;
     }) || null;
-    console.log("[calendar-post] fallback match " + (!!post));
+    console.log("[calendar] resolved", { method: "title+date", ok: !!post, title: postTitle, date: postDateKey });
   }
   if (post) {
-    console.log("[calendar-post] id", post.id || post.post_id || post.postId || post.frontendId || "");
+    console.log("[calendar] opened", { postId: post.id || post.post_id || post.postId || post.frontendId || "" });
     openPostObjectModal(post, "calendar");
   } else {
-    console.log("[calendar-post] could not resolve post", { postId: postId, title: postTitle, dateKey: postDateKey });
+    console.error("[calendar] failed", { postId: postId, title: postTitle, dateKey: postDateKey });
   }
 }
 
@@ -15460,7 +15927,7 @@ function openPostModal(
   var mondayStatusEl = document.getElementById("modal-monday-sync-status");
   var mondayItemIdInput = document.getElementById("modal-monday-item-id");
   var mondaySyncedAtInput = document.getElementById("modal-monday-synced-at");
-  var mondayBoardId = (WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active && WORKSPACE_RUNTIME_CONFIG.active.monday_board_id) || "";
+  var mondayBoardId = getMondayBoardId(WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active, WORKSPACE_CONNECTIONS);
   if (mondayBoardId && mondaySection) {
     mondaySection.classList.remove("hidden");
     var itemId = matched?.mondayItemId || matched?.monday_item_id || "";
@@ -15601,9 +16068,80 @@ function closeModal() {
   if (modalAiOutput) modalAiOutput.textContent = "AI assist output will appear here.";
   if (scheduleSocialEnabledInput) scheduleSocialEnabledInput.checked = false;
   if (socialScheduleStatusEl) socialScheduleStatusEl.textContent = "Creates one scheduled_social_posts row per selected platform when saved.";
+  hidePostSaveErrorBanner();
   modalAiInlineHelper?.classList.add("hidden");
   renderModalCarouselPreview();
   updateModalCampaignPreview();
+}
+
+function hidePostSaveErrorBanner() {
+  postSaveErrorBanner?.classList.add("hidden");
+  if (postSaveErrorMessage) postSaveErrorMessage.textContent = "";
+  if (postSaveErrorDetails) postSaveErrorDetails.textContent = "";
+}
+
+function buildSaveDiagnosticsDetails(err, payload = {}) {
+  const source = getGoogleSheetsConnectionSource();
+  const backend = err?.backend || err?.responseBody || {};
+  const meta = getWorkspaceRequestMetadata();
+  const backendMode = getActiveWorkspaceBackendMode();
+  return [
+    "backend mode: " + (backendMode.mode || payload.backend_type || "unknown"),
+    "backend URL source: " + (source.source || "unknown"),
+    "backend URL present: " + (source.url ? "true" : "false"),
+    "requested route: " + (err?.action || "savePost"),
+    "response ok: " + String(backend.ok === undefined ? false : backend.ok),
+    "response error: " + (backend.error || err?.message || "Unknown error"),
+    "rowNumber sent: " + String(payload._rowNumber || payload.rowNumber || payload.row_number || payload.sheetRow || ""),
+    "post_id sent: " + String(payload.post_id || payload.postId || payload.id || ""),
+    "workspace_slug: " + String(payload.workspace_slug || meta.workspace_slug || backend.workspace_slug || ""),
+    backend.routeStatus ? "routeStatus: " + JSON.stringify(backend.routeStatus) : "",
+    backend.diagnostics ? "diagnostics: " + JSON.stringify(backend.diagnostics) : ""
+  ].filter(Boolean).join("\n");
+}
+
+function showPostSaveErrorBanner(err, payload = {}) {
+  if (!postSaveErrorBanner) return;
+  postSaveErrorBanner.classList.remove("hidden");
+  if (postSaveErrorMessage) postSaveErrorMessage.textContent = err?.message || "The post could not be saved.";
+  if (postSaveErrorDetails) postSaveErrorDetails.textContent = buildSaveDiagnosticsDetails(err, payload);
+}
+
+function upsertSavedPostIntoAppState(saveResult, fallbackPayload = {}) {
+  const rawPost = saveResult?.post || saveResult?.savedPost || fallbackPayload;
+  const normalized = normalizeRemotePost(
+    Object.assign({}, fallbackPayload || {}, rawPost || {}, {
+      post_id: rawPost?.post_id || rawPost?.postId || saveResult?.savedPostId || saveResult?.postId || fallbackPayload.post_id || fallbackPayload.postId || fallbackPayload.id || "",
+      postId: rawPost?.postId || rawPost?.post_id || saveResult?.savedPostId || saveResult?.postId || fallbackPayload.postId || fallbackPayload.post_id || fallbackPayload.id || "",
+      row_number: rawPost?.row_number || rawPost?.rowNumber || saveResult?.rowNumber || fallbackPayload._rowNumber || fallbackPayload.sheetRow || "",
+      rowNumber: rawPost?.rowNumber || rawPost?.row_number || saveResult?.rowNumber || fallbackPayload._rowNumber || fallbackPayload.sheetRow || ""
+    }),
+    getAvailableCampaignRecords(),
+    appState.media || [],
+    (appState.posts || []).length
+  );
+  const ids = new Set([
+    normalized.id,
+    normalized.postId,
+    normalized.post_id,
+    fallbackPayload.id,
+    fallbackPayload.postId,
+    fallbackPayload.post_id,
+    fallbackPayload._frontendId,
+    fallbackPayload.frontendId
+  ].map((value) => String(value || "").trim()).filter(Boolean));
+  const row = String(normalized.sheetRow || saveResult?.rowNumber || fallbackPayload._rowNumber || fallbackPayload.sheetRow || "").trim();
+  const index = (appState.posts || []).findIndex((post) => {
+    const postIds = [post.id, post.postId, post.post_id, post.frontendId, post._frontendId].map((value) => String(value || "").trim());
+    const rowMatch = row && String(post.sheetRow || post.row_number || post._rowNumber || "").trim() === row;
+    return rowMatch || postIds.some((id) => ids.has(id));
+  });
+  if (index >= 0) appState.posts[index] = Object.assign({}, appState.posts[index], normalized);
+  else appState.posts = [normalized].concat(appState.posts || []);
+  window.__currentModalPostData = normalized;
+  persistLocalState();
+  rerenderAll();
+  return normalized;
 }
 
 function setupSaveHandler() {
@@ -15613,6 +16151,10 @@ function setupSaveHandler() {
   saveButton.removeAttribute("onclick");
 
   saveButton.addEventListener("click", async () => {
+    hidePostSaveErrorBanner();
+    const originalSaveButtonHtml = saveButton.innerHTML;
+    saveButton.disabled = true;
+    saveButton.innerHTML = '<i class="ph-bold ph-spinner-gap text-sm animate-spin"></i> Saving...';
     const existing = currentEditingPostId
       ? hydratePostCampaign((appState.posts || []).find(p => p.id === currentEditingPostId))
       : null;
@@ -15624,9 +16166,15 @@ function setupSaveHandler() {
     const selectedContentPillar = normalizePillar(getActivePillar() || existing?.hubPillarLabel || existing?.pillar || (appState.settings?.pillars || [])[0] || "authority");
     const selectedCampaignName = selectedCampaign?.campaignName || normalizeCampaignName(selectedCampaignId);
     const requestedDate = String(dateInput?.value || "").trim();
+    if ((statusSelect?.value || "draft") === "scheduled" && !requestedDate) {
+      saveButton.disabled = false;
+      saveButton.innerHTML = originalSaveButtonHtml;
+      showToast("Missing date", "Scheduled posts need a planning date.", "ph-warning-circle", "text-yellow-400");
+      return;
+    }
     const planning = normalizePostPlanningFields({
       queueDateLabel: requestedDate,
-      queueTimeLabel: timeInput?.value || "",
+      queueTimeLabel: timeInput?.value || (requestedDate ? "9:15 AM" : ""),
       scheduledAt: requestedDate ? existing?.date || "" : ""
     }, requestedDate ? (existing || {}) : {});
     const hasValidSchedule = !!planning.queueDateLabel && !!planning.scheduledAt;
@@ -15637,19 +16185,35 @@ function setupSaveHandler() {
 
     const selectedPlatforms = getSelectedModalPlatforms();
     if (!selectedPlatforms.length) {
+      saveButton.disabled = false;
+      saveButton.innerHTML = originalSaveButtonHtml;
       showToast("Missing platform", "Select at least one target platform.", "ph-warning-circle", "text-yellow-400");
       return;
     }
 
     const payload = {
-      id: currentEditingPostId || generateId("post"),
+      id: currentEditingPostId || existing?.id || existing?.postId || existing?.post_id || generateId("post"),
+      postId: currentEditingPostId || existing?.postId || existing?.post_id || existing?.id || "",
+      post_id: currentEditingPostId || existing?.post_id || existing?.postId || existing?.id || "",
+      _frontendId: existing?._frontendId || existing?.frontendId || currentEditingPostId || "",
+      frontendId: existing?.frontendId || existing?._frontendId || currentEditingPostId || "",
+      _rowNumber: existing?._rowNumber || existing?.row_number || existing?.sheetRow || "",
+      sheetRow: existing?.sheetRow || existing?.row_number || existing?._rowNumber || "",
       title: titleInput?.value.trim() || "",
       platform: selectedPlatforms[0],
       platforms: selectedPlatforms,
       platform_targets: selectedPlatforms.join(","),
       pillar: selectedContentPillar,
       date: hasValidSchedule ? planning.scheduledAt : "",
+      scheduled_at: hasValidSchedule ? planning.scheduledAt : "",
+      scheduledAt: hasValidSchedule ? planning.scheduledAt : "",
       status: resolvedStatus,
+      publish_status: resolvedStatus,
+      publishStatus: resolvedStatus,
+      publish_date: hasValidSchedule ? planning.queueDateLabel : "",
+      publishDate: hasValidSchedule ? planning.queueDateLabel : "",
+      publish_time: hasValidSchedule ? planning.queueTimeLabel : "",
+      publishTime: hasValidSchedule ? planning.queueTimeLabel : "",
       postType: postTypeSelect?.value || "text",
       description: descInput?.value.trim() || "",
       assetId: currentModalAsset?.id || existing?.assetId || "",
@@ -15660,9 +16224,17 @@ function setupSaveHandler() {
       mediaAltText: currentModalAsset?.mediaAltText || currentModalAsset?.media_alt_text || currentModalAsset?.altText || existing?.mediaAltText || existing?.media_alt_text || "",
       mediaSource: currentModalAsset?.mediaSource || currentModalAsset?.media_source || currentModalAsset?.sourceType || existing?.mediaSource || existing?.media_source || "",
       storagePath: currentModalAsset?.storagePath || currentModalAsset?.storage_path || existing?.storagePath || existing?.storage_path || "",
+      workspace_id: getWorkspaceRequestMetadata().workspace_id || existing?.workspace_id || existing?.workspaceId || "",
+      workspaceId: getWorkspaceRequestMetadata().workspace_id || existing?.workspaceId || existing?.workspace_id || "",
+      workspace_slug: getWorkspaceRequestMetadata().workspace_slug || "",
+      user_id: getWorkspaceRequestMetadata().user_id || "",
+      user_email: getWorkspaceRequestMetadata().user_email || "",
+      backend_type: getWorkspaceRequestMetadata().backend_type || "",
       mondayItemId: document.getElementById("modal-monday-item-id")?.value || existing?.mondayItemId || existing?.monday_item_id || "",
+      monday_item_id: document.getElementById("modal-monday-item-id")?.value || existing?.monday_item_id || existing?.mondayItemId || "",
       mondayGroupId: existing?.mondayGroupId || existing?.monday_group_id || "",
       mondayLastSyncedAt: document.getElementById("modal-monday-synced-at")?.value || existing?.mondayLastSyncedAt || existing?.monday_last_synced_at || "",
+      monday_synced_at: document.getElementById("modal-monday-synced-at")?.value || existing?.monday_last_synced_at || existing?.mondayLastSyncedAt || "",
       mondaySyncStatus: existing?.mondaySyncStatus || existing?.monday_sync_status || "",
       carouselAssetIds: currentModalCarouselAssets.length
         ? currentModalCarouselAssets.map(asset => asset.assetId || asset.id).filter(Boolean)
@@ -15694,7 +16266,7 @@ function setupSaveHandler() {
       sourceImportStatus: existing?.sourceImportStatus || "",
       sourceMetadata: existing?.sourceMetadata || "",
       platformTargets: selectedPlatforms,
-      publishStatus: existing?.publishStatus || "draft",
+      publishStatus: resolvedStatus,
       publishedUrl: existing?.publishedUrl || "",
       publishedAt: existing?.publishedAt || "",
       apiPostId: existing?.apiPostId || "",
@@ -15720,33 +16292,51 @@ function setupSaveHandler() {
     };
 
     if (!payload.title) {
+      saveButton.disabled = false;
+      saveButton.innerHTML = originalSaveButtonHtml;
       showToast("Missing title", "Please add a content title.", "ph-warning-circle", "text-yellow-400");
       return;
     }
 
-    if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
-      try {
-        const wasEditingPost = !!currentEditingPostId;
-        let result;
-        if (noteIdToConvert) {
-          try {
-            result = await apiCreatePostFromNote(noteIdToConvert, payload);
-          } catch (noteErr) {
+	    if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
+	      try {
+	        const wasEditingPost = !!currentEditingPostId;
+	        const backendMode = getActiveWorkspaceBackendMode();
+	        console.log("[save] backend mode", backendMode.mode);
+	        console.log("[save] workspace", payload.workspace_slug || payload.workspace_id || "");
+	        console.log("[save] post_id", payload.post_id || payload.postId || payload.id || "");
+	        console.log("[save] rowNumber", payload._rowNumber || payload.rowNumber || payload.sheetRow || "");
+	        let result;
+	        if (noteIdToConvert && backendMode.mode !== "supabase_native") {
+	          try {
+	            result = await apiCreatePostFromNote(noteIdToConvert, payload);
+	          } catch (noteErr) {
             console.warn("createPostFromNote failed, falling back to savePost", noteErr);
             result = await apiSavePost(payload);
           }
         } else {
           result = await apiSavePost(payload);
         }
-        if (inspoIdToConvert) {
-          await apiArchiveInspo(inspoIdToConvert, result?.post?.postId || result?.postId || payload.id);
-        }
+	        const savedPost = upsertSavedPostIntoAppState(result, payload);
+	        console.log("[save] response", {
+	          ok: !!result?.ok,
+	          source: result?.source || backendMode.mode,
+	          post_id: result?.post?.post_id || result?.postId || result?.savedPostId || "",
+	          rowNumber: result?.rowNumber || ""
+	        });
+	        if (inspoIdToConvert) {
+	          if (backendMode.mode !== "supabase_native") {
+	            await apiArchiveInspo(inspoIdToConvert, savedPost?.postId || result?.post?.postId || result?.postId || payload.id);
+	          } else {
+	            console.log("[savePost] skipped Apps Script inspo archive on supabase_native backend");
+	          }
+	        }
         if (scheduleSocialEnabledInput?.checked) {
           try {
             const schedulePayload = {
               ...payload,
-              postId: result?.post?.postId || result?.postId || payload.id,
-              id: result?.post?.postId || result?.postId || payload.id
+              postId: savedPost?.postId || result?.post?.postId || result?.postId || payload.id,
+              id: savedPost?.id || result?.post?.postId || result?.postId || payload.id
             };
             const socialResults = await scheduleSocialPostsForTargets(schedulePayload);
             if (socialScheduleStatusEl) socialScheduleStatusEl.textContent = `Social schedule rows created: ${socialResults.length}`;
@@ -15756,8 +16346,12 @@ function setupSaveHandler() {
           }
         }
         await syncRemoteIfConfigured();
-        closeModal();
-        showToast("Synced", wasEditingPost ? "Post updated in Google Sheets." : "Post created in Google Sheets.", "ph-cloud-check", "text-[#00ffaa]");
+	        rerenderAll();
+	        if (currentView) switchView(currentView);
+	        closeModal();
+	        const backendLabel = backendMode.mode === "supabase_native" ? "Supabase" : "Google Sheets";
+	        saveButton.innerHTML = '<i class="ph-bold ph-check text-sm"></i> Saved';
+	        showToast("Synced", wasEditingPost ? "Post updated in " + backendLabel + "." : "Post created in " + backendLabel + ".", "ph-cloud-check", "text-[#00ffaa]");
       } catch (err) {
         console.error("savePost remote sync failed", {
           action: err?.action || "savePost",
@@ -15775,7 +16369,12 @@ function setupSaveHandler() {
           routeStatus.requiredHeadersPresent === false ? "POSTS sheet headers are incomplete." : "",
           routeStatus.spreadsheetIdConfigured === false ? "SPREADSHEET_ID is not configured." : ""
         ].filter(Boolean).join(" ");
+        showPostSaveErrorBanner(err, payload);
+        saveButton.innerHTML = '<i class="ph-bold ph-warning text-sm"></i> Error';
         showToast("Save failed", detail || "The backend rejected the post. No local fallback was applied.", "ph-warning", "text-yellow-400");
+      } finally {
+        saveButton.disabled = false;
+        if (!modal?.classList.contains("active")) saveButton.innerHTML = originalSaveButtonHtml;
       }
       return;
     }
@@ -15825,6 +16424,8 @@ function setupSaveHandler() {
     }
     rerenderAll();
     closeModal();
+    saveButton.disabled = false;
+    saveButton.innerHTML = originalSaveButtonHtml;
     showToast("Saved locally", "Backend sync is not configured; this post is stored in local browser data only.", "ph-check", "text-[#00ffaa]");
   });
 }
@@ -15923,6 +16524,11 @@ function switchView(viewName) {
   const requestedView = String(viewName || "calendar").trim();
   const routeFound = registeredViews.includes(requestedView);
   const targetName = routeFound ? requestedView : "calendar";
+  const featureGate = getFeatureGateForView(targetName);
+  if (!featureGate.enabled) {
+    showToast("Upgrade required", featureGate.label + " is not available on this workspace tier.", "ph-lock", "text-yellow-400");
+    if (targetName !== "calendar") return switchView("calendar");
+  }
   const targetView = document.getElementById(`view-${targetName}`);
   const targetNav = document.querySelector(`[data-view-target="${targetName}"], #nav-${targetName}`);
   const renderFn = getViewRenderFunction(targetName);
@@ -17208,7 +17814,7 @@ async function saveExistingPostImportAsIdea() {
     return;
   }
   if (!APP_CONFIG.ENABLE_REMOTE_SYNC || !isRemoteConfigured()) {
-    showToast("Backend required", "Configure the Apps Script backend before importing an existing post into Inspo.", "ph-warning", "text-yellow-400");
+    showToast("Backend required", "Managed through Supabase backend setup before importing an existing post into Inspo.", "ph-warning", "text-yellow-400");
     return;
   }
   try {
@@ -17314,7 +17920,7 @@ async function testLinkedInBackendImportRoute() {
     summary: "Posting dry-run importCapturedPosts payload.",
     errors: "",
     verification: "",
-    debug: `APP_SCRIPT_URL used: ${APP_CONFIG.APP_SCRIPT_URL} • Backend action called: importCapturedPosts`
+    debug: `Backend URL configured: ${APP_CONFIG.APP_SCRIPT_URL ? "yes" : "no"} • Backend action called: importCapturedPosts`
   });
   try {
     const [postResult, getResult] = await Promise.all([
@@ -17328,7 +17934,7 @@ async function testLinkedInBackendImportRoute() {
       errors: "",
       verification: getResult?.importCapturedPostsRegistered ? "GET route check confirms importCapturedPosts is registered." : "",
       debug: [
-        `APP_SCRIPT_URL used: ${APP_CONFIG.APP_SCRIPT_URL}`,
+        `Backend URL configured: ${APP_CONFIG.APP_SCRIPT_URL ? "yes" : "no"}`,
         `Backend action called: importCapturedPosts`,
         postResult?.action ? `Backend action returned: ${postResult.action}` : "",
         postResult?.backendVersion || postResult?.codeVersionStamp ? `Backend version: ${postResult.backendVersion || postResult.codeVersionStamp}` : ""
@@ -17341,12 +17947,12 @@ async function testLinkedInBackendImportRoute() {
       visible: true,
       progress: "Backend route failed",
       summary: invalidAction
-        ? "Backend deployment is stale or APP_SCRIPT_URL points to the wrong Apps Script deployment."
+        ? "Backend deployment is stale or the configured backend URL points to the wrong deployment."
         : "Backend import route test failed.",
       errors: `Raw backend error: ${rawError}`,
       verification: "",
       debug: [
-        `APP_SCRIPT_URL used: ${APP_CONFIG.APP_SCRIPT_URL}`,
+        `Backend URL configured: ${APP_CONFIG.APP_SCRIPT_URL ? "yes" : "no"}`,
         `Backend action called: importCapturedPosts`,
         err?.backend?.action ? `Backend action returned: ${err.backend.action}` : "",
         err?.backend?.backendVersion || err?.backend?.codeVersionStamp ? `Backend version: ${err.backend.backendVersion || err.backend.codeVersionStamp}` : ""
@@ -17431,7 +18037,7 @@ function buildImportJobReportFromStatus(status = {}) {
 function formatImportJobDebug(status = {}) {
   const job = normalizeImportJob(status?.job || status || {});
   return [
-    `APP_SCRIPT_URL used: ${APP_CONFIG.APP_SCRIPT_URL}`,
+    `Backend URL configured: ${APP_CONFIG.APP_SCRIPT_URL ? "yes" : "no"}`,
     `Backend action called: runImportJobBatch`,
     status?.action ? `Backend action returned: ${status.action}` : "",
     status?.backendVersion ? `Backend version: ${status.backendVersion}` : "",
@@ -17616,7 +18222,7 @@ async function importSelectedLinkedInCaptureItems() {
     return;
   }
   if (!APP_CONFIG.ENABLE_REMOTE_SYNC || !isRemoteConfigured()) {
-    showToast("Backend required", "Configure the Apps Script backend before importing captured LinkedIn posts into POSTS.", "ph-warning", "text-yellow-400");
+    showToast("Backend required", "Managed through Supabase backend setup before importing captured LinkedIn posts into POSTS.", "ph-warning", "text-yellow-400");
     return;
   }
   updateLinkedInImportResultPanel({
@@ -17625,7 +18231,7 @@ async function importSelectedLinkedInCaptureItems() {
     summary: "Saving parsed LinkedIn items into a resumable backend job.",
     errors: "",
     verification: "",
-    debug: `APP_SCRIPT_URL used: ${APP_CONFIG.APP_SCRIPT_URL} • Backend action called: createImportJob`
+    debug: `Backend URL configured: ${APP_CONFIG.APP_SCRIPT_URL ? "yes" : "no"} • Backend action called: createImportJob`
   });
   try {
     const payload = {
@@ -17680,7 +18286,7 @@ async function importSelectedLinkedInCaptureItems() {
     console.error(err);
     if (linkedInCaptureDiagnosticsEl) linkedInCaptureDiagnosticsEl.textContent = err?.message || "Captured import failed.";
     const backendDebug = [
-      `APP_SCRIPT_URL used: ${APP_CONFIG.APP_SCRIPT_URL}`,
+      `Backend URL configured: ${APP_CONFIG.APP_SCRIPT_URL ? "yes" : "no"}`,
       `Backend action called: createImportJob`,
       err?.backend?.action ? `Backend action returned: ${err.backend.action}` : "",
       err?.backend?.backendVersion || err?.backend?.codeVersionStamp ? `Backend version: ${err.backend.backendVersion || err.backend.codeVersionStamp}` : "",
@@ -17691,7 +18297,7 @@ async function importSelectedLinkedInCaptureItems() {
       visible: true,
       progress: "Import failed",
       summary: invalidAction
-        ? "Backend deployment is stale or APP_SCRIPT_URL points to the wrong Apps Script deployment."
+        ? "Backend deployment is stale or the configured backend URL points to the wrong deployment."
         : "The import did not finish.",
       errors: err?.message || "Could not import selected captured posts.",
       verification: "",
@@ -17817,16 +18423,18 @@ function setupPWAInstall() {
     if (!deferredInstallPrompt) {
       console.log("[install] unavailable");
       if (installContext.isIos) {
-        showToast("Install tip", "On iPhone or iPad, use Share then Add to Home Screen.", "ph-device-mobile", "text-[#38bdf8]");
+        showToast("Install tip", "iOS Safari: Share → Add to Home Screen.", "ph-device-mobile", "text-[#38bdf8]");
       } else {
-        showToast("Install unavailable", "Open StellarSync in Chrome, Edge, or Safari and try again.", "ph-browser", "text-yellow-400");
+        showToast("Install unavailable", "Chrome/Edge desktop: browser menu → Install app.", "ph-browser", "text-yellow-400");
       }
+      openInstallHelperModal();
       return false;
     }
-    console.log("[install] prompt opened");
+    console.log("[install] prompt clicked");
     deferredInstallPrompt.prompt();
     try {
-      await deferredInstallPrompt.userChoice;
+      const choice = await deferredInstallPrompt.userChoice;
+      console.log("[install] user choice", choice);
       return true;
     } finally {
       deferredInstallPrompt = null;
@@ -18233,15 +18841,58 @@ async function syncRemoteIfConfigured() {
   var activeCfg = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active;
   console.log("[data] active workspace", activeCfg ? (activeCfg.workspace_slug || activeCfg.slug) : "none");
   console.log("[data] backend_type", activeCfg ? (activeCfg.backend_type || "unknown") : "unknown");
+  var backendMode = getActiveWorkspaceBackendMode();
+  console.log("[data] backend_mode", backendMode.mode);
   var gsUrl = activeCfg ? (activeCfg.apps_script_url || "") : "";
   console.log("[data] google_sheets apps_script_url present", gsUrl ? "true" : "false");
   if (!APP_CONFIG.ENABLE_REMOTE_SYNC || !isRemoteConfigured()) {
     offlineMode = true;
     backendReachable = false;
-    lastSyncError = "Remote sync is disabled or APP_SCRIPT_URL is not configured.";
+    lastSyncError = "Remote sync is disabled or the active backend is not configured.";
     console.log("[data]", getAppStateCounts());
     rerenderAll();
     return;
+  }
+
+  if (backendMode.mode === "supabase_native") {
+    try {
+      var staleNativeErr = document.getElementById("sync-error-state");
+      if (staleNativeErr) staleNativeErr.remove();
+      var staleNativeZero = document.getElementById("zero-posts-state");
+      if (staleNativeZero) staleNativeZero.remove();
+      const posts = await apiGetPosts();
+      try { await loadAIProviders(); } catch (err) { /* silent */ }
+      if (Array.isArray(posts)) {
+        appState.posts = posts.map((post, index) => normalizeRemotePost(post, getAvailableCampaignRecords(), appState.media || [], index));
+      }
+      if (isSupabaseMediaEnabled()) {
+        try {
+          var supabaseMediaResult = await loadSupabaseMediaAssets(activeCfg);
+          appState.media = filterRenderableArtifacts(Array.isArray(supabaseMediaResult.assets) ? supabaseMediaResult.assets : [], "media");
+        } catch (err) {
+          console.log("[media-backend] load error", err?.message || err);
+        }
+      }
+      calendarCursor = getInitialCalendarCursor();
+      selectedCalendarDateKey = toDateKey(calendarCursor);
+      offlineMode = false;
+      backendReachable = true;
+      lastSyncError = "";
+      persistLocalState();
+      console.log("[data]", getAppStateCounts());
+      rerenderAll();
+      showToast("Connected", "Supabase workspace data loaded.", "ph-cloud-check", "text-[#00ffaa]");
+      return;
+    } catch (err) {
+      console.error(err);
+      offlineMode = true;
+      backendReachable = false;
+      lastSyncError = err && err.message ? err.message : String(err);
+      console.log("[data]", getAppStateCounts());
+      rerenderAll();
+      showToast("Supabase sync issue", lastSyncError || "Posts could not be loaded.", "ph-warning", "text-yellow-400");
+      return;
+    }
   }
 
   try {
@@ -18300,8 +18951,12 @@ async function syncRemoteIfConfigured() {
           console.log("[media-backend] source", supabaseMediaResult.source);
           if (Array.isArray(supabaseMediaResult.assets) && supabaseMediaResult.assets.length > 0) {
             var seenKeys = new Set();
+            filteredMedia.forEach(function(asset) {
+              var key = String(asset.asset_id || asset.assetId || asset.storage_path || asset.storagePath || asset.url || asset.media_url || "").trim();
+              if (key) seenKeys.add(key);
+            });
             supabaseMediaResult.assets.forEach(function(asset) {
-              var key = asset.asset_id || asset.storage_path || asset.url || "";
+              var key = String(asset.asset_id || asset.assetId || asset.storage_path || asset.storagePath || asset.url || asset.media_url || "").trim();
               if (key && !seenKeys.has(key)) {
                 seenKeys.add(key);
                 filteredMedia.push(asset);
@@ -18404,8 +19059,12 @@ async function syncRemoteIfConfigured() {
 }
 
 function isRemoteConfigured() {
-  const apiUrl = getWorkspaceApiUrl();
-  return (
+  const backendMode = getActiveWorkspaceBackendMode();
+  if (backendMode.mode === "supabase_native") {
+    return !!STELLARSYNC_SUPABASE_CLIENT;
+  }
+  const apiUrl = backendMode.appsScriptUrl || getWorkspaceApiUrl();
+  return !!(
     apiUrl &&
     apiUrl !== "PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE"
   );
@@ -18432,15 +19091,33 @@ async function apiGet(action, params = {}) {
 async function apiPost(action, payload = {}) {
   const apiUrl = getWorkspaceApiUrl();
   if (!apiUrl) throw new Error("Workspace setup needed: missing Apps Script backend URL.");
+  const requestBody = { action, route: action, payload: withWorkspaceRequestMetadata(payload || {}) };
   const response = await fetch(apiUrl, {
     method: "POST",
     mode: "cors",
     headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({ action, payload: withWorkspaceRequestMetadata(payload || {}) })
+    body: JSON.stringify(requestBody)
   });
 
-  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
-  const result = await response.json();
+  const rawText = await response.text();
+  let result = {};
+  try {
+    result = rawText ? JSON.parse(rawText) : {};
+  } catch (parseErr) {
+    const err = new Error("Backend returned non-JSON response");
+    err.action = action;
+    err.status = response.status;
+    err.responseText = rawText.slice(0, 1000);
+    err.backend = { ok: false, error: err.message, responseText: err.responseText };
+    throw err;
+  }
+  if (!response.ok) {
+    const err = new Error(result.error || `Request failed: ${response.status}`);
+    err.backend = result;
+    err.action = action;
+    err.status = response.status;
+    throw err;
+  }
   if (!result.ok) {
     const err = new Error(result.error || "Unknown Apps Script error");
     err.backend = result;
@@ -18465,12 +19142,184 @@ async function callSupabaseEdgeFunction(functionName, payload = {}) {
     body: JSON.stringify(payload || {})
   });
   const result = await response.json().catch(() => ({}));
-  if (!response.ok || result.ok === false) throw new Error(result.error || `Supabase function failed: ${functionName}`);
+  if (!response.ok || result.ok === false) {
+    const err = new Error(result.error || `Supabase function failed: ${functionName}`);
+    err.backend = result;
+    err.status = response.status;
+    err.functionName = functionName;
+    throw err;
+  }
   return result;
+}
+
+function getSupabasePostId(payload = {}) {
+  const existing = String(payload.post_id || payload.postId || payload.id || payload._frontendId || payload.frontendId || "").trim();
+  if (existing && !existing.startsWith("index_")) return existing;
+  if (window.crypto && typeof window.crypto.randomUUID === "function") return window.crypto.randomUUID();
+  return "post_" + Date.now() + "_" + Math.random().toString(36).slice(2, 10);
+}
+
+function buildSupabasePostRow(payload = {}) {
+  const meta = getWorkspaceRequestMetadata();
+  const postId = getSupabasePostId(payload);
+  const targets = Array.isArray(payload.platform_targets)
+    ? payload.platform_targets
+    : Array.isArray(payload.platformTargets)
+      ? payload.platformTargets
+      : String(payload.platform_targets || payload.platformTargets || payload.platform || "")
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+  const now = new Date().toISOString();
+  return {
+    workspace_id: payload.workspace_id || payload.workspaceId || meta.workspace_id || null,
+    workspace_slug: payload.workspace_slug || meta.workspace_slug || "",
+    post_id: postId,
+    title: payload.title || "",
+    description: payload.description || payload.caption || payload.body || "",
+    status: payload.status || payload.publish_status || "draft",
+    publish_status: payload.publish_status || payload.status || "draft",
+    publish_date: payload.publish_date || payload.publishDate || payload.queueDateLabel || "",
+    publish_time: payload.publish_time || payload.publishTime || payload.queueTimeLabel || "",
+    scheduled_at: payload.scheduled_at || payload.scheduledAt || null,
+    platform: payload.platform || targets[0] || "linkedin",
+    platform_targets: targets,
+    campaign_id: payload.campaignId || payload.campaign_id || "",
+    campaign_name: payload.campaignName || payload.campaign_name || "",
+    pillar: payload.pillar || payload.hubPillarLabel || "",
+    format: payload.format || payload.postType || "",
+    post_type: payload.postType || payload.format || "",
+    media_id: payload.mediaId || payload.media_id || payload.assetId || "",
+    media_url: payload.mediaUrl || payload.media_url || "",
+    media_type: payload.mediaType || payload.media_type || "",
+    media_filename: payload.mediaFilename || payload.media_filename || "",
+    media_alt_text: payload.mediaAltText || payload.media_alt_text || "",
+    storage_path: payload.storagePath || payload.storage_path || "",
+    monday_item_id: payload.monday_item_id || payload.mondayItemId || "",
+    monday_synced_at: payload.monday_synced_at || payload.mondayLastSyncedAt || null,
+    monday_sync_status: payload.mondaySyncStatus || payload.monday_sync_status || "",
+    published_url: payload.publishedUrl || payload.published_url || "",
+    published_at: payload.publishedAt || payload.published_at || null,
+    source_url: payload.sourceUrl || payload.source_url || "",
+    source_platform: payload.sourcePlatform || payload.source_platform || "",
+    updated_at: now,
+    created_at: payload.created_at || now
+  };
+}
+
+function normalizeSupabasePostRecord(row = {}) {
+  const postId = String(row.post_id || row.postId || row.id || "").trim();
+  return {
+    ...row,
+    id: postId || row.id || "",
+    postId: postId || row.id || "",
+    post_id: postId || row.id || "",
+    title: row.title || "",
+    description: row.description || row.caption || "",
+    status: row.status || row.publish_status || "draft",
+    publishStatus: row.publish_status || row.status || "draft",
+    publish_status: row.publish_status || row.status || "draft",
+    publishDate: row.publish_date || row.publishDate || "",
+    publish_date: row.publish_date || row.publishDate || "",
+    publishTime: row.publish_time || row.publishTime || "",
+    publish_time: row.publish_time || row.publishTime || "",
+    scheduledAt: row.scheduled_at || row.scheduledAt || "",
+    scheduled_at: row.scheduled_at || row.scheduledAt || "",
+    platformTargets: Array.isArray(row.platform_targets) ? row.platform_targets : String(row.platform_targets || row.platform || "").split(",").map((item) => item.trim()).filter(Boolean),
+    platform_targets: Array.isArray(row.platform_targets) ? row.platform_targets.join(",") : String(row.platform_targets || ""),
+    campaignName: row.campaign_name || row.campaignName || "",
+    campaign_name: row.campaign_name || row.campaignName || "",
+    mondayItemId: row.monday_item_id || row.mondayItemId || "",
+    monday_item_id: row.monday_item_id || row.mondayItemId || "",
+    mondayLastSyncedAt: row.monday_synced_at || row.mondayLastSyncedAt || "",
+    monday_synced_at: row.monday_synced_at || row.mondayLastSyncedAt || "",
+    source: row.source || "supabase_native"
+  };
+}
+
+async function apiGetSupabasePosts() {
+  if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase is not configured.");
+  const meta = getWorkspaceRequestMetadata();
+  const workspaceId = meta.workspace_id || "";
+  if (!workspaceId) throw new Error("Workspace ID is missing for Supabase posts.");
+  const result = await STELLARSYNC_SUPABASE_CLIENT
+    .from("posts")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .order("updated_at", { ascending: false });
+  if (result.error) throw result.error;
+  return (Array.isArray(result.data) ? result.data : []).map(normalizeSupabasePostRecord);
+}
+
+async function apiSavePostToSupabase(payload = {}) {
+  if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase is not configured.");
+  const row = buildSupabasePostRow(payload);
+  const workspaceId = row.workspace_id;
+  if (!workspaceId) throw new Error("Workspace ID is missing for Supabase save.");
+  let saved = null;
+  let upsertResult = await STELLARSYNC_SUPABASE_CLIENT
+    .from("posts")
+    .upsert(row, { onConflict: "workspace_id,post_id" })
+    .select("*")
+    .maybeSingle();
+  if (upsertResult.error) {
+    const existing = await STELLARSYNC_SUPABASE_CLIENT
+      .from("posts")
+      .select("id")
+      .eq("workspace_id", workspaceId)
+      .eq("post_id", row.post_id)
+      .maybeSingle();
+    if (existing.error && existing.error.code !== "PGRST116") throw upsertResult.error;
+    if (existing.data && existing.data.id) {
+      const updateResult = await STELLARSYNC_SUPABASE_CLIENT
+        .from("posts")
+        .update(row)
+        .eq("id", existing.data.id)
+        .select("*")
+        .maybeSingle();
+      if (updateResult.error) throw updateResult.error;
+      saved = updateResult.data;
+    } else {
+      const insertResult = await STELLARSYNC_SUPABASE_CLIENT
+        .from("posts")
+        .insert(row)
+        .select("*")
+        .maybeSingle();
+      if (insertResult.error) throw insertResult.error;
+      saved = insertResult.data;
+    }
+  } else {
+    saved = upsertResult.data;
+  }
+  const post = normalizeSupabasePostRecord(saved || row);
+  return {
+    ok: true,
+    post,
+    savedPostId: post.post_id || post.postId || "",
+    postId: post.post_id || post.postId || "",
+    rowNumber: "",
+    source: "supabase_native"
+  };
 }
 
 async function apiGetPosts() {
   console.log("[data] getPosts request started");
+  const backendMode = getActiveWorkspaceBackendMode();
+  if (backendMode.mode === "supabase_native") {
+    const posts = await apiGetSupabasePosts();
+    console.log("[data] getPosts response status", "ok");
+    console.log("[data] supabase posts count", posts.length);
+    GOOGLE_SHEETS_CONNECTION_STATUS = {
+      source: "supabase_native",
+      connected: false,
+      lastSync: "",
+      postCount: 0,
+      error: "",
+      sheetName: "",
+      appsScriptUrl: ""
+    };
+    return filterBlankPostsForRender(posts);
+  }
   try {
     const result = await apiGet("getPosts");
     console.log("[data] getPosts response status", result.ok ? "ok" : "error");
@@ -18478,9 +19327,36 @@ async function apiGetPosts() {
     const posts = extractPostsFromGetPostsResult(result);
     const filteredPosts = filterBlankPostsForRender(posts);
     console.log("[data] posts count", Array.isArray(filteredPosts) ? filteredPosts.length : 0);
+    GOOGLE_SHEETS_CONNECTION_STATUS = {
+      source: getGoogleSheetsConnectionSource().source,
+      connected: true,
+      lastSync: new Date().toISOString(),
+      postCount: Array.isArray(filteredPosts) ? filteredPosts.length : 0,
+      error: "",
+      sheetName: result.sheet_name || result.spreadsheet_name || result.diagnostics?.sheetName || result.diagnostics?.spreadsheetName || "",
+      appsScriptUrl: getWorkspaceApiUrl()
+    };
+    console.log("[sheets] connection source", GOOGLE_SHEETS_CONNECTION_STATUS.source);
+    console.log("[sheets] connected", true);
+    console.log("[sheets] last sync", GOOGLE_SHEETS_CONNECTION_STATUS.lastSync);
+    console.log("[sheets] post count", GOOGLE_SHEETS_CONNECTION_STATUS.postCount);
     return filteredPosts;
   } catch (err) {
     console.log("[data] getPosts error", err && err.message ? err.message : String(err));
+    const source = getGoogleSheetsConnectionSource();
+    GOOGLE_SHEETS_CONNECTION_STATUS = {
+      source: source.source,
+      connected: false,
+      lastSync: GOOGLE_SHEETS_CONNECTION_STATUS.lastSync || "",
+      postCount: GOOGLE_SHEETS_CONNECTION_STATUS.postCount || 0,
+      error: err && err.message ? err.message : String(err),
+      sheetName: "",
+      appsScriptUrl: source.url || getWorkspaceApiUrl()
+    };
+    console.log("[sheets] connection source", GOOGLE_SHEETS_CONNECTION_STATUS.source);
+    console.log("[sheets] connected", false);
+    console.log("[sheets] last sync", GOOGLE_SHEETS_CONNECTION_STATUS.lastSync || "none");
+    console.log("[sheets] post count", GOOGLE_SHEETS_CONNECTION_STATUS.postCount || 0);
     throw err;
   }
 }
@@ -18775,8 +19651,8 @@ function hasDeploymentUrlMismatch() {
 
 function getDeployChecklistItems() {
   return [
-    "Redeploy Apps Script web app after Code.gs changes",
-    "Confirm APP_SCRIPT_URL matches PUBLIC_WEBAPP_BASE_URL",
+    "Redeploy GPE Apps Script web app after gpe_code.gs changes",
+    "Confirm the backend URL matches PUBLIC_WEBAPP_BASE_URL",
     "Confirm SPREADSHEET_ID",
     "Confirm MEDIA_FOLDER_ID if uploads are used",
     "Open app once after deploy to refresh service worker"
@@ -19157,7 +20033,7 @@ function renderDiagnosticsPanel() {
 
   if (warning) {
     if (hasDeploymentUrlMismatch()) {
-      warning.textContent = "Deployment URL mismatch. Update APP_SCRIPT_URL or PUBLIC_WEBAPP_BASE_URL.";
+      warning.textContent = "Deployment URL mismatch. Update the backend URL or PUBLIC_WEBAPP_BASE_URL.";
       warning.classList.remove("hidden");
 	    } else if (hasVersionMismatch()) {
 	      warning.textContent = "Frontend/backend version mismatch. A stale service worker cache may be serving old connect logic; use Reset Cache / Reload App after redeploy.";
@@ -20872,23 +21748,43 @@ async function apiSavePost(post) {
   const hydratedPost = hydratePostCampaign(post);
   const planning = normalizePostPlanningFields(hydratedPost, hydratedPost);
   const platformTargets = getPostTargetPlatforms(hydratedPost);
-  return apiPost("savePost", {
-    postId: hydratedPost.id || null,
+  const meta = getWorkspaceRequestMetadata();
+  const backendType = String(meta.backend_type || WORKSPACE_RUNTIME_CONFIG?.active?.backend_type || "").trim();
+  const savePayload = {
+    id: hydratedPost.id || hydratedPost.postId || hydratedPost.post_id || hydratedPost._frontendId || null,
+    postId: hydratedPost.postId || hydratedPost.post_id || hydratedPost.id || null,
+    post_id: hydratedPost.post_id || hydratedPost.postId || hydratedPost.id || "",
+    _frontendId: hydratedPost._frontendId || hydratedPost.frontendId || hydratedPost.id || "",
+    frontendId: hydratedPost.frontendId || hydratedPost._frontendId || hydratedPost.id || "",
+    _rowNumber: hydratedPost._rowNumber || hydratedPost.row_number || hydratedPost.sheetRow || "",
+    sheetRow: hydratedPost.sheetRow || hydratedPost.row_number || hydratedPost._rowNumber || "",
     title: hydratedPost.title || "",
     platform: platformTargets[0] || hydratedPost.platform || "linkedin",
     pillar: normalizePillar(hydratedPost.pillar || hydratedPost.hubPillarLabel || (appState.settings?.pillars || [])[0] || "authority"),
     scheduledAt: planning.scheduledAt || hydratedPost.date || "",
+    scheduled_at: planning.scheduledAt || hydratedPost.scheduled_at || hydratedPost.date || "",
     queueDateLabel: planning.queueDateLabel,
     queueTimeLabel: planning.queueTimeLabel,
+    publish_date: planning.queueDateLabel,
+    publishDate: planning.queueDateLabel,
+    publish_time: planning.queueTimeLabel,
+    publishTime: planning.queueTimeLabel,
     calendarMonth: planning.calendarMonth,
     calendarYear: planning.calendarYear,
     calendarDay: planning.calendarDay,
     hasUserSelectedTime: planning.hasUserSelectedTime,
     status: hydratedPost.status || "draft",
+    publish_status: hydratedPost.publishStatus || hydratedPost.publish_status || hydratedPost.status || "draft",
     postType: hydratedPost.postType || "text",
+    format: hydratedPost.format || hydratedPost.postType || "text",
     description: hydratedPost.description || "",
     assetId: hydratedPost.assetId || "",
-    workspaceId: hydratedPost.workspaceId || hydratedPost.workspace_id || getWorkspaceRequestMetadata().workspace_id || "",
+    workspaceId: hydratedPost.workspaceId || hydratedPost.workspace_id || meta.workspace_id || "",
+    workspace_id: hydratedPost.workspace_id || hydratedPost.workspaceId || meta.workspace_id || "",
+    workspace_slug: meta.workspace_slug || "",
+    user_id: meta.user_id || "",
+    user_email: meta.user_email || "",
+    backend_type: backendType,
     mediaId: hydratedPost.mediaId || hydratedPost.media_id || hydratedPost.assetId || "",
     mediaUrl: hydratedPost.mediaUrl || hydratedPost.media_url || "",
     mediaType: hydratedPost.mediaType || hydratedPost.media_type || "",
@@ -20897,8 +21793,10 @@ async function apiSavePost(post) {
     mediaSource: hydratedPost.mediaSource || hydratedPost.media_source || "",
     storagePath: hydratedPost.storagePath || hydratedPost.storage_path || "",
     mondayItemId: hydratedPost.mondayItemId || hydratedPost.monday_item_id || "",
+    monday_item_id: hydratedPost.monday_item_id || hydratedPost.mondayItemId || "",
     mondayGroupId: hydratedPost.mondayGroupId || hydratedPost.monday_group_id || "",
     mondayLastSyncedAt: hydratedPost.mondayLastSyncedAt || hydratedPost.monday_last_synced_at || "",
+    monday_synced_at: hydratedPost.mondayLastSyncedAt || hydratedPost.monday_last_synced_at || "",
     mondaySyncStatus: hydratedPost.mondaySyncStatus || hydratedPost.monday_sync_status || "",
     hubTitle: hydratedPost.hubTitle || hydratedPost.title || "",
     hubPillarLabel: formatContentPillarLabel(hydratedPost.hubPillarLabel || hydratedPost.pillar || (appState.settings?.pillars || [])[0] || "authority"),
@@ -20947,7 +21845,22 @@ async function apiSavePost(post) {
     saves: hydratedPost.saves || 0,
     clicks: hydratedPost.clicks || 0,
     engagementRate: hydratedPost.engagementRate || 0
-  });
+  };
+  console.log("[savePost] payload", savePayload);
+  const backendMode = getActiveWorkspaceBackendMode();
+  savePayload.backend_type = backendMode.mode;
+  savePayload.backend_mode = backendMode.mode;
+  console.log("[savePost] backend", backendMode.mode);
+  try {
+    const response = backendMode.mode === "supabase_native"
+      ? await apiSavePostToSupabase(savePayload)
+      : await apiPost("savePost", savePayload);
+    console.log("[savePost] response", response);
+    return response;
+  } catch (err) {
+    console.log("[savePost] error", err);
+    throw err;
+  }
 }
 
 async function apiDeletePost(postId) {
@@ -21119,10 +22032,10 @@ function safeStorageSet(key, value) {
 function loadLocalState() {
   try {
     const raw = safeStorageGet(APP_CONFIG.STORAGE_KEY);
-    if (!raw) return structuredCloneState(DEFAULT_STATE);
+    if (!raw) return sanitizeAppStateArtifacts(structuredCloneState(DEFAULT_STATE));
 
     const parsed = JSON.parse(raw);
-    return {
+    return sanitizeAppStateArtifacts({
       posts: Array.isArray(parsed.posts) ? parsed.posts : structuredCloneState(DEFAULT_STATE.posts),
       campaigns: Array.isArray(parsed.campaigns) ? parsed.campaigns : structuredCloneState(DEFAULT_STATE.campaigns),
       settings: parsed.settings ? normalizeRemoteSettings(parsed.settings) : structuredCloneState(DEFAULT_STATE.settings),
@@ -21132,11 +22045,21 @@ function loadLocalState() {
       importJobs: Array.isArray(parsed.importJobs) ? parsed.importJobs : structuredCloneState(DEFAULT_STATE.importJobs),
       aiDrafts: Array.isArray(parsed.aiDrafts) ? parsed.aiDrafts : structuredCloneState(DEFAULT_STATE.aiDrafts),
       brandFramework: Array.isArray(parsed.brandFramework) ? parsed.brandFramework : structuredCloneState(DEFAULT_STATE.brandFramework)
-    };
+    });
   } catch (err) {
     console.warn("Failed to load local state, using defaults.", err);
-    return structuredCloneState(DEFAULT_STATE);
+    return sanitizeAppStateArtifacts(structuredCloneState(DEFAULT_STATE));
   }
+}
+
+function sanitizeAppStateArtifacts(state) {
+  const next = state || structuredCloneState(DEFAULT_STATE);
+  next.posts = filterRenderableArtifacts(next.posts || [], "post");
+  next.inspo = filterRenderableArtifacts(next.inspo || [], "inspo");
+  next.notes = filterRenderableArtifacts(next.notes || [], "note");
+  next.media = filterRenderableArtifacts(next.media || [], "media");
+  next.aiDrafts = filterRenderableArtifacts(next.aiDrafts || [], "aiDraft");
+  return next;
 }
 
 function persistLocalState() {
@@ -22397,18 +23320,32 @@ async function savePWWorkspace() {
     var avatarMode = icon === "none" ? "initials" : "icon";
     var initials = shortName || getWorkspaceInitials(WORKSPACE_RUNTIME_CONFIG.active);
     if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase client not available");
-    var slug = (WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active && (WORKSPACE_RUNTIME_CONFIG.active.workspace_slug || WORKSPACE_RUNTIME_CONFIG.active.slug)) || "";
+    var activeWorkspace = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active || {};
+    var slug = (activeWorkspace && (activeWorkspace.workspace_slug || activeWorkspace.slug)) || "";
+    var workspaceId = activeWorkspace.workspace_id || activeWorkspace.id || "";
     if (slug) {
       console.log("[profile-modal] saving branding");
+      if (workspaceId && name) {
+        var workspaceUpdate = await STELLARSYNC_SUPABASE_CLIENT
+          .from("workspaces")
+          .update({ name: name, updated_at: new Date().toISOString() })
+          .eq("id", workspaceId);
+        if (workspaceUpdate.error) throw workspaceUpdate.error;
+      }
       var existing = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").select("id").eq("workspace_slug", slug).maybeSingle();
+      if (existing.error) throw existing.error;
       var payload = { workspace_slug: slug, display_name: name, short_name: shortName, avatar_initials: initials, avatar_mode: avatarMode, icon: icon, updated_at: new Date().toISOString() };
+      console.log("[profile-modal] supabase update payload", payload);
       if (existing && existing.data && existing.data.id) {
-        await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").update(payload).eq("id", existing.data.id);
+        var settingsUpdate = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").update(payload).eq("id", existing.data.id);
+        if (settingsUpdate.error) throw settingsUpdate.error;
       } else {
-        await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").insert(payload);
+        var settingsInsert = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").insert(payload);
+        if (settingsInsert.error) throw settingsInsert.error;
       }
       console.log("[profile-modal] save success");
       WORKSPACE_RUNTIME_CONFIG.active = mergeWorkspaceSettings(WORKSPACE_RUNTIME_CONFIG.active, { display_name: name, short_name: shortName, avatar_initials: initials, avatar_mode: avatarMode, icon: icon });
+      WORKSPACE_RUNTIME_CONFIG.active.name = name || WORKSPACE_RUNTIME_CONFIG.active.name;
       storeActiveWorkspaceConfig(WORKSPACE_RUNTIME_CONFIG.active);
     }
     if (statusEl) { statusEl.textContent = "Workspace saved."; statusEl.className = "text-xs text-emerald-400"; statusEl.classList.remove("hidden"); }

@@ -1,0 +1,45 @@
+{
+  "manifest_version": 3,
+  "name": "LinkedIn Post Export Helper",
+  "version": "0.1.1",
+  "description": "Export your visible LinkedIn posts locally for StellarSync import.",
+  "icons": {
+    "16": "icons/stellarsync-16.png",
+    "32": "icons/stellarsync-32.png",
+    "48": "icons/stellarsync-48.png",
+    "128": "icons/stellarsync-128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "LinkedIn Post Export Helper",
+    "default_icon": {
+      "16": "icons/stellarsync-16.png",
+      "32": "icons/stellarsync-32.png",
+      "48": "icons/stellarsync-48.png",
+      "128": "icons/stellarsync-128.png"
+    }
+  },
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "downloads",
+    "clipboardWrite"
+  ],
+  "host_permissions": [
+    "https://www.linkedin.com/*",
+    "https://linkedin.com/*",
+    "https://media.licdn.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.linkedin.com/*",
+        "https://linkedin.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

@@ -17,9 +17,10 @@
     body {
       margin: 0;
       min-height: 100vh;
+      min-height: 100dvh;
       display: grid;
       place-items: center;
-      padding: 24px;
+      padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
       color: #f7f2ff;
       background:
         radial-gradient(circle at 20% 20%, rgba(157, 78, 221, 0.18), transparent 28rem),
@@ -164,7 +165,7 @@
         name: String(source.name || source.slug || "").trim(),
         plan: String(source.plan || "").trim(),
         subscription_status: String(source.subscription_status || "").trim(),
-        backend_type: String(source.backend_type || "client_google_sheets").trim(),
+        backend_type: String(source.backend_type || "supabase_native").trim(),
         apps_script_url: String(source.apps_script_url || "").trim(),
         sheet_id: String(source.sheet_id || "").trim(),
         monday_board_id: String(source.monday_board_id || "").trim(),
