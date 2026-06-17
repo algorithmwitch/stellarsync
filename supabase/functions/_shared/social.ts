@@ -60,7 +60,7 @@ export async function requireWorkspaceMember(supabase: ReturnType<typeof createC
     .from("workspace_members")
     .select("role, workspace_id")
     .eq("workspace_id", workspaceId)
-    .or(`user_id.eq.${userId},auth_user_id.eq.${userId}`)
+    .eq("user_id", userId)
     .maybeSingle();
   if (error) throw error;
   if (!data) throw new Error("Workspace access denied");

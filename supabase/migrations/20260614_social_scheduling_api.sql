@@ -75,7 +75,7 @@ using (
   exists (
     select 1 from public.workspace_members wm
     where wm.workspace_id = social_accounts.workspace_id
-      and (wm.user_id = auth.uid() or wm.auth_user_id = auth.uid())
+      and (wm.user_id = auth.uid() or wm.user_id = auth.uid())
   )
 );
 
@@ -86,7 +86,7 @@ using (
   exists (
     select 1 from public.workspace_members wm
     where wm.workspace_id = social_accounts.workspace_id
-      and (wm.user_id = auth.uid() or wm.auth_user_id = auth.uid())
+      and (wm.user_id = auth.uid() or wm.user_id = auth.uid())
       and lower(coalesce(wm.role, '')) in ('owner', 'admin')
   )
 )
@@ -94,7 +94,7 @@ with check (
   exists (
     select 1 from public.workspace_members wm
     where wm.workspace_id = social_accounts.workspace_id
-      and (wm.user_id = auth.uid() or wm.auth_user_id = auth.uid())
+      and (wm.user_id = auth.uid() or wm.user_id = auth.uid())
       and lower(coalesce(wm.role, '')) in ('owner', 'admin')
   )
 );
@@ -106,7 +106,7 @@ using (
   exists (
     select 1 from public.workspace_members wm
     where wm.workspace_id = scheduled_social_posts.workspace_id
-      and (wm.user_id = auth.uid() or wm.auth_user_id = auth.uid())
+      and (wm.user_id = auth.uid() or wm.user_id = auth.uid())
   )
 );
 
@@ -117,7 +117,7 @@ using (
   exists (
     select 1 from public.workspace_members wm
     where wm.workspace_id = scheduled_social_posts.workspace_id
-      and (wm.user_id = auth.uid() or wm.auth_user_id = auth.uid())
+      and (wm.user_id = auth.uid() or wm.user_id = auth.uid())
       and lower(coalesce(wm.role, '')) in ('owner', 'admin')
   )
 )
@@ -125,7 +125,7 @@ with check (
   exists (
     select 1 from public.workspace_members wm
     where wm.workspace_id = scheduled_social_posts.workspace_id
-      and (wm.user_id = auth.uid() or wm.auth_user_id = auth.uid())
+      and (wm.user_id = auth.uid() or wm.user_id = auth.uid())
       and lower(coalesce(wm.role, '')) in ('owner', 'admin')
   )
 );
@@ -138,7 +138,7 @@ using (
   and exists (
     select 1 from public.workspace_members wm
     where wm.workspace_id = social_oauth_states.workspace_id
-      and (wm.user_id = auth.uid() or wm.auth_user_id = auth.uid())
+      and (wm.user_id = auth.uid() or wm.user_id = auth.uid())
   )
 );
 
@@ -150,7 +150,7 @@ with check (
   and exists (
     select 1 from public.workspace_members wm
     where wm.workspace_id = social_oauth_states.workspace_id
-      and (wm.user_id = auth.uid() or wm.auth_user_id = auth.uid())
+      and (wm.user_id = auth.uid() or wm.user_id = auth.uid())
   )
 );
 

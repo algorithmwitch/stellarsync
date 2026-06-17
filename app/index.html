@@ -19,15 +19,36 @@
     <style vid="10">
   html,
   body {
-    height: 100%;
     min-height: 100%;
+    margin: 0;
     background: #0a0612;
+  }
+
+  body {
+    min-height: 100dvh;
+    margin: 0;
   }
 
   #boot-loading,
   #boot-diagnostics {
+    position: fixed;
+    inset: 0;
     width: 100vw;
-    min-height: 100vh;
+    min-height: 100dvh;
+    height: 100dvh;
+    background:
+      radial-gradient(circle at 20% 20%, rgba(157, 78, 221, 0.18), transparent 28rem),
+      radial-gradient(circle at 80% 12%, rgba(0, 240, 255, 0.10), transparent 30rem),
+      linear-gradient(135deg, #0a0612, #05020a 55%, #0a0612) !important;
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #boot-loading.hidden,
+  #boot-diagnostics.hidden {
+    display: none !important;
   }
 
   main {
@@ -2032,7 +2053,7 @@
             <div id="stars-container" class="stars absolute inset-0" vid="16"></div>
         </div>
 
-    <div id="boot-loading" class="fixed inset-0 z-[9998] flex flex-col items-center justify-center p-6 gap-5" style="background:#0a0514;width:100vw;min-height:100vh;">
+    <div id="boot-loading" class="fixed inset-0 z-[9998] flex flex-col items-center justify-center p-6 gap-5" style="background:#0a0612;width:100vw;min-height:100dvh;height:100dvh;">
       <img src="../icon/stellarsync-192.png" alt="StellarSync" class="w-14 h-14 rounded-2xl shadow-[0_0_28px_rgba(199,125,255,0.32)]">
       <div class="flex flex-col items-center gap-2">
         <div class="w-12 h-12 rounded-2xl bg-[#231738] flex items-center justify-center text-white text-sm font-bold border border-white/10">
@@ -2043,7 +2064,7 @@
       <div class="text-gray-500 text-[11px] text-center max-w-[280px] leading-relaxed">StellarSync is preparing your workspace.</div>
     </div>
 
-    <div id="boot-diagnostics" class="hidden fixed inset-0 z-[9999] flex items-center justify-center p-6" style="background:#0a0514;">
+    <div id="boot-diagnostics" class="hidden fixed inset-0 z-[9999] flex items-center justify-center p-6" style="background:#0a0612;width:100vw;min-height:100dvh;height:100dvh;">
       <div class="w-full max-w-xl bg-[#120c1d] border border-white/10 rounded-2xl p-6 space-y-4">
         <div class="flex items-center gap-3">
           <i class="ph-bold ph-bug-beetle text-2xl text-yellow-400"></i>
@@ -4927,9 +4948,10 @@ function getSessionWorkspaceConfig() {
 	      created_at: parsed.created_at || null,
 	      updated_at: parsed.updated_at || null,
 	      subscription_status: String(parsed.subscription_status || "").trim(),
-	      backend_type: String(parsed.backend_type || "supabase_native").trim(),
+	      backend_type: String(parsed.backend_type || "").trim(),
 	      apps_script_url: String(parsed.apps_script_url || "").trim(),
-	      sheet_id: String(parsed.sheet_id || "").trim(),
+	      sheet_id: String(parsed.google_sheet_id || parsed.sheet_id || "").trim(),
+	      google_sheet_id: String(parsed.google_sheet_id || parsed.sheet_id || "").trim(),
 	      monday_board_id: String(parsed.monday_board_id || "").trim(),
 	      supabase_media_enabled: Boolean(parsed.supabase_media_enabled),
 	      media_bucket: String(parsed.media_bucket || parsed.storage_bucket || "media").trim(),
@@ -4978,9 +5000,10 @@ function loadWorkspaceConfig() {
 	      created_at: sessionConfig.created_at || null,
 	      updated_at: sessionConfig.updated_at || null,
 	      subscription_status: sessionConfig.subscription_status || "",
-	      backend_type: sessionConfig.backend_type || "supabase_native",
+	      backend_type: sessionConfig.backend_type || "",
 	      apps_script_url: sessionConfig.apps_script_url || "",
-	      sheet_id: sessionConfig.sheet_id || "",
+	      sheet_id: sessionConfig.google_sheet_id || sessionConfig.sheet_id || "",
+	      google_sheet_id: sessionConfig.google_sheet_id || sessionConfig.sheet_id || "",
 	      monday_board_id: sessionConfig.monday_board_id || "",
 	      supabase_media_enabled: sessionConfig.supabase_media_enabled,
 	      supabase_url: SUPABASE_URL,
@@ -4991,7 +5014,7 @@ function loadWorkspaceConfig() {
 	      avatar_mode: sessionConfig.avatar_mode || "",
 	      icon: sessionConfig.icon || ""
 	    };
-    if (!WORKSPACE_RUNTIME_CONFIG.backend_types.includes(active.backend_type)) {
+    if (active.backend_type && !WORKSPACE_RUNTIME_CONFIG.backend_types.includes(active.backend_type)) {
       active.backend_type = "supabase_native";
     }
     WORKSPACE_RUNTIME_CONFIG.active = active;
@@ -5009,7 +5032,8 @@ function loadWorkspaceConfig() {
     workspace_id: String(workspaceConfig.workspace_id || workspaceConfig.workspace_slug || slug || masterConfig.workspace_id || "master").trim(),
     backend_type: String(workspaceConfig.backend_type || masterConfig.backend_type || "supabase_native").trim(),
     apps_script_url: String(workspaceConfig.apps_script_url || masterConfig.apps_script_url || APP_CONFIG.APP_SCRIPT_URL || "").trim(),
-    sheet_id: String(workspaceConfig.sheet_id || masterConfig.sheet_id || "").trim(),
+    sheet_id: String(workspaceConfig.google_sheet_id || workspaceConfig.sheet_id || masterConfig.google_sheet_id || masterConfig.sheet_id || "").trim(),
+    google_sheet_id: String(workspaceConfig.google_sheet_id || workspaceConfig.sheet_id || masterConfig.google_sheet_id || masterConfig.sheet_id || "").trim(),
     monday_board_id: String(workspaceConfig.monday_board_id || masterConfig.monday_board_id || "").trim(),
     storage_bucket: String(workspaceConfig.storage_bucket || masterConfig.storage_bucket || "media").trim(),
     short_name: String(workspaceConfig.short_name || masterConfig.short_name || "").trim(),
@@ -5017,7 +5041,7 @@ function loadWorkspaceConfig() {
     avatar_mode: String(workspaceConfig.avatar_mode || workspaceConfig.avatarMode || masterConfig.avatar_mode || "").trim(),
     icon: String(workspaceConfig.icon || workspaceConfig.avatar_icon || masterConfig.icon || "").trim()
   };
-  if (!WORKSPACE_RUNTIME_CONFIG.backend_types.includes(active.backend_type)) {
+  if (active.backend_type && !WORKSPACE_RUNTIME_CONFIG.backend_types.includes(active.backend_type)) {
     active.backend_type = "supabase_native";
   }
   WORKSPACE_RUNTIME_CONFIG.active = active;
@@ -5038,9 +5062,10 @@ function normalizeSupabaseWorkspaceConfig(workspace) {
     subscription_status: String(source.subscription_status || "").trim(),
     role: String(source.role || "").trim(),
     apps_script_url: String(source.apps_script_url || "").trim(),
-    sheet_id: String(source.sheet_id || "").trim(),
+    sheet_id: String(source.google_sheet_id || source.sheet_id || "").trim(),
+    google_sheet_id: String(source.google_sheet_id || source.sheet_id || "").trim(),
     monday_board_id: String(source.monday_board_id || "").trim(),
-    backend_type: String(source.backend_type || "supabase_native").trim(),
+    backend_type: String(source.backend_type || "").trim(),
     supabase_media_enabled: Boolean(source.supabase_media_enabled),
     media_bucket: String(source.media_bucket || source.storage_bucket || "media").trim(),
     short_name: String(source.short_name || source.shortName || "").trim(),
@@ -5059,12 +5084,11 @@ function mergeWorkspaceSettings(workspace, settings) {
   const avatarInitials = String(settings.avatar_initials || settings.avatarInitials || "").trim();
   const avatarMode = String(settings.avatar_mode || settings.avatarMode || "").trim();
   const icon = String(settings.icon || settings.avatar_icon || settings.avatarIcon || "").trim();
-  const plan = String(settings.plan || settings.tier || "").trim();
+  const plan = String(settings.plan || "").trim();
   return {
     ...workspace,
     name: displayName || workspace.name,
     plan: workspace.plan || plan,
-    tier: workspace.tier || plan,
     settings_plan: plan,
     short_name: shortName || workspace.short_name || "",
     avatar_initials: avatarInitials || workspace.avatar_initials || "",
@@ -5123,7 +5147,7 @@ async function fetchWorkspaceMembershipsByUserId(userId, userEmail) {
     plan,
     subscription_status,
     apps_script_url,
-    sheet_id,
+    google_sheet_id,
     monday_board_id,
     backend_type,
     supabase_media_enabled,
@@ -5414,7 +5438,7 @@ async function ensureSupabaseWorkspaceBeforeBoot() {
   activeWorkspace = await loadWorkspaceSettingsForWorkspace(activeWorkspace);
   console.log("[app-router] selected workspace slug", activeWorkspace.slug);
 
-  if (isSubscriptionBlocked(activeWorkspace)) {
+  if (isSubscriptionBlocked(activeWorkspace) && !isManagedHybridWorkspace(activeWorkspace, [])) {
     console.warn("[app-router] subscription blocked", activeWorkspace.slug, activeWorkspace.subscription_status);
     showAppRouterState({
       title: "Subscription required",
@@ -5424,6 +5448,8 @@ async function ensureSupabaseWorkspaceBeforeBoot() {
       ctaLabel: "Contact Support"
     });
     return null;
+  } else if (isManagedHybridWorkspace(activeWorkspace, [])) {
+    console.log("[tier] upgrade lock skipped for managed hybrid");
   }
 
   // Fetch workspace_connections and resolve apps_script_url
@@ -5449,7 +5475,6 @@ async function ensureSupabaseWorkspaceBeforeBoot() {
     console.log("[app-router] using google_sheets connection apps_script_url");
   }
   const backendMode = getWorkspaceBackendMode(activeWorkspace, WORKSPACE_CONNECTIONS);
-  activeWorkspace.backend_mode = backendMode.mode;
   activeWorkspace.backend_type = backendMode.mode;
   if (backendMode.appsScriptUrl) {
     activeWorkspace.apps_script_url = backendMode.appsScriptUrl;
@@ -5686,7 +5711,8 @@ function getWorkspaceRequestMetadata() {
     role: config.role || "",
     backend_type: backendMode.mode || config.backend_type || "supabase_native",
     backend_mode: backendMode.mode || config.backend_type || "supabase_native",
-    sheet_id: config.sheet_id || "",
+    sheet_id: config.google_sheet_id || config.sheet_id || "",
+    google_sheet_id: config.google_sheet_id || config.sheet_id || "",
     monday_board_id: getMondayBoardId(config, WORKSPACE_CONNECTIONS) || "",
     supabase_media_enabled: !!config.supabase_media_enabled,
     connection_provider: backendMode.provider || "supabase"
@@ -6777,21 +6803,28 @@ const CONNECTED_ACCOUNT_PLATFORMS = ["linkedin", "instagram", "threads", "bluesk
 const WORKSPACE_CONNECTION_PROVIDERS = ["google_sheets", "google_drive", "monday"]; // stripe removed — belongs in Billing tab, not Connections
 function normalizeWorkspacePlan(value) {
   const normalized = String(value || "").trim().toLowerCase();
-  if (["starter", "growth", "agency", "managed"].includes(normalized)) return normalized;
+  if (["starter", "growth", "agency", "managed", "custom"].includes(normalized)) return normalized;
   if (normalized === "free") return "starter";
   if (normalized === "pro") return "growth";
   if (normalized === "enterprise") return "managed";
-  return "starter";
+  return normalized || "";
 }
 
 function getWorkspacePlanFeatures(workspace = {}) {
-  const plan = normalizeWorkspacePlan(workspace.plan || workspace.tier || workspace.workspace_plan || workspace.workspace_tier || workspace.settings_plan);
+  const rawPlan = String(workspace.plan || workspace.workspace_plan || workspace.settings_plan || "").trim();
+  const plan = normalizeWorkspacePlan(rawPlan);
+  const subscriptionStatus = String(workspace.subscription_status || workspace.subscriptionStatus || "").trim().toLowerCase();
   const backendType = String(workspace.backend_type || "").trim().toLowerCase();
   const gsConn = typeof getWorkspaceConnection === "function" ? getWorkspaceConnection("google_sheets") : null;
   const explicitHybrid = ["google_sheets_hybrid", "managed_hybrid", "client_google_sheets", "master_google_sheets", "hybrid"].includes(backendType);
-  const hybridEnabled = explicitHybrid || (!!String(workspace.apps_script_url || "").trim() && !!gsConn && isWorkspaceConnectionEnabled(gsConn));
+  const managedHybrid = typeof isManagedHybridWorkspace === "function" ? isManagedHybridWorkspace(workspace, WORKSPACE_CONNECTIONS || []) : false;
+  const hybridEnabled = managedHybrid || explicitHybrid || (!!String(workspace.apps_script_url || "").trim() && !!gsConn && isWorkspaceConnectionEnabled(gsConn));
+  const customActive = plan === "custom" && subscriptionStatus === "active";
+  const managedAccess = plan === "managed" || plan === "custom" || customActive || managedHybrid;
+  const agencyAccess = managedAccess || plan === "agency";
+  const growthAccess = agencyAccess || plan === "growth";
   const base = {
-    plan,
+    plan: plan || "core",
     calendar: true,
     posts: true,
     notes: true,
@@ -6810,7 +6843,7 @@ function getWorkspacePlanFeatures(workspace = {}) {
     mondaySetup: false,
     migrationWorkflowSupport: false
   };
-  if (plan === "growth" || plan === "agency" || plan === "managed") {
+  if (!rawPlan && subscriptionStatus === "active") {
     Object.assign(base, {
       campaigns: true,
       mediaLibraryStorage: true,
@@ -6818,7 +6851,15 @@ function getWorkspacePlanFeatures(workspace = {}) {
       basicIntegrations: true
     });
   }
-  if (plan === "agency" || plan === "managed") {
+  if (growthAccess) {
+    Object.assign(base, {
+      campaigns: true,
+      mediaLibraryStorage: true,
+      publishingReadiness: true,
+      basicIntegrations: true
+    });
+  }
+  if (agencyAccess) {
     Object.assign(base, {
       agencyTools: true,
       templates: true,
@@ -6826,7 +6867,7 @@ function getWorkspacePlanFeatures(workspace = {}) {
       prioritySupport: true
     });
   }
-  if (plan === "managed") {
+  if (managedAccess) {
     Object.assign(base, {
       googleSheetsHybrid: true,
       googleDriveSetup: true,
@@ -6836,8 +6877,15 @@ function getWorkspacePlanFeatures(workspace = {}) {
   } else if (hybridEnabled && plan !== "starter") {
     base.googleSheetsHybrid = true;
   }
-  base.hybridEnabled = base.googleSheetsHybrid || (plan === "managed" && hybridEnabled);
-  console.log("[tier] active plan", plan);
+  base.hybridEnabled = base.googleSheetsHybrid || managedHybrid || (managedAccess && hybridEnabled);
+  console.log("[tier] plan", plan || "(missing)");
+  console.log("[tier] subscription_status", subscriptionStatus || "(missing)");
+  if (customActive || (plan === "custom" && subscriptionStatus === "active")) {
+    console.log("[tier] custom active access granted");
+  }
+  if (managedHybrid) {
+    console.log("[tier] upgrade lock skipped for managed hybrid");
+  }
   console.log("[tier] enabled features", base);
   return base;
 }
@@ -11341,20 +11389,51 @@ function getMondayBoardId(workspace = WORKSPACE_RUNTIME_CONFIG?.active, connecti
   ).trim();
 }
 
+function isManagedHybridWorkspace(workspace = {}, connections = []) {
+  const activeWorkspace = workspace || {};
+  const list = Array.isArray(connections) ? connections : [];
+  const slug = String(activeWorkspace.slug || activeWorkspace.workspace_slug || "").trim().toLowerCase();
+  const plan = String(activeWorkspace.plan || activeWorkspace.workspace_plan || activeWorkspace.settings_plan || "").trim().toLowerCase();
+  const backendType = String(activeWorkspace.backend_type || "").trim().toLowerCase();
+  const workspaceUrl = String(activeWorkspace.apps_script_url || "").trim();
+  const gsConn = list.find((item) => item && item.provider === "google_sheets") || null;
+  const connUrl = String(gsConn?.config?.apps_script_url || "").trim();
+  const connStatus = String(gsConn?.status || "").trim().toLowerCase();
+  return !!(
+    slug === "gpe" ||
+    plan === "managed" ||
+    plan === "custom" ||
+    backendType === "google_sheets_hybrid" ||
+    backendType === "managed_hybrid" ||
+    workspaceUrl ||
+    connUrl ||
+    connStatus === "connected"
+  );
+}
+
 function getWorkspaceBackendMode(workspace = {}, connections = []) {
   const activeWorkspace = workspace || {};
   const gsConn = (connections || []).find((item) => item && item.provider === "google_sheets") || null;
   const source = getGoogleSheetsConnectionSource();
   const appsScriptUrl = String(source.url || activeWorkspace.apps_script_url || "").trim();
-  const plan = normalizeWorkspacePlan(activeWorkspace.plan || activeWorkspace.tier || activeWorkspace.settings_plan);
+  const rawPlan = String(activeWorkspace.plan || activeWorkspace.settings_plan || "").trim();
+  const plan = normalizeWorkspacePlan(rawPlan);
   const backendType = String(activeWorkspace.backend_type || "").trim().toLowerCase();
-  const connectionEnabled = !!(gsConn && isWorkspaceConnectionEnabled(gsConn));
-  const explicitHybrid = ["google_sheets_hybrid", "managed_hybrid", "client_google_sheets", "master_google_sheets", "hybrid"].includes(backendType);
-  const managedHybrid = plan === "managed" && !!appsScriptUrl && (connectionEnabled || explicitHybrid);
-  const googleSheetsHybrid = !!appsScriptUrl && (connectionEnabled || explicitHybrid);
+  const connAppsScriptUrl = String(gsConn?.config?.apps_script_url || "").trim();
   let mode = "supabase_native";
-  if (managedHybrid) mode = "managed_hybrid";
-  else if (googleSheetsHybrid) mode = "google_sheets_hybrid";
+  if (backendType) {
+    mode = backendType;
+  } else if (connAppsScriptUrl) {
+    mode = "google_sheets_hybrid";
+  } else if (String(activeWorkspace.apps_script_url || "").trim()) {
+    mode = "google_sheets_hybrid";
+  }
+  if (mode === "supabase_native" && appsScriptUrl) {
+    mode = "google_sheets_hybrid";
+  }
+  if (!WORKSPACE_RUNTIME_CONFIG.backend_types.includes(mode)) {
+    mode = mode === "supabase_native" ? "supabase_native" : "google_sheets_hybrid";
+  }
   const result = {
     mode,
     backend_type: mode,
@@ -11367,6 +11446,9 @@ function getWorkspaceBackendMode(workspace = {}, connections = []) {
     source: mode === "supabase_native" ? "supabase_native_default" : source.source,
     plan
   };
+  console.log("[backend-mode] backend_type", backendType || "(missing)");
+  console.log("[backend-mode] apps_script_url present", !!appsScriptUrl);
+  console.log("[backend-mode] resolved mode", mode);
   console.log("[backend] mode", result);
   return result;
 }
@@ -12318,19 +12400,24 @@ function renderWorkspaceConnectionCards() {
     const conn = getWorkspaceConnection(provider);
     const providerLabel = toTitleCase(provider.replace(/_/g, " "));
     var statusLabel, statusTone, chipLabel, detailParts, actions;
+    var workspaceManagedHybrid = isManagedHybridWorkspace(WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active, WORKSPACE_CONNECTIONS);
     if (provider === "google_sheets") {
       var sheetsSource = getGoogleSheetsConnectionSource();
       var sheetsStatus = GOOGLE_SHEETS_CONNECTION_STATUS || {};
       var hasUrl = !!sheetsSource.url;
+      var gsConnStatus = String(conn?.status || "").trim().toLowerCase();
+      var configuredSheetId = String((WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active && (WORKSPACE_RUNTIME_CONFIG.active.google_sheet_id || WORKSPACE_RUNTIME_CONFIG.active.sheet_id)) || "").trim();
       console.log("[sheets] connection source", sheetsSource.source);
       console.log("[sheets] connected", !!sheetsStatus.connected);
       console.log("[sheets] last sync", sheetsStatus.lastSync || "none");
       console.log("[sheets] post count", sheetsStatus.postCount || 0);
-      if (hasUrl && sheetsStatus.connected) {
+      if ((hasUrl || gsConnStatus === "connected") && (sheetsStatus.connected || backendMode.mode !== "supabase_native" || workspaceManagedHybrid)) {
         statusLabel = "Connected";
         statusTone = "text-emerald-300";
         chipLabel = "Hybrid Enabled";
         detailParts = ["Hybrid Google Sheets backend enabled"];
+        if (sheetsSource.source && sheetsSource.source !== "none") detailParts.push("Source: " + sheetsSource.source);
+        if (configuredSheetId) detailParts.push("Sheet ID: " + configuredSheetId);
         if (sheetsStatus.sheetName) detailParts.push("Sheet: " + sheetsStatus.sheetName);
         if (sheetsStatus.lastSync) detailParts.push("Last sync: " + sheetsStatus.lastSync);
         detailParts.push("Posts: " + (sheetsStatus.postCount || 0));
@@ -12346,12 +12433,19 @@ function renderWorkspaceConnectionCards() {
         statusTone = "text-emerald-300";
         chipLabel = "Configured";
         detailParts = ["Google Sheets backend URL is configured", "Source: " + sheetsSource.source];
+        if (configuredSheetId) detailParts.push("Sheet ID: " + configuredSheetId);
         actions = '<button type="button" onclick="syncRemoteIfConfigured().then(function(){ refreshConnectionCards(); showToast(\'Google Sheets synced\', \'success\'); }).catch(function(err){ showToast(\'Sync issue: \' + (err.message || err), \'error\'); })" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Retry Sync</button>';
+      } else if (configuredSheetId) {
+        statusLabel = "Configured";
+        statusTone = "text-emerald-300";
+        chipLabel = "Sheet configured";
+        detailParts = ["Google Sheet ID configured: " + configuredSheetId];
+        actions = '<button type="button" onclick="openSupportModal(\'Integration setup\')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Request Setup</button>';
       } else {
         statusLabel = planFeatures.googleSheetsHybrid ? "Setup available" : "Optional";
         statusTone = "text-gray-300";
         chipLabel = planFeatures.googleSheetsHybrid ? "Setup available" : "Optional";
-        if (planFeatures.plan === "starter") {
+        if (planFeatures.plan === "starter" && !workspaceManagedHybrid) {
           statusLabel = "Not included in plan";
           chipLabel = "Not included";
           detailParts = ["Core app data uses Supabase. Google Sheets hybrid is not included on this workspace tier."];
@@ -12411,7 +12505,7 @@ function renderWorkspaceConnectionCards() {
           chipLabel = "Optional";
           detailParts = ["Monday sync is optional and disabled until a board is configured."];
         }
-        if (!mondayBoardId && planFeatures.plan === "starter") {
+        if (!mondayBoardId && planFeatures.plan === "starter" && !workspaceManagedHybrid) {
           statusLabel = "Not included in plan";
           chipLabel = "Not included";
           detailParts = ["Monday sync is not included on this workspace tier."];
@@ -12456,7 +12550,7 @@ function renderWorkspaceConnectionCards() {
           statusTone = "text-emerald-300";
           chipLabel = "Board configured";
           detailParts = ["Board configured", "Board ID: " + mondayBoardId + " — test connection to verify"];
-        } else if (planFeatures.plan === "starter") {
+        } else if (planFeatures.plan === "starter" && !workspaceManagedHybrid) {
           statusLabel = "Not included in plan";
           statusTone = "text-gray-300";
           chipLabel = "Not included";
@@ -16524,11 +16618,6 @@ function switchView(viewName) {
   const requestedView = String(viewName || "calendar").trim();
   const routeFound = registeredViews.includes(requestedView);
   const targetName = routeFound ? requestedView : "calendar";
-  const featureGate = getFeatureGateForView(targetName);
-  if (!featureGate.enabled) {
-    showToast("Upgrade required", featureGate.label + " is not available on this workspace tier.", "ph-lock", "text-yellow-400");
-    if (targetName !== "calendar") return switchView("calendar");
-  }
   const targetView = document.getElementById(`view-${targetName}`);
   const targetNav = document.querySelector(`[data-view-target="${targetName}"], #nav-${targetName}`);
   const renderFn = getViewRenderFunction(targetName);

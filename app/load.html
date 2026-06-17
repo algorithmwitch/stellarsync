@@ -13,13 +13,19 @@
   <link rel="shortcut icon" href="../icon/stellarsync-192.png">
   <style>
     * { box-sizing: border-box; }
-    html { background: #0a0612; }
+    html,
+    body {
+      min-height: 100%;
+      margin: 0;
+      background: #0a0612;
+    }
     body {
       margin: 0;
-      min-height: 100vh;
       min-height: 100dvh;
-      display: grid;
-      place-items: center;
+      width: 100vw;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
       color: #f7f2ff;
       background:
@@ -27,6 +33,23 @@
         radial-gradient(circle at 80% 12%, rgba(0, 240, 255, 0.10), transparent 30rem),
         #0a0612;
       font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    main.card {
+      position: relative;
+      z-index: 99999;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      min-height: 100dvh;
+      height: 100dvh;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(157, 78, 221, 0.18), transparent 28rem),
+        radial-gradient(circle at 80% 12%, rgba(0, 240, 255, 0.10), transparent 30rem),
+        linear-gradient(135deg, #0a0612, #05020a 55%, #0a0612);
+      z-index: 99998;
     }
     .card {
       width: min(100%, 440px);
@@ -165,9 +188,10 @@
         name: String(source.name || source.slug || "").trim(),
         plan: String(source.plan || "").trim(),
         subscription_status: String(source.subscription_status || "").trim(),
-        backend_type: String(source.backend_type || "supabase_native").trim(),
+        backend_type: String(source.backend_type || "").trim(),
         apps_script_url: String(source.apps_script_url || "").trim(),
-        sheet_id: String(source.sheet_id || "").trim(),
+        sheet_id: String(source.google_sheet_id || source.sheet_id || "").trim(),
+        google_sheet_id: String(source.google_sheet_id || source.sheet_id || "").trim(),
         monday_board_id: String(source.monday_board_id || "").trim(),
         supabase_media_enabled: Boolean(source.supabase_media_enabled),
         media_bucket: String(source.media_bucket || source.storage_bucket || "media").trim(),
@@ -242,7 +266,7 @@
             }
           }
           if (wsIds.length) {
-            var wsUrl = "/rest/v1/workspaces?select=id,slug,name,plan,subscription_status,apps_script_url,sheet_id,monday_board_id,backend_type,supabase_media_enabled,media_bucket&id=in.(" + wsIds.map(encodeURIComponent).join(",") + ")";
+            var wsUrl = "/rest/v1/workspaces?select=id,slug,name,plan,subscription_status,apps_script_url,google_sheet_id,monday_board_id,backend_type,supabase_media_enabled,media_bucket&id=in.(" + wsIds.map(encodeURIComponent).join(",") + ")";
             var wsResp = await sbGet(wsUrl);
             var workspaces = Array.isArray(wsResp) ? wsResp : (wsResp.data && Array.isArray(wsResp.data) ? wsResp.data : []);
             console.log("[load] workspace rows", workspaces.length);
@@ -281,7 +305,7 @@
               }
             }
             if (ewsIds.length) {
-              var ewsUrl = "/rest/v1/workspaces?select=id,slug,name,plan,subscription_status,apps_script_url,sheet_id,monday_board_id,backend_type,supabase_media_enabled,media_bucket&id=in.(" + ewsIds.map(encodeURIComponent).join(",") + ")";
+              var ewsUrl = "/rest/v1/workspaces?select=id,slug,name,plan,subscription_status,apps_script_url,google_sheet_id,monday_board_id,backend_type,supabase_media_enabled,media_bucket&id=in.(" + ewsIds.map(encodeURIComponent).join(",") + ")";
               var ewsResp = await sbGet(ewsUrl);
               var eWorkspaces = Array.isArray(ewsResp) ? ewsResp : (ewsResp.data && Array.isArray(ewsResp.data) ? ewsResp.data : []);
               console.log("[load] workspace rows", eWorkspaces.length);
