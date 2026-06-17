@@ -6161,8 +6161,45 @@ function getRemotePostSheetRow(post) {
   return String(pickRemoteValue(post?.row_number, post?.rowNumber, post?.sheetRow, post?.sheet_row, post?.rowIndex, post?.row_index, "")).trim();
 }
 
+function getCanonicalPostId(post) {
+  return String(pickRemoteValue(post?.post_id, post?.postId, "")).trim();
+}
+
+function getPostLookupId(post, index = 0) {
+  const canonicalId = getCanonicalPostId(post);
+  if (canonicalId) return canonicalId;
+  const slug = String(pickRemoteValue(post?.slug, post?.content_slug, "")).trim();
+  if (slug) return `slug_${slug}`;
+  const contentKey = String(pickRemoteValue(post?.content_key, post?.contentKey, "")).trim();
+  if (contentKey) return `content_key_${contentKey}`;
+  return ensureFrontendPostId(post, index);
+}
+
+function getPostIdentityDataset(post, index = 0) {
+  return {
+    postId: getPostLookupId(post, index) || "",
+    slug: String(pickRemoteValue(post?.slug, post?.content_slug, "")).trim(),
+    contentKey: String(pickRemoteValue(post?.contentKey, post?.content_key, "")).trim(),
+    rowNumber: getRemotePostSheetRow(post),
+    postTitle: getPostDisplayTitle(post, "Untitled post"),
+    postDate: getPostCalendarDateKey(post) || normalizePostCalendarDateKey(post) || ""
+  };
+}
+
+function renderPostIdentityDataAttributes(post, index = 0) {
+  const data = getPostIdentityDataset(post, index);
+  return [
+    `data-post-id="${escapeHtml(data.postId)}"`,
+    `data-slug="${escapeHtml(data.slug)}"`,
+    `data-content-key="${escapeHtml(data.contentKey)}"`,
+    `data-row-number="${escapeHtml(data.rowNumber)}"`,
+    `data-post-title="${escapeHtml(data.postTitle)}"`,
+    `data-post-date="${escapeHtml(data.postDate)}"`
+  ].join(" ");
+}
+
 function ensureFrontendPostId(post, index = 0) {
-  const existingId = String(pickRemoteValue(post?.postId, post?.post_id, post?.id, "")).trim();
+  const existingId = getCanonicalPostId(post);
   if (existingId) return existingId;
   const sheetRow = getRemotePostSheetRow(post);
   return sheetRow ? `row_${sheetRow}` : `index_${index}`;
@@ -6764,6 +6801,7 @@ let socialCardUpload = null;
 let socialImportCapabilities = null;
 let connectedAccounts = [];
 let WORKSPACE_CONNECTIONS = [];
+let MISSING_POST_ID_COUNT = 0;
 let GOOGLE_SHEETS_CONNECTION_STATUS = {
   source: "none",
   connected: false,
@@ -8125,7 +8163,7 @@ function getScheduledQueue() {
     .filter(post => post.status === "scheduled" && normalizePostCalendarDateKey(post))
     .sort((a, b) => (parsePostDate(normalizePostCalendarDateKey(a) || a.date)?.getTime() || 0) - (parsePostDate(normalizePostCalendarDateKey(b) || b.date)?.getTime() || 0))
     .map(post => ({
-      postId: post.id,
+      postId: getCanonicalPostId(post) || getPostLookupId(post),
       title: getPostDisplayTitle(post),
       displayTitle: getPostDisplayTitle(post),
       platform: post.platform,
@@ -8282,16 +8320,7 @@ function setupWorkspaceUI() {
     var postId = postEl.dataset.calendarPostId || postEl.dataset.postId || "";
     var postTitle = postEl.dataset.postTitle || "";
     var postDateKey = postEl.dataset.postDate || "";
-    var post = postId ? findPostByAnyId(postId) : null;
-    console.log("[calendar] resolved", { method: "id", ok: !!post, postId });
-    if (!post && postTitle && postDateKey) {
-      post = (appState.posts || []).find(function(p) {
-        var titleMatch = getPostDisplayTitle(p) === postTitle;
-        var dateMatch = normalizePostCalendarDateKey(p) === postDateKey;
-        return titleMatch && dateMatch;
-      }) || null;
-      console.log("[calendar] resolved", { method: "title+date", ok: !!post, title: postTitle, date: postDateKey });
-    }
+    var post = findPostFromCalendarDataset(postEl.dataset || {});
     if (!post && postEl.dataset.postId) {
       var directId = postEl.dataset.postId;
       post = (appState.posts || []).find(function(p) {
@@ -9553,6 +9582,7 @@ function renderCalendar() {
       pushAppError("renderCalendar", new Error("#calendar-grid missing"));
       return;
     }
+    renderPostIdRepairWarning();
 
     selectedCalendarDateKey = selectedCalendarDateKey || toDateKey(calendarCursor || new Date());
     grid.classList.toggle("calendar-mode-month", calendarMode === "month");
@@ -9590,6 +9620,43 @@ function renderCalendar() {
       htmlLength: grid ? String(grid.innerHTML || "").length : 0
     });
   }
+}
+
+function getCurrentMissingPostIdCount() {
+  const backendMode = getActiveWorkspaceBackendMode();
+  if (backendMode.mode === "supabase_native") return 0;
+  const fromResponse = Number(MISSING_POST_ID_COUNT || 0);
+  if (fromResponse > 0) return fromResponse;
+  return (appState.posts || []).filter(function(post) {
+    return !getCanonicalPostId(post) && postHasVisibleContent(post);
+  }).length;
+}
+
+function renderPostIdRepairWarning() {
+  const calendarView = document.getElementById("view-calendar");
+  if (!calendarView) return;
+  const existing = document.getElementById("post-id-repair-warning");
+  const count = getCurrentMissingPostIdCount();
+  if (!count) {
+    if (existing) existing.remove();
+    return;
+  }
+  const html = `
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-yellow-400/20 bg-yellow-400/10 px-4 py-3 mb-4" id="post-id-repair-warning">
+      <div class="flex items-start gap-2 text-sm text-yellow-100">
+        <i class="ph-bold ph-warning-circle text-yellow-300 mt-0.5"></i>
+        <span>Some posts need IDs for editing/sync.</span>
+      </div>
+      <button type="button" onclick="repairPostIds()" class="px-3 py-2 rounded-lg bg-yellow-300 text-[#120c1d] text-[10px] uppercase tracking-widest font-bold hover:bg-yellow-200 transition-colors">Repair Post IDs</button>
+    </div>
+  `;
+  if (existing) {
+    existing.outerHTML = html;
+    return;
+  }
+  const header = document.getElementById("calendar-header");
+  if (header) header.insertAdjacentHTML("afterend", html);
+  else calendarView.insertAdjacentHTML("afterbegin", html);
 }
 
 function renderDayCalendar(monthNameEl, yearNameEl, grid) {
@@ -9714,7 +9781,7 @@ function renderMobileDayCalendar() {
   list.innerHTML = `<div class="calendar-day-shell">${posts.map((post) => {
     const badge = getPublishingBadge(post);
     return `
-      <button type="button" class="mobile-day-post calendar-day-post-card" onclick="openCalendarPost(this)" data-post-id="${escapeHtml(post.id || post.post_id || post.postId || post.frontendId || post._frontendId || '')}" data-post-title="${escapeHtml(getPostDisplayTitle(post, 'Untitled post'))}" data-post-date="${escapeHtml(selectedCalendarDateKey || normalizePostCalendarDateKey(post) || '')}">
+      <button type="button" class="mobile-day-post calendar-day-post-card" onclick="openCalendarPost(this)" ${renderPostIdentityDataAttributes(post)}>
         <div class="flex items-start justify-between gap-3 mb-2">
           <div>
             <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${escapeHtml(post.queueTimeLabel || "No time")}</div>
@@ -9757,7 +9824,7 @@ function renderCalendarPill(post, isWeekMode = false) {
   }
   if (compactMonth) {
     return `
-      <button type="button" class="post-pill compact-month mt-1 text-left" onclick="event.stopPropagation();openCalendarPost(this)" title="${escapeHtml(buildDateDiagnosticTitle(post))}" style="background:${campaignColor}14;border:1px solid ${campaignColor}30;box-shadow:inset 2px 0 0 ${campaignColor};" data-post-id="${escapeHtml(post.id || post.post_id || post.postId || post.frontendId || post._frontendId || '')}" data-post-title="${escapeHtml(displayTitle)}" data-post-date="${escapeHtml(getPostCalendarDateKey(post) || normalizePostCalendarDateKey(post) || '')}">
+      <button type="button" class="post-pill compact-month mt-1 text-left" onclick="event.stopPropagation();openCalendarPost(this)" title="${escapeHtml(buildDateDiagnosticTitle(post))}" style="background:${campaignColor}14;border:1px solid ${campaignColor}30;box-shadow:inset 2px 0 0 ${campaignColor};" ${renderPostIdentityDataAttributes(post)}>
         <span class="compact-month-icons">
           <span class="calendar-mobile-dot" style="background:${campaignColor};box-shadow:0 0 10px ${campaignColor}66;"></span>
           ${iconBlock}
@@ -9769,7 +9836,7 @@ function renderCalendarPill(post, isWeekMode = false) {
   }
 
   return `
-    <button type="button" class="post-pill mt-1 text-left" onclick="event.stopPropagation();openCalendarPost(this)" title="${escapeHtml(buildDateDiagnosticTitle(post))}" style="background:${campaignColor}14;border:1px solid ${campaignColor}30;box-shadow:inset 3px 0 0 ${campaignColor};" data-post-id="${escapeHtml(post.id || post.post_id || post.postId || post.frontendId || post._frontendId || '')}" data-post-title="${escapeHtml(displayTitle)}" data-post-date="${escapeHtml(getPostCalendarDateKey(post) || normalizePostCalendarDateKey(post) || '')}">
+    <button type="button" class="post-pill mt-1 text-left" onclick="event.stopPropagation();openCalendarPost(this)" title="${escapeHtml(buildDateDiagnosticTitle(post))}" style="background:${campaignColor}14;border:1px solid ${campaignColor}30;box-shadow:inset 3px 0 0 ${campaignColor};" ${renderPostIdentityDataAttributes(post)}>
       <div class="flex items-center gap-1.5 w-full">
         <span class="w-2 h-2 rounded-full shrink-0" style="background:${campaignColor};box-shadow:0 0 10px ${campaignColor}66;"></span>
         ${iconBlock}
@@ -10273,7 +10340,7 @@ function buildConstellationLaneDiagnostics() {
     }
   });
   const missingCampaignIdButName = (appState.posts || []).filter((post) => !String(post.campaignId || "").trim() && normalizeLookupValue(post.campaignName || "")).map((post) => ({
-    postId: post.id || post.postId || "",
+    postId: getCanonicalPostId(post) || getPostLookupId(post) || "",
     campaignName: post.campaignName || ""
   }));
   const normalizedNameGroups = {};
@@ -15186,13 +15253,13 @@ function buildMediaVaultItems() {
   (appState.posts || []).forEach((post) => {
     const postAssets = getPostAssets(post);
     if ((post.carouselAssetIds || []).length > 1 && postAssets.length > 1) {
-      groupedPostIds.add(post.id);
+      groupedPostIds.add(getCanonicalPostId(post) || getPostLookupId(post));
       items.push({
-        id: `group:${post.id}`,
+        id: `group:${getCanonicalPostId(post) || getPostLookupId(post)}`,
         kind: "group",
         title: post.mediaLabel || getPostDisplayTitle(post, "Carousel Group"),
         type: "carousel",
-        postId: post.id,
+        postId: getCanonicalPostId(post) || "",
         campaign: post.campaignName || "",
         sourceUrl: post.sourceUrl || "",
         assets: postAssets.map(asset => normalizeRemoteMedia(asset)),
@@ -15704,20 +15771,51 @@ function findPostByAnyId(postId) {
   const target = String(postId || "").trim();
   if (!target) return null;
   return (appState.posts || []).find(post => {
-    return [post.id, post.postId, post.post_id, post.frontendId, post._frontendId, post.sheetRow ? `row_${post.sheetRow}` : ""]
+    return [
+      post.id,
+      post.postId,
+      post.post_id,
+      post.frontendId,
+      post._frontendId,
+      post.sheetRow ? `row_${post.sheetRow}` : "",
+      post.rowNumber ? `row_${post.rowNumber}` : "",
+      post.row_number ? `row_${post.row_number}` : "",
+      post.sheetRow,
+      post.rowNumber,
+      post.row_number,
+      post.slug,
+      post.slug ? `slug_${post.slug}` : "",
+      post.contentKey,
+      post.contentKey ? `content_key_${post.contentKey}` : "",
+      post.content_key,
+      post.content_key ? `content_key_${post.content_key}` : ""
+    ]
       .map(value => String(value || "").trim())
       .includes(target);
   }) || null;
 }
 
-function openCalendarPost(btn) {
-  console.log("[calendar] clicked", { source: "inline-handler" });
-  if (!btn) return;
-  var postId = btn.dataset.postId || "";
-  var postTitle = btn.dataset.postTitle || "";
-  var postDateKey = btn.dataset.postDate || "";
+function findPostFromCalendarDataset(dataset = {}) {
+  var postId = dataset.calendarPostId || dataset.postId || "";
+  var postTitle = dataset.postTitle || "";
+  var postDateKey = dataset.postDate || "";
+  var slug = dataset.slug || "";
+  var contentKey = dataset.contentKey || "";
+  var rowNumber = dataset.rowNumber || "";
   var post = postId ? findPostByAnyId(postId) : null;
   console.log("[calendar] resolved", { method: "id", ok: !!post, postId });
+  if (!post && slug) {
+    post = findPostByAnyId(`slug_${slug}`) || findPostByAnyId(slug);
+    console.log("[calendar] resolved", { method: "slug", ok: !!post, slug });
+  }
+  if (!post && contentKey) {
+    post = findPostByAnyId(`content_key_${contentKey}`) || findPostByAnyId(contentKey);
+    console.log("[calendar] resolved", { method: "content_key", ok: !!post, contentKey });
+  }
+  if (!post && rowNumber) {
+    post = findPostByAnyId(`row_${rowNumber}`) || findPostByAnyId(rowNumber);
+    console.log("[calendar] resolved", { method: "rowNumber", ok: !!post, rowNumber });
+  }
   if (!post && postTitle && postDateKey) {
     post = (appState.posts || []).find(function(p) {
       var titleMatch = getPostDisplayTitle(p) === postTitle;
@@ -15726,6 +15824,16 @@ function openCalendarPost(btn) {
     }) || null;
     console.log("[calendar] resolved", { method: "title+date", ok: !!post, title: postTitle, date: postDateKey });
   }
+  return post;
+}
+
+function openCalendarPost(btn) {
+  console.log("[calendar] clicked", { source: "inline-handler" });
+  if (!btn) return;
+  var postId = btn.dataset.postId || "";
+  var postTitle = btn.dataset.postTitle || "";
+  var postDateKey = btn.dataset.postDate || "";
+  var post = findPostFromCalendarDataset(btn.dataset || {});
   if (post) {
     console.log("[calendar] opened", { postId: post.id || post.post_id || post.postId || post.frontendId || "" });
     openPostObjectModal(post, "calendar");
@@ -15747,7 +15855,7 @@ function openPostObjectModal(post, source = "unknown") {
     post.status || "draft",
     post.description || post.body || post.caption || "",
     post.postType || post.post_type || "text",
-    post.id || post.postId || post.frontendId || null,
+    getPostLookupId(post) || null,
     post
   );
 }
@@ -15910,6 +16018,120 @@ function populateMediaCampaignFilter() {
 
   select.innerHTML = options.join("");
   select.value = mediaFilters.campaign || "all";
+}
+
+function buildScheduledAtFromPlanningFields(post) {
+  try {
+    const source = (post && typeof post === "object")
+      ? post
+      : {
+          publish_date: post,
+          publish_time: arguments.length > 1 ? arguments[1] : "",
+          queueDateLabel: post,
+          queueTimeLabel: arguments.length > 1 ? arguments[1] : ""
+        };
+    const hasInput = Object.values(source || {}).some(value => String(value ?? "").trim());
+
+    function parseTimeParts(value) {
+      const text = String(value || "").trim();
+      if (!text) return { hours: 0, minutes: 0, hasTime: false };
+      const match = text.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\s*([AP]M))?$/i);
+      if (!match) return null;
+      let hours = Number(match[1]);
+      const minutes = Number(match[2]);
+      const meridian = String(match[4] || "").toUpperCase();
+      if (meridian === "PM" && hours < 12) hours += 12;
+      if (meridian === "AM" && hours === 12) hours = 0;
+      if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+      return { hours, minutes, hasTime: true };
+    }
+
+    function formatLocalIso(date) {
+      if (!date || Number.isNaN(date.getTime())) return "";
+      return [
+        date.getFullYear(),
+        String(date.getMonth() + 1).padStart(2, "0"),
+        String(date.getDate()).padStart(2, "0")
+      ].join("-") + "T" +
+        String(date.getHours()).padStart(2, "0") + ":" +
+        String(date.getMinutes()).padStart(2, "0") + ":" +
+        String(date.getSeconds()).padStart(2, "0");
+    }
+
+    function parseDateOnly(value) {
+      const text = String(value || "").trim();
+      if (!text) return null;
+      let match = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+      if (match) return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 0, 0, 0, 0);
+      match = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+      if (match) {
+        let year = Number(match[3]);
+        if (year < 100) year += 2000;
+        return new Date(year, Number(match[1]) - 1, Number(match[2]), 0, 0, 0, 0);
+      }
+      return null;
+    }
+
+    function parseDateValue(value) {
+      if (!value && value !== 0) return null;
+      if (value instanceof Date && !Number.isNaN(value.getTime())) return new Date(value.getTime());
+      const text = String(value || "").trim();
+      if (!text) return null;
+      const dateOnly = parseDateOnly(text);
+      if (dateOnly && !Number.isNaN(dateOnly.getTime())) return dateOnly;
+      const localIso = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})[T\s](\d{1,2}):(\d{2})(?::(\d{2}))?/);
+      if (localIso) {
+        return new Date(
+          Number(localIso[1]),
+          Number(localIso[2]) - 1,
+          Number(localIso[3]),
+          Number(localIso[4]),
+          Number(localIso[5]),
+          Number(localIso[6] || 0),
+          0
+        );
+      }
+      const parsed = new Date(text);
+      return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    function combineDateAndTime(dateValue, timeValue) {
+      const date = parseDateValue(dateValue);
+      if (!date || Number.isNaN(date.getTime())) return "";
+      const time = parseTimeParts(timeValue);
+      if (time === null) return "";
+      date.setHours(time.hours, time.minutes, 0, 0);
+      return formatLocalIso(date);
+    }
+
+    const directValue = source.scheduled_at || source.scheduledAt || source.date || "";
+    if (String(directValue || "").trim()) {
+      const directDate = parseDateValue(directValue);
+      if (directDate && !Number.isNaN(directDate.getTime())) return formatLocalIso(directDate);
+    }
+
+    const publishDate = source.publish_date || source.publishDate || source.queueDateLabel || source.queue_date_label || "";
+    const publishTime = source.publish_time || source.publishTime || source.queueTimeLabel || source.queue_time_label || "";
+    if (String(publishDate || publishTime || "").trim()) {
+      const combinedPublish = combineDateAndTime(publishDate, publishTime);
+      if (combinedPublish) return combinedPublish;
+    }
+
+    const calendarYear = source.calendarYear || source.calendar_year || "";
+    const calendarMonth = source.calendarMonth || source.calendar_month || "";
+    const calendarDay = source.calendarDay || source.calendar_day || "";
+    if (String(calendarYear || calendarMonth || calendarDay || "").trim()) {
+      const calendarDate = `${calendarYear}-${String(calendarMonth).padStart(2, "0")}-${String(calendarDay).padStart(2, "0")}`;
+      const combinedCalendar = combineDateAndTime(calendarDate, source.queueTimeLabel || source.queue_time_label || "");
+      if (combinedCalendar) return combinedCalendar;
+    }
+
+    if (hasInput) console.warn("[post-modal] scheduled_at parse failed", source);
+    return "";
+  } catch (err) {
+    console.warn("[post-modal] scheduled_at parse failed", err);
+    return "";
+  }
 }
     
 function openPostModal(
@@ -16203,10 +16425,11 @@ function showPostSaveErrorBanner(err, payload = {}) {
 
 function upsertSavedPostIntoAppState(saveResult, fallbackPayload = {}) {
   const rawPost = saveResult?.post || saveResult?.savedPost || fallbackPayload;
+  const returnedPostId = getCanonicalPostId(rawPost || {}) || String(saveResult?.savedPostId || saveResult?.postId || "").trim();
   const normalized = normalizeRemotePost(
     Object.assign({}, fallbackPayload || {}, rawPost || {}, {
-      post_id: rawPost?.post_id || rawPost?.postId || saveResult?.savedPostId || saveResult?.postId || fallbackPayload.post_id || fallbackPayload.postId || fallbackPayload.id || "",
-      postId: rawPost?.postId || rawPost?.post_id || saveResult?.savedPostId || saveResult?.postId || fallbackPayload.postId || fallbackPayload.post_id || fallbackPayload.id || "",
+      post_id: returnedPostId || getCanonicalPostId(fallbackPayload),
+      postId: returnedPostId || getCanonicalPostId(fallbackPayload),
       row_number: rawPost?.row_number || rawPost?.rowNumber || saveResult?.rowNumber || fallbackPayload._rowNumber || fallbackPayload.sheetRow || "",
       rowNumber: rawPost?.rowNumber || rawPost?.row_number || saveResult?.rowNumber || fallbackPayload._rowNumber || fallbackPayload.sheetRow || ""
     }),
@@ -16232,6 +16455,7 @@ function upsertSavedPostIntoAppState(saveResult, fallbackPayload = {}) {
   });
   if (index >= 0) appState.posts[index] = Object.assign({}, appState.posts[index], normalized);
   else appState.posts = [normalized].concat(appState.posts || []);
+  currentEditingPostId = normalized.id || normalized.postId || normalized.post_id || currentEditingPostId;
   window.__currentModalPostData = normalized;
   persistLocalState();
   rerenderAll();
@@ -16250,8 +16474,10 @@ function setupSaveHandler() {
     saveButton.disabled = true;
     saveButton.innerHTML = '<i class="ph-bold ph-spinner-gap text-sm animate-spin"></i> Saving...';
     const existing = currentEditingPostId
-      ? hydratePostCampaign((appState.posts || []).find(p => p.id === currentEditingPostId))
+      ? hydratePostCampaign(findPostByAnyId(currentEditingPostId))
       : null;
+    const existingCanonicalPostId = getCanonicalPostId(existing || {});
+    const existingLookupId = existing?.id || existing?.frontendId || existing?._frontendId || currentEditingPostId || "";
     const inspoIdToConvert = currentModalInspoId || existing?.createdFromInspoId || "";
     const noteIdToConvert = currentModalNoteId || existing?.createdFromNoteId || "";
 
@@ -16286,13 +16512,18 @@ function setupSaveHandler() {
     }
 
     const payload = {
-      id: currentEditingPostId || existing?.id || existing?.postId || existing?.post_id || generateId("post"),
-      postId: currentEditingPostId || existing?.postId || existing?.post_id || existing?.id || "",
-      post_id: currentEditingPostId || existing?.post_id || existing?.postId || existing?.id || "",
-      _frontendId: existing?._frontendId || existing?.frontendId || currentEditingPostId || "",
-      frontendId: existing?.frontendId || existing?._frontendId || currentEditingPostId || "",
+      id: existingCanonicalPostId || existingLookupId || generateId("post"),
+      postId: existingCanonicalPostId,
+      post_id: existingCanonicalPostId,
+      _frontendId: existing?._frontendId || existing?.frontendId || existingLookupId || "",
+      frontendId: existing?.frontendId || existing?._frontendId || existingLookupId || "",
       _rowNumber: existing?._rowNumber || existing?.row_number || existing?.sheetRow || "",
       sheetRow: existing?.sheetRow || existing?.row_number || existing?._rowNumber || "",
+      rowNumber: existing?.rowNumber || existing?.row_number || existing?.sheetRow || "",
+      row_number: existing?.row_number || existing?.rowNumber || existing?.sheetRow || "",
+      slug: existing?.slug || "",
+      contentKey: existing?.contentKey || existing?.content_key || "",
+      content_key: existing?.content_key || existing?.contentKey || "",
       title: titleInput?.value.trim() || "",
       platform: selectedPlatforms[0],
       platforms: selectedPlatforms,
@@ -16427,10 +16658,12 @@ function setupSaveHandler() {
 	        }
         if (scheduleSocialEnabledInput?.checked) {
           try {
+            const scheduledPostId = getCanonicalPostId(savedPost) || getCanonicalPostId(result?.post || {}) || String(result?.postId || result?.savedPostId || "").trim();
             const schedulePayload = {
               ...payload,
-              postId: savedPost?.postId || result?.post?.postId || result?.postId || payload.id,
-              id: savedPost?.id || result?.post?.postId || result?.postId || payload.id
+              postId: scheduledPostId,
+              post_id: scheduledPostId,
+              id: scheduledPostId
             };
             const socialResults = await scheduleSocialPostsForTargets(schedulePayload);
             if (socialScheduleStatusEl) socialScheduleStatusEl.textContent = `Social schedule rows created: ${socialResults.length}`;
@@ -19242,8 +19475,8 @@ async function callSupabaseEdgeFunction(functionName, payload = {}) {
 }
 
 function getSupabasePostId(payload = {}) {
-  const existing = String(payload.post_id || payload.postId || payload.id || payload._frontendId || payload.frontendId || "").trim();
-  if (existing && !existing.startsWith("index_")) return existing;
+  const existing = getCanonicalPostId(payload);
+  if (existing) return existing;
   if (window.crypto && typeof window.crypto.randomUUID === "function") return window.crypto.randomUUID();
   return "post_" + Date.now() + "_" + Math.random().toString(36).slice(2, 10);
 }
@@ -19297,12 +19530,12 @@ function buildSupabasePostRow(payload = {}) {
 }
 
 function normalizeSupabasePostRecord(row = {}) {
-  const postId = String(row.post_id || row.postId || row.id || "").trim();
+  const postId = getCanonicalPostId(row);
   return {
     ...row,
-    id: postId || row.id || "",
-    postId: postId || row.id || "",
-    post_id: postId || row.id || "",
+    id: postId,
+    postId: postId,
+    post_id: postId,
     title: row.title || "",
     description: row.description || row.caption || "",
     status: row.status || row.publish_status || "draft",
@@ -19391,11 +19624,34 @@ async function apiSavePostToSupabase(payload = {}) {
   };
 }
 
+async function mirrorGoogleSheetPostsToSupabase(posts = []) {
+  const backendMode = getActiveWorkspaceBackendMode();
+  if (backendMode.mode === "supabase_native") return;
+  if (!STELLARSYNC_SUPABASE_CLIENT) return;
+  const meta = getWorkspaceRequestMetadata();
+  const workspaceId = String(meta.workspace_id || "").trim();
+  if (!workspaceId) return;
+  const rows = (Array.isArray(posts) ? posts : [])
+    .filter(post => getCanonicalPostId(post))
+    .map(post => buildSupabasePostRow({ ...post, workspace_id: workspaceId, workspaceId, workspace_slug: meta.workspace_slug || "" }));
+  if (!rows.length) return;
+  try {
+    const result = await STELLARSYNC_SUPABASE_CLIENT
+      .from("posts")
+      .upsert(rows, { onConflict: "workspace_id,post_id" });
+    if (result.error) throw result.error;
+    console.log("[supabase-mirror] mirrored posts", rows.length);
+  } catch (err) {
+    console.warn("[supabase-mirror] mirror skipped", err?.message || err);
+  }
+}
+
 async function apiGetPosts() {
   console.log("[data] getPosts request started");
   const backendMode = getActiveWorkspaceBackendMode();
   if (backendMode.mode === "supabase_native") {
     const posts = await apiGetSupabasePosts();
+    MISSING_POST_ID_COUNT = 0;
     console.log("[data] getPosts response status", "ok");
     console.log("[data] supabase posts count", posts.length);
     GOOGLE_SHEETS_CONNECTION_STATUS = {
@@ -19413,8 +19669,10 @@ async function apiGetPosts() {
     const result = await apiGet("getPosts");
     console.log("[data] getPosts response status", result.ok ? "ok" : "error");
     console.log("[data] getPosts response keys", Object.keys(result));
+    MISSING_POST_ID_COUNT = Number(result.missing_post_id_count || result.missingPostIdCount || result.diagnostics?.missingPostIdCount || 0);
     const posts = extractPostsFromGetPostsResult(result);
     const filteredPosts = filterBlankPostsForRender(posts);
+    await mirrorGoogleSheetPostsToSupabase(filteredPosts);
     console.log("[data] posts count", Array.isArray(filteredPosts) ? filteredPosts.length : 0);
     GOOGLE_SHEETS_CONNECTION_STATUS = {
       source: getGoogleSheetsConnectionSource().source,
@@ -19447,6 +19705,32 @@ async function apiGetPosts() {
     console.log("[sheets] last sync", GOOGLE_SHEETS_CONNECTION_STATUS.lastSync || "none");
     console.log("[sheets] post count", GOOGLE_SHEETS_CONNECTION_STATUS.postCount || 0);
     throw err;
+  }
+}
+
+async function repairPostIds() {
+  const backendMode = getActiveWorkspaceBackendMode();
+  if (backendMode.mode === "supabase_native") return;
+  const warning = document.getElementById("post-id-repair-warning");
+  const button = warning ? warning.querySelector("button") : null;
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Repairing...";
+  }
+  try {
+    const result = await apiPost("backfillPostIds", {});
+    const updatedCount = Number(result.updatedCount || 0);
+    const posts = await apiGetPosts();
+    if (Array.isArray(posts)) {
+      appState.posts = posts.map((post, index) => normalizeRemotePost(post, getAvailableCampaignRecords(), appState.media || [], index));
+    }
+    persistLocalState();
+    rerenderAll();
+    showToast("Post IDs repaired", `${updatedCount} post ID${updatedCount === 1 ? "" : "s"} written to Google Sheets.`, "ph-check", "text-[#00ffaa]");
+  } catch (err) {
+    console.warn("[post-id-repair] failed", err?.message || err);
+    showToast("Repair failed", err?.message || "Post IDs could not be repaired.", "ph-warning", "text-yellow-400");
+    renderPostIdRepairWarning();
   }
 }
 
@@ -19517,14 +19801,15 @@ async function scheduleSocialPostsForTargets(post) {
   const config = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active || {};
   const workspaceId = config.workspace_id || config.id || getWorkspaceRequestMetadata().workspace_id || "";
   const targets = getPostTargetPlatforms(post);
-  if (!workspaceId || !targets.length) return [];
+  const canonicalPostId = getCanonicalPostId(post);
+  if (!workspaceId || !targets.length || !canonicalPostId) return [];
   const scheduledFor = post.scheduledAt || post.scheduled_at || post.date || "";
   const results = [];
   for (const provider of targets) {
     const account = getSocialAccountForPlatform(provider);
     const result = await callSupabaseEdgeFunction("social-schedule-post", {
       workspace_id: workspaceId,
-      source_id: post.postId || post.post_id || post.id || "",
+      source_id: canonicalPostId,
       provider,
       social_account_id: account?.id || null,
       post_payload: {
@@ -21240,8 +21525,9 @@ function normalizeRemotePost(post, campaigns = [], mediaItems = [], index = 0) {
   const campaignId = String(pickRemoteValue(post?.campaignId, post?.campaign_id, post?.campaignID, "")).trim();
   const incomingCampaignName = normalizeCampaignName(pickRemoteValue(post?.campaignName, post?.campaign_name, ""));
   const matchedCampaign = getCampaignById(campaignId, campaigns) || getCampaignByName(incomingCampaignName, campaigns);
-  const postId = String(pickRemoteValue(post?.postId, post?.post_id, post?.id, "")).trim();
+  const postId = getCanonicalPostId(post);
   const frontendId = ensureFrontendPostId(post, index);
+  const lookupId = getPostLookupId(post, index);
   const rawDescription = String(pickRemoteValue(post?.description, post?.caption, post?.body, post?.content, post?.copy, "")).trim();
   const title = getPostDisplayTitle({ ...post, description: rawDescription }, "");
   const scheduledAt = String(pickRemoteValue(post?.scheduledAt, post?.scheduled_at, post?.date, "")).trim();
@@ -21262,12 +21548,17 @@ function normalizeRemotePost(post, campaigns = [], mediaItems = [], index = 0) {
     : String(pickRemoteValue(post?.carousel_asset_ids, post?.carouselAssetIds, "")).split(/[|,\n]/).map(value => String(value || "").trim()).filter(Boolean);
   const targetPlatforms = getPostTargetPlatforms(post);
   const normalizedPost = {
-    id: postId || frontendId,
-    postId: postId || frontendId,
+    id: postId || lookupId,
+    postId: postId,
     post_id: postId,
     frontendId,
     isTemporaryFrontendId: !postId,
     sheetRow: getRemotePostSheetRow(post),
+    rowNumber: getRemotePostSheetRow(post),
+    row_number: getRemotePostSheetRow(post),
+    slug: String(pickRemoteValue(post?.slug, "")).trim(),
+    contentKey: String(pickRemoteValue(post?.contentKey, post?.content_key, "")).trim(),
+    content_key: String(pickRemoteValue(post?.content_key, post?.contentKey, "")).trim(),
     title,
     displayTitle: title || "Untitled",
     platform: targetPlatforms[0] || String(pickRemoteValue(post?.platform, "linkedin")).trim() || "linkedin",
@@ -21744,7 +22035,8 @@ function normalizeRemoteBrandFrameworkItem(item) {
 
 async function persistLinkedAssetForPost(asset) {
   if (!currentEditingPostId) return;
-  const postIndex = appState.posts.findIndex((post) => post.id === currentEditingPostId);
+  const targetPost = findPostByAnyId(currentEditingPostId);
+  const postIndex = appState.posts.findIndex((post) => post === targetPost);
   if (postIndex < 0) return;
 
   appState.posts[postIndex].assetId = asset?.assetId || asset?.id || "";
@@ -21839,14 +22131,20 @@ async function apiSavePost(post) {
   const platformTargets = getPostTargetPlatforms(hydratedPost);
   const meta = getWorkspaceRequestMetadata();
   const backendType = String(meta.backend_type || WORKSPACE_RUNTIME_CONFIG?.active?.backend_type || "").trim();
+  const canonicalPostId = getCanonicalPostId(hydratedPost);
   const savePayload = {
-    id: hydratedPost.id || hydratedPost.postId || hydratedPost.post_id || hydratedPost._frontendId || null,
-    postId: hydratedPost.postId || hydratedPost.post_id || hydratedPost.id || null,
-    post_id: hydratedPost.post_id || hydratedPost.postId || hydratedPost.id || "",
+    id: canonicalPostId || hydratedPost.id || hydratedPost._frontendId || null,
+    postId: canonicalPostId,
+    post_id: canonicalPostId,
     _frontendId: hydratedPost._frontendId || hydratedPost.frontendId || hydratedPost.id || "",
     frontendId: hydratedPost.frontendId || hydratedPost._frontendId || hydratedPost.id || "",
     _rowNumber: hydratedPost._rowNumber || hydratedPost.row_number || hydratedPost.sheetRow || "",
     sheetRow: hydratedPost.sheetRow || hydratedPost.row_number || hydratedPost._rowNumber || "",
+    rowNumber: hydratedPost.rowNumber || hydratedPost.row_number || hydratedPost.sheetRow || "",
+    row_number: hydratedPost.row_number || hydratedPost.rowNumber || hydratedPost.sheetRow || "",
+    slug: hydratedPost.slug || "",
+    contentKey: hydratedPost.contentKey || hydratedPost.content_key || "",
+    content_key: hydratedPost.content_key || hydratedPost.contentKey || "",
     title: hydratedPost.title || "",
     platform: platformTargets[0] || hydratedPost.platform || "linkedin",
     pillar: normalizePillar(hydratedPost.pillar || hydratedPost.hubPillarLabel || (appState.settings?.pillars || [])[0] || "authority"),
@@ -22500,6 +22798,7 @@ window.openProfileWorkspaceModal = openProfileWorkspaceModal;
 window.closeProfileWorkspaceModal = closeProfileWorkspaceModal;
 window.openLinkedInCaptureImporter = openLinkedInCaptureImporter;
 window.openExistingPostImportModal = openExistingPostImportModal;
+window.repairPostIds = repairPostIds;
 window.aiGenerate = aiGenerate;
 window.inspoToPost = inspoToPost;
 window.noteToPost = noteToPost;
