@@ -2345,6 +2345,9 @@
             <button id="mobile-filter-trigger" type="button" class="w-10 h-10 rounded-xl bg-[#1e152d] border border-white/5 flex items-center justify-center text-gray-300 hover:text-white transition-colors shrink-0" title="Filters">
               <i class="ph-bold ph-funnel"></i>
             </button>
+            <button id="topbar-assistant-btn" type="button" title="Restore Stellar Assistant" class="hidden w-10 h-10 rounded-xl bg-[#1e152d] border border-white/5 flex items-center justify-center text-[#c77dff] hover:text-white transition-colors shrink-0" onclick="toggleAssistantVisibility()">
+              <i class="ph-fill ph-sparkle"></i>
+            </button>
             <div class="relative">
               <button id="avatar-menu-btn" type="button" title="Workspace and Settings" class="w-10 h-10 rounded-xl bg-[#1e152d] border border-white/5 flex items-center justify-center text-xs font-bold cursor-pointer text-gray-300 hover:text-white transition-colors shrink-0" vid="28">
                   <span id="avatar-initials">WS</span>
@@ -4706,6 +4709,19 @@
               </div>
               <div class="text-xs text-gray-400 wrap-safe">Planned in StellarSync. Live platform posting is not connected yet.</div>
             </div>
+            <div class="platform-card">
+              <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
+                <div>
+                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Stellar Assistant</div>
+                  <div class="text-sm text-gray-300 mt-1">Show or hide the AI assistant. When hidden, use the top bar sparkle button to restore it.</div>
+                </div>
+                <button type="button" id="settings-assistant-toggle" class="px-4 py-2 rounded-xl bg-[#231738] border border-white/5 text-xs font-bold text-white hover:bg-[#2d1b4e] transition-colors" onclick="toggleAssistantVisibility()">Hide Assistant</button>
+              </div>
+              <div class="flex gap-3 items-center">
+                <button type="button" class="px-3 py-1.5 rounded-lg bg-[#1a1128] border border-white/5 text-[10px] uppercase tracking-wider text-gray-400 hover:text-white transition-colors font-bold" onclick="resetAssistantPosition()">Reset Position</button>
+                <span id="settings-assistant-status" class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Visible</span>
+              </div>
+            </div>
           </section>
           <section data-settings-panel="accounts" class="hidden space-y-4"></section>
           <section data-settings-panel="providers" class="hidden space-y-4">
@@ -5071,9 +5087,14 @@
         <p class="text-[10px] uppercase tracking-widest text-[#00ffaa] font-bold mt-0.5">Active Strategist</p>
       </div>
     </div>
-    <button type="button" class="w-9 h-9 rounded-xl bg-[#181125] hover:bg-[#231738] text-gray-400 hover:text-white border border-white/5 transition-colors flex items-center justify-center" onclick="closeAssistantPanel()" aria-label="Close Stellar Assistant">
-      <i class="ph-bold ph-x"></i>
-    </button>
+    <div class="flex items-center gap-2">
+      <button type="button" class="w-9 h-9 rounded-xl bg-[#181125] hover:bg-[#231738] text-gray-400 hover:text-white border border-white/5 transition-colors flex items-center justify-center" onclick="minimizeAssistantPanel()" aria-label="Minimize Stellar Assistant">
+        <i class="ph-bold ph-minus"></i>
+      </button>
+      <button type="button" class="w-9 h-9 rounded-xl bg-[#181125] hover:bg-[#231738] text-gray-400 hover:text-white border border-white/5 transition-colors flex items-center justify-center" onclick="closeAssistantPanel()" aria-label="Close Stellar Assistant">
+        <i class="ph-bold ph-x"></i>
+      </button>
+    </div>
   </div>
   <div id="stellar-assistant-messages" class="p-4 space-y-3 overflow-y-auto custom-scrollbar flex-1 min-h-0"></div>
   <div class="px-4 pb-3">
@@ -9121,6 +9142,109 @@ let stellarAssistantHistory = [];
 let stellarAssistantContext = {};
 let stellarAssistantLastOutput = "";
 let stellarAssistantLastAction = "";
+var stellarAssistantPrefs = loadAssistantPrefs();
+
+function getAssistantPrefsKey() {
+  var slug = String((WORKSPACE_RUNTIME_CONFIG?.active?.slug || WORKSPACE_RUNTIME_CONFIG?.active?.workspace_slug || "default")).trim();
+  var uid = String(window.__SUPABASE_USER?.id || window.__SUPABASE_USER?.user_id || "anon").trim();
+  return "stellarAssistantPrefs:" + slug + ":" + uid;
+}
+
+function loadAssistantPrefs() {
+  try {
+    var raw = localStorage.getItem(getAssistantPrefsKey());
+    if (raw) return JSON.parse(raw);
+  } catch (_) {}
+  return { visible: true, minimized: false, position: { corner: "bottom-right", x: 0, y: 0 } };
+}
+
+function saveAssistantPrefs() {
+  try {
+    localStorage.setItem(getAssistantPrefsKey(), JSON.stringify(stellarAssistantPrefs));
+    console.log("[assistant-ui] prefs saved");
+  } catch (_) {}
+}
+
+function applyAssistantPrefs() {
+  if (!stellarAssistantButton || !stellarAssistantPanel) return;
+  var topbarBtn = document.getElementById("topbar-assistant-btn");
+  var settingsToggle = document.getElementById("settings-assistant-toggle");
+  var settingsStatus = document.getElementById("settings-assistant-status");
+  if (!stellarAssistantPrefs.visible) {
+    stellarAssistantButton.classList.add("hidden");
+    stellarAssistantPanel.classList.add("hidden");
+    if (topbarBtn) topbarBtn.classList.remove("hidden");
+    if (settingsToggle) settingsToggle.textContent = "Show Assistant";
+    if (settingsStatus) settingsStatus.textContent = "Hidden";
+    showAssistantHiddenNotice();
+    return;
+  }
+  stellarAssistantButton.classList.remove("hidden");
+  if (topbarBtn) topbarBtn.classList.add("hidden");
+  if (settingsToggle) settingsToggle.textContent = "Hide Assistant";
+  if (settingsStatus) settingsStatus.textContent = "Visible";
+  if (stellarAssistantPrefs.minimized) {
+    stellarAssistantPanel.classList.add("hidden");
+    stellarAssistantButton.classList.remove("hidden");
+  }
+  var pos = stellarAssistantPrefs.position;
+  if (pos && pos.corner) {
+    var isMobile = window.innerWidth < 640;
+    if (isMobile) pos.corner = "bottom-right";
+    setAssistantCorner(pos.corner);
+  }
+  if (pos && (pos.x || pos.y) && pos.corner === "free") {
+    stellarAssistantButton.style.left = pos.x + "px";
+    stellarAssistantButton.style.top = pos.y + "px";
+    stellarAssistantButton.style.right = "auto";
+    stellarAssistantButton.style.bottom = "auto";
+  }
+}
+
+function setAssistantCorner(corner) {
+  if (!stellarAssistantButton) return;
+  var b = stellarAssistantButton;
+  b.style.left = "";
+  b.style.top = "";
+  b.style.right = "";
+  b.style.bottom = "";
+  if (corner === "bottom-right") {
+    b.style.right = "1.5rem";
+    b.style.bottom = "1.5rem";
+  } else if (corner === "bottom-left") {
+    b.style.left = "1.5rem";
+    b.style.bottom = "1.5rem";
+  } else if (corner === "top-right") {
+    b.style.right = "1.5rem";
+    b.style.top = "1.5rem";
+  } else if (corner === "top-left") {
+    b.style.left = "1.5rem";
+    b.style.top = "1.5rem";
+  }
+  stellarAssistantPrefs.position = stellarAssistantPrefs.position || {};
+  stellarAssistantPrefs.position.corner = corner;
+  saveAssistantPrefs();
+}
+
+function resetAssistantPosition() {
+  stellarAssistantPrefs.position = { corner: "bottom-right", x: 0, y: 0 };
+  stellarAssistantPrefs.visible = true;
+  saveAssistantPrefs();
+  applyAssistantPrefs();
+  showToast("Assistant reset", "Position restored to bottom-right.", "ph-sparkle", "text-[#c77dff]");
+}
+
+function showAssistantHiddenNotice() {
+  var existing = document.getElementById("assistant-hidden-notice");
+  if (existing) return;
+  var notice = document.createElement("div");
+  notice.id = "assistant-hidden-notice";
+  notice.className = "fixed bottom-4 left-1/2 -translate-x-1/2 z-[117] px-4 py-2 bg-[#181125] border border-white/10 rounded-xl text-[10px] uppercase tracking-wider text-gray-400 font-bold shadow-lg pointer-events-none transition-opacity duration-500";
+  notice.textContent = "Stellar Assistant hidden. Retrieve it from Settings \u2192 Assistant or the top bar sparkle button.";
+  document.body.appendChild(notice);
+  setTimeout(function() { notice.style.opacity = "0"; }, 6000);
+  setTimeout(function() { if (notice.parentNode) notice.parentNode.removeChild(notice); }, 8000);
+}
 
 function buildAssistantContext(overrides = {}) {
   const topPost = (appState.posts || []).slice().sort((a, b) => Math.max(getPostImpressions(b), getEngagementTotal(b)) - Math.max(getPostImpressions(a), getEngagementTotal(a)))[0] || null;
@@ -9146,20 +9270,57 @@ function ensureAssistantWelcome() {
 }
 
 function toggleAssistant() {
-  if (!stellarAssistantPanel) return;
+  if (!stellarAssistantButton || !stellarAssistantPanel) return;
+  if (stellarAssistantPrefs.visible === false) {
+    stellarAssistantPrefs.visible = true;
+    stellarAssistantPrefs.minimized = false;
+    saveAssistantPrefs();
+    applyAssistantPrefs();
+    openAssistantPanel();
+    return;
+  }
   if (stellarAssistantPanel.classList.contains("hidden")) openAssistantPanel();
-  else closeAssistantPanel();
+  else minimizeAssistantPanel();
+}
+
+function toggleAssistantVisibility() {
+  if (!stellarAssistantButton) return;
+  if (stellarAssistantPrefs.visible === false) {
+    console.log("[assistant-ui] restore");
+    stellarAssistantPrefs.visible = true;
+    stellarAssistantPrefs.minimized = false;
+    saveAssistantPrefs();
+    applyAssistantPrefs();
+    openAssistantPanel();
+    return;
+  }
+  console.log("[assistant-ui] hide");
+  stellarAssistantPrefs.visible = false;
+  saveAssistantPrefs();
+  applyAssistantPrefs();
 }
 
 function openAssistantPanel(context = {}) {
   stellarAssistantContext = { ...buildAssistantContext(), ...(context || {}) };
+  stellarAssistantPrefs.minimized = false;
   stellarAssistantPanel?.classList.remove("hidden");
+  stellarAssistantButton?.classList.remove("hidden");
+  saveAssistantPrefs();
   ensureAssistantWelcome();
   setTimeout(() => stellarAssistantInput?.focus(), 40);
 }
 
 function closeAssistantPanel() {
   stellarAssistantPanel?.classList.add("hidden");
+}
+
+function minimizeAssistantPanel() {
+  if (!stellarAssistantPanel) return;
+  console.log("[assistant-ui] minimize");
+  stellarAssistantPrefs.minimized = true;
+  stellarAssistantPanel.classList.add("hidden");
+  stellarAssistantButton?.classList.remove("hidden");
+  saveAssistantPrefs();
 }
 
 function renderAssistantMessage(role, content) {
@@ -9371,6 +9532,56 @@ function setupStellarAssistant() {
       sendAssistantMessage();
     }
   });
+
+  if (stellarAssistantButton && !stellarAssistantButton.dataset.dragBound) {
+    var dragStartX = 0, dragStartY = 0, dragOrigX = 0, dragOrigY = 0, isDragging = false;
+    stellarAssistantButton.addEventListener("pointerdown", function(e) {
+      if (e.target.closest("[data-assistant-action]") || e.target.closest("button")) return;
+      dragStartX = e.clientX;
+      dragStartY = e.clientY;
+      var rect = stellarAssistantButton.getBoundingClientRect();
+      dragOrigX = rect.left;
+      dragOrigY = rect.top;
+      isDragging = false;
+      stellarAssistantButton.setPointerCapture(e.pointerId);
+    });
+    window.addEventListener("pointermove", function(e) {
+      if (!stellarAssistantButton.hasPointerCapture(e.pointerId)) return;
+      var dx = e.clientX - dragStartX;
+      var dy = e.clientY - dragStartY;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) isDragging = true;
+      if (!isDragging) return;
+      e.preventDefault();
+      var newX = dragOrigX + dx;
+      var newY = dragOrigY + dy;
+      newX = Math.max(0, Math.min(newX, window.innerWidth - 70));
+      newY = Math.max(0, Math.min(newY, window.innerHeight - 70));
+      stellarAssistantButton.style.left = newX + "px";
+      stellarAssistantButton.style.top = newY + "px";
+      stellarAssistantButton.style.right = "auto";
+      stellarAssistantButton.style.bottom = "auto";
+    });
+    window.addEventListener("pointerup", function(e) {
+      if (!stellarAssistantButton.hasPointerCapture(e.pointerId)) return;
+      stellarAssistantButton.releasePointerCapture(e.pointerId);
+      if (isDragging) {
+        console.log("[assistant-ui] drag end");
+        var rect = stellarAssistantButton.getBoundingClientRect();
+        stellarAssistantPrefs.position = stellarAssistantPrefs.position || {};
+        stellarAssistantPrefs.position.x = rect.left;
+        stellarAssistantPrefs.position.y = rect.top;
+        stellarAssistantPrefs.position.corner = "free";
+        saveAssistantPrefs();
+      } else if (!stellarAssistantPrefs.visible) {
+        return;
+      } else {
+        toggleAssistant();
+      }
+    });
+    stellarAssistantButton.dataset.dragBound = "true";
+  }
+
+  applyAssistantPrefs();
 }
 
 function setupAIAndBrandWorkspaces() {
@@ -11685,6 +11896,8 @@ function openUploadStagingModal(target = "vault") {
   renderUploadAttachPostSelect();
   renderUploadStagingList();
   console.log("[media-upload] modal open centered");
+  console.log("[assistant-ui] modal minimize");
+  minimizeAssistantPanel();
   if (uploadStagingModal) {
     uploadStagingModal.classList.remove("hidden", "opacity-0", "pointer-events-none");
     uploadStagingModal.removeAttribute("aria-hidden");
@@ -11694,22 +11907,29 @@ function openUploadStagingModal(target = "vault") {
 }
 
 function closeUploadStagingModal() {
-  console.log("[media-upload] close modal");
+  console.log("[media-upload] close requested");
   var modal = document.getElementById("upload-staging-modal");
   if (!modal) return;
   if (confirmUploadStagingBtn && confirmUploadStagingBtn.disabled && pendingUploadFiles.length > 0) {
     if (!confirm("Upload in progress. Close anyway?")) return;
+    console.log("[media-upload] close blocked — upload in progress");
+    return;
   }
   modal.classList.add("hidden");
   modal.setAttribute("aria-hidden", "true");
   document.body.classList.remove("overflow-hidden");
-  if (uploadStagingResult) uploadStagingResult.textContent = "";
+  if (uploadStagingResult) { uploadStagingResult.textContent = ""; uploadStagingResult.className = ""; }
   pendingUploadFiles.forEach(function(item) {
     try { URL.revokeObjectURL(item.previewUrl); } catch (_) {}
   });
   pendingUploadFiles = [];
+  if (confirmUploadStagingBtn) { confirmUploadStagingBtn.disabled = false; confirmUploadStagingBtn.textContent = "Upload"; }
+  var input = document.getElementById("media-upload-input");
+  if (input) input.value = "";
   renderUploadStagingList();
+  console.log("[media-upload] close complete");
 }
+window.closeUploadStagingModal = closeUploadStagingModal;
 
 function renderUploadAttachPostSelect() {
   if (!uploadStagingAttachShell || !uploadStagingAttachPostSelect) return;
@@ -16462,6 +16682,8 @@ function renderTaggedContent(item, linkedPost) {
 
 function openMediaAssetModal(item, options = {}) {
   if (!item || !mediaAssetModal || !mediaAssetModalCard) return;
+  console.log("[assistant-ui] modal minimize");
+  minimizeAssistantPanel();
   if (Array.isArray(options.items) && options.items.length) {
     currentMediaViewerItems = options.items;
   } else if (!currentMediaViewerItems.length || !currentMediaViewerItems.some(asset => getMediaItemKey(asset) === getMediaItemKey(item))) {
@@ -17241,6 +17463,8 @@ function openPostModal(
   postId = null,
   postObject = null
 ) {
+  console.log("[assistant-ui] modal minimize");
+  minimizeAssistantPanel();
   const modalEl = getPostModalElement();
   console.log("[post-modal] open requested", postObject ? "openPostModal:object" : "openPostModal");
   console.log("[post-modal] post id", postId || postObject?.id || postObject?.postId || postObject?.post_id || postObject?.frontendId || "");
