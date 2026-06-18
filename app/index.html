@@ -194,26 +194,26 @@
 
   #media-asset-modal {
     z-index: 122;
-    padding-bottom: calc(88px + env(safe-area-inset-bottom));
+    padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
   }
 
   #media-asset-modal-card {
-    width: min(1100px, calc(100vw - 48px));
-    max-width: min(1100px, calc(100vw - 48px));
-    max-height: calc(100dvh - 72px);
+    width: min(1100px, calc(100vw - 32px));
+    max-width: min(1100px, calc(100vw - 32px));
+    max-height: min(860px, calc(100dvh - 40px));
     display: flex;
     flex-direction: column;
   }
 
   #upload-staging-modal {
     z-index: 123;
-    padding-bottom: calc(88px + env(safe-area-inset-bottom));
+    padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
   }
 
   #upload-staging-modal-card {
-    width: min(880px, calc(100vw - 48px));
-    max-width: min(880px, calc(100vw - 48px));
-    max-height: calc(100dvh - 72px);
+    width: min(880px, calc(100vw - 32px));
+    max-width: min(880px, calc(100vw - 32px));
+    max-height: min(860px, calc(100dvh - 40px));
     display: flex;
     flex-direction: column;
   }
@@ -2095,12 +2095,12 @@
 
             #media-asset-modal-card {
                 width: calc(100vw - 24px) !important;
-                max-height: calc(100dvh - 48px) !important;
+                max-height: calc(100dvh - 24px) !important;
             }
 
             #upload-staging-modal-card {
                 width: calc(100vw - 24px) !important;
-                max-height: calc(100dvh - 48px) !important;
+                max-height: calc(100dvh - 24px) !important;
             }
 
             .media-viewer-body {
@@ -3103,7 +3103,7 @@
         <i class="ph-bold ph-link-simple"></i>
         Add Link
       </button>
-      <input id="media-upload-input" type="file" class="hidden" accept="image/*,video/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt" />
+      <input id="media-upload-input" type="file" class="hidden" accept="image/*,video/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt" multiple onchange="handleMediaUploadFileSelected(event)" />
     </div>
   </div>
 
@@ -4354,10 +4354,9 @@
           </div>
           <div class="text-sm font-bold text-white">Drop media here</div>
           <div class="text-xs text-gray-500 mt-1">Images, videos, PDFs, docs, presentations, spreadsheets, or text files.</div>
-          <button id="upload-staging-pick-btn" type="button" class="mt-4 px-4 py-2 rounded-xl bg-[#231738] border border-white/10 text-xs uppercase tracking-widest font-bold text-white hover:bg-[#2d1b4e] transition-colors">
+          <button id="upload-staging-pick-btn" type="button" class="mt-4 px-4 py-2 rounded-xl bg-[#231738] border border-white/10 text-xs uppercase tracking-widest font-bold text-white hover:bg-[#2d1b4e] transition-colors" onclick="triggerMediaFilePicker()">
             Choose Files
           </button>
-          <input id="upload-staging-file-input" type="file" class="hidden" accept="image/*,video/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt" multiple>
         </div>
         <div id="upload-staging-attach-shell" class="hidden p-4 rounded-2xl bg-[#181125] border border-white/5">
           <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2">Attach to post</label>
@@ -11660,6 +11659,7 @@ function openUploadStagingModal(target = "vault") {
   if (uploadStagingResult) uploadStagingResult.textContent = "";
   renderUploadAttachPostSelect();
   renderUploadStagingList();
+  console.log("[media-upload] modal open centered");
   uploadStagingModal?.classList.remove("opacity-0", "pointer-events-none");
   uploadStagingModalCard?.classList.remove("scale-95");
   uploadStagingModalCard?.classList.add("scale-100");
@@ -11885,19 +11885,26 @@ function queueUploadFiles(fileList, target = "vault") {
   openUploadStagingModal(target);
 }
 
+function triggerMediaFilePicker() {
+  console.log("[media-upload] choose file clicked");
+  const input = document.getElementById("media-upload-input");
+  console.log("[media-upload] file input found", Boolean(input));
+  if (input) input.click();
+}
+
+function handleMediaUploadFileSelected(event) {
+  const files = event.target?.files;
+  if (!files || !files.length) return;
+  const file = files[0];
+  console.log("[media-upload] file selected", file.name, file.type, file.size);
+  queueUploadFiles(files, uploadStagingTarget || "vault");
+  event.target.value = "";
+}
+
 function setupMediaUpload() {
   if (mediaUploadBtn && !mediaUploadBtn.dataset.bound) {
     mediaUploadBtn.addEventListener("click", () => openUploadStagingModal("vault"));
     mediaUploadBtn.dataset.bound = "true";
-  }
-
-  if (mediaUploadInput && !mediaUploadInput.dataset.bound) {
-    mediaUploadInput.setAttribute("multiple", "multiple");
-    mediaUploadInput.addEventListener("change", (e) => {
-      queueUploadFiles(e.target.files, "vault");
-      mediaUploadInput.value = "";
-    });
-    mediaUploadInput.dataset.bound = "true";
   }
 }
 
@@ -15773,11 +15780,6 @@ function setupMediaLinkModal() {
 function setupUploadStagingModal() {
   closeUploadStagingModalBtn?.addEventListener("click", closeUploadStagingModal);
   cancelUploadStagingBtn?.addEventListener("click", closeUploadStagingModal);
-  uploadStagingPickBtn?.addEventListener("click", () => uploadStagingFileInput?.click());
-  uploadStagingFileInput?.addEventListener("change", (event) => {
-    queueUploadFiles(event.target?.files, uploadStagingTarget || "vault");
-    if (uploadStagingFileInput) uploadStagingFileInput.value = "";
-  });
   ["dragenter", "dragover"].forEach((eventName) => {
     uploadStagingDropzone?.addEventListener(eventName, (event) => {
       event.preventDefault();
@@ -16501,6 +16503,7 @@ function openMediaAssetModal(item, options = {}) {
     mediaAssetModalOpenLink.classList.toggle("opacity-40", !targetUrl);
   }
 
+  console.log("[media-viewer] open centered");
   mediaAssetModal.classList.remove("opacity-0", "pointer-events-none");
   mediaAssetModalCard.classList.remove("scale-95");
   mediaAssetModalCard.classList.add("scale-100");
