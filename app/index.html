@@ -139,6 +139,20 @@
     align-items: center;
     justify-content: center;
     transition: transform 160ms ease, box-shadow 160ms ease;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+  }
+
+  .stellar-assistant-button:active,
+  .stellar-assistant-drag-handle:active {
+    cursor: grabbing;
+  }
+
+  .stellar-assistant-drag-handle {
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
   }
 
   .stellar-assistant-button:hover {
@@ -5071,13 +5085,13 @@
   </div>
 </div>
 
-<button id="stellar-assistant-button" type="button" class="stellar-assistant-button" onclick="toggleAssistant()" aria-label="Stellar Assistant">
+<button id="stellar-assistant-button" type="button" class="stellar-assistant-button stellar-assistant-drag-handle" aria-label="Stellar Assistant">
   <i class="ph-fill ph-sparkle text-2xl"></i>
   <span class="stellar-assistant-button-label">Stellar Assistant</span>
 </button>
 
 <section id="stellar-assistant-panel" class="stellar-assistant-panel hidden" aria-label="Stellar Assistant">
-  <div class="px-5 py-4 border-b border-white/5 flex items-center justify-between gap-3">
+  <div class="stellar-assistant-drag-handle px-5 py-4 border-b border-white/5 flex items-center justify-between gap-3">
     <div class="flex items-center gap-3 min-w-0">
       <div class="w-10 h-10 rounded-2xl bg-[#2d1b4e] border border-white/10 flex items-center justify-center text-[#c77dff] shrink-0">
         <i class="ph-fill ph-sparkle text-xl"></i>
@@ -6001,6 +6015,10 @@ async function loadSupabaseMediaAssets(workspace, options = {}) {
           mimeType: asset.mime_type || asset.mime_type || "",
           source: "supabase",
           importedMediaSource: "supabase",
+          post_id: asset.post_id || asset.linked_post_id || "",
+          postId: asset.post_id || asset.linked_post_id || "",
+          linked_post_id: asset.linked_post_id || asset.post_id || "",
+          linkedPostId: asset.linked_post_id || asset.post_id || "",
           linked_note_id: asset.linked_note_id || "",
           linked_inspo_id: asset.linked_inspo_id || "",
           tags: asset.tags || [],
@@ -6755,18 +6773,154 @@ function hydratePostCampaign(post) {
 }
 
 function getPostAssets(post) {
-  const ids = Array.isArray(post?.carouselAssetIds) ? post.carouselAssetIds : String(post?.carouselAssetIds || "").split(/[|,\n]/).filter(Boolean);
-  return ids.map((id) => (appState.media || []).find((asset) => String(asset.assetId || asset.id || "") === String(id))).filter(Boolean);
+  return getAttachedMediaForPost(post).filter((item) => item && typeof item === "object").map((asset) => normalizeRemoteMedia(asset));
 }
 
 function findLinkedAssetForPost(post) {
   const postId = String(post?.id || post?.postId || "").trim();
   if (!postId) return null;
-  return (appState.media || []).find((asset) => String(asset.postId || asset.linkedPostId || "") === postId) || null;
+  return getAttachedMediaForPost(post)[0] || null;
 }
 
 function getPostMediaKind(post) {
-  return getPostAssets(post)[0]?.assetType || post?.postType || "text";
+  return derivePostFormatFromMedia(post).post_type;
+}
+
+function splitMediaIdList(value) {
+  if (Array.isArray(value)) return value.map((item) => String(item || "").trim()).filter(Boolean);
+  return String(value || "").split(/[|,\n]/).map((item) => String(item || "").trim()).filter(Boolean);
+}
+
+function getPostIdentityValues(post = {}) {
+  return [post.id, post.postId, post.post_id, post.frontendId, post._frontendId, post.contentKey, post.content_key]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+}
+
+function getMediaDedupeKey(item = {}) {
+  if (!item || typeof item !== "object") return String(item || "").trim();
+  return String(
+    item.media_asset_id || item.mediaAssetId ||
+    item.asset_id || item.assetId ||
+    item.media_id || item.mediaId ||
+    item.id ||
+    item.storage_path || item.storagePath ||
+    item.media_url || item.mediaUrl || item.fileUrl || item.url || item.sourceUrl || ""
+  ).trim();
+}
+
+function findMediaAssetByAnyKey(key, mediaItems = appState.media || []) {
+  const target = String(key || "").trim();
+  if (!target) return null;
+  return (mediaItems || []).find((asset) => {
+    return [
+      asset.media_asset_id,
+      asset.mediaAssetId,
+      asset.asset_id,
+      asset.assetId,
+      asset.media_id,
+      asset.mediaId,
+      asset.id,
+      asset.storage_path,
+      asset.storagePath,
+      asset.media_url,
+      asset.mediaUrl,
+      asset.fileUrl,
+      asset.url,
+      asset.sourceUrl
+    ].map((value) => String(value || "").trim()).includes(target);
+  }) || null;
+}
+
+function getAttachedMediaForPost(post, mediaItems = appState.media || []) {
+  if (!post) return [];
+  const postIds = new Set(getPostIdentityValues(post));
+  const collect = (values = []) => {
+    const seen = new Set();
+    const attached = [];
+    values.forEach((item) => {
+      if (!item) return;
+      const resolved = typeof item === "object" ? item : (findMediaAssetByAnyKey(item, mediaItems) || String(item || "").trim());
+      const key = getMediaDedupeKey(resolved);
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      attached.push(resolved);
+    });
+    return attached;
+  };
+  const firstNonEmpty = (...sources) => {
+    for (const values of sources) {
+      const attached = collect(values);
+      if (attached.length) return attached;
+    }
+    return [];
+  };
+  const postLinkedAssets = (mediaItems || []).filter((asset) => {
+    const linkedId = String(asset.linkedPostId || asset.linked_post_id || asset.postId || asset.post_id || "").trim();
+    return linkedId && postIds.has(linkedId);
+  });
+  const single = post.media_id || post.mediaId || post.asset_id || post.assetId;
+  const postMediaRows = []
+    .concat(Array.isArray(post.post_media) ? post.post_media : [])
+    .concat(Array.isArray(post.postMedia) ? post.postMedia : [])
+    .sort((a, b) => (Number(a?.sort_order || a?.sortOrder || 0) || 0) - (Number(b?.sort_order || b?.sortOrder || 0) || 0))
+    .map((row) => row?.media_asset || row?.media_assets || row?.asset || row?.media_asset_id || row?.mediaAssetId || row?.asset_id || row?.assetId || row?.id || row);
+
+  return firstNonEmpty(
+    postMediaRows,
+    splitMediaIdList(post.media_ids || post.mediaIds),
+    splitMediaIdList(post.carouselAssetIds || post.carousel_asset_ids).concat(Array.isArray(post.carouselAssets) ? post.carouselAssets : []),
+    postLinkedAssets,
+    single ? [single] : []
+  );
+}
+
+function inferMediaKindFromAsset(asset) {
+  const source = typeof asset === "object" ? asset : { url: String(asset || "") };
+  const mime = String(source.mime_type || source.mimeType || source.type || source.media_type || source.mediaType || source.assetType || "").toLowerCase();
+  const url = String(source.storage_path || source.storagePath || source.media_url || source.mediaUrl || source.fileUrl || source.url || source.sourceUrl || source.filename || source.mediaFilename || source.title || "").toLowerCase();
+  const ext = (url.split(/[?#]/)[0].match(/\.([a-z0-9]+)$/i) || [])[1] || "";
+  if (mime.startsWith("image/") || mime === "image" || ["png", "jpg", "jpeg", "gif", "webp", "svg", "avif"].includes(ext)) return "image";
+  if (mime.startsWith("video/") || mime === "video" || ["mp4", "webm", "mov", "m4v", "avi", "mkv"].includes(ext)) return "video";
+  if (mime.includes("pdf") || mime.includes("document") || ["pdf", "doc", "docx", "ppt", "pptx", "xls", "xlsx", "txt", "csv"].includes(ext)) return "document";
+  return String(source.media_type || source.mediaType || source.assetType || source.type || "").toLowerCase() || "image";
+}
+
+function derivePostFormatFromMedia(post, mediaItems = appState.media || []) {
+  const media = getAttachedMediaForPost(post, mediaItems);
+  const mediaCount = media.length;
+  if (mediaCount >= 2) return { post_type: "carousel", postType: "carousel", format: "carousel", isCarousel: true, mediaCount };
+  if (mediaCount === 1) {
+    const kind = inferMediaKindFromAsset(media[0]);
+    return { post_type: kind, postType: kind, format: kind, isCarousel: false, mediaCount };
+  }
+  const explicit = String(post?.postType || post?.post_type || post?.format || "").trim().toLowerCase();
+  const meaningful = explicit && !["image", "video", "carousel", "document", "file", "media"].includes(explicit) ? explicit : "text";
+  return { post_type: meaningful, postType: meaningful, format: meaningful, isCarousel: false, mediaCount: 0 };
+}
+
+function applyDerivedPostMediaFormat(post, mediaItems = appState.media || []) {
+  const attached = getAttachedMediaForPost(post, mediaItems);
+  const ids = attached.map((asset) => getMediaDedupeKey(asset)).filter(Boolean);
+  const normalizedAssets = attached.filter((asset) => asset && typeof asset === "object").map((asset) => normalizeRemoteMedia(asset));
+  const derived = derivePostFormatFromMedia({ ...post, media_ids: ids, carouselAssetIds: ids, carouselAssets: normalizedAssets }, mediaItems);
+  return {
+    ...post,
+    media_ids: ids,
+    mediaIds: ids,
+    carouselAssetIds: ids,
+    carouselAssets: normalizedAssets,
+    post_type: derived.post_type,
+    postType: derived.postType,
+    format: derived.format,
+    isCarousel: derived.isCarousel
+  };
+}
+
+function renderPostMediaTypeBadge(post) {
+  const derived = derivePostFormatFromMedia(post);
+  const label = derived.isCarousel ? `Carousel · ${derived.mediaCount} assets` : derived.post_type === "text" ? "Text" : toTitleCase(derived.post_type);
+  return label;
 }
 
 function getPublishingBadge(post) {
@@ -9161,8 +9315,54 @@ function loadAssistantPrefs() {
 function saveAssistantPrefs() {
   try {
     localStorage.setItem(getAssistantPrefsKey(), JSON.stringify(stellarAssistantPrefs));
-    console.log("[assistant-ui] prefs saved");
+    console.log("[assistant-ui] position saved");
   } catch (_) {}
+}
+
+function constrainAssistantPoint(x, y) {
+  const rect = stellarAssistantButton?.getBoundingClientRect();
+  const width = rect?.width || 60;
+  const height = rect?.height || 60;
+  return {
+    x: Math.max(8, Math.min(Number(x) || 0, window.innerWidth - width - 8)),
+    y: Math.max(8, Math.min(Number(y) || 0, window.innerHeight - height - 8))
+  };
+}
+
+function positionAssistantPanelFromButton() {
+  if (!stellarAssistantButton || !stellarAssistantPanel || stellarAssistantPanel.classList.contains("hidden")) return;
+  const buttonRect = stellarAssistantButton.getBoundingClientRect();
+  const panelWidth = Math.min(440, window.innerWidth - 16);
+  const panelHeight = Math.min(720, window.innerHeight - 24);
+  let left = Math.min(Math.max(8, buttonRect.right - panelWidth), window.innerWidth - panelWidth - 8);
+  let top = buttonRect.top - panelHeight - 12;
+  if (top < 8) top = Math.min(buttonRect.bottom + 12, window.innerHeight - panelHeight - 8);
+  stellarAssistantPanel.style.left = left + "px";
+  stellarAssistantPanel.style.top = Math.max(8, top) + "px";
+  stellarAssistantPanel.style.right = "auto";
+  stellarAssistantPanel.style.bottom = "auto";
+  stellarAssistantPanel.style.maxHeight = Math.max(260, Math.min(panelHeight, window.innerHeight - 24)) + "px";
+}
+
+function applyAssistantPosition(pos = stellarAssistantPrefs.position || {}) {
+  if (!stellarAssistantButton) return;
+  var isMobile = window.innerWidth < 640;
+  if (isMobile && pos.corner === "free") {
+    pos = { corner: Number(pos.x || 0) < window.innerWidth / 2 ? "bottom-left" : "bottom-right", x: 0, y: 0 };
+    stellarAssistantPrefs.position = pos;
+  }
+  if (pos && pos.corner === "free") {
+    var point = constrainAssistantPoint(pos.x, pos.y);
+    stellarAssistantButton.style.left = point.x + "px";
+    stellarAssistantButton.style.top = point.y + "px";
+    stellarAssistantButton.style.right = "auto";
+    stellarAssistantButton.style.bottom = "auto";
+    positionAssistantPanelFromButton();
+    console.log("[assistant-ui] position applied", point);
+    return;
+  }
+  setAssistantCorner(pos.corner || "bottom-right", { persist: false });
+  console.log("[assistant-ui] position applied", pos.corner || "bottom-right");
 }
 
 function applyAssistantPrefs() {
@@ -9187,21 +9387,10 @@ function applyAssistantPrefs() {
     stellarAssistantPanel.classList.add("hidden");
     stellarAssistantButton.classList.remove("hidden");
   }
-  var pos = stellarAssistantPrefs.position;
-  if (pos && pos.corner) {
-    var isMobile = window.innerWidth < 640;
-    if (isMobile) pos.corner = "bottom-right";
-    setAssistantCorner(pos.corner);
-  }
-  if (pos && (pos.x || pos.y) && pos.corner === "free") {
-    stellarAssistantButton.style.left = pos.x + "px";
-    stellarAssistantButton.style.top = pos.y + "px";
-    stellarAssistantButton.style.right = "auto";
-    stellarAssistantButton.style.bottom = "auto";
-  }
+  applyAssistantPosition(stellarAssistantPrefs.position || { corner: "bottom-right", x: 0, y: 0 });
 }
 
-function setAssistantCorner(corner) {
+function setAssistantCorner(corner, options = {}) {
   if (!stellarAssistantButton) return;
   var b = stellarAssistantButton;
   b.style.left = "";
@@ -9223,7 +9412,8 @@ function setAssistantCorner(corner) {
   }
   stellarAssistantPrefs.position = stellarAssistantPrefs.position || {};
   stellarAssistantPrefs.position.corner = corner;
-  saveAssistantPrefs();
+  positionAssistantPanelFromButton();
+  if (options.persist !== false) saveAssistantPrefs();
 }
 
 function resetAssistantPosition() {
@@ -9306,6 +9496,7 @@ function openAssistantPanel(context = {}) {
   stellarAssistantPanel?.classList.remove("hidden");
   stellarAssistantButton?.classList.remove("hidden");
   saveAssistantPrefs();
+  positionAssistantPanelFromButton();
   ensureAssistantWelcome();
   setTimeout(() => stellarAssistantInput?.focus(), 40);
 }
@@ -9534,47 +9725,64 @@ function setupStellarAssistant() {
   });
 
   if (stellarAssistantButton && !stellarAssistantButton.dataset.dragBound) {
-    var dragStartX = 0, dragStartY = 0, dragOrigX = 0, dragOrigY = 0, isDragging = false;
-    stellarAssistantButton.addEventListener("pointerdown", function(e) {
-      if (e.target.closest("[data-assistant-action]") || e.target.closest("button")) return;
-      dragStartX = e.clientX;
-      dragStartY = e.clientY;
+    var dragState = null;
+    var startAssistantDrag = function(e) {
+      if (!stellarAssistantButton || e.button !== 0) return;
+      if (e.target.closest("#stellar-assistant-panel button, #stellar-assistant-panel input, #stellar-assistant-panel textarea, #stellar-assistant-panel select")) return;
       var rect = stellarAssistantButton.getBoundingClientRect();
-      dragOrigX = rect.left;
-      dragOrigY = rect.top;
-      isDragging = false;
-      stellarAssistantButton.setPointerCapture(e.pointerId);
-    });
+      dragState = {
+        pointerId: e.pointerId,
+        startX: e.clientX,
+        startY: e.clientY,
+        originX: rect.left,
+        originY: rect.top,
+        dragging: false
+      };
+      console.log("[assistant-ui] drag start");
+      try { (e.currentTarget || stellarAssistantButton).setPointerCapture(e.pointerId); } catch (_) {}
+    };
+    stellarAssistantButton.addEventListener("pointerdown", startAssistantDrag);
+    stellarAssistantPanel?.querySelector(".stellar-assistant-drag-handle")?.addEventListener("pointerdown", startAssistantDrag);
     window.addEventListener("pointermove", function(e) {
-      if (!stellarAssistantButton.hasPointerCapture(e.pointerId)) return;
-      var dx = e.clientX - dragStartX;
-      var dy = e.clientY - dragStartY;
-      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) isDragging = true;
-      if (!isDragging) return;
+      if (!dragState || dragState.pointerId !== e.pointerId) return;
+      var dx = e.clientX - dragState.startX;
+      var dy = e.clientY - dragState.startY;
+      if (!dragState.dragging && Math.hypot(dx, dy) >= 6) {
+        dragState.dragging = true;
+        minimizeAssistantPanel();
+      }
+      if (!dragState.dragging) return;
       e.preventDefault();
-      var newX = dragOrigX + dx;
-      var newY = dragOrigY + dy;
-      newX = Math.max(0, Math.min(newX, window.innerWidth - 70));
-      newY = Math.max(0, Math.min(newY, window.innerHeight - 70));
-      stellarAssistantButton.style.left = newX + "px";
-      stellarAssistantButton.style.top = newY + "px";
+      var point = constrainAssistantPoint(dragState.originX + dx, dragState.originY + dy);
+      stellarAssistantButton.style.left = point.x + "px";
+      stellarAssistantButton.style.top = point.y + "px";
       stellarAssistantButton.style.right = "auto";
       stellarAssistantButton.style.bottom = "auto";
+      console.log("[assistant-ui] drag move", point);
     });
     window.addEventListener("pointerup", function(e) {
-      if (!stellarAssistantButton.hasPointerCapture(e.pointerId)) return;
-      stellarAssistantButton.releasePointerCapture(e.pointerId);
-      if (isDragging) {
-        console.log("[assistant-ui] drag end");
-        var rect = stellarAssistantButton.getBoundingClientRect();
-        stellarAssistantPrefs.position = stellarAssistantPrefs.position || {};
-        stellarAssistantPrefs.position.x = rect.left;
-        stellarAssistantPrefs.position.y = rect.top;
-        stellarAssistantPrefs.position.corner = "free";
-        saveAssistantPrefs();
-      } else if (!stellarAssistantPrefs.visible) {
+      if (!dragState || dragState.pointerId !== e.pointerId) return;
+      try { stellarAssistantButton.releasePointerCapture(e.pointerId); } catch (_) {}
+      var wasDragging = dragState.dragging;
+      dragState = null;
+      if (!wasDragging) {
+        toggleAssistant();
         return;
+      }
+      var rect = stellarAssistantButton.getBoundingClientRect();
+      var point = constrainAssistantPoint(rect.left, rect.top);
+      if (window.innerWidth < 640) {
+        stellarAssistantPrefs.position = { corner: point.x < window.innerWidth / 2 ? "bottom-left" : "bottom-right", x: 0, y: 0 };
       } else {
+        stellarAssistantPrefs.position = { corner: "free", x: point.x, y: point.y };
+      }
+      saveAssistantPrefs();
+      applyAssistantPosition(stellarAssistantPrefs.position);
+      console.log("[assistant-ui] drag end", stellarAssistantPrefs.position);
+    });
+    stellarAssistantButton.addEventListener("keydown", function(e) {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
         toggleAssistant();
       }
     });
@@ -9582,6 +9790,12 @@ function setupStellarAssistant() {
   }
 
   applyAssistantPrefs();
+  if (!window.__stellarAssistantResizeBound) {
+    window.addEventListener("resize", function() {
+      applyAssistantPosition(stellarAssistantPrefs.position || { corner: "bottom-right" });
+    });
+    window.__stellarAssistantResizeBound = true;
+  }
 }
 
 function setupAIAndBrandWorkspaces() {
@@ -10452,6 +10666,7 @@ function renderCalendarPill(post, isWeekMode = false) {
     : displayTitle;
   const hydrated = hydratePostCampaign(post);
   const campaignColor = getCampaignColor(hydrated, getPostContentPillar(hydrated));
+  const mediaTypeLabel = renderPostMediaTypeBadge(hydrated);
   function buildDateDiagnosticTitle(post) {
     var pid = post.id || post.post_id || "no-id";
     var rawLabel = (post.queueDateLabel || post.queue_date_label || "").trim() || "—";
@@ -10482,6 +10697,7 @@ function renderCalendarPill(post, isWeekMode = false) {
         <div class="w-1.5 h-1.5 rounded-full ml-auto" style="background:${statusColor}"></div>
       </div>
       <span class="text-[9px] text-gray-300 wrap-safe w-full block mt-0.5">${escapeHtml(pillTitle)}</span>
+      <span class="text-[8px] text-gray-500 wrap-safe w-full block mt-0.5">${escapeHtml(mediaTypeLabel)}</span>
     </button>
   `;
 }
@@ -10525,7 +10741,7 @@ function renderLedger() {
   }
 
   if (ledgerFilters.type !== "all") {
-    posts = posts.filter(post => String(post.postType || "") === ledgerFilters.type);
+    posts = posts.filter(post => derivePostFormatFromMedia(post).post_type === ledgerFilters.type);
   }
 
   if (ledgerFilters.status !== "all") {
@@ -10591,7 +10807,7 @@ function renderLedger() {
     const pillarShape = renderPillarShape(pillarValue, "", getPillarTheme(pillarValue));
     const mediaKind = getPostMediaKind(hydrated);
     const publishingBadge = getPublishingBadge(hydrated);
-    const mediaLabel = mediaKind === "missing" ? "Missing media" : mediaKind === "carousel" ? "Carousel" : mediaKind === "text" ? "No media needed" : toTitleCase(mediaKind);
+    const mediaLabel = renderPostMediaTypeBadge(hydrated);
 
     return `
       <div class="ledger-card glass-card p-5" data-post-id="${escapeHtml(post.id)}">
@@ -12092,7 +12308,8 @@ async function commitPendingUploads() {
         if (!currentModalCarouselAssets.some(asset => getMediaItemKey(asset) === key)) {
           currentModalCarouselAssets.push(normalized);
         }
-        if (modalMediaStatus) modalMediaStatus.textContent = `${currentModalCarouselAssets.length} linked asset${currentModalCarouselAssets.length === 1 ? "" : "s"}`;
+        const refreshedPost = linkedPostId ? refreshPostMediaClassification(linkedPostId) : null;
+        if (modalMediaStatus) modalMediaStatus.textContent = refreshedPost ? `${renderPostMediaTypeBadge(refreshedPost)} linked` : `${currentModalCarouselAssets.length} linked asset${currentModalCarouselAssets.length === 1 ? "" : "s"}`;
       }
     }
     if (uploadStagingResult) {
@@ -12100,7 +12317,7 @@ async function commitPendingUploads() {
       uploadStagingResult.className = "text-[11px] text-[#00ffaa] mt-1";
     }
     closeUploadStagingModal();
-    renderMedia();
+    rerenderAll();
     if (isSupabaseMediaEnabled()) {
       refreshMediaFromRemote().then(() => renderMedia()).catch(err => console.warn("[media-upload] refresh skipped", err?.message || err));
     } else {
@@ -14792,7 +15009,7 @@ function buildAIHistoryFilterPayload() {
 function filterHistoricalPostsLocal(posts, filters = {}) {
   return (Array.isArray(posts) ? posts : []).filter((post) => {
     const platform = String(post?.platform || "").trim().toLowerCase();
-    const postType = String(pickRemoteValue(post?.postType, post?.post_type, "text")).trim().toLowerCase();
+    const postType = derivePostFormatFromMedia(post).post_type;
     const sourceType = String(pickRemoteValue(post?.sourceType, post?.source_type, "")).trim().toLowerCase();
     const campaignId = String(pickRemoteValue(post?.campaignId, post?.campaign_id, "")).trim();
     const campaignName = String(pickRemoteValue(post?.campaignName, post?.campaign_name, "")).trim();
@@ -16215,7 +16432,7 @@ function buildMediaVaultItems() {
 
   (appState.posts || []).forEach((post) => {
     const postAssets = getPostAssets(post);
-    if ((post.carouselAssetIds || []).length > 1 && postAssets.length > 1) {
+    if (postAssets.length > 1) {
       groupedPostIds.add(getCanonicalPostId(post) || getPostLookupId(post));
       items.push({
         id: `group:${getCanonicalPostId(post) || getPostLookupId(post)}`,
@@ -16385,7 +16602,7 @@ function renderMedia() {
     const linkedPost = item.linkedPost || (appState.posts || []).find(post => post.id === item.postId);
     const linkedStatus = getMediaLinkedStatus(item);
     const linkedPostAssets = linkedPost ? getPostAssets(linkedPost) : [];
-    const isCarouselPreview = isGroup || (linkedPost?.carouselAssetIds || []).length > 1 || type === "carousel";
+    const isCarouselPreview = isGroup || (linkedPost && getAttachedMediaForPost(linkedPost).length > 1) || type === "carousel";
     const campaignLabel = linkedPost?.campaignName
       ? formatCampaignDisplayName(linkedPost.campaignName)
       : item.campaign
@@ -16426,7 +16643,7 @@ const metaLine = [linkedStatus, item.meta || "", campaignLabel, sourceLabel].fil
         <div class="p-4">
           <p class="text-white text-sm font-semibold wrap-safe mb-1" title="${escapeHtml(displayTitle)}">${escapeHtml(displayTitle)}</p>
           <p class="text-gray-500 text-[10px] font-medium wrap-safe">${escapeHtml(metaLine)}</p>
-          ${isCarouselPreview ? `<p class="text-gray-600 text-[10px] font-medium wrap-safe mt-1">${(item.assets?.length || linkedPostAssets.length || (linkedPost?.carouselAssetIds || []).length)} linked images</p>` : ""}
+          ${isCarouselPreview ? `<p class="text-gray-600 text-[10px] font-medium wrap-safe mt-1">Carousel · ${(item.assets?.length || linkedPostAssets.length || getAttachedMediaForPost(linkedPost).length)} assets</p>` : ""}
           ${assetUrl ? `<p class="text-gray-600 text-[10px] font-medium wrap-safe mt-1">${escapeHtml(getDisplayExcerpt(assetUrl, assetUrl))}</p>` : ""}
         </div>
       </div>
@@ -16524,6 +16741,42 @@ async function attachMediaAssetToPost(item, postId) {
   }
 }
 
+function refreshPostMediaClassification(postId) {
+  const targetId = String(postId || "").trim();
+  if (!targetId) return null;
+  let updatedPost = null;
+  appState.posts = (appState.posts || []).map((post) => {
+    if (!getPostIdentityValues(post).includes(targetId)) return post;
+    const linkedAssets = (appState.media || []).filter((asset) => {
+      const linkedId = String(asset.linkedPostId || asset.linked_post_id || asset.postId || asset.post_id || "").trim();
+      return linkedId === targetId;
+    }).map((asset) => normalizeRemoteMedia(asset));
+    const linkedIds = linkedAssets.map((asset) => asset.assetId || asset.asset_id || asset.mediaId || asset.media_id || asset.id).filter(Boolean);
+    updatedPost = applyDerivedPostMediaFormat({
+      ...post,
+      media_ids: linkedIds,
+      mediaIds: linkedIds,
+      carouselAssetIds: linkedIds,
+      carouselAssets: linkedAssets,
+      media_id: linkedIds[0] || "",
+      mediaId: linkedIds[0] || ""
+    });
+    return updatedPost;
+  });
+  if (updatedPost && currentEditingPostId && getPostIdentityValues(updatedPost).includes(String(currentEditingPostId))) {
+    const attached = getAttachedMediaForPost(updatedPost).filter((asset) => asset && typeof asset === "object").map((asset) => normalizeRemoteMedia(asset));
+    currentModalCarouselAssets = attached;
+    currentModalAsset = attached[0] || null;
+    if (postTypeSelect) postTypeSelect.value = updatedPost.postType || "text";
+    if (modalMediaStatus) {
+      modalMediaStatus.textContent = attached.length ? `${renderPostMediaTypeBadge(updatedPost)} linked` : "No media linked";
+    }
+    renderModalCarouselPreview();
+  }
+  persistLocalState();
+  return updatedPost;
+}
+
 async function attachSelectedMediaToPost(postId) {
   const targetPostId = String(postId || "").trim();
   if (!targetPostId || !canAttachMediaToPosts()) return;
@@ -16541,6 +16794,7 @@ async function attachSelectedMediaToPost(postId) {
   }
   updated.forEach((asset) => upsertMediaAssetIntoAppState(asset));
   if (updated[0]) currentMediaAssetDetail = updated[0];
+  const refreshedPost = refreshPostMediaClassification(targetPostId);
   const currentPostKey = String(currentEditingPostId || "").trim();
   if (currentPostKey && currentPostKey === targetPostId) {
     updated.forEach((asset) => {
@@ -16550,12 +16804,12 @@ async function attachSelectedMediaToPost(postId) {
         currentModalCarouselAssets.push(asset);
       }
     });
-    if (modalMediaStatus) modalMediaStatus.textContent = `${currentModalCarouselAssets.length} linked asset${currentModalCarouselAssets.length === 1 ? "" : "s"}`;
+    if (modalMediaStatus) modalMediaStatus.textContent = refreshedPost ? `${renderPostMediaTypeBadge(refreshedPost)} linked` : `${currentModalCarouselAssets.length} linked asset${currentModalCarouselAssets.length === 1 ? "" : "s"}`;
     renderModalCarouselPreview();
     renderModalExistingMediaPicker(getMediaItemKey(currentMediaAssetDetail));
   }
   persistLocalState();
-  renderMedia();
+  rerenderAll();
   openMediaAssetModal(currentMediaAssetDetail, { items: currentMediaViewerItems, openPosts: true });
   showToast("Media attached", `${items.length} asset${items.length === 1 ? "" : "s"} linked to post.`, "ph-link", "text-[#00ffaa]");
 }
@@ -16603,11 +16857,13 @@ async function detachCurrentMediaAssetFromPost() {
   if (!currentMediaAssetDetail || !canAttachMediaToPosts()) return;
   try {
     console.log("[media-match] detach", getMediaItemKey(currentMediaAssetDetail));
+    const previousPostId = String(currentMediaAssetDetail.linkedPostId || currentMediaAssetDetail.linked_post_id || currentMediaAssetDetail.postId || "").trim();
     currentMediaAssetDetail = await detachMediaAssetFromPost(currentMediaAssetDetail);
     appState.media = (appState.media || []).map(asset => String(asset.assetId || asset.id || "") === String(currentMediaAssetDetail.assetId || currentMediaAssetDetail.id || "") ? currentMediaAssetDetail : asset);
+    if (previousPostId) refreshPostMediaClassification(previousPostId);
     persistLocalState();
     openMediaAssetModal(currentMediaAssetDetail);
-    renderMedia();
+    rerenderAll();
     showToast("Media detached", "Asset is now unlinked.", "ph-link-break", "text-[#00ffaa]");
   } catch (err) {
     showToast("Detach failed", err?.message || "Asset could not be detached.", "ph-warning", "text-yellow-400");
@@ -17539,6 +17795,13 @@ function openPostModal(
   } else {
     if (modalMediaStatus) modalMediaStatus.textContent = "No media linked";
   }
+  const modalDerived = derivePostFormatFromMedia({
+    ...matched,
+    carouselAssets: currentModalCarouselAssets,
+    carouselAssetIds: currentModalCarouselAssets.map((asset) => asset.assetId || asset.id).filter(Boolean)
+  });
+  if (postTypeSelect) postTypeSelect.value = modalDerived.postType || "text";
+  if (modalMediaStatus) modalMediaStatus.textContent = currentModalCarouselAssets.length ? `${renderPostMediaTypeBadge({ ...matched, carouselAssets: currentModalCarouselAssets })} linked` : "No media linked";
   renderModalExistingMediaPicker(currentModalAsset?.assetId || currentModalAsset?.id || "");
   if (modalMediaUploadTrigger) {
     modalMediaUploadTrigger.classList.toggle("hidden", !canManageMedia());
@@ -17891,6 +18154,9 @@ function setupSaveHandler() {
       carouselAssetIds: currentModalCarouselAssets.length
         ? currentModalCarouselAssets.map(asset => asset.assetId || asset.id).filter(Boolean)
         : Array.isArray(existing?.carouselAssetIds) ? existing.carouselAssetIds : [],
+      carouselAssets: currentModalCarouselAssets.length
+        ? currentModalCarouselAssets.map(asset => normalizeRemoteMedia(asset))
+        : Array.isArray(existing?.carouselAssets) ? existing.carouselAssets : [],
       mediaIds: currentModalCarouselAssets.length
         ? currentModalCarouselAssets.map(asset => asset.mediaId || asset.media_id || asset.assetId || asset.id).filter(Boolean)
         : [currentModalAsset?.mediaId || currentModalAsset?.media_id || currentModalAsset?.assetId || currentModalAsset?.id || existing?.mediaId || existing?.media_id].filter(Boolean),
@@ -17948,6 +18214,7 @@ function setupSaveHandler() {
       clicks: existing?.clicks || 0,
       engagementRate: existing?.engagementRate || 0
     };
+    Object.assign(payload, applyDerivedPostMediaFormat(payload));
 
     if (!payload.title) {
       saveButton.disabled = false;
@@ -23710,7 +23977,7 @@ function normalizeRemotePost(post, campaigns = [], mediaItems = [], index = 0) {
     normalizedPost.engagementRate = normalizedPost.engagementTotal / normalizedPost.impressions;
     normalizedPost.engagement_rate = normalizedPost.engagementRate;
   }
-  return hydratePostCampaign({ ...normalizedPost, ...normalizeRemoteSemanticFields(post) }, campaigns);
+  return hydratePostCampaign(applyDerivedPostMediaFormat({ ...normalizedPost, ...normalizeRemoteSemanticFields(post) }, mediaItems), campaigns);
 }
 
 function normalizeRemoteCampaign(campaign) {
@@ -24267,6 +24534,10 @@ async function apiSavePost(post) {
   };
   console.log("[savePost] payload", savePayload);
   const backendMode = getActiveWorkspaceBackendMode();
+  Object.assign(savePayload, applyDerivedPostMediaFormat(savePayload));
+  if (backendMode.mode !== "supabase_native" && Array.isArray(savePayload.media_ids)) {
+    savePayload.media_ids = savePayload.media_ids.join("|");
+  }
   savePayload.backend_type = backendMode.mode;
   savePayload.backend_mode = backendMode.mode;
   console.log("[savePost] backend", backendMode.mode);
@@ -24433,6 +24704,7 @@ function renderQueue(queueItems) {
             ${renderPillarShape(hydrated.pillar, "", pillarColor)}
             ${platformIcons}
             <span>${escapeHtml(item.queueTimeLabel || "")}</span>
+            <span>${escapeHtml(renderPostMediaTypeBadge(hydrated))}</span>
           </div>
         </div>
       </div>
@@ -24502,6 +24774,7 @@ function sanitizeAppStateArtifacts(state) {
   next.inspo = filterRenderableArtifacts(next.inspo || [], "inspo");
   next.notes = filterRenderableArtifacts(next.notes || [], "note");
   next.media = filterRenderableArtifacts(next.media || [], "media");
+  next.posts = next.posts.map((post) => applyDerivedPostMediaFormat(post, next.media || []));
   next.aiDrafts = filterRenderableArtifacts(next.aiDrafts || [], "aiDraft");
   return next;
 }
