@@ -5534,6 +5534,14 @@ function getWorkspaceMediaPrefix(workspace = WORKSPACE_RUNTIME_CONFIG.active || 
   return slug ? `${slug}/` : "";
 }
 
+function getActiveMediaWorkspaceContext(workspace = WORKSPACE_RUNTIME_CONFIG.active || loadWorkspaceConfig()) {
+  const active = WORKSPACE_RUNTIME_CONFIG.active || {};
+  const meta = getWorkspaceRequestMetadata();
+  const id = String(active.id || workspace?.id || active.workspace_id || workspace?.workspace_id || meta.workspace_id || "").trim();
+  const slug = String(active.slug || active.workspace_slug || workspace?.slug || workspace?.workspace_slug || meta.workspace_slug || getCurrentWorkspaceSlug() || "").trim();
+  return { id, slug };
+}
+
 async function uploadMediaToSupabaseStorage(file, options = {}) {
   if (!isSupabaseMediaEnabled()) {
     throw new Error("Supabase media is not configured for this workspace.");
@@ -5593,10 +5601,13 @@ async function loadSupabaseMediaAssets(workspace, options = {}) {
   
   var config = workspace || WORKSPACE_RUNTIME_CONFIG.active || loadWorkspaceConfig();
   var bucket = "media";
-  var workspaceId = config.workspace_id || config.id || getWorkspaceRequestMetadata().workspace_id || "";
-  var workspaceSlug = config.workspace_slug || config.slug || getCurrentWorkspaceSlug() || "";
+  var mediaWorkspace = getActiveMediaWorkspaceContext(config);
+  var workspaceId = mediaWorkspace.id;
+  var workspaceSlug = mediaWorkspace.slug;
   var prefix = options.prefix || getWorkspaceMediaPrefix(config);
   var loadingToastId = options.silent ? "" : showLoadingToast("Loading media assets", "Loading media assets...");
+  console.log("[media] active workspace id", workspaceId || "(missing)");
+  console.log("[media] active workspace slug", workspaceSlug || "(missing)");
 
   try {
     var indexed = await callSupabaseEdgeFunction("media-index", {
@@ -5606,7 +5617,7 @@ async function loadSupabaseMediaAssets(workspace, options = {}) {
       prefix
     });
     var indexedAssets = Array.isArray(indexed.assets) ? indexed.assets : [];
-    console.log("[media] table query count", indexedAssets.length);
+    console.log("[media] list_assets returned count", indexedAssets.length);
     if (indexedAssets.length) {
       result.assets = indexedAssets.map(normalizeRemoteMedia);
       result.source = "media_assets";
@@ -5623,6 +5634,7 @@ async function loadSupabaseMediaAssets(workspace, options = {}) {
   
   console.log("[media-backend] attempting table query");
   try {
+    console.log("[media] direct table workspace_id used", workspaceId || "(missing)");
     var tableResult = await STELLARSYNC_SUPABASE_CLIENT
       .from("media_assets")
       .select("*")
@@ -5733,8 +5745,8 @@ async function loadSupabaseMediaAssets(workspace, options = {}) {
     return result;
   }
 
-  console.log("[media-backend] fallback to google_sheets only");
-  result.source = "google_sheets";
+  console.log("[media-backend] no supabase media assets found");
+  result.source = "media_assets";
   if (loadingToastId) updateLoadingToastSuccess(loadingToastId, "Loading media assets", "No Supabase media assets found.");
   return result;
 }
@@ -15359,16 +15371,26 @@ async function indexSupabaseStorageForMedia() {
     return;
   }
   try {
-    const meta = getWorkspaceRequestMetadata();
     const active = WORKSPACE_RUNTIME_CONFIG.active || {};
+    const mediaWorkspace = getActiveMediaWorkspaceContext(active);
     const prefix = getWorkspaceMediaPrefix(active);
     const loadingToastId = showLoadingToast("Indexing media", `Indexing media from media/${prefix}...`);
     const result = await callSupabaseEdgeFunction("media-index", {
       action: "index_bucket",
-      workspace_id: meta.workspace_id,
-      workspace_slug: active.workspace_slug || active.slug || getCurrentWorkspaceSlug() || "",
+      workspace_id: mediaWorkspace.id,
+      workspace_slug: mediaWorkspace.slug,
       prefix
     });
+    console.log("[media-index] response", result);
+    console.log("[media-index] bucket", result.bucket || "");
+    console.log("[media-index] configuredBucket", result.configuredBucket || "");
+    console.log("[media-index] bucketFallbackUsed", Boolean(result.bucketFallbackUsed));
+    console.log("[media-index] prefix", result.prefix || prefix || "");
+    console.log("[media-index] fileCount", Number(result.fileCount || 0));
+    console.log("[media-index] indexedCount", Number(result.indexedCount || 0));
+    console.log("[media-index] samplePaths", result.samplePaths || []);
+    console.log("[media-index] listErrors", result.listErrors || []);
+    console.log("[media-index] error/message", result.error || result.message || "");
     console.log("[media] storage indexed count", Number(result.indexedCount || 0));
     if (!result.ok || Number(result.fileCount || 0) === 0) {
       const bucket = result.bucket || "media";
@@ -15377,8 +15399,15 @@ async function indexSupabaseStorageForMedia() {
       updateLoadingToastError(loadingToastId, "Index failed", message);
       return;
     }
-    const mediaResult = await loadSupabaseMediaAssets(active, { silent: true, prefix: result.prefix || prefix });
-    appState.media = filterRenderableArtifacts(Array.isArray(mediaResult.assets) ? mediaResult.assets.map(normalizeRemoteMedia) : [], "media");
+    const listResult = await callSupabaseEdgeFunction("media-index", {
+      action: "list_assets",
+      workspace_id: mediaWorkspace.id,
+      workspace_slug: mediaWorkspace.slug,
+      prefix: result.prefix || prefix
+    });
+    const listedAssets = Array.isArray(listResult.assets) ? listResult.assets : [];
+    console.log("[media] list_assets returned count", listedAssets.length);
+    appState.media = filterRenderableArtifacts(listedAssets.map(normalizeRemoteMedia), "media");
     persistLocalState();
     renderMedia();
     updateLoadingToastSuccess(loadingToastId, "Indexing media", `Indexed ${Number(result.indexedCount || 0)} media asset${Number(result.indexedCount || 0) === 1 ? "" : "s"}.`);
