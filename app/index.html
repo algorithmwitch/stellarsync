@@ -19971,12 +19971,27 @@ async function callSupabaseEdgeFunction(functionName, payload = {}) {
     },
     body: JSON.stringify(payload || {})
   });
-  const result = await response.json().catch(() => ({}));
+  const rawText = await response.text().catch(() => "");
+  let result = {};
+  try {
+    result = rawText ? JSON.parse(rawText) : {};
+  } catch (_) {
+    result = {};
+  }
+  if (functionName === "media-index" && !response.ok) {
+    console.log("[media-index] HTTP status", response.status);
+    console.log("[media-index] raw response", rawText);
+    console.log("[media-index] parsed error", result);
+    console.log("[media-index] request payload", payload || {});
+  }
   if (!response.ok || result.ok === false) {
-    const err = new Error(result.error || `Supabase function failed: ${functionName}`);
+    const message = result.error || result.message || rawText || `HTTP ${response.status}`;
+    const err = new Error(message);
     err.backend = result;
     err.status = response.status;
     err.functionName = functionName;
+    err.responseText = rawText;
+    err.requestPayload = payload || {};
     throw err;
   }
   return result;
