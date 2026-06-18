@@ -192,6 +192,142 @@
     display: none;
   }
 
+  #media-asset-modal {
+    z-index: 122;
+    padding-bottom: calc(88px + env(safe-area-inset-bottom));
+  }
+
+  #media-asset-modal-card {
+    width: min(1100px, calc(100vw - 48px));
+    max-width: min(1100px, calc(100vw - 48px));
+    max-height: calc(100dvh - 72px);
+    display: flex;
+    flex-direction: column;
+  }
+
+  #upload-staging-modal {
+    z-index: 123;
+    padding-bottom: calc(88px + env(safe-area-inset-bottom));
+  }
+
+  #upload-staging-modal-card {
+    width: min(880px, calc(100vw - 48px));
+    max-width: min(880px, calc(100vw - 48px));
+    max-height: calc(100dvh - 72px);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .upload-media-scroll {
+    overflow: auto;
+    min-height: 0;
+  }
+
+  .upload-media-dropzone {
+    border: 1px dashed rgba(199, 125, 255, 0.35);
+    background: rgba(24, 17, 37, 0.72);
+    transition: border-color 160ms ease, background 160ms ease;
+  }
+
+  .upload-media-dropzone.is-dragging {
+    border-color: rgba(199, 125, 255, 0.9);
+    background: rgba(45, 27, 78, 0.66);
+  }
+
+  .media-viewer-header,
+  .media-viewer-footer {
+    position: sticky;
+    z-index: 4;
+    background: rgba(18, 12, 29, 0.98);
+    backdrop-filter: blur(14px);
+  }
+
+  .media-viewer-header {
+    top: 0;
+  }
+
+  .media-viewer-footer {
+    bottom: 0;
+  }
+
+  .media-viewer-scroll {
+    overflow: auto;
+    min-height: 0;
+  }
+
+  .media-viewer-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+    min-height: 0;
+  }
+
+  .media-viewer-main {
+    min-width: 0;
+  }
+
+  #media-asset-modal-preview {
+    position: relative;
+    min-height: 260px;
+    max-height: 58dvh;
+    overflow: hidden;
+  }
+
+  #media-asset-modal-preview img,
+  #media-asset-modal-preview video {
+    max-width: 100%;
+    max-height: 58dvh;
+    object-fit: contain;
+  }
+
+  .media-viewer-nav {
+    position: absolute;
+    right: 0.85rem;
+    top: 50%;
+    transform: translateY(-50%);
+    display: grid;
+    gap: 0.6rem;
+    z-index: 3;
+  }
+
+  .media-viewer-nav button {
+    width: 2.35rem;
+    height: 2.35rem;
+    border-radius: 999px;
+    background: rgba(18, 12, 29, 0.86);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .media-viewer-nav button:disabled {
+    opacity: 0.32;
+    cursor: not-allowed;
+  }
+
+  .media-viewer-posts-panel {
+    border-left: 1px solid rgba(255,255,255,0.06);
+    background: rgba(15, 10, 24, 0.92);
+    overflow: auto;
+    max-height: calc(100dvh - 190px);
+    display: none;
+  }
+
+  .media-viewer-posts-panel.open {
+    display: block;
+  }
+
+  .media-select-box {
+    position: absolute;
+    left: 0.75rem;
+    top: 0.75rem;
+    z-index: 6;
+    width: 1.15rem;
+    height: 1.15rem;
+    accent-color: #c77dff;
+  }
+
   #stellar-toast-stack {
     position: fixed;
     right: max(18px, env(safe-area-inset-right));
@@ -1952,8 +2088,31 @@
 
             #media-asset-modal-preview {
                 min-height: 180px !important;
+                max-height: 42dvh !important;
                 border-right: 0 !important;
                 border-bottom: 1px solid rgba(255,255,255,0.05);
+            }
+
+            #media-asset-modal-card {
+                width: calc(100vw - 24px) !important;
+                max-height: calc(100dvh - 48px) !important;
+            }
+
+            #upload-staging-modal-card {
+                width: calc(100vw - 24px) !important;
+                max-height: calc(100dvh - 48px) !important;
+            }
+
+            .media-viewer-body {
+                grid-template-columns: 1fr !important;
+            }
+
+            .media-viewer-posts-panel {
+                position: static !important;
+                width: 100% !important;
+                max-height: 34dvh !important;
+                border-left: 0 !important;
+                border-top: 1px solid rgba(255,255,255,0.06);
             }
 
             #view-media .media-vault-card .aspect-square {
@@ -4044,8 +4203,8 @@
 
 <div id="media-asset-modal" class="fixed inset-0 z-[121] bg-black/70 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-200">
   <div class="w-full h-full flex items-center justify-center p-6">
-    <div id="media-asset-modal-card" class="w-full max-w-4xl bg-[#120c1d] border border-white/10 rounded-2xl shadow-2xl transform scale-95 transition-transform duration-200 overflow-hidden">
-      <div class="flex items-center justify-between px-6 py-5 border-b border-white/5">
+    <div id="media-asset-modal-card" class="bg-[#120c1d] border border-white/10 rounded-2xl shadow-2xl transform scale-95 transition-transform duration-200 overflow-hidden">
+      <div class="media-viewer-header flex items-center justify-between px-5 py-4 border-b border-white/5 shrink-0">
         <div>
           <h3 id="media-asset-modal-title" class="text-white font-bold text-lg">Media Asset</h3>
           <p id="media-asset-modal-subtitle" class="text-xs text-gray-500 mt-1">Vault details</p>
@@ -4054,17 +4213,35 @@
           <i class="ph-bold ph-x"></i>
         </button>
       </div>
-      <div class="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-0">
-        <div id="media-asset-modal-preview" class="min-h-[320px] bg-[#0f0a18] border-r border-white/5 flex items-center justify-center p-6"></div>
-        <div class="p-6 space-y-5">
-          <div id="media-asset-modal-meta" class="space-y-3"></div>
-          <div>
-            <h4 class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3">Linked Performance</h4>
-            <div id="media-asset-modal-performance" class="grid grid-cols-2 gap-3"></div>
+      <div class="media-viewer-scroll">
+        <div class="media-viewer-body">
+          <div class="media-viewer-main min-w-0">
+            <div id="media-asset-modal-preview" class="bg-[#0f0a18] border-b border-white/5 flex items-center justify-center p-5"></div>
+            <div class="p-4 space-y-4">
+              <div id="media-asset-tagged-content" class="p-4 rounded-xl bg-[#181125] border border-white/5"></div>
+              <div id="media-asset-modal-meta" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+              <div>
+                <h4 class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3">Linked Performance</h4>
+                <div id="media-asset-modal-performance" class="grid grid-cols-2 md:grid-cols-3 gap-3"></div>
+              </div>
+            </div>
           </div>
+          <aside id="media-viewer-posts-panel" class="media-viewer-posts-panel p-4">
+            <div class="flex items-center justify-between gap-3 mb-3">
+              <div>
+                <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Show Posts</div>
+                <div id="media-viewer-posts-count" class="text-xs text-gray-400 mt-1">Attach media to a post.</div>
+              </div>
+              <button type="button" onclick="toggleMediaPostsPanel(false)" class="w-9 h-9 rounded-xl bg-[#181125] border border-white/5 text-gray-400 hover:text-white flex items-center justify-center">
+                <i class="ph-bold ph-x"></i>
+              </button>
+            </div>
+            <input id="media-viewer-post-search" class="form-input text-sm mb-3" placeholder="Search posts...">
+            <div id="media-viewer-post-list" class="space-y-2"></div>
+          </aside>
         </div>
       </div>
-      <div class="px-6 py-5 border-t border-white/5 flex justify-end gap-3">
+      <div class="media-viewer-footer px-5 py-4 border-t border-white/5 flex flex-wrap justify-end gap-3 shrink-0">
         <button id="media-asset-modal-close-btn" type="button" class="px-4 py-2 bg-[#1a1128] hover:bg-[#231738] text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all border border-white/10">
           Close
         </button>
@@ -4158,10 +4335,10 @@
   </div>
 </div>
 
-<div id="upload-staging-modal" class="fixed inset-0 z-[131] bg-black/70 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-200">
+<div id="upload-staging-modal" class="fixed inset-0 z-[123] bg-black/70 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-200">
   <div class="w-full h-full flex items-center justify-center p-6">
-    <div id="upload-staging-modal-card" class="w-full max-w-5xl bg-[#120c1d] border border-white/10 rounded-2xl shadow-2xl transform scale-95 transition-transform duration-200 overflow-hidden">
-      <div class="flex items-center justify-between px-6 py-5 border-b border-white/5">
+    <div id="upload-staging-modal-card" class="bg-[#120c1d] border border-white/10 rounded-2xl shadow-2xl transform scale-95 transition-transform duration-200 overflow-hidden">
+      <div class="media-viewer-header flex items-center justify-between px-5 py-4 border-b border-white/5 shrink-0">
         <div>
           <h3 class="text-white font-bold text-lg">Upload Media</h3>
           <p id="upload-staging-subtitle" class="text-xs text-gray-500 mt-1">Review files before uploading</p>
@@ -4170,12 +4347,30 @@
           <i class="ph-bold ph-x"></i>
         </button>
       </div>
-      <div class="p-6">
-        <div id="upload-staging-list" class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[55vh] overflow-y-auto custom-scrollbar"></div>
-        <div id="upload-staging-empty" class="hidden p-8 rounded-2xl bg-[#181125] border border-white/5 text-center text-sm text-gray-400 mt-4">No files selected.</div>
+      <div class="upload-media-scroll p-5 space-y-4">
+        <div id="upload-staging-dropzone" class="upload-media-dropzone rounded-2xl p-5 text-center">
+          <div class="mx-auto w-12 h-12 rounded-2xl bg-[#2d1b4e] flex items-center justify-center text-[#c77dff] mb-3">
+            <i class="ph-bold ph-upload-simple text-2xl"></i>
+          </div>
+          <div class="text-sm font-bold text-white">Drop media here</div>
+          <div class="text-xs text-gray-500 mt-1">Images, videos, PDFs, docs, presentations, spreadsheets, or text files.</div>
+          <button id="upload-staging-pick-btn" type="button" class="mt-4 px-4 py-2 rounded-xl bg-[#231738] border border-white/10 text-xs uppercase tracking-widest font-bold text-white hover:bg-[#2d1b4e] transition-colors">
+            Choose Files
+          </button>
+          <input id="upload-staging-file-input" type="file" class="hidden" accept="image/*,video/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt" multiple>
+        </div>
+        <div id="upload-staging-attach-shell" class="hidden p-4 rounded-2xl bg-[#181125] border border-white/5">
+          <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2">Attach to post</label>
+          <select id="upload-staging-attach-post-select" class="form-input text-sm"></select>
+        </div>
+        <div id="upload-staging-list" class="grid grid-cols-1 gap-4"></div>
+        <div id="upload-staging-empty" class="hidden p-6 rounded-2xl bg-[#181125] border border-white/5 text-center text-sm text-gray-400">No files selected.</div>
       </div>
-      <div class="px-6 py-5 border-t border-white/5 flex justify-between items-center gap-3">
-        <div id="upload-staging-status" class="text-xs text-gray-500">0 files ready</div>
+      <div class="media-viewer-footer px-5 py-4 border-t border-white/5 flex justify-between items-center gap-3 flex-wrap shrink-0">
+        <div>
+          <div id="upload-staging-status" class="text-xs text-gray-500">0 files ready</div>
+          <div id="upload-staging-result" class="text-[11px] text-gray-500 mt-1"></div>
+        </div>
         <div class="flex gap-3">
           <button id="cancel-upload-staging-btn" type="button" class="px-4 py-2 bg-[#1a1128] hover:bg-[#231738] text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all border border-white/10">
             Cancel
@@ -5594,9 +5789,21 @@ function sanitizeWorkspacePathSegment(value, fallback) {
 
 function buildWorkspaceMediaPath(workspaceSlug, postId, filename) {
   const slug = sanitizeWorkspacePathSegment(workspaceSlug || getCurrentWorkspaceSlug() || "master", "master");
-  const owner = sanitizeWorkspacePathSegment(postId || "unassigned", "unassigned");
   const name = sanitizeWorkspacePathSegment(filename || "media", "media");
-  return `${slug}/${owner}/${Date.now()}-${name}`;
+  const unique = (window.crypto && typeof window.crypto.randomUUID === "function")
+    ? window.crypto.randomUUID()
+    : String(Date.now());
+  return `${slug}/${unique}-${name}`;
+}
+
+function inferUploadMediaType(file) {
+  const type = String(file?.type || "").toLowerCase();
+  const name = String(file?.name || "").toLowerCase();
+  if (type.startsWith("image/")) return "image";
+  if (type.startsWith("video/")) return "video";
+  if (type.startsWith("audio/")) return "audio";
+  if (/\.(pdf|doc|docx|ppt|pptx|xls|xlsx|txt)$/i.test(name)) return "document";
+  return "file";
 }
 
 function getWorkspaceMediaPrefix(workspace = WORKSPACE_RUNTIME_CONFIG.active || loadWorkspaceConfig()) {
@@ -5621,11 +5828,15 @@ async function uploadMediaToSupabaseStorage(file, options = {}) {
   const storagePath = buildWorkspaceMediaPath(config.workspace_slug, options.postId || "", file?.name || "media");
   const bucket = encodeURIComponent("media");
   const uploadUrl = `${String(config.supabase_url || "").replace(/\/+$/, "")}/storage/v1/object/${bucket}/${storagePath}`;
+  const sessionResult = STELLARSYNC_SUPABASE_CLIENT
+    ? await STELLARSYNC_SUPABASE_CLIENT.auth.getSession().catch(() => null)
+    : null;
+  const accessToken = sessionResult?.data?.session?.access_token || config.supabase_anon_key;
   const response = await fetch(uploadUrl, {
     method: "POST",
     headers: {
       apikey: config.supabase_anon_key,
-      Authorization: `Bearer ${config.supabase_anon_key}`,
+      Authorization: `Bearer ${accessToken}`,
       "Content-Type": file?.type || "application/octet-stream",
       "x-upsert": "true"
     },
@@ -5633,28 +5844,52 @@ async function uploadMediaToSupabaseStorage(file, options = {}) {
   });
   if (!response.ok) throw new Error(`Supabase upload failed: ${response.status}`);
   const publicUrl = `${String(config.supabase_url || "").replace(/\/+$/, "")}/storage/v1/object/public/${bucket}/${storagePath}`;
-  const mediaId = `sb-${Date.now()}`;
-  try {
-    await callSupabaseEdgeFunction("media-index", {
-      action: "index_bucket",
-      workspace_id: config.workspace_id || config.id || getWorkspaceRequestMetadata().workspace_id,
-      workspace_slug: config.workspace_slug || config.slug || getCurrentWorkspaceSlug() || "",
-      prefix: getWorkspaceMediaPrefix(config)
-    });
-  } catch (err) {
-    console.warn("[media] upload index skipped", err?.message || err);
+  const mediaType = inferUploadMediaType(file);
+  const createPayload = {
+    action: "create_asset",
+    workspace_id: config.workspace_id || config.id || getWorkspaceRequestMetadata().workspace_id,
+    workspace_slug: config.workspace_slug || config.slug || getCurrentWorkspaceSlug() || "",
+    bucket: "media",
+    storage_path: storagePath,
+    filename: file?.name || "",
+    title: options.title || file?.name || "Supabase media",
+    media_type: mediaType,
+    media_url: publicUrl,
+    mime_type: file?.type || "",
+    size_bytes: file?.size || 0,
+    alt_text: options.altText || "",
+    tags: Array.isArray(options.tags) ? options.tags : [],
+    metadata: {
+      upload_context: options.postId ? "post" : "vault",
+      original_filename: file?.name || ""
+    },
+    linked_post_id: options.postId || null,
+    post_id: options.postId || null
+  };
+  const created = await callSupabaseEdgeFunction("media-index", createPayload);
+  if (!created?.ok || !created.asset) {
+    const err = new Error(created?.error || "Media asset row was not created after upload.");
+    err.backend = created;
+    throw err;
   }
+  const normalized = normalizeRemoteMedia(created.asset);
+  const mediaId = normalized.assetId || normalized.asset_id || normalized.mediaId || `sb-${Date.now()}`;
+  console.log("[media-upload] uploaded/indexed/viewer opened", { storage_path: storagePath, asset: normalized });
   return {
+    ...normalized,
     media_id: mediaId,
     media_url: publicUrl,
-    media_type: file?.type || "",
+    media_type: mediaType,
     media_filename: file?.name || "",
     media_alt_text: options.altText || "",
     media_source: "supabase",
     storage_path: storagePath,
-    assetId: mediaId,
-    assetName: file?.name || "Supabase media",
-    assetType: file?.type || "",
+    assetId: normalized.assetId || normalized.asset_id || `sb-${Date.now()}`,
+    assetName: normalized.assetName || options.title || file?.name || "Supabase media",
+    title: options.title || file?.name || "Supabase media",
+    altText: options.altText || "",
+    tags: Array.isArray(options.tags) ? options.tags : [],
+    assetType: mediaType,
     fileUrl: publicUrl,
     sourceUrl: publicUrl,
     linkedPostId: options.postId || "",
@@ -6845,7 +7080,21 @@ function validateUploadFile(file) {
 }
 
 function fileToPreview(file) {
-  return file ? URL.createObjectURL(file) : "";
+  if (!file) return null;
+  const name = String(file.name || "media");
+  const title = name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").trim() || name;
+  return {
+    id: `upload-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    file,
+    previewUrl: URL.createObjectURL(file),
+    name,
+    title,
+    altText: "",
+    tags: "",
+    type: file.type || "",
+    size: file.size || 0,
+    error: ""
+  };
 }
 
 const DEFAULT_STATE = {
@@ -6921,6 +7170,10 @@ let currentView = "calendar";
 let currentEditingPostId = null;
 let currentModalAsset = null;
 let currentMediaAssetDetail = null;
+let currentMediaViewerItems = [];
+let currentMediaViewerIndex = 0;
+let selectedMediaAssetIds = new Set();
+let mediaPostsPanelOpen = false;
 let currentModalInspoId = null;
 let currentModalNoteId = null;
 let shellLayout = loadShellLayout();
@@ -7405,6 +7658,11 @@ const mediaAssetModalPerformance = document.getElementById("media-asset-modal-pe
 const mediaAssetModalOpenLink = document.getElementById("media-asset-modal-open-link");
 const mediaAssetCreatePostBtn = document.getElementById("media-asset-create-post-btn");
 const mediaAssetWriteIdeaBtn = document.getElementById("media-asset-write-idea-btn");
+const mediaAssetTaggedContent = document.getElementById("media-asset-tagged-content");
+const mediaViewerPostsPanel = document.getElementById("media-viewer-posts-panel");
+const mediaViewerPostSearch = document.getElementById("media-viewer-post-search");
+const mediaViewerPostList = document.getElementById("media-viewer-post-list");
+const mediaViewerPostsCount = document.getElementById("media-viewer-posts-count");
 const installAppBtn = document.getElementById("install-app-btn");
 const mobileInstallAppBtn = document.getElementById("mobile-install-app-btn");
 const appStatusBanner = document.getElementById("app-status-banner");
@@ -7563,6 +7821,12 @@ const uploadStagingSubtitle = document.getElementById("upload-staging-subtitle")
 const uploadStagingList = document.getElementById("upload-staging-list");
 const uploadStagingEmpty = document.getElementById("upload-staging-empty");
 const uploadStagingStatus = document.getElementById("upload-staging-status");
+const uploadStagingResult = document.getElementById("upload-staging-result");
+const uploadStagingDropzone = document.getElementById("upload-staging-dropzone");
+const uploadStagingPickBtn = document.getElementById("upload-staging-pick-btn");
+const uploadStagingFileInput = document.getElementById("upload-staging-file-input");
+const uploadStagingAttachShell = document.getElementById("upload-staging-attach-shell");
+const uploadStagingAttachPostSelect = document.getElementById("upload-staging-attach-post-select");
 const closeUploadStagingModalBtn = document.getElementById("close-upload-staging-modal-btn");
 const cancelUploadStagingBtn = document.getElementById("cancel-upload-staging-btn");
 const confirmUploadStagingBtn = document.getElementById("confirm-upload-staging-btn");
@@ -11337,7 +11601,7 @@ function renderModalExistingMediaPicker(selectedAssetId = "") {
     target.innerHTML = isSupabaseMediaEnabled() && canIndexMediaStorage()
       ? `<div class="grid gap-2">
           <button type="button" onclick="indexSupabaseStorageForMedia()" class="w-full px-3 py-2 rounded-lg bg-[#181125] border border-white/5 text-[9px] uppercase tracking-widest font-bold text-gray-400 hover:text-white">Index Storage</button>
-          <button type="button" onclick="indexSupabaseStorageForMedia({ include_all: true })" class="w-full px-3 py-2 rounded-lg bg-[#181125] border border-yellow-400/20 text-[9px] uppercase tracking-widest font-bold text-yellow-200 hover:text-white">Admin/Dev: Index Entire Bucket</button>
+          ${canIndexEntireBucket() ? `<button type="button" onclick="indexSupabaseStorageForMedia({ include_all: true })" class="w-full px-3 py-2 rounded-lg bg-[#181125] border border-yellow-400/20 text-[9px] uppercase tracking-widest font-bold text-yellow-200 hover:text-white">Admin: Index Entire Bucket</button>` : ""}
         </div>`
       : "";
     return;
@@ -11387,8 +11651,14 @@ function removeCarouselAsset(index) {
 }
 
 function openUploadStagingModal(target = "vault") {
+  if (!canManageMedia()) {
+    showToast("Upload unavailable", "Your role can view media but cannot upload.", "ph-warning", "text-yellow-400");
+    return;
+  }
   uploadStagingTarget = target;
   if (uploadStagingSubtitle) uploadStagingSubtitle.textContent = describeUploadTarget();
+  if (uploadStagingResult) uploadStagingResult.textContent = "";
+  renderUploadAttachPostSelect();
   renderUploadStagingList();
   uploadStagingModal?.classList.remove("opacity-0", "pointer-events-none");
   uploadStagingModalCard?.classList.remove("scale-95");
@@ -11399,6 +11669,7 @@ function closeUploadStagingModal() {
   uploadStagingModal?.classList.add("opacity-0", "pointer-events-none");
   uploadStagingModalCard?.classList.remove("scale-100");
   uploadStagingModalCard?.classList.add("scale-95");
+  if (uploadStagingResult) uploadStagingResult.textContent = "";
   pendingUploadFiles.forEach((item) => {
     try { URL.revokeObjectURL(item.previewUrl); } catch (_) {}
   });
@@ -11406,34 +11677,102 @@ function closeUploadStagingModal() {
   renderUploadStagingList();
 }
 
+function renderUploadAttachPostSelect() {
+  if (!uploadStagingAttachShell || !uploadStagingAttachPostSelect) return;
+  const isPostUpload = uploadStagingTarget === "post";
+  uploadStagingAttachShell.classList.toggle("hidden", !isPostUpload);
+  if (!isPostUpload) {
+    uploadStagingAttachPostSelect.innerHTML = "";
+    return;
+  }
+  const currentId = String(currentEditingPostId || "").trim();
+  const posts = appState.posts || [];
+  uploadStagingAttachPostSelect.innerHTML = [
+    `<option value="${escapeHtml(currentId)}">${currentId ? "Current post" : "Attach after post is saved"}</option>`,
+    ...posts.map(post => {
+      const postId = getCanonicalPostId(post) || getPostLookupId(post) || "";
+      if (!postId || String(postId) === currentId) return "";
+      return `<option value="${escapeHtml(postId)}">${escapeHtml(getPostDisplayTitle(post, "Untitled post"))}</option>`;
+    })
+  ].filter(Boolean).join("");
+}
+
+function updatePendingUploadField(fileId, field, value) {
+  const key = String(fileId || "");
+  pendingUploadFiles = pendingUploadFiles.map(item => item.id === key ? { ...item, [field]: value } : item);
+}
+
 function renderUploadStagingList() {
   if (!uploadStagingList || !uploadStagingEmpty || !uploadStagingStatus) return;
   uploadStagingEmpty.classList.toggle("hidden", !!pendingUploadFiles.length);
   uploadStagingStatus.textContent = `${pendingUploadFiles.length} file${pendingUploadFiles.length === 1 ? "" : "s"} ready`;
+  if (confirmUploadStagingBtn) {
+    const validCount = pendingUploadFiles.filter(item => !item.error).length;
+    confirmUploadStagingBtn.disabled = !validCount;
+    confirmUploadStagingBtn.classList.toggle("opacity-50", !validCount);
+    confirmUploadStagingBtn.classList.toggle("cursor-not-allowed", !validCount);
+  }
   if (!pendingUploadFiles.length) {
     uploadStagingList.innerHTML = "";
     return;
   }
   uploadStagingList.innerHTML = pendingUploadFiles.map((item, index) => `
-    <div class="p-4 rounded-2xl bg-[#181125] border border-white/5">
-      <div class="aspect-video rounded-xl overflow-hidden bg-[#0f0a18] border border-white/5 flex items-center justify-center mb-3">
+    <div class="p-4 rounded-2xl bg-[#181125] border border-white/5 grid grid-cols-1 md:grid-cols-[180px_1fr] gap-4">
+      <div class="aspect-video md:aspect-square rounded-xl overflow-hidden bg-[#0f0a18] border border-white/5 flex items-center justify-center">
         ${item.type.startsWith("video/")
           ? `<video src="${escapeHtml(item.previewUrl)}" class="w-full h-full object-cover" muted playsinline preload="metadata"></video>`
           : item.type.startsWith("image/")
           ? `<img src="${escapeHtml(item.previewUrl)}" alt="${escapeHtml(item.name)}" class="w-full h-full object-cover" onerror="handleBrokenMediaPreview(this)">`
           : `<div class="w-full h-full flex flex-col items-center justify-center text-gray-400"><i class="ph-bold ph-file-text text-3xl mb-2"></i><span class="text-xs uppercase tracking-wider font-bold">Document</span></div>`}
       </div>
-      <div class="text-sm font-bold text-white wrap-safe mb-1">${escapeHtml(item.name)}</div>
-      <div class="text-[10px] text-gray-500 mb-3">${escapeHtml(Math.round(item.size / 1024))} KB • ${escapeHtml(item.type || "unknown")}</div>
-      ${item.error ? `<div class="text-[11px] text-red-300 mb-3">${escapeHtml(item.error)}</div>` : ""}
-      <button type="button" onclick="removePendingUploadFile('${escapeHtml(item.id)}')" class="px-3 py-2 rounded-xl bg-[#30121b] border border-red-400/20 text-[10px] uppercase tracking-wider font-bold text-red-200">Remove</button>
+      <div class="min-w-0 space-y-3">
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <div class="text-sm font-bold text-white wrap-safe">${escapeHtml(item.name)}</div>
+            <div class="text-[10px] text-gray-500 mt-1">${escapeHtml(Math.round(item.size / 1024))} KB - ${escapeHtml(item.type || "unknown")}</div>
+          </div>
+          <button type="button" onclick="removePendingUploadFile('${escapeHtml(item.id)}')" class="px-3 py-2 rounded-xl bg-[#30121b] border border-red-400/20 text-[10px] uppercase tracking-wider font-bold text-red-200">Remove</button>
+        </div>
+        ${item.error ? `<div class="text-[11px] text-red-300">${escapeHtml(item.error)}</div>` : ""}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2">Title</label>
+            <input class="form-input text-sm" value="${escapeHtml(item.title || "")}" oninput="updatePendingUploadField('${escapeHtml(item.id)}', 'title', this.value)">
+          </div>
+          <div>
+            <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2">Tags</label>
+            <input class="form-input text-sm" value="${escapeHtml(item.tags || "")}" placeholder="tag, tag" oninput="updatePendingUploadField('${escapeHtml(item.id)}', 'tags', this.value)">
+          </div>
+        </div>
+        <div>
+          <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2">Alt Text</label>
+          <textarea class="form-input text-sm min-h-[72px]" oninput="updatePendingUploadField('${escapeHtml(item.id)}', 'altText', this.value)">${escapeHtml(item.altText || "")}</textarea>
+        </div>
+      </div>
     </div>
   `).join("");
 }
 
 function removePendingUploadFile(fileId) {
+  const removed = pendingUploadFiles.find((item) => item.id === fileId);
+  if (removed?.previewUrl) {
+    try { URL.revokeObjectURL(removed.previewUrl); } catch (_) {}
+  }
   pendingUploadFiles = pendingUploadFiles.filter((item) => item.id !== fileId);
   renderUploadStagingList();
+}
+
+function upsertMediaAssetIntoAppState(asset) {
+  const normalized = normalizeRemoteMedia(asset || {});
+  const key = getMediaItemKey(normalized);
+  if (!key) return normalized;
+  const current = Array.isArray(appState.media) ? appState.media.slice() : [];
+  const index = current.findIndex(item => getMediaItemKey(item) === key || String(item.assetId || item.asset_id || "") === String(normalized.assetId || normalized.asset_id || ""));
+  if (index >= 0) current[index] = { ...current[index], ...normalized };
+  else current.unshift(normalized);
+  appState.media = current;
+  persistLocalState();
+  return normalized;
 }
 
 async function commitPendingUploads() {
@@ -11443,32 +11782,36 @@ async function commitPendingUploads() {
     return;
   }
   const loadingToastId = showLoadingToast("Uploading media", `Uploading ${validItems.length} media file${validItems.length === 1 ? "" : "s"}...`);
+  let lastUploadedAsset = null;
   try {
+    if (uploadStagingResult) {
+      uploadStagingResult.textContent = "Uploading...";
+      uploadStagingResult.className = "text-[11px] text-[#c77dff] mt-1";
+    }
+    if (confirmUploadStagingBtn) {
+      confirmUploadStagingBtn.disabled = true;
+      confirmUploadStagingBtn.classList.add("opacity-50", "cursor-not-allowed");
+    }
     for (let index = 0; index < validItems.length; index += 1) {
       const item = validItems[index];
       uploadStagingStatus.textContent = `Uploading ${index + 1} of ${validItems.length}`;
-      const linkedPostId = uploadStagingTarget === "post" ? (currentEditingPostId || "") : "";
+      const selectedPostId = String(uploadStagingAttachPostSelect?.value || "").trim();
+      const linkedPostId = uploadStagingTarget === "post" ? (selectedPostId || currentEditingPostId || "") : "";
       const campaign = uploadStagingTarget === "post" ? getCurrentModalCampaignLabel() : "";
       let result = null;
+      const uploadTags = String(item.tags || "")
+        .split(",")
+        .map(value => value.trim())
+        .filter(Boolean);
       if (isSupabaseMediaEnabled()) {
-        const supabaseAsset = await uploadMediaToSupabaseStorage(item.file, { postId: linkedPostId, campaign });
-        result = await apiPost("saveMediaLink", {
-          sourceUrl: supabaseAsset.media_url,
-          assetName: supabaseAsset.media_filename,
-          assetType: supabaseAsset.media_type,
-          linkedPostId,
+        const supabaseAsset = await uploadMediaToSupabaseStorage(item.file, {
+          postId: linkedPostId,
           campaign,
-          assetBadge: item.file.type.startsWith("video/") ? "Reel" : item.file.type.startsWith("image/") ? uploadStagingTarget === "post" && postTypeSelect?.value === "carousel" ? "Carousel" : "Image" : "Document",
-          assetMeta: "",
-          media_id: supabaseAsset.media_id,
-          media_url: supabaseAsset.media_url,
-          media_type: supabaseAsset.media_type,
-          media_filename: supabaseAsset.media_filename,
-          media_alt_text: supabaseAsset.media_alt_text,
-          media_source: supabaseAsset.media_source,
-          storage_path: supabaseAsset.storage_path
+          title: item.title || item.name,
+          altText: item.altText || "",
+          tags: uploadTags
         });
-        result.asset = { ...supabaseAsset, ...(result.asset || {}) };
+        result = { asset: supabaseAsset };
       } else {
         const base64Data = await fileToBase64(item.file);
         result = await apiPost("uploadMedia", {
@@ -11480,41 +11823,71 @@ async function commitPendingUploads() {
           importedMediaSource: uploadStagingTarget === "post" ? "post_upload" : "vault_upload",
           assetBadge: item.file.type.startsWith("video/") ? "Reel" : item.file.type.startsWith("image/") ? uploadStagingTarget === "post" && postTypeSelect?.value === "carousel" ? "Carousel" : "Image" : "Document",
           assetMeta: "",
+          title: item.title || item.name,
+          altText: item.altText || "",
+          tags: uploadTags,
           linkedPostId,
           campaign
         });
       }
-      const normalized = normalizeRemoteMedia(result.asset);
+      const normalized = upsertMediaAssetIntoAppState(result.asset);
+      lastUploadedAsset = normalized;
       if (uploadStagingTarget === "post") {
         if (!currentModalAsset) currentModalAsset = normalized;
-        currentModalCarouselAssets.push(normalized);
+        const key = getMediaItemKey(normalized);
+        if (!currentModalCarouselAssets.some(asset => getMediaItemKey(asset) === key)) {
+          currentModalCarouselAssets.push(normalized);
+        }
         if (modalMediaStatus) modalMediaStatus.textContent = `${currentModalCarouselAssets.length} linked asset${currentModalCarouselAssets.length === 1 ? "" : "s"}`;
       }
     }
+    if (uploadStagingResult) {
+      uploadStagingResult.textContent = "Upload complete.";
+      uploadStagingResult.className = "text-[11px] text-[#00ffaa] mt-1";
+    }
     closeUploadStagingModal();
-    await refreshMediaFromRemote();
+    renderMedia();
+    if (isSupabaseMediaEnabled()) {
+      refreshMediaFromRemote().then(() => renderMedia()).catch(err => console.warn("[media-upload] refresh skipped", err?.message || err));
+    } else {
+      await refreshMediaFromRemote();
+    }
     renderModalCarouselPreview();
+    if (lastUploadedAsset) {
+      const key = getMediaItemKey(lastUploadedAsset);
+      const refreshed = getFilteredMediaVaultItems().find(item => getMediaItemKey(item) === key || String(item.assetId || "") === String(lastUploadedAsset.assetId || ""));
+      openMediaAssetModal(refreshed || lastUploadedAsset);
+      console.log("[media-upload] viewer opened", { id: key || getMediaItemKey(refreshed || {}) });
+    }
     updateToast(loadingToastId, "success", "Uploaded", uploadStagingTarget === "post" ? "Media linked to the current post." : "Media uploaded to the vault.");
   } catch (err) {
+    if (uploadStagingResult) {
+      uploadStagingResult.textContent = err?.message || "Upload failed.";
+      uploadStagingResult.className = "text-[11px] text-yellow-300 mt-1";
+    }
     updateToast(loadingToastId, "error", "Upload failed", err);
     throw err;
+  } finally {
+    renderUploadStagingList();
   }
 }
 
 function queueUploadFiles(fileList, target = "vault") {
   const files = Array.from(fileList || []);
   if (!files.length) return;
-  pendingUploadFiles = files.map((file) => {
+  const next = files.map((file) => {
     const preview = fileToPreview(file);
+    if (!preview) return null;
     preview.error = validateUploadFile(file, target);
     return preview;
-  });
+  }).filter(Boolean);
+  pendingUploadFiles = pendingUploadFiles.concat(next);
   openUploadStagingModal(target);
 }
 
 function setupMediaUpload() {
-  if (mediaUploadBtn && mediaUploadInput && !mediaUploadBtn.dataset.bound) {
-    mediaUploadBtn.addEventListener("click", () => mediaUploadInput.click());
+  if (mediaUploadBtn && !mediaUploadBtn.dataset.bound) {
+    mediaUploadBtn.addEventListener("click", () => openUploadStagingModal("vault"));
     mediaUploadBtn.dataset.bound = "true";
   }
 
@@ -15384,11 +15757,42 @@ function setupMediaLinkModal() {
   mediaAssetModal?.addEventListener("click", (e) => {
     if (e.target === mediaAssetModal) closeMediaAssetModal();
   });
+  mediaViewerPostSearch?.addEventListener("input", renderMediaPostPanel);
+  document.addEventListener("keydown", (event) => {
+    if (!mediaAssetModal || mediaAssetModal.classList.contains("pointer-events-none")) return;
+    if (event.key === "Escape") {
+      closeMediaAssetModal();
+    } else if (event.key === "ArrowLeft") {
+      navigateMediaViewer(-1);
+    } else if (event.key === "ArrowRight") {
+      navigateMediaViewer(1);
+    }
+  });
 }
 
 function setupUploadStagingModal() {
   closeUploadStagingModalBtn?.addEventListener("click", closeUploadStagingModal);
   cancelUploadStagingBtn?.addEventListener("click", closeUploadStagingModal);
+  uploadStagingPickBtn?.addEventListener("click", () => uploadStagingFileInput?.click());
+  uploadStagingFileInput?.addEventListener("change", (event) => {
+    queueUploadFiles(event.target?.files, uploadStagingTarget || "vault");
+    if (uploadStagingFileInput) uploadStagingFileInput.value = "";
+  });
+  ["dragenter", "dragover"].forEach((eventName) => {
+    uploadStagingDropzone?.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      uploadStagingDropzone.classList.add("is-dragging");
+    });
+  });
+  ["dragleave", "drop"].forEach((eventName) => {
+    uploadStagingDropzone?.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      uploadStagingDropzone.classList.remove("is-dragging");
+    });
+  });
+  uploadStagingDropzone?.addEventListener("drop", (event) => {
+    queueUploadFiles(event.dataTransfer?.files, uploadStagingTarget || "vault");
+  });
   confirmUploadStagingBtn?.addEventListener("click", async () => {
     try {
       await commitPendingUploads();
@@ -15413,7 +15817,7 @@ function setupModalMediaUpload() {
   if (!modalMediaUploadTrigger || !modalMediaUploadInput) return;
 
   modalMediaUploadTrigger.addEventListener("click", () => {
-    modalMediaUploadInput.click();
+    openUploadStagingModal("post");
   });
 
   modalMediaUploadInput.setAttribute("multiple", "multiple");
@@ -15442,10 +15846,33 @@ function getMediaLinkedStatus(item = {}) {
   return "Unlinked";
 }
 
-function canIndexMediaStorage() {
+function getCurrentWorkspaceRole() {
   const active = WORKSPACE_RUNTIME_CONFIG.active || {};
-  const role = String(active.role || getWorkspaceRequestMetadata().role || "").toLowerCase();
-  return ["owner", "admin"].includes(role) || isManagedHybridWorkspace(active, WORKSPACE_CONNECTIONS || []);
+  return String(active.role || getWorkspaceRequestMetadata().role || "").trim().toLowerCase();
+}
+
+function canManageWorkspace() {
+  return ["owner", "admin"].includes(getCurrentWorkspaceRole());
+}
+
+function canManageMedia() {
+  return ["owner", "admin", "content_lead"].includes(getCurrentWorkspaceRole());
+}
+
+function canIndexWorkspaceMedia() {
+  return canManageMedia();
+}
+
+function canIndexEntireBucket() {
+  return ["owner", "admin"].includes(getCurrentWorkspaceRole());
+}
+
+function canAttachMediaToPosts() {
+  return canManageMedia();
+}
+
+function canIndexMediaStorage() {
+  return canIndexWorkspaceMedia();
 }
 
 async function indexSupabaseStorageForMedia(options = {}) {
@@ -15569,31 +15996,18 @@ function handleBrokenMediaPreview(el) {
   if (parent) parent.replaceChild(replacement, el);
 }
 
-function renderMedia() {
-  console.log("[render] renderMedia start", getAppStateCounts());
-  const grid = document.getElementById("media-grid");
-  if (!grid) {
-    console.error("renderMedia: #media-grid missing");
-    pushAppError("renderMedia", new Error("#media-grid missing"));
-    return;
-  }
+function getMediaItemKey(item = {}) {
+  return String(item.id || item.assetId || item.asset_id || item.mediaAssetId || item.media_asset_id || item.storagePath || item.storage_path || "").trim();
+}
 
-  let items = buildMediaVaultItems();
-  items = filterRenderableArtifacts(items, "media");
-  var missingUrlCount = items.filter(item => !(item.url || item.media_url || item.source_url || item.fileUrl || item.file_url || item.thumbnail_url || item.thumbnailUrl || item.storage_path || item.storagePath)).length;
-  var unlinkedCount = items.filter(item => getMediaLinkedStatus(item) === "Unlinked").length;
-  console.log("[media] renderable count", items.length);
-  console.log("[media] unlinked count", unlinkedCount);
-  console.log("[media] missing url count", missingUrlCount);
-
+function getFilteredMediaVaultItems() {
+  let items = filterRenderableArtifacts(buildMediaVaultItems(), "media");
   if (currentMediaFilter !== "all") {
     items = items.filter(item => String(item.type || "").toLowerCase() === currentMediaFilter);
   }
-
   if (mediaFilters.type !== "all") {
     items = items.filter(item => String(item.type || "").toLowerCase() === mediaFilters.type);
   }
-
   if (mediaFilters.campaign !== "all") {
     items = items.filter(item => {
       const campaignId = String(item.campaignId || "");
@@ -15607,7 +16021,49 @@ function renderMedia() {
       );
     });
   }
+  return items;
+}
 
+function toggleMediaSelection(assetId, checked) {
+  const key = String(assetId || "").trim();
+  if (!key) return;
+  if (checked) selectedMediaAssetIds.add(key);
+  else selectedMediaAssetIds.delete(key);
+  renderMedia();
+}
+
+function clearSelectedMedia() {
+  selectedMediaAssetIds.clear();
+  renderMedia();
+}
+
+function openSelectedMediaAttachPanel() {
+  if (!canAttachMediaToPosts()) return;
+  const selected = getFilteredMediaVaultItems().filter(item => selectedMediaAssetIds.has(getMediaItemKey(item)));
+  const first = selected[0] || currentMediaAssetDetail;
+  if (!first) return;
+  openMediaAssetModal(first, { items: selected.length ? selected : undefined, openPosts: true });
+}
+
+function renderMedia() {
+  console.log("[render] renderMedia start", getAppStateCounts());
+  const grid = document.getElementById("media-grid");
+  if (!grid) {
+    console.error("renderMedia: #media-grid missing");
+    pushAppError("renderMedia", new Error("#media-grid missing"));
+    return;
+  }
+  if (mediaUploadBtn) {
+    mediaUploadBtn.classList.toggle("hidden", !canManageMedia());
+    mediaUploadBtn.disabled = !canManageMedia();
+  }
+
+  let items = getFilteredMediaVaultItems();
+  var missingUrlCount = items.filter(item => !(item.url || item.media_url || item.source_url || item.fileUrl || item.file_url || item.thumbnail_url || item.thumbnailUrl || item.storage_path || item.storagePath)).length;
+  var unlinkedCount = items.filter(item => getMediaLinkedStatus(item) === "Unlinked").length;
+  console.log("[media] renderable count", items.length);
+  console.log("[media] unlinked count", unlinkedCount);
+  console.log("[media] missing url count", missingUrlCount);
   if (!items.length) {
     grid.innerHTML = `
       <div class="col-span-full">
@@ -15617,9 +16073,11 @@ function renderMedia() {
             <button type="button" onclick="indexSupabaseStorageForMedia()" class="px-4 py-2 rounded-xl bg-[#231738] border border-white/10 text-xs uppercase tracking-widest font-bold text-white hover:bg-[#2d1b4e] transition-colors">
               Index Storage
             </button>
+            ${canIndexEntireBucket() ? `
             <button type="button" onclick="indexSupabaseStorageForMedia({ include_all: true })" class="px-4 py-2 rounded-xl bg-[#181125] border border-yellow-400/20 text-xs uppercase tracking-widest font-bold text-yellow-200 hover:bg-[#231738] transition-colors">
-              Admin/Dev: Index Entire Bucket
+              Admin: Index Entire Bucket
             </button>
+            ` : ""}
           </div>
         ` : ""}
       </div>
@@ -15628,7 +16086,20 @@ function renderMedia() {
     return;
   }
 
-  grid.innerHTML = items.map(item => {
+  const selectedCount = selectedMediaAssetIds.size;
+  const toolbar = `
+    <div class="col-span-full flex flex-wrap items-center justify-between gap-3 mb-1">
+      <div class="text-xs text-gray-400">${selectedCount ? `${selectedCount} selected` : `${items.length} media asset${items.length === 1 ? "" : "s"}`}</div>
+      <div class="flex flex-wrap gap-2">
+        ${selectedCount ? `<button type="button" onclick="clearSelectedMedia()" class="px-3 py-2 rounded-lg bg-[#181125] border border-white/5 text-[10px] uppercase tracking-widest font-bold text-gray-300">Clear</button>` : ""}
+        ${selectedCount && canAttachMediaToPosts() ? `<button type="button" onclick="openSelectedMediaAttachPanel()" class="px-3 py-2 rounded-lg bg-[#231738] border border-white/10 text-[10px] uppercase tracking-widest font-bold text-white">Attach selected to post</button>` : ""}
+      </div>
+    </div>
+  `;
+
+  grid.innerHTML = toolbar + items.map(item => {
+    const itemKey = getMediaItemKey(item);
+    const isSelected = selectedMediaAssetIds.has(itemKey);
     const isGroup = item.kind === "group";
     const type = String(item.type || "").toLowerCase();
     const previewUrl = isGroup
@@ -15680,7 +16151,8 @@ const metaLine = [linkedStatus, item.meta || "", campaignLabel, sourceLabel].fil
       : `<div class="w-full h-full flex items-center justify-center"><i class="ph-fill ${icon} text-gray-600 text-5xl"></i></div>`;
 
     return `
-      <button type="button" class="glass-card media-vault-card overflow-hidden group text-left w-full" onclick="openMediaAsset('${escapeHtml(item.id)}')">
+      <div class="glass-card media-vault-card overflow-hidden group text-left w-full relative ${isSelected ? "ring-2 ring-[#c77dff]/70" : ""}" onclick="openMediaAsset('${escapeHtml(itemKey)}')">
+        <input type="checkbox" class="media-select-box" ${isSelected ? "checked" : ""} onclick="event.stopPropagation()" onchange="toggleMediaSelection('${escapeHtml(itemKey)}', this.checked)" aria-label="Select media">
         <div class="aspect-square bg-[#120c1d] border-b border-white/5 flex items-center justify-center relative p-4">
           ${previewBlock}
           <span class="absolute top-3 right-3 px-2 py-1 bg-[#181125] border border-white/5 rounded text-[8px] uppercase font-bold text-gray-300">${escapeHtml(badge)}</span>
@@ -15696,7 +16168,7 @@ const metaLine = [linkedStatus, item.meta || "", campaignLabel, sourceLabel].fil
           ${isCarouselPreview ? `<p class="text-gray-600 text-[10px] font-medium wrap-safe mt-1">${(item.assets?.length || linkedPostAssets.length || (linkedPost?.carouselAssetIds || []).length)} linked images</p>` : ""}
           ${assetUrl ? `<p class="text-gray-600 text-[10px] font-medium wrap-safe mt-1">${escapeHtml(getDisplayExcerpt(assetUrl, assetUrl))}</p>` : ""}
         </div>
-      </button>
+      </div>
     `;
   }).join("");
   console.log("[render] renderMedia done", { childCount: grid.children.length, htmlLength: grid.innerHTML.length });
@@ -15731,7 +16203,17 @@ function getMediaAssetPerformanceRows(linkedPost) {
 function getMediaAssetIdentifier(item = {}) {
   return {
     media_asset_id: item.mediaAssetId || item.media_asset_id || "",
-    asset_id: item.assetId || item.asset_id || item.mediaId || item.media_id || item.id || ""
+    asset_id: item.assetId || item.asset_id || item.mediaId || item.media_id || item.id || "",
+    bucket: item.bucket || "media",
+    storage_path: item.storagePath || item.storage_path || "",
+    filename: item.filename || item.mediaFilename || item.media_filename || item.assetName || item.title || "",
+    title: item.title || item.assetName || item.media_title || "",
+    media_type: item.media_type || item.type || item.assetType || "",
+    media_url: item.media_url || item.mediaUrl || item.fileUrl || item.url || item.sourceUrl || "",
+    mime_type: item.mime_type || item.mimeType || "",
+    size_bytes: item.size_bytes || item.fileSizeBytes || 0,
+    alt_text: item.alt_text || item.altText || "",
+    tags: Array.isArray(item.tags) ? item.tags : []
   };
 }
 
@@ -15758,13 +16240,63 @@ async function updateMediaAssetCatalog(item, updates) {
 async function attachMediaAssetToPost(item, postId) {
   const meta = getWorkspaceRequestMetadata();
   const identifiers = getMediaAssetIdentifier(item);
-  const result = await callSupabaseEdgeFunction("media-index", {
+  const payload = {
     action: "attach_to_post",
     workspace_id: meta.workspace_id,
+    workspace_slug: meta.workspace_slug || getCurrentWorkspaceSlug() || "",
     ...identifiers,
     post_id: postId
-  });
-  return normalizeRemoteMedia(result.asset || {});
+  };
+  console.log("[media-match] attach request", payload);
+  try {
+    const result = await callSupabaseEdgeFunction("media-index", payload);
+    console.log("[media-match] post_media response", result);
+    return normalizeRemoteMedia(result.asset || {});
+  } catch (err) {
+    console.log("[media-match] attach error full object", {
+      message: err?.message,
+      backend: err?.backend,
+      status: err?.status,
+      requestPayload: err?.requestPayload || payload
+    });
+    throw err;
+  }
+}
+
+async function attachSelectedMediaToPost(postId) {
+  const targetPostId = String(postId || "").trim();
+  if (!targetPostId || !canAttachMediaToPosts()) return;
+  const selectedItems = (currentMediaViewerItems || []).filter(item => selectedMediaAssetIds.has(getMediaItemKey(item)));
+  const items = selectedItems.length ? selectedItems : [currentMediaAssetDetail].filter(Boolean);
+  console.log("[media-match] attach selected", { postId: targetPostId, count: items.length });
+  const updated = [];
+  for (const item of items) {
+    try {
+      updated.push(await attachMediaAssetToPost(item, targetPostId));
+    } catch (err) {
+      console.warn("[media-match] attach failed", getMediaItemKey(item), err?.message || err);
+      throw err;
+    }
+  }
+  updated.forEach((asset) => upsertMediaAssetIntoAppState(asset));
+  if (updated[0]) currentMediaAssetDetail = updated[0];
+  const currentPostKey = String(currentEditingPostId || "").trim();
+  if (currentPostKey && currentPostKey === targetPostId) {
+    updated.forEach((asset) => {
+      if (!currentModalAsset) currentModalAsset = asset;
+      const key = getMediaItemKey(asset);
+      if (!currentModalCarouselAssets.some(item => getMediaItemKey(item) === key)) {
+        currentModalCarouselAssets.push(asset);
+      }
+    });
+    if (modalMediaStatus) modalMediaStatus.textContent = `${currentModalCarouselAssets.length} linked asset${currentModalCarouselAssets.length === 1 ? "" : "s"}`;
+    renderModalCarouselPreview();
+    renderModalExistingMediaPicker(getMediaItemKey(currentMediaAssetDetail));
+  }
+  persistLocalState();
+  renderMedia();
+  openMediaAssetModal(currentMediaAssetDetail, { items: currentMediaViewerItems, openPosts: true });
+  showToast("Media attached", `${items.length} asset${items.length === 1 ? "" : "s"} linked to post.`, "ph-link", "text-[#00ffaa]");
 }
 
 async function detachMediaAssetFromPost(item) {
@@ -15779,7 +16311,7 @@ async function detachMediaAssetFromPost(item) {
 }
 
 async function saveMediaAssetDetail() {
-  if (!currentMediaAssetDetail) return;
+  if (!currentMediaAssetDetail || !canManageMedia()) return;
   const title = String(document.getElementById("media-asset-detail-title")?.value || "").trim();
   const altText = String(document.getElementById("media-asset-detail-alt")?.value || "").trim();
   const tags = String(document.getElementById("media-asset-detail-tags")?.value || "")
@@ -15796,24 +16328,20 @@ async function saveMediaAssetDetail() {
 }
 
 async function attachCurrentMediaAssetToPost() {
-  if (!currentMediaAssetDetail) return;
+  if (!currentMediaAssetDetail || !canAttachMediaToPosts()) return;
   const postId = String(document.getElementById("media-asset-detail-post-select")?.value || "").trim();
   if (!postId) return;
   try {
-    currentMediaAssetDetail = await attachMediaAssetToPost(currentMediaAssetDetail, postId);
-    appState.media = (appState.media || []).map(asset => String(asset.assetId || asset.id || "") === String(currentMediaAssetDetail.assetId || currentMediaAssetDetail.id || "") ? currentMediaAssetDetail : asset);
-    persistLocalState();
-    openMediaAssetModal(currentMediaAssetDetail);
-    renderMedia();
-    showToast("Media attached", "Asset linked to post.", "ph-link", "text-[#00ffaa]");
+    await attachSelectedMediaToPost(postId);
   } catch (err) {
     showToast("Attach failed", err?.message || "Asset could not be attached.", "ph-warning", "text-yellow-400");
   }
 }
 
 async function detachCurrentMediaAssetFromPost() {
-  if (!currentMediaAssetDetail) return;
+  if (!currentMediaAssetDetail || !canAttachMediaToPosts()) return;
   try {
+    console.log("[media-match] detach", getMediaItemKey(currentMediaAssetDetail));
     currentMediaAssetDetail = await detachMediaAssetFromPost(currentMediaAssetDetail);
     appState.media = (appState.media || []).map(asset => String(asset.assetId || asset.id || "") === String(currentMediaAssetDetail.assetId || currentMediaAssetDetail.id || "") ? currentMediaAssetDetail : asset);
     persistLocalState();
@@ -15825,10 +16353,85 @@ async function detachCurrentMediaAssetFromPost() {
   }
 }
 
-function openMediaAssetModal(item) {
+function renderMediaPreviewContent(item, linkedAssets, previewUrl, type) {
+  const nav = currentMediaViewerItems.length > 1 ? `
+    <div class="media-viewer-nav">
+      <button type="button" onclick="navigateMediaViewer(-1)" aria-label="Previous media"><i class="ph-bold ph-caret-left"></i></button>
+      <button type="button" onclick="navigateMediaViewer(1)" aria-label="Next media"><i class="ph-bold ph-caret-right"></i></button>
+    </div>
+  ` : "";
+  if (linkedAssets.length > 1) {
+    return `
+      ${nav}
+      <div class="w-full h-full overflow-auto">
+        <div class="grid grid-cols-2 gap-3">
+          ${linkedAssets.slice(0, 4).map((asset) => {
+            const assetPreview = asset.fileUrl || asset.sourceUrl || "";
+            return `<div class="aspect-square rounded-xl overflow-hidden bg-[#181125] border border-white/5 flex items-center justify-center">
+              ${assetPreview ? `<img src="${escapeHtml(assetPreview)}" alt="${escapeHtml(asset.title || asset.assetName || "Carousel asset")}" class="w-full h-full object-contain" onerror="handleBrokenMediaPreview(this)">` : `<i class="ph-bold ph-image text-gray-500 text-2xl"></i>`}
+            </div>`;
+          }).join("")}
+        </div>
+      </div>
+    `;
+  }
+  if (previewUrl && type === "image") {
+    return `${nav}<img src="${escapeHtml(previewUrl)}" alt="${escapeHtml(item.title || "Media asset")}" loading="lazy">`;
+  }
+  if (previewUrl && type === "video") {
+    return `${nav}<video src="${escapeHtml(previewUrl)}" controls playsinline preload="metadata"></video>`;
+  }
+  const icon = type === "carousel" ? "ph-images" : type === "article" || type === "document" || type === "file" ? "ph-file-text" : "ph-image";
+  return `${nav}<div class="w-full max-w-sm rounded-2xl bg-[#181125] border border-white/5 p-6 text-center">
+    <i class="ph-fill ${icon} text-gray-500 text-5xl block mb-3"></i>
+    <div class="text-white text-sm font-bold wrap-safe">${escapeHtml(item.filename || item.assetName || item.title || "File")}</div>
+    <div class="text-xs text-gray-500 mt-1">${escapeHtml(toTitleCase(type || "file"))}</div>
+  </div>`;
+}
+
+function renderTaggedContent(item, linkedPost) {
+  const targetUrl = item.fileUrl || item.sourceUrl || item.media_url || item.url || "";
+  const noteId = String(item.linkedNoteId || item.linked_note_id || "").trim();
+  const inspoId = String(item.linkedInspoId || item.linked_inspo_id || "").trim();
+  const platforms = linkedPost ? getPostTargetPlatforms(linkedPost) : [];
+  const attached = linkedPost
+    ? `<div class="text-sm text-white font-semibold wrap-safe">${escapeHtml(getPostDisplayTitle(linkedPost, "Untitled post"))}</div>
+       <div class="text-[11px] text-gray-500 mt-1">${escapeHtml([linkedPost.queueDateLabel || linkedPost.date || "", platforms.join(", "), linkedPost.status || ""].filter(Boolean).join(" - "))}</div>`
+    : noteId
+    ? `<div class="text-sm text-white font-semibold">Linked note</div><div class="text-[11px] text-gray-500 mt-1">${escapeHtml(noteId)}</div>`
+    : inspoId
+    ? `<div class="text-sm text-white font-semibold">Linked inspo</div><div class="text-[11px] text-gray-500 mt-1">${escapeHtml(inspoId)}</div>`
+    : `<div class="text-sm text-gray-400">Unlinked</div>`;
+  if (!mediaAssetTaggedContent) return;
+  mediaAssetTaggedContent.innerHTML = `
+    <div class="flex items-start justify-between gap-3 flex-wrap">
+      <div>
+        <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Tagged content</div>
+        ${attached}
+      </div>
+      <div class="flex flex-wrap gap-2">
+        ${canAttachMediaToPosts() ? `<button type="button" onclick="toggleMediaPostsPanel(true)" class="px-3 py-2 rounded-lg bg-[#231738] border border-white/10 text-[10px] uppercase tracking-widest font-bold text-white">Attach to post</button>` : ""}
+        ${canAttachMediaToPosts() ? `<button type="button" onclick="detachCurrentMediaAssetFromPost()" class="px-3 py-2 rounded-lg bg-[#181125] border border-white/10 text-[10px] uppercase tracking-widest font-bold text-gray-300">Detach</button>` : ""}
+        ${targetUrl ? `<button type="button" onclick="copyCurrentMediaAssetUrl()" class="px-3 py-2 rounded-lg bg-[#181125] border border-white/10 text-[10px] uppercase tracking-widest font-bold text-gray-300">Copy URL</button>` : ""}
+        ${targetUrl ? `<a href="${escapeHtml(targetUrl)}" target="_blank" rel="noopener noreferrer" class="px-3 py-2 rounded-lg bg-[#181125] border border-white/10 text-[10px] uppercase tracking-widest font-bold text-gray-300">Open original</a>` : ""}
+      </div>
+    </div>
+  `;
+}
+
+function openMediaAssetModal(item, options = {}) {
   if (!item || !mediaAssetModal || !mediaAssetModalCard) return;
+  if (Array.isArray(options.items) && options.items.length) {
+    currentMediaViewerItems = options.items;
+  } else if (!currentMediaViewerItems.length || !currentMediaViewerItems.some(asset => getMediaItemKey(asset) === getMediaItemKey(item))) {
+    currentMediaViewerItems = selectedMediaAssetIds.size
+      ? getFilteredMediaVaultItems().filter(asset => selectedMediaAssetIds.has(getMediaItemKey(asset)))
+      : getFilteredMediaVaultItems();
+  }
+  currentMediaViewerIndex = Math.max(0, currentMediaViewerItems.findIndex(asset => getMediaItemKey(asset) === getMediaItemKey(item)));
   currentMediaAssetDetail = normalizeRemoteMedia(item);
   item = currentMediaAssetDetail;
+  console.log("[media-viewer] open", { id: getMediaItemKey(item), index: currentMediaViewerIndex, total: currentMediaViewerItems.length });
 
   const linkedPostKey = String(item.postId || item.linkedPostId || item.linked_post_id || "").trim();
   const linkedPost = item.linkedPost || (appState.posts || []).find(post => [post.id, post.postId, post.post_id, post.frontendId].map(value => String(value || "").trim()).includes(linkedPostKey));
@@ -15849,60 +16452,28 @@ function openMediaAssetModal(item) {
   }
 
   if (mediaAssetModalPreview) {
-    if (linkedAssets.length > 1) {
-      mediaAssetModalPreview.innerHTML = `
-        <div class="w-full h-full">
-          <div class="grid grid-cols-2 gap-3">
-            ${linkedAssets.slice(0, 4).map((asset) => {
-              const assetPreview = asset.fileUrl || asset.sourceUrl || "";
-              return `<div class="aspect-square rounded-xl overflow-hidden bg-[#181125] border border-white/5 flex items-center justify-center">
-                ${assetPreview ? `<img src="${escapeHtml(assetPreview)}" alt="${escapeHtml(asset.title || asset.assetName || "Carousel asset")}" class="w-full h-full object-cover" onerror="handleBrokenMediaPreview(this)">` : `<i class="ph-bold ph-image text-gray-500 text-2xl"></i>`}
-              </div>`;
-            }).join("")}
-          </div>
-        </div>
-      `;
-    } else if (previewUrl && type === "image") {
-      mediaAssetModalPreview.innerHTML = `<img src="${escapeHtml(previewUrl)}" alt="${escapeHtml(item.title || "Media asset")}" class="max-w-full max-h-[420px] object-contain rounded-xl" loading="lazy">`;
-    } else if (previewUrl && type === "video") {
-      mediaAssetModalPreview.innerHTML = `<video src="${escapeHtml(previewUrl)}" class="max-w-full max-h-[420px] rounded-xl" controls playsinline preload="metadata"></video>`;
-    } else {
-      const icon = type === "carousel" ? "ph-images" : type === "article" ? "ph-article" : "ph-image";
-      mediaAssetModalPreview.innerHTML = `<div class="w-full h-full flex items-center justify-center"><i class="ph-fill ${icon} text-gray-600 text-7xl"></i></div>`;
-    }
+    mediaAssetModalPreview.innerHTML = renderMediaPreviewContent(item, linkedAssets, previewUrl, type);
   }
+  renderTaggedContent(item, linkedPost);
 
   if (mediaAssetModalMeta) {
-    const postOptions = (appState.posts || []).map(post => {
-      const value = getCanonicalPostId(post) || getPostLookupId(post) || "";
-      return value ? `<option value="${escapeHtml(value)}" ${String(item.linkedPostId || item.postId || "") === String(value) ? "selected" : ""}>${escapeHtml(getPostDisplayTitle(post, "Untitled post"))}</option>` : "";
-    }).join("");
     mediaAssetModalMeta.innerHTML = `
       <div class="p-3 rounded-xl bg-[#181125] border border-white/5">
         <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Title</div>
-        <input id="media-asset-detail-title" class="form-input text-sm" value="${escapeHtml(item.title || item.assetName || "")}">
+        <input id="media-asset-detail-title" class="form-input text-sm" value="${escapeHtml(item.title || item.assetName || "")}" ${canManageMedia() ? "" : "disabled"}>
       </div>
       <div class="p-3 rounded-xl bg-[#181125] border border-white/5">
         <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Alt Text</div>
-        <textarea id="media-asset-detail-alt" class="form-input text-sm min-h-[76px]">${escapeHtml(item.altText || item.alt_text || item.mediaAltText || "")}</textarea>
+        <textarea id="media-asset-detail-alt" class="form-input text-sm min-h-[76px]" ${canManageMedia() ? "" : "disabled"}>${escapeHtml(item.altText || item.alt_text || item.mediaAltText || "")}</textarea>
       </div>
       <div class="p-3 rounded-xl bg-[#181125] border border-white/5">
         <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Tags</div>
-        <input id="media-asset-detail-tags" class="form-input text-sm" value="${escapeHtml((item.tags || []).join(", "))}">
+        <input id="media-asset-detail-tags" class="form-input text-sm" value="${escapeHtml((item.tags || []).join(", "))}" ${canManageMedia() ? "" : "disabled"}>
       </div>
-      <div class="p-3 rounded-xl bg-[#181125] border border-white/5">
-        <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Linked Status</div>
-        <div class="text-sm text-white mb-3">${escapeHtml(getMediaLinkedStatus(item))}</div>
-        <select id="media-asset-detail-post-select" class="form-input text-sm mb-3">
-          <option value="">Select post...</option>
-          ${postOptions}
-        </select>
-        <div class="flex flex-wrap gap-2">
-          <button type="button" onclick="attachCurrentMediaAssetToPost()" class="px-3 py-2 rounded-lg bg-[#231738] border border-white/10 text-[10px] uppercase tracking-widest font-bold text-white">Attach to Post</button>
-          <button type="button" onclick="detachCurrentMediaAssetFromPost()" class="px-3 py-2 rounded-lg bg-[#181125] border border-white/10 text-[10px] uppercase tracking-widest font-bold text-gray-300">Detach</button>
-          <button type="button" onclick="saveMediaAssetDetail()" class="px-3 py-2 rounded-lg bg-[#c77dff] text-[#120c1d] text-[10px] uppercase tracking-widest font-bold">Save Details</button>
-        </div>
-      </div>
+      ${canManageMedia() ? `<div class="p-3 rounded-xl bg-[#181125] border border-white/5 flex items-center justify-between gap-3">
+        <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Details</div><div class="text-xs text-gray-400 mt-1">Save title, alt text, and tags.</div></div>
+        <button type="button" onclick="saveMediaAssetDetail()" class="px-3 py-2 rounded-lg bg-[#c77dff] text-[#120c1d] text-[10px] uppercase tracking-widest font-bold">Save Details</button>
+      </div>` : ""}
     ` + getMediaAssetDetailRows(item, linkedPost).map((row) => `
       <div class="p-3 rounded-xl bg-[#181125] border border-white/5">
         <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">${escapeHtml(row.label)}</div>
@@ -15933,6 +16504,8 @@ function openMediaAssetModal(item) {
   mediaAssetModal.classList.remove("opacity-0", "pointer-events-none");
   mediaAssetModalCard.classList.remove("scale-95");
   mediaAssetModalCard.classList.add("scale-100");
+  renderMediaPostPanel();
+  toggleMediaPostsPanel(Boolean(options.openPosts));
   if (mediaAssetCreatePostBtn) {
     mediaAssetCreatePostBtn.onclick = () => createPostFromMediaItem(item, linkedPost);
   }
@@ -15944,17 +16517,73 @@ function openMediaAssetModal(item) {
   }
 }
 
+function navigateMediaViewer(delta) {
+  if (!currentMediaViewerItems.length) return;
+  currentMediaViewerIndex = (currentMediaViewerIndex + delta + currentMediaViewerItems.length) % currentMediaViewerItems.length;
+  const next = currentMediaViewerItems[currentMediaViewerIndex];
+  console.log("[media-viewer] navigate", { index: currentMediaViewerIndex, id: getMediaItemKey(next) });
+  openMediaAssetModal(next, { items: currentMediaViewerItems, openPosts: mediaPostsPanelOpen });
+}
+
+function toggleMediaPostsPanel(open = !mediaPostsPanelOpen) {
+  mediaPostsPanelOpen = Boolean(open);
+  if (mediaViewerPostsPanel) mediaViewerPostsPanel.classList.toggle("open", mediaPostsPanelOpen);
+  if (mediaPostsPanelOpen) {
+    console.log("[media-viewer] attach panel open", { selectedCount: selectedMediaAssetIds.size });
+    renderMediaPostPanel();
+    setTimeout(() => mediaViewerPostSearch?.focus(), 0);
+  }
+}
+
+function copyCurrentMediaAssetUrl() {
+  const targetUrl = currentMediaAssetDetail?.fileUrl || currentMediaAssetDetail?.sourceUrl || currentMediaAssetDetail?.media_url || currentMediaAssetDetail?.url || "";
+  if (!targetUrl) return;
+  copyTextToClipboardWithToast(targetUrl, "Copied", "Media URL copied.", "Copy failed", "Could not copy media URL.");
+}
+
+function renderMediaPlatformChips(platforms = []) {
+  return (platforms || []).map(platform => `<span class="px-2 py-0.5 rounded bg-[#231738] text-[9px] uppercase tracking-wider font-bold text-[#c77dff]">${escapeHtml(platform)}</span>`).join("");
+}
+
+function renderMediaPostPanel() {
+  if (!mediaViewerPostList) return;
+  const query = String(mediaViewerPostSearch?.value || "").trim().toLowerCase();
+  const posts = (appState.posts || []).filter(post => {
+    const text = [getPostDisplayTitle(post, ""), post.description || "", post.status || "", getPostTargetPlatforms(post).join(" ")].join(" ").toLowerCase();
+    return !query || text.includes(query);
+  });
+  if (mediaViewerPostsCount) {
+    const selectedCount = selectedMediaAssetIds.size || (currentMediaAssetDetail ? 1 : 0);
+    mediaViewerPostsCount.textContent = `${posts.length} posts - attaching ${selectedCount} media item${selectedCount === 1 ? "" : "s"}.`;
+  }
+  mediaViewerPostList.innerHTML = posts.length ? posts.map(post => {
+    const postId = getCanonicalPostId(post) || getPostLookupId(post) || "";
+    const platforms = getPostTargetPlatforms(post);
+    return `
+      <button type="button" onclick="attachSelectedMediaToPost('${escapeHtml(postId)}')" class="w-full text-left p-3 rounded-xl bg-[#181125] border border-white/5 hover:border-[#c77dff]/40 transition-colors">
+        <div class="text-sm text-white font-semibold wrap-safe">${escapeHtml(getPostDisplayTitle(post, "Untitled post"))}</div>
+        <div class="text-[11px] text-gray-500 mt-1">${escapeHtml([post.queueDateLabel || post.date || "", post.status || ""].filter(Boolean).join(" - "))}</div>
+        <div class="flex flex-wrap gap-1 mt-2">${renderMediaPlatformChips(platforms)}</div>
+      </button>
+    `;
+  }).join("") : `<div class="text-sm text-gray-500 p-3">No posts match this search.</div>`;
+}
+
 function closeMediaAssetModal() {
   if (!mediaAssetModal || !mediaAssetModalCard) return;
   mediaAssetModal.classList.add("opacity-0", "pointer-events-none");
   mediaAssetModalCard.classList.remove("scale-100");
   mediaAssetModalCard.classList.add("scale-95");
+  toggleMediaPostsPanel(false);
 }
 
 function openMediaAsset(assetId) {
-  const item = buildMediaVaultItems().find(asset => asset.id === assetId);
+  const item = getFilteredMediaVaultItems().find(asset => getMediaItemKey(asset) === String(assetId || ""));
   if (!item) return;
-  openMediaAssetModal(item);
+  const selectedItems = selectedMediaAssetIds.size
+    ? getFilteredMediaVaultItems().filter(asset => selectedMediaAssetIds.has(getMediaItemKey(asset)))
+    : [];
+  openMediaAssetModal(item, { items: selectedItems.length ? selectedItems : getFilteredMediaVaultItems() });
 }
 
 function createPostFromMediaItem(item, linkedPost = null) {
@@ -16645,6 +17274,10 @@ function openPostModal(
     if (modalMediaStatus) modalMediaStatus.textContent = "No media linked";
   }
   renderModalExistingMediaPicker(currentModalAsset?.assetId || currentModalAsset?.id || "");
+  if (modalMediaUploadTrigger) {
+    modalMediaUploadTrigger.classList.toggle("hidden", !canManageMedia());
+    modalMediaUploadTrigger.disabled = !canManageMedia();
+  }
 
   if (matched?.createdFromNoteId) {
     setModalSourceContext("note", "Create Post from Note", "This draft was created from a note source.", matched.createdFromNoteId);
@@ -20605,10 +21238,11 @@ function getDeployChecklistItems() {
 function setBackendActionAvailability() {
   const backendOnlyDisabled = !!offlineMode;
   [mediaUploadBtn, mediaLinkBtn, modalMediaUploadTrigger].filter(Boolean).forEach((button) => {
-    if (backendOnlyDisabled) {
+    const mediaUploadBlocked = (button === mediaUploadBtn || button === modalMediaUploadTrigger) && !canManageMedia();
+    if (backendOnlyDisabled || mediaUploadBlocked) {
       button.setAttribute("disabled", "disabled");
       button.classList.add("opacity-50", "cursor-not-allowed");
-      button.title = "Unavailable while offline or when the backend is unreachable.";
+      button.title = mediaUploadBlocked ? "Your role can view media but cannot upload." : "Unavailable while offline or when the backend is unreachable.";
     } else {
       button.removeAttribute("disabled");
       button.classList.remove("opacity-50", "cursor-not-allowed");
@@ -23389,6 +24023,15 @@ window.indexSupabaseStorageForMedia = indexSupabaseStorageForMedia;
 window.saveMediaAssetDetail = saveMediaAssetDetail;
 window.attachCurrentMediaAssetToPost = attachCurrentMediaAssetToPost;
 window.detachCurrentMediaAssetFromPost = detachCurrentMediaAssetFromPost;
+window.toggleMediaSelection = toggleMediaSelection;
+window.clearSelectedMedia = clearSelectedMedia;
+window.openSelectedMediaAttachPanel = openSelectedMediaAttachPanel;
+window.updatePendingUploadField = updatePendingUploadField;
+window.removePendingUploadFile = removePendingUploadFile;
+window.navigateMediaViewer = navigateMediaViewer;
+window.toggleMediaPostsPanel = toggleMediaPostsPanel;
+window.attachSelectedMediaToPost = attachSelectedMediaToPost;
+window.copyCurrentMediaAssetUrl = copyCurrentMediaAssetUrl;
 window.selectExistingMediaForPost = selectExistingMediaForPost;
 window.closeModal = closeModal;
 window.switchView = switchView;
