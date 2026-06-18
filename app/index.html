@@ -192,6 +192,71 @@
     display: none;
   }
 
+  #stellar-toast-stack {
+    position: fixed;
+    right: max(18px, env(safe-area-inset-right));
+    bottom: calc(96px + env(safe-area-inset-bottom));
+    z-index: 140;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-end;
+    pointer-events: none;
+    max-width: min(380px, calc(100vw - 36px));
+    max-height: calc(100dvh - 128px - env(safe-area-inset-bottom));
+    overflow: visible;
+  }
+
+  .stellar-toast {
+    width: min(360px, calc(100vw - 36px));
+    background: rgba(24, 17, 37, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+    border-radius: 0.9rem;
+    padding: 0.85rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    transform: translateY(4px);
+    opacity: 0;
+    animation: stellarToastIn 160ms ease forwards;
+  }
+
+  .stellar-toast-icon {
+    width: 2.3rem;
+    height: 2.3rem;
+    border-radius: 999px;
+    background: #2d1b4e;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+  }
+
+  .stellar-toast[data-state="loading"] .stellar-toast-icon i {
+    animation: stellarToastSpin 900ms linear infinite;
+  }
+
+  @keyframes stellarToastIn {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes stellarToastSpin {
+    to { transform: rotate(360deg); }
+  }
+
+  @media (max-width: 640px) {
+    #stellar-toast-stack {
+      right: max(12px, env(safe-area-inset-right));
+      bottom: calc(92px + env(safe-area-inset-bottom));
+      max-width: calc(100vw - 24px);
+    }
+
+    .stellar-toast {
+      width: min(340px, calc(100vw - 24px));
+    }
+  }
+
   .stellar-assistant-message {
     padding: 0.85rem 0.95rem;
     border-radius: 1rem;
@@ -4845,17 +4910,7 @@
   </div>
 </section>
 
-<div id="ai-toast" class="fixed bottom-8 right-8 z-[110] opacity-0 pointer-events-none transition-opacity duration-300">
-  <div class="bg-[#181125] px-5 py-4 rounded-xl border border-white/5 shadow-2xl flex items-center gap-4">
-    <div class="w-10 h-10 rounded-full bg-[#2d1b4e] flex items-center justify-center text-[#c77dff]">
-      <i id="ai-toast-icon" class="ph-bold ph-sparkle text-lg"></i>
-    </div>
-    <div>
-      <p id="ai-toast-title" class="text-white text-sm font-bold tracking-wide">AI Assistant</p>
-      <p id="ai-toast-text" class="text-gray-400 text-xs font-medium mt-0.5">Generating caption...</p>
-    </div>
-  </div>
-</div>
+<div id="stellar-toast-stack" aria-live="polite" aria-atomic="false"></div>
 <div id="import-task-tray" class="fixed bottom-8 right-8 z-[109] w-[340px] max-w-[calc(100vw-2rem)] hidden">
   <div class="rounded-2xl bg-[#120c1d]/95 border border-white/10 shadow-2xl backdrop-blur-sm overflow-hidden">
     <div class="px-4 py-3 border-b border-white/5 flex items-center justify-between gap-3">
@@ -5403,12 +5458,17 @@ async function ensureSupabaseWorkspaceBeforeBoot() {
     return null;
   }
 
+  const bootToastId = showLoadingToast("Connecting workspace", "Loading workspace connection...");
   const { data: sessionData, error: sessionError } = await STELLARSYNC_SUPABASE_CLIENT.auth.getSession();
-  if (sessionError) throw sessionError;
+  if (sessionError) {
+    updateToast(bootToastId, "error", "Workspace connection failed", sessionError);
+    throw sessionError;
+  }
 
   const session = sessionData && sessionData.session;
   if (!session || !session.user) {
     console.log("[app-router] session missing");
+    dismissToast(bootToastId);
     window.location.replace("/login/");
     return null;
   }
@@ -5416,11 +5476,18 @@ async function ensureSupabaseWorkspaceBeforeBoot() {
   console.log("[app-router] session found", session.user.email || session.user.id);
   console.log("[app-router] user email", session.user.email || "(none)");
 
-  let workspaces = await fetchWorkspaceMembershipsByUserId(session.user.id, session.user.email || "");
-  workspaces = await Promise.all((Array.isArray(workspaces) ? workspaces : []).map(loadWorkspaceSettingsForWorkspace));
+  let workspaces = [];
+  try {
+    workspaces = await fetchWorkspaceMembershipsByUserId(session.user.id, session.user.email || "");
+    workspaces = await Promise.all((Array.isArray(workspaces) ? workspaces : []).map(loadWorkspaceSettingsForWorkspace));
+  } catch (err) {
+    updateToast(bootToastId, "error", "Workspace connection failed", err);
+    throw err;
+  }
   STELLARSYNC_LOOKUP_WORKSPACES = workspaces;
   console.log("[app-router] workspace memberships count", workspaces.length);
   if (!workspaces.length) {
+    updateToast(bootToastId, "error", "Workspace missing", "No workspace was found for this account.");
     showAppRouterState({
       title: "No workspace found",
       message: "Your account does not have a StellarSync workspace yet.",
@@ -5434,6 +5501,7 @@ async function ensureSupabaseWorkspaceBeforeBoot() {
   const requestedSlug = getCurrentWorkspaceSlug();
   let activeWorkspace = await pickWorkspaceForUser(workspaces, requestedSlug);
   if (!activeWorkspace) {
+    dismissToast(bootToastId);
     return null;
   }
   activeWorkspace = await loadWorkspaceSettingsForWorkspace(activeWorkspace);
@@ -5488,10 +5556,12 @@ async function ensureSupabaseWorkspaceBeforeBoot() {
   storeActiveWorkspaceConfig(activeWorkspace);
 
   if (!requestedSlug || requestedSlug !== activeWorkspace.slug) {
+    dismissToast(bootToastId);
     window.location.replace(`/app/?workspace=${encodeURIComponent(activeWorkspace.slug)}`);
     return null;
   }
 
+  updateToast(bootToastId, "success", "Workspace connected", "Workspace connection loaded.");
   return activeWorkspace;
 }
 
@@ -5531,6 +5601,7 @@ function buildWorkspaceMediaPath(workspaceSlug, postId, filename) {
 
 function getWorkspaceMediaPrefix(workspace = WORKSPACE_RUNTIME_CONFIG.active || loadWorkspaceConfig()) {
   const slug = sanitizeWorkspacePathSegment(workspace?.workspace_slug || workspace?.slug || getCurrentWorkspaceSlug() || "", "");
+  if (!slug || ["gpe", "girl-plus-environment", "girlplusenvironment"].includes(slug)) return "gpe/";
   return slug ? `${slug}/` : "";
 }
 
@@ -5616,6 +5687,7 @@ async function loadSupabaseMediaAssets(workspace, options = {}) {
       workspace_slug: workspaceSlug,
       prefix
     });
+    console.log("[media-index] list_assets response FULL_OBJECT", indexed);
     var indexedAssets = Array.isArray(indexed.assets) ? indexed.assets : [];
     console.log("[media] list_assets returned count", indexedAssets.length);
     if (indexedAssets.length) {
@@ -11263,7 +11335,10 @@ function renderModalExistingMediaPicker(selectedAssetId = "") {
   const media = (appState.media || []).filter(asset => isRenderableArtifact(asset, "media"));
   if (!media.length) {
     target.innerHTML = isSupabaseMediaEnabled() && canIndexMediaStorage()
-      ? `<button type="button" onclick="indexSupabaseStorageForMedia()" class="w-full px-3 py-2 rounded-lg bg-[#181125] border border-white/5 text-[9px] uppercase tracking-widest font-bold text-gray-400 hover:text-white">Index Storage</button>`
+      ? `<div class="grid gap-2">
+          <button type="button" onclick="indexSupabaseStorageForMedia()" class="w-full px-3 py-2 rounded-lg bg-[#181125] border border-white/5 text-[9px] uppercase tracking-widest font-bold text-gray-400 hover:text-white">Index Storage</button>
+          <button type="button" onclick="indexSupabaseStorageForMedia({ include_all: true })" class="w-full px-3 py-2 rounded-lg bg-[#181125] border border-yellow-400/20 text-[9px] uppercase tracking-widest font-bold text-yellow-200 hover:text-white">Admin/Dev: Index Entire Bucket</button>
+        </div>`
       : "";
     return;
   }
@@ -11367,57 +11442,63 @@ async function commitPendingUploads() {
     showToast("No valid files", "Remove invalid files or choose different uploads.", "ph-warning", "text-yellow-400");
     return;
   }
-  for (let index = 0; index < validItems.length; index += 1) {
-    const item = validItems[index];
-    uploadStagingStatus.textContent = `Uploading ${index + 1} of ${validItems.length}`;
-    const linkedPostId = uploadStagingTarget === "post" ? (currentEditingPostId || "") : "";
-    const campaign = uploadStagingTarget === "post" ? getCurrentModalCampaignLabel() : "";
-    let result = null;
-    if (isSupabaseMediaEnabled()) {
-      const supabaseAsset = await uploadMediaToSupabaseStorage(item.file, { postId: linkedPostId, campaign });
-      result = await apiPost("saveMediaLink", {
-        sourceUrl: supabaseAsset.media_url,
-        assetName: supabaseAsset.media_filename,
-        assetType: supabaseAsset.media_type,
-        linkedPostId,
-        campaign,
-        assetBadge: item.file.type.startsWith("video/") ? "Reel" : item.file.type.startsWith("image/") ? uploadStagingTarget === "post" && postTypeSelect?.value === "carousel" ? "Carousel" : "Image" : "Document",
-        assetMeta: "",
-        media_id: supabaseAsset.media_id,
-        media_url: supabaseAsset.media_url,
-        media_type: supabaseAsset.media_type,
-        media_filename: supabaseAsset.media_filename,
-        media_alt_text: supabaseAsset.media_alt_text,
-        media_source: supabaseAsset.media_source,
-        storage_path: supabaseAsset.storage_path
-      });
-      result.asset = { ...supabaseAsset, ...(result.asset || {}) };
-    } else {
-      const base64Data = await fileToBase64(item.file);
-      result = await apiPost("uploadMedia", {
-        fileName: item.file.name,
-        mimeType: item.file.type,
-        base64Data,
-        fileSizeBytes: item.file.size,
-        originalFilename: item.file.name,
-        importedMediaSource: uploadStagingTarget === "post" ? "post_upload" : "vault_upload",
-        assetBadge: item.file.type.startsWith("video/") ? "Reel" : item.file.type.startsWith("image/") ? uploadStagingTarget === "post" && postTypeSelect?.value === "carousel" ? "Carousel" : "Image" : "Document",
-        assetMeta: "",
-        linkedPostId,
-        campaign
-      });
+  const loadingToastId = showLoadingToast("Uploading media", `Uploading ${validItems.length} media file${validItems.length === 1 ? "" : "s"}...`);
+  try {
+    for (let index = 0; index < validItems.length; index += 1) {
+      const item = validItems[index];
+      uploadStagingStatus.textContent = `Uploading ${index + 1} of ${validItems.length}`;
+      const linkedPostId = uploadStagingTarget === "post" ? (currentEditingPostId || "") : "";
+      const campaign = uploadStagingTarget === "post" ? getCurrentModalCampaignLabel() : "";
+      let result = null;
+      if (isSupabaseMediaEnabled()) {
+        const supabaseAsset = await uploadMediaToSupabaseStorage(item.file, { postId: linkedPostId, campaign });
+        result = await apiPost("saveMediaLink", {
+          sourceUrl: supabaseAsset.media_url,
+          assetName: supabaseAsset.media_filename,
+          assetType: supabaseAsset.media_type,
+          linkedPostId,
+          campaign,
+          assetBadge: item.file.type.startsWith("video/") ? "Reel" : item.file.type.startsWith("image/") ? uploadStagingTarget === "post" && postTypeSelect?.value === "carousel" ? "Carousel" : "Image" : "Document",
+          assetMeta: "",
+          media_id: supabaseAsset.media_id,
+          media_url: supabaseAsset.media_url,
+          media_type: supabaseAsset.media_type,
+          media_filename: supabaseAsset.media_filename,
+          media_alt_text: supabaseAsset.media_alt_text,
+          media_source: supabaseAsset.media_source,
+          storage_path: supabaseAsset.storage_path
+        });
+        result.asset = { ...supabaseAsset, ...(result.asset || {}) };
+      } else {
+        const base64Data = await fileToBase64(item.file);
+        result = await apiPost("uploadMedia", {
+          fileName: item.file.name,
+          mimeType: item.file.type,
+          base64Data,
+          fileSizeBytes: item.file.size,
+          originalFilename: item.file.name,
+          importedMediaSource: uploadStagingTarget === "post" ? "post_upload" : "vault_upload",
+          assetBadge: item.file.type.startsWith("video/") ? "Reel" : item.file.type.startsWith("image/") ? uploadStagingTarget === "post" && postTypeSelect?.value === "carousel" ? "Carousel" : "Image" : "Document",
+          assetMeta: "",
+          linkedPostId,
+          campaign
+        });
+      }
+      const normalized = normalizeRemoteMedia(result.asset);
+      if (uploadStagingTarget === "post") {
+        if (!currentModalAsset) currentModalAsset = normalized;
+        currentModalCarouselAssets.push(normalized);
+        if (modalMediaStatus) modalMediaStatus.textContent = `${currentModalCarouselAssets.length} linked asset${currentModalCarouselAssets.length === 1 ? "" : "s"}`;
+      }
     }
-    const normalized = normalizeRemoteMedia(result.asset);
-    if (uploadStagingTarget === "post") {
-      if (!currentModalAsset) currentModalAsset = normalized;
-      currentModalCarouselAssets.push(normalized);
-      if (modalMediaStatus) modalMediaStatus.textContent = `${currentModalCarouselAssets.length} linked asset${currentModalCarouselAssets.length === 1 ? "" : "s"}`;
-    }
+    closeUploadStagingModal();
+    await refreshMediaFromRemote();
+    renderModalCarouselPreview();
+    updateToast(loadingToastId, "success", "Uploaded", uploadStagingTarget === "post" ? "Media linked to the current post." : "Media uploaded to the vault.");
+  } catch (err) {
+    updateToast(loadingToastId, "error", "Upload failed", err);
+    throw err;
   }
-  closeUploadStagingModal();
-  await refreshMediaFromRemote();
-  renderModalCarouselPreview();
-  showToast("Uploaded", uploadStagingTarget === "post" ? "Media linked to the current post." : "Media uploaded to the vault.", "ph-check", "text-[#00ffaa]");
 }
 
 function queueUploadFiles(fileList, target = "vault") {
@@ -12208,6 +12289,7 @@ async function submitSupportReport() {
 
   if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = "Sending..."; }
   if (statusEl) { statusEl.classList.add("hidden"); statusEl.textContent = ""; }
+  var loadingToastId = showLoadingToast("Sending support report", "Sending contact/support report...");
 
   try {
     var diagnostics = "";
@@ -12261,10 +12343,11 @@ async function submitSupportReport() {
     }
 
     if (typeof showToast === "function") {
-      showToast("Report sent", "Thank you. Our team will review your report.", "ph-check-circle", "text-emerald-300");
+      updateToast(loadingToastId, "success", "Report sent", "Thank you. Our team will review your report.");
     }
     closeSupportModal();
   } catch (err) {
+    updateToast(loadingToastId, "error", "Support send failed", err.message || "Could not send support report.");
     if (statusEl) {
       statusEl.innerHTML = "Failed to send: " + (err.message || "Unknown error") + '. <a href="/contact/?topic=support" class="text-[#c77dff] underline">Contact us directly</a>.';
       statusEl.classList.remove("hidden");
@@ -12774,10 +12857,10 @@ function renderWorkspaceConnectionCards() {
 
 async function testMondayConnection() {
   console.log("[monday] test clicked");
+  var loadingToastId = showLoadingToast("Testing Monday connection", "Testing Monday connection...");
   try {
-    showToast("Testing Monday connection...", "info");
     var boardId = getMondayBoardId(WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active, WORKSPACE_CONNECTIONS);
-    if (!boardId) { showToast("No Monday board ID configured", "error"); return; }
+    if (!boardId) { updateToast(loadingToastId, "error", "Monday test failed", "No Monday board ID configured."); return; }
     var meta = getWorkspaceRequestMetadata();
     var result = await callSupabaseEdgeFunction("monday-sync", {
       action: "test",
@@ -12785,7 +12868,7 @@ async function testMondayConnection() {
     });
     if (result.ok) {
       console.log("[monday] test success", result);
-      showToast("Monday connection successful!", "success");
+      updateToast(loadingToastId, "success", "Monday connected", "Monday connection successful.");
       if (result.board_name) {
         upsertLocalWorkspaceConnection("monday", {
           status: "connected",
@@ -12796,13 +12879,13 @@ async function testMondayConnection() {
       refreshConnectionCards();
     } else {
       console.log("[monday] test error", result.error);
-      showToast("Monday connection failed: " + (result.error || "Unknown error"), "error");
+      updateToast(loadingToastId, "error", "Monday connection failed", result.error || "Unknown error");
       upsertLocalWorkspaceConnection("monday", { status: "error", last_error: result.error || "Unknown error" });
       refreshConnectionCards();
     }
   } catch (e) {
     console.log("[monday] test error", e);
-    showToast("Monday connection error: " + (e.message || String(e)), "error");
+    updateToast(loadingToastId, "error", "Monday connection error", e.message || String(e));
   }
 }
 
@@ -15365,37 +15448,50 @@ function canIndexMediaStorage() {
   return ["owner", "admin"].includes(role) || isManagedHybridWorkspace(active, WORKSPACE_CONNECTIONS || []);
 }
 
-async function indexSupabaseStorageForMedia() {
+async function indexSupabaseStorageForMedia(options = {}) {
   if (!isSupabaseMediaEnabled()) {
     showToast("Media indexing unavailable", "Supabase media is not configured for this workspace.", "ph-warning", "text-yellow-400");
     return;
   }
+  const includeAll = Boolean(options && options.include_all);
   try {
     const active = WORKSPACE_RUNTIME_CONFIG.active || {};
     const mediaWorkspace = getActiveMediaWorkspaceContext(active);
-    const prefix = getWorkspaceMediaPrefix(active);
-    const loadingToastId = showLoadingToast("Indexing media", `Indexing media from media/${prefix}...`);
+    const prefix = includeAll ? "" : (getWorkspaceMediaPrefix(active) || "gpe/");
+    const loadingToastId = showLoadingToast("Indexing media", includeAll ? "Indexing entire media bucket..." : `Indexing media from media/${prefix}...`);
     const result = await callSupabaseEdgeFunction("media-index", {
       action: "index_bucket",
       workspace_id: mediaWorkspace.id,
       workspace_slug: mediaWorkspace.slug,
-      prefix
+      prefix,
+      include_all: includeAll
     });
     console.log("[media-index] response", result);
+    console.log("[media-index] response FULL_OBJECT", result);
     console.log("[media-index] bucket", result.bucket || "");
     console.log("[media-index] configuredBucket", result.configuredBucket || "");
+    console.log("[media-index] bucketExists", Boolean(result.bucketExists));
     console.log("[media-index] bucketFallbackUsed", Boolean(result.bucketFallbackUsed));
     console.log("[media-index] prefix", result.prefix || prefix || "");
     console.log("[media-index] fileCount", Number(result.fileCount || 0));
+    console.log("[media-index] allBucketFileCount", Number(result.allBucketFileCount || 0));
     console.log("[media-index] indexedCount", Number(result.indexedCount || 0));
     console.log("[media-index] samplePaths", result.samplePaths || []);
+    console.log("[media-index] allBucketSamplePaths", result.allBucketSamplePaths || []);
     console.log("[media-index] listErrors", result.listErrors || []);
+    console.log("[media-index] upsertErrors", result.upsertErrors || []);
     console.log("[media-index] error/message", result.error || result.message || "");
     console.log("[media] storage indexed count", Number(result.indexedCount || 0));
-    if (!result.ok || Number(result.fileCount || 0) === 0) {
-      const bucket = result.bucket || "media";
-      const resultPrefix = result.prefix || prefix || "";
-      const message = `No files found in ${bucket}/${resultPrefix}`;
+    if (Number(result.fileCount || 0) === 0 || (!result.ok && Number(result.indexedCount || 0) === 0)) {
+      let message = result.message || "";
+      if (Number(result.fileCount || 0) === 0 && Number(result.allBucketFileCount || 0) > 0) {
+        message = "Files exist in media bucket but not under gpe/. Move them into media/gpe/ or index all.";
+      }
+      if (!message) {
+        const bucket = result.bucket || "media";
+        const resultPrefix = result.prefix || prefix || "";
+        message = `No files found in ${bucket}/${resultPrefix}`;
+      }
       updateLoadingToastError(loadingToastId, "Index failed", message);
       return;
     }
@@ -15405,12 +15501,19 @@ async function indexSupabaseStorageForMedia() {
       workspace_slug: mediaWorkspace.slug,
       prefix: result.prefix || prefix
     });
+    console.log("[media-index] list_assets response FULL_OBJECT", listResult);
     const listedAssets = Array.isArray(listResult.assets) ? listResult.assets : [];
     console.log("[media] list_assets returned count", listedAssets.length);
-    appState.media = filterRenderableArtifacts(listedAssets.map(normalizeRemoteMedia), "media");
-    persistLocalState();
-    renderMedia();
-    updateLoadingToastSuccess(loadingToastId, "Indexing media", `Indexed ${Number(result.indexedCount || 0)} media asset${Number(result.indexedCount || 0) === 1 ? "" : "s"}.`);
+    if (Number(listResult.count || listedAssets.length || 0) > 0) {
+      appState.media = filterRenderableArtifacts(listedAssets.map(normalizeRemoteMedia), "media");
+      persistLocalState();
+      renderMedia();
+    }
+    if (Number(result.failedCount || 0) > 0) {
+      updateLoadingToastError(loadingToastId, "Index completed with errors", result.message || `Indexed ${Number(result.indexedCount || 0)} media asset${Number(result.indexedCount || 0) === 1 ? "" : "s"}, ${Number(result.failedCount || 0)} failed.`);
+    } else {
+      updateLoadingToastSuccess(loadingToastId, "Indexing media", `Indexed ${Number(result.indexedCount || 0)} media asset${Number(result.indexedCount || 0) === 1 ? "" : "s"}.`);
+    }
   } catch (err) {
     console.warn("[media] storage index failed", err?.message || err);
     updateLoadingToastError("", "Index failed", err?.message || "Storage could not be indexed.");
@@ -15510,9 +15613,12 @@ function renderMedia() {
       <div class="col-span-full">
         ${makeEmptyState("No media", offlineMode ? "Offline or backend unavailable. Local media will appear here when available." : "No media found for this filter. Upload files, add links, or index Supabase Storage.", "ph-images")}
         ${isSupabaseMediaEnabled() && canIndexMediaStorage() ? `
-          <div class="flex justify-center mt-4">
+          <div class="flex flex-wrap justify-center gap-3 mt-4">
             <button type="button" onclick="indexSupabaseStorageForMedia()" class="px-4 py-2 rounded-xl bg-[#231738] border border-white/10 text-xs uppercase tracking-widest font-bold text-white hover:bg-[#2d1b4e] transition-colors">
               Index Storage
+            </button>
+            <button type="button" onclick="indexSupabaseStorageForMedia({ include_all: true })" class="px-4 py-2 rounded-xl bg-[#181125] border border-yellow-400/20 text-xs uppercase tracking-widest font-bold text-yellow-200 hover:bg-[#231738] transition-colors">
+              Admin/Dev: Index Entire Bucket
             </button>
           </div>
         ` : ""}
@@ -17302,22 +17408,17 @@ function switchView(viewName) {
 }
 
 async function aiGenerate(type) {
-  const toast = document.getElementById("ai-toast");
-  const toastText = document.getElementById("ai-toast-text");
   const captionField = descInput;
-
-  if (!toast || !toastText) return;
-
-  toastText.textContent =
+  const loadingToastId = showLoadingToast(
+    "Generating AI draft",
     type === "keywords" ? "Generating keywords..." :
     type === "emoji" ? "Adding emojis..." :
-    "Generating caption...";
-
-  toast.classList.remove("opacity-0", "pointer-events-none");
+    "Generating caption..."
+  );
   try {
     if (type === "emoji") {
       if (captionField) captionField.value = `${captionField.value || ""} ✨`.trim();
-      toastText.textContent = "Emoji added!";
+      updateToast(loadingToastId, "success", "AI updated", "Emoji added!");
       return;
     }
  	    const current = String(captionField?.value || "").trim();
@@ -17353,7 +17454,7 @@ async function aiGenerate(type) {
       if (captionField) {
         captionField.value = current ? `${current}\n\nKeywords: ${tags.join(", ")}` : `Keywords: ${tags.join(", ")}`;
       }
-      toastText.textContent = "Keywords ready!";
+      updateToast(loadingToastId, "success", "AI ready", "Keywords ready!");
     } else {
       const payload = {
         sourceType: currentModalSourceContext.type || "manual",
@@ -17375,52 +17476,110 @@ async function aiGenerate(type) {
       if (captionField) {
         captionField.value = result.draftText || result.captionVariant || current;
       }
-      toastText.textContent = "Caption ready!";
+      updateToast(loadingToastId, "success", "AI ready", "Caption ready!");
     }
   } catch (err) {
     console.error(err);
-    toastText.textContent = err.message || "AI drafting failed.";
-  } finally {
-    setTimeout(() => {
-      toast.classList.add("opacity-0", "pointer-events-none");
-    }, 2200);
+    updateToast(loadingToastId, "error", "AI drafting failed", err.message || "AI drafting failed.");
   }
 }
 
-function showToast(title, message, iconClass = "ph-sparkle", colorClass = "text-[#c77dff]", durationMs = 3000) {
-  const toast = document.getElementById("ai-toast");
-  const toastTitle = document.getElementById("ai-toast-title");
-  const toastText = document.getElementById("ai-toast-text");
-  const iconEl = document.getElementById("ai-toast-icon");
+function ensureToastStack() {
+  let stack = document.getElementById("stellar-toast-stack");
+  if (!stack) {
+    stack = document.createElement("div");
+    stack.id = "stellar-toast-stack";
+    stack.setAttribute("aria-live", "polite");
+    stack.setAttribute("aria-atomic", "false");
+    document.body.appendChild(stack);
+  }
+  return stack;
+}
 
-  if (!toast) return;
+function getToastVisual(state, iconClass = "", colorClass = "") {
+  if (state === "loading") return { icon: iconClass || "ph-spinner-gap", color: colorClass || "text-[#c77dff]" };
+  if (state === "success") return { icon: iconClass || "ph-check", color: colorClass || "text-[#00ffaa]" };
+  if (state === "error") return { icon: iconClass || "ph-warning", color: colorClass || "text-yellow-400" };
+  return { icon: iconClass || "ph-sparkle", color: colorClass || "text-[#c77dff]" };
+}
 
-  if (toastTitle) toastTitle.textContent = title;
-  if (toastText) toastText.textContent = message;
-  if (iconEl) iconEl.className = `ph-bold ${iconClass} ${colorClass} text-lg`;
-
-  toast.classList.remove("opacity-0", "pointer-events-none");
-  if (showToast._timer) clearTimeout(showToast._timer);
+function renderToastElement(id, state, label, detail, options = {}) {
+  const stack = ensureToastStack();
+  let toast = document.getElementById(id);
+  const visual = getToastVisual(state, options.iconClass, options.colorClass);
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = id;
+    toast.className = "stellar-toast";
+    stack.appendChild(toast);
+  }
+  toast.dataset.state = state || "info";
+  toast.innerHTML = `
+    <div class="stellar-toast-icon ${escapeHtml(visual.color)}">
+      <i class="ph-bold ${escapeHtml(visual.icon)} text-lg"></i>
+    </div>
+    <div class="min-w-0">
+      <p class="text-white text-sm font-bold tracking-wide">${escapeHtml(label || "StellarSync")}</p>
+      ${detail ? `<p class="text-gray-400 text-xs font-medium mt-0.5 wrap-safe">${escapeHtml(detail)}</p>` : ""}
+    </div>
+  `;
+  if (toast._dismissTimer) clearTimeout(toast._dismissTimer);
+  const durationMs = Number(options.durationMs ?? (state === "loading" ? 0 : 3200));
   if (durationMs > 0) {
-    showToast._timer = setTimeout(() => {
-      toast.classList.add("opacity-0", "pointer-events-none");
-    }, durationMs);
+    toast._dismissTimer = setTimeout(() => dismissToast(id), durationMs);
   }
-}
-
-function showLoadingToast(label, detail = "") {
-  const id = `loading-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  showToast("Loading", detail || label || "Working...", "ph-spinner-gap", "text-[#c77dff]", 0);
   return id;
 }
 
+function showToast(title, message, iconClass = "ph-sparkle", colorClass = "text-[#c77dff]", durationMs = 3000) {
+  if (arguments.length === 2 && ["success", "error", "info"].includes(String(message || "").toLowerCase())) {
+    const state = String(message || "info").toLowerCase();
+    const label = state === "success" ? "Loaded" : state === "error" ? "Error" : "StellarSync";
+    return renderToastElement(`toast-${Date.now()}-${Math.random().toString(36).slice(2)}`, state, label, title, { durationMs });
+  }
+  var state = iconClass && iconClass.includes("warning") ? "error" : iconClass && iconClass.includes("check") ? "success" : "info";
+  return renderToastElement(`toast-${Date.now()}-${Math.random().toString(36).slice(2)}`, state, title, message, { iconClass, colorClass, durationMs });
+}
+
+function showLoadingToast(label, detail = "", options = {}) {
+  const id = `loading-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return renderToastElement(id, "loading", label || "Loading", detail || "Working...", options);
+}
+
+function showSuccessToast(label, detail = "", options = {}) {
+  return renderToastElement(`toast-${Date.now()}-${Math.random().toString(36).slice(2)}`, "success", label || "Loaded", detail || "Done.", options);
+}
+
+function showErrorToast(label, detailOrError, options = {}) {
+  const message = detailOrError?.message || detailOrError?.error || String(detailOrError || label || "Action failed.");
+  return renderToastElement(`toast-${Date.now()}-${Math.random().toString(36).slice(2)}`, "error", label || "Error", message, options);
+}
+
+function updateToast(id, state, label, detail) {
+  if (!id) {
+    if (state === "error") return showErrorToast(label, detail);
+    if (state === "success") return showSuccessToast(label, detail);
+    return showToast(label, detail);
+  }
+  return renderToastElement(id, state || "info", label || (state === "success" ? "Loaded" : state === "error" ? "Error" : "Loading"), detail || "");
+}
+
+function dismissToast(id) {
+  const toast = id ? document.getElementById(id) : null;
+  if (!toast) return;
+  if (toast._dismissTimer) clearTimeout(toast._dismissTimer);
+  toast.style.opacity = "0";
+  toast.style.transform = "translateY(4px)";
+  setTimeout(() => toast.remove(), 140);
+}
+
 function updateLoadingToastSuccess(id, label, detail = "") {
-  showToast("Loaded", detail || label || "Done.", "ph-check", "text-[#00ffaa]");
+  updateToast(id, "success", label || "Loaded", detail || "Done.");
 }
 
 function updateLoadingToastError(id, label, error) {
   const message = error?.message || error?.error || String(error || label || "Action failed.");
-  showToast(label || "Error", message, "ph-warning", "text-yellow-400");
+  updateToast(id, "error", label || "Error", message);
 }
 
 function resolveConfirmAction(result) {
@@ -20174,44 +20333,68 @@ async function scheduleSocialPostsForTargets(post) {
   const targets = getPostTargetPlatforms(post);
   const canonicalPostId = getCanonicalPostId(post);
   if (!workspaceId || !targets.length || !canonicalPostId) return [];
+  const loadingToastId = showLoadingToast("Scheduling social posts", "Creating social scheduling queue entries...");
   const scheduledFor = post.scheduledAt || post.scheduled_at || post.date || "";
   const results = [];
-  for (const provider of targets) {
-    const account = getSocialAccountForPlatform(provider);
-    const result = await callSupabaseEdgeFunction("social-schedule-post", {
-      workspace_id: workspaceId,
-      source_id: canonicalPostId,
-      provider,
-      social_account_id: account?.id || null,
-      post_payload: {
-        title: post.title || "",
-        description: post.description || post.caption || "",
-        platform: provider,
-        readiness: account ? "publishing_not_implemented" : "missing_account"
-      },
-      media_payload: {
-        media_id: post.mediaId || post.media_id || post.assetId || "",
-        media_url: post.mediaUrl || post.media_url || ""
-      },
-      scheduled_for: scheduledFor || null
-    });
-    results.push({ provider, readiness: account ? "publishing_not_implemented" : "missing_account", result });
+  try {
+    for (const provider of targets) {
+      const account = getSocialAccountForPlatform(provider);
+      const result = await callSupabaseEdgeFunction("social-schedule-post", {
+        workspace_id: workspaceId,
+        source_id: canonicalPostId,
+        provider,
+        social_account_id: account?.id || null,
+        post_payload: {
+          title: post.title || "",
+          description: post.description || post.caption || "",
+          platform: provider,
+          readiness: account ? "publishing_not_implemented" : "missing_account"
+        },
+        media_payload: {
+          media_id: post.mediaId || post.media_id || post.assetId || "",
+          media_url: post.mediaUrl || post.media_url || ""
+        },
+        scheduled_for: scheduledFor || null
+      });
+      results.push({ provider, readiness: account ? "publishing_not_implemented" : "missing_account", result });
+    }
+    updateToast(loadingToastId, "success", "Social queue ready", `${results.length} scheduling entr${results.length === 1 ? "y" : "ies"} created.`);
+  } catch (err) {
+    updateToast(loadingToastId, "error", "Social scheduling failed", err);
+    throw err;
   }
   console.log("[social] schedule created", results.map((item) => ({ provider: item.provider, readiness: item.readiness })));
   return results;
 }
 
 async function apiStartPlatformAuth(platform) {
-  if (platform === "linkedin") return apiGet("startLinkedInAuth");
-  if (platform === "instagram") return apiGet("startInstagramAuth");
-  if (platform === "threads") return apiGet("startThreadsAuth");
-  if (platform === "bluesky") return apiGet("startBlueskyAuth");
-  if (platform === "tiktok") return apiGet("startTikTokAuth");
-  throw new Error(`Unsupported platform: ${platform}`);
+  const loadingToastId = showLoadingToast("Starting social connection", `Requesting ${toTitleCase(platform)} connection...`);
+  try {
+    let result;
+    if (platform === "linkedin") result = await apiGet("startLinkedInAuth");
+    else if (platform === "instagram") result = await apiGet("startInstagramAuth");
+    else if (platform === "threads") result = await apiGet("startThreadsAuth");
+    else if (platform === "bluesky") result = await apiGet("startBlueskyAuth");
+    else if (platform === "tiktok") result = await apiGet("startTikTokAuth");
+    else throw new Error(`Unsupported platform: ${platform}`);
+    updateToast(loadingToastId, "success", "Connection ready", `${toTitleCase(platform)} connection request created.`);
+    return result;
+  } catch (err) {
+    updateToast(loadingToastId, "error", "Connection failed", err);
+    throw err;
+  }
 }
 
 async function apiDisconnectPlatform(platform) {
-  return apiPost("disconnectPlatform", { platform });
+  const loadingToastId = showLoadingToast("Disconnecting social account", `Disconnecting ${toTitleCase(platform)}...`);
+  try {
+    const result = await apiPost("disconnectPlatform", { platform });
+    updateToast(loadingToastId, "success", "Disconnected", `${toTitleCase(platform)} disconnected.`);
+    return result;
+  } catch (err) {
+    updateToast(loadingToastId, "error", "Disconnect failed", err);
+    throw err;
+  }
 }
 
 async function apiTestPlatformConnection(platform) {
@@ -24086,6 +24269,7 @@ async function savePWProfile() {
   var saveBtn = document.getElementById("pw-profile-save-btn");
   if (statusEl) { statusEl.classList.add("hidden"); statusEl.textContent = ""; }
   if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = "Saving..."; }
+  var loadingToastId = showLoadingToast("Saving profile", "Saving profile settings...");
   try {
     var initials = (document.getElementById("pw-profile-initials") || {}).value || "";
     var displayName = (document.getElementById("pw-profile-display-name") || {}).value || "";
@@ -24100,10 +24284,12 @@ async function savePWProfile() {
     console.log("[profile-modal] save success");
     if (statusEl) { statusEl.textContent = "Profile saved."; statusEl.className = "text-xs text-emerald-400"; statusEl.classList.remove("hidden"); }
     renderWorkspaceBranding();
+    updateToast(loadingToastId, "success", "Profile saved", "Profile settings saved.");
     setTimeout(function() { if (statusEl) statusEl.classList.add("hidden"); }, 3000);
   } catch (err) {
     console.log("[profile-modal] save error", err);
     if (statusEl) { statusEl.textContent = "Save failed: " + (err.message || String(err)); statusEl.className = "text-xs text-red-400"; statusEl.classList.remove("hidden"); }
+    updateToast(loadingToastId, "error", "Profile save failed", err);
   } finally {
     if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "Save Profile"; }
   }
@@ -24115,6 +24301,7 @@ async function savePWWorkspace() {
   var saveBtn = document.getElementById("pw-workspace-save-btn");
   if (statusEl) { statusEl.classList.add("hidden"); statusEl.textContent = ""; }
   if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = "Saving..."; }
+  var loadingToastId = showLoadingToast("Saving workspace settings", "Saving workspace settings...");
   try {
     var name = (document.getElementById("pw-workspace-name") || {}).value || "";
     var shortName = (document.getElementById("pw-workspace-short-name") || {}).value || "";
@@ -24154,6 +24341,7 @@ async function savePWWorkspace() {
     if (statusEl) { statusEl.textContent = "Workspace saved."; statusEl.className = "text-xs text-emerald-400"; statusEl.classList.remove("hidden"); }
     renderWorkspaceBranding();
     console.log("[workspace-branding] refreshed");
+    updateToast(loadingToastId, "success", "Workspace saved", "Workspace settings saved.");
     setTimeout(function() { if (statusEl) statusEl.classList.add("hidden"); }, 3000);
   } catch (err) {
     console.log("[profile-modal] save error", err);
@@ -24162,6 +24350,7 @@ async function savePWWorkspace() {
       msg = "Workspace name save blocked by permissions (RLS). Contact admin.";
     }
     if (statusEl) { statusEl.textContent = msg; statusEl.className = "text-xs text-red-400"; statusEl.classList.remove("hidden"); }
+    updateToast(loadingToastId, "error", "Workspace save failed", err);
   } finally {
     if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "Save Workspace"; }
   }
@@ -24171,6 +24360,7 @@ async function doPWResetPassword() {
   var statusEl = document.getElementById("pw-security-status");
   if (!statusEl) return;
   statusEl.classList.add("hidden");
+  var loadingToastId = showLoadingToast("Sending password reset", "Sending password reset email...");
   try {
     var user = STELLARSYNC_AUTH_USER;
     if (!user || !user.email) throw new Error("No authenticated user email");
@@ -24182,10 +24372,12 @@ async function doPWResetPassword() {
     statusEl.textContent = "Password reset email sent.";
     statusEl.className = "text-xs text-emerald-400 mt-3";
     statusEl.classList.remove("hidden");
+    updateToast(loadingToastId, "success", "Password reset sent", "Password reset email sent.");
   } catch (err) {
     statusEl.textContent = "Could not send reset email. " + (err.message || "Unknown error");
     statusEl.className = "text-xs text-yellow-400 mt-3";
     statusEl.classList.remove("hidden");
+    updateToast(loadingToastId, "error", "Password reset failed", err);
   }
 }
 
