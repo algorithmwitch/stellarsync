@@ -125,6 +125,7 @@ function normalizeRouteName_(route) {
   var normalized = value.toLowerCase().replace(/[\s-]+/g, "_");
   if (normalized === "getposts" || normalized === "get_posts" || normalized === "posts") return "getPosts";
   if (normalized === "savepost" || normalized === "save_post" || normalized === "updatepost" || normalized === "update_post") return "savePost";
+  if (normalized === "backfillpostids" || normalized === "backfill_post_ids" || normalized === "repairpostids" || normalized === "repair_post_ids") return "backfillPostIds";
   if (normalized === "diagnostics" || normalized === "getdiagnostics" || normalized === "get_diagnostics") return "diagnostics";
   return value;
 }
@@ -240,7 +241,8 @@ function buildPostsResponse_(result, context, requestedRoute) {
     originalGetPostsType: describeResultType_(result),
     originalGetPostsKeys: getObjectKeysSafe_(result),
     detectedPostsPath: detectedPostsPath,
-    detectedPostsLength: Array.isArray(posts) ? posts.length : 0
+    detectedPostsLength: Array.isArray(posts) ? posts.length : 0,
+    missingPostIdCount: countPostsMissingPostIds_(posts)
   };
   var response = result && !Array.isArray(result) && typeof result === "object" ? Object.assign({}, result) : {};
   response.ok = true;
@@ -251,6 +253,8 @@ function buildPostsResponse_(result, context, requestedRoute) {
   response.data = posts;
   response.source = "google_sheets";
   response.workspace_slug = context.workspace_slug || "";
+  response.missing_post_id_count = diagnostics.missingPostIdCount;
+  response.missingPostIdCount = diagnostics.missingPostIdCount;
   response.diagnostics = Object.assign({}, response.diagnostics || {}, diagnostics);
   return response;
 }
@@ -1132,6 +1136,9 @@ function doGet(e) {
         "getPosts",
         "get_posts",
         "posts",
+        "backfillPostIds",
+        "backfill_post_ids",
+        "repairPostIds",
         "getMedia",
         "getWorkspaceConfig",
         "getInspo",
@@ -1228,6 +1235,7 @@ function doGet(e) {
       const result = getPosts();
       return jsonResponse(buildPostsResponse_(result, context, action));
     }
+    if (route === "backfillPostIds") return jsonResponse(backfillPostIds());
     if (action === "getWorkspaceConfig") return jsonResponse({ ok: true, workspace: getWorkspaceServerConfig_(payloadOrParams_(e)) });
     if (action === "validatePostSchema") return jsonResponse(validatePostSchema());
     if (action === "validateCoreSchema") return jsonResponse(validateCoreSchema());
@@ -1340,6 +1348,10 @@ function doPost(e) {
     if (route === "getPosts") {
       const result = getPosts();
       return jsonResponse(buildPostsResponse_(result, context, action));
+    }
+
+    if (route === "backfillPostIds") {
+      return jsonResponse(backfillPostIds());
     }
 
     if (route === "savePost" || action === "savePost" || action === "updatePost") {
@@ -2217,6 +2229,103 @@ function getPostsData_() {
     });
 }
 
+function postHasMeaningfulIdBackfillContent_(row) {
+  row = normalizePostSchemaAliases_(Object.assign({}, row || {}));
+  return !!String(pickFirstDefined_(
+    row.title,
+    row.post_title,
+    row.postTitle,
+    row.queue_title,
+    row.queueTitle,
+    row.headline,
+    row.description,
+    row.caption,
+    row.body,
+    row.content,
+    row.copy,
+    row.scheduled_at,
+    row.scheduledAt,
+    row.publish_date,
+    row.publishDate,
+    row.queue_date_label,
+    row.queueDateLabel,
+    ""
+  )).trim();
+}
+
+function countPostsMissingPostIds_(posts) {
+  return (Array.isArray(posts) ? posts : []).reduce(function(count, post) {
+    var postId = String(pickFirstDefined_(post && post.post_id, post && post.postId, "")).trim();
+    return !postId && postHasMeaningfulIdBackfillContent_(post) ? count + 1 : count;
+  }, 0);
+}
+
+function backfillPostIds() {
+  const sheet = getPostsSheet_();
+  const headerMap = getHeaderMap_(sheet);
+  const postIdColumn = headerMap.post_id;
+  if (!postIdColumn) {
+    return {
+      ok: false,
+      action: "backfillPostIds",
+      error: "Missing required post_id column on " + sheet.getName() + ". Add a post_id header before running repair."
+    };
+  }
+
+  const lastRow = sheet.getLastRow();
+  const lastColumn = sheet.getLastColumn();
+  if (lastRow < 2 || !lastColumn) {
+    return {
+      ok: true,
+      action: "backfillPostIds",
+      updatedCount: 0,
+      skippedCount: 0,
+      sampleUpdated: []
+    };
+  }
+
+  const headers = sheet.getRange(1, 1, 1, lastColumn).getValues()[0].map(normalizeHeader_);
+  const values = sheet.getRange(2, 1, lastRow - 1, lastColumn).getValues();
+  var updatedCount = 0;
+  var skippedCount = 0;
+  var sampleUpdated = [];
+
+  values.forEach(function(rowValues, index) {
+    var rowNumber = index + 2;
+    var existingPostId = String(rowValues[postIdColumn - 1] || "").trim();
+    var row = { row_number: rowNumber };
+    headers.forEach(function(header, colIndex) {
+      if (header) row[header] = rowValues[colIndex];
+    });
+
+    if (existingPostId || !postHasMeaningfulIdBackfillContent_(row)) {
+      skippedCount += 1;
+      return;
+    }
+
+    var generatedPostId = createPostId_();
+    sheet.getRange(rowNumber, postIdColumn).setValue(generatedPostId);
+    updatedCount += 1;
+    if (sampleUpdated.length < 10) {
+      sampleUpdated.push({
+        rowNumber: rowNumber,
+        post_id: generatedPostId,
+        title: derivePostTitle_(row),
+        publish_date: String(pickFirstDefined_(row.publish_date, row.publishDate, row.queue_date_label, row.queueDateLabel, "")).trim(),
+        scheduled_at: String(pickFirstDefined_(row.scheduled_at, row.scheduledAt, "")).trim()
+      });
+    }
+  });
+
+  return {
+    ok: true,
+    action: "backfillPostIds",
+    updatedCount: updatedCount,
+    skippedCount: skippedCount,
+    sampleUpdated: sampleUpdated
+  };
+}
+
 function findPostObjectById_(postId) {
   const target = String(postId || "").trim();
   if (!target) return null;
@@ -2225,13 +2334,54 @@ function findPostObjectById_(postId) {
   }) || null;
 }
 
+function isTemporaryPostLookupId_(value) {
+  var text = String(value || "").trim();
+  return !text || /^(row|index|slug|content_key)_/.test(text);
+}
+
+function canonicalIncomingPostId_(payload) {
+  var postId = String(pickFirstDefined_(payload && payload.post_id, payload && payload.postId, "")).trim();
+  if (postId && !isTemporaryPostLookupId_(postId)) return postId;
+  return "";
+}
+
 function findPostObjectForSave_(payload) {
   payload = payload || {};
-  var byId = findPostObjectById_(pickFirstDefined_(payload.postId, payload.post_id, payload.id));
+  var byId = findPostObjectById_(canonicalIncomingPostId_(payload));
   if (byId) return byId;
   var rowNumber = Number(pickFirstDefined_(payload._rowNumber, payload.rowNumber, payload.row_number, payload.sheetRow, payload.sheet_row, ""));
-  if (!rowNumber || rowNumber < 2) return null;
-  return getPostsData_().find(function(row) {
+  var rows = getPostsData_();
+  if (rowNumber && rowNumber >= 2) {
+    var byRow = rows.find(function(row) {
+      return Number(row.row_number || row._rowNumber || row.sheetRow || 0) === rowNumber;
+    });
+    if (byRow) return byRow;
+  }
+  var slug = String(pickFirstDefined_(payload.slug, payload.content_slug, "")).trim();
+  if (slug) {
+    var bySlug = rows.find(function(row) {
+      return String(pickFirstDefined_(row.slug, row.content_slug, "")).trim() === slug;
+    });
+    if (bySlug) return bySlug;
+  }
+  var contentKey = String(pickFirstDefined_(payload.content_key, payload.contentKey, "")).trim();
+  if (contentKey) {
+    var byContentKey = rows.find(function(row) {
+      return String(pickFirstDefined_(row.content_key, row.contentKey, "")).trim() === contentKey;
+    });
+    if (byContentKey) return byContentKey;
+  }
+  var payloadTitle = String(derivePostTitle_(payload) || "").trim().toLowerCase();
+  var payloadDateKey = getPostPlanningDateKey(payload);
+  if (payloadTitle && payloadDateKey) {
+    var byTitleAndDate = rows.find(function(row) {
+      var rowTitle = String(derivePostTitle_(row) || "").trim().toLowerCase();
+      var rowDateKey = getPostPlanningDateKey(row);
+      return rowTitle === payloadTitle && rowDateKey === payloadDateKey;
+    });
+    if (byTitleAndDate) return byTitleAndDate;
+  }
+  return rows.find(function(row) {
     return Number(row.row_number || row._rowNumber || row.sheetRow || 0) === rowNumber;
   }) || null;
 }
@@ -2669,7 +2819,12 @@ function upsertPostObjectById_(sheet, post, payload) {
   const rowNumber = findRowByNormalizedHeaderValue_(sheet, ["post_id", "postId"], postId);
   const rowByPayload = requestedRow >= 2 && requestedRow <= Math.max(sheet.getLastRow(), 2) ? requestedRow : 0;
   const targetRow = rowNumber > 0 ? rowNumber : rowByPayload > 0 ? rowByPayload : Math.max(sheet.getLastRow() + 1, 2);
-  writePostObjectToRow_(sheet, targetRow, Object.assign({}, post, { post_id: postId }));
+  var existingTarget = targetRow >= 2 ? getPostsData_().find(function(row) {
+    return Number(row.row_number || 0) === targetRow;
+  }) : null;
+  var existingPostId = String(pickFirstDefined_(existingTarget && existingTarget.post_id, existingTarget && existingTarget.postId, "")).trim();
+  var canonicalPostId = existingPostId || postId;
+  writePostObjectToRow_(sheet, targetRow, Object.assign({}, post, { post_id: canonicalPostId, postId: canonicalPostId }));
   return targetRow;
 }
 
@@ -3095,7 +3250,7 @@ function deleteRowByAliases_(sheet, headerNames, keyValue) {
 }
 
 function createPostId_() {
-  return "POST-" + Utilities.getUuid().slice(0, 8).toUpperCase();
+  return "post_" + Utilities.getUuid();
 }
 
 function createAssetId_() {
@@ -4827,9 +4982,11 @@ function savePost(payload) {
   const aiDraftStatus = String(pickFirstDefined_(payload.aiDraftStatus, payload.ai_draft_status, finalExisting && finalExisting.ai_draft_status, "")).trim();
   const postType = String(pickFirstDefined_(payload.postType, payload.post_type, payload.format, existing && existing.post_type, existing && existing.format, existing && existing.postType, "text")).trim() || "text";
   const workspaceFields = normalizeWorkspacePostFields_(payload, finalExisting || existing || {});
+  const incomingPostId = canonicalIncomingPostId_(payload);
+  const existingPostId = String(pickFirstDefined_(finalExisting && finalExisting.post_id, finalExisting && finalExisting.postId, existing && existing.post_id, existing && existing.postId, "")).trim();
 
   const normalized = {
-    post_id: String(pickFirstDefined_(payload.postId, payload.post_id, payload.id, finalExisting && finalExisting.post_id, finalExisting && finalExisting.postId, existing && existing.post_id, existing && existing.postId, createPostId_())).trim(),
+    post_id: String(pickFirstDefined_(existingPostId, incomingPostId, createPostId_())).trim(),
     title: String(pickFirstDefined_(payload.title, payload.postTitle, existing && existing.title, "")).trim(),
     platform: primaryPlatform,
     post_type: postType,
@@ -4950,6 +5107,7 @@ function savePost(payload) {
   var response = Object.assign({
     postId: normalized.post_id,
     post_id: normalized.post_id,
+    savedPostId: normalized.post_id,
     rowNumber: savedRowNumber,
     row_number: savedRowNumber,
     source: "google_sheets",
@@ -13311,6 +13469,18 @@ function auditFlowIntegrity() {
 
 function getDiagnostics(payload) {
   payload = payload || {};
+  var diagnosticsWarnings = [];
+  function addDiagnosticsWarning_(section, err) {
+    diagnosticsWarnings.push(section + ": " + sanitizeErrorMessage_(err && err.message || err || "Unknown diagnostics warning"));
+  }
+  function safeDiagnosticsValue_(section, fallback, producer) {
+    try {
+      return producer();
+    } catch (err) {
+      addDiagnosticsWarning_(section, err);
+      return fallback;
+    }
+  }
   var payloadContext = getWorkspaceRequestContext_(null, { payload: payload });
   if (payloadContext.spreadsheetId || payloadContext.workspace_slug || payloadContext.workspace_id || payloadContext.postsSheetName) {
     setWorkspaceRequestContext_(Object.assign({}, getCurrentWorkspaceRequestContext_(), payloadContext));
@@ -13334,14 +13504,50 @@ function getDiagnostics(payload) {
       error: sanitizeErrorMessage_(spreadsheetErr && spreadsheetErr.message || spreadsheetErr)
     };
   }
-  var postsSheet = findExistingSheet_("posts");
-  var mediaSheet = findExistingSheet_("media");
-  var inspoSheet = findExistingSheet_("inspo");
-  var notesSheet = findExistingSheet_("notes");
-  var aiDraftsSheet = findExistingSheet_("aiDrafts");
-  var brandFrameworkSheet = findExistingSheet_("brandFramework");
-  var campaignSheet = findExistingSheet_("campaign");
-  var settingsSheet = findExistingSheet_("settings");
+  function safeFindExistingSheet_(sheetKey) {
+    return safeDiagnosticsValue_("findExistingSheet_(" + sheetKey + ")", null, function() {
+      return findExistingSheet_(sheetKey);
+    });
+  }
+  var postsSheet = null;
+  var values = [];
+  var headers = [];
+  var rowCount = 0;
+  var missingPostIdCount = 0;
+  var rawPostRows = [];
+  var posts = [];
+  try {
+    postsSheet = typeof getPostsSheet_ === "function"
+      ? getPostsSheet_()
+      : SpreadsheetApp.getActiveSpreadsheet().getSheetByName("POSTS");
+    values = postsSheet ? postsSheet.getDataRange().getValues() : [];
+    headers = values.length ? values[0].map(String) : [];
+    rowCount = Math.max(0, values.length - 1);
+    var postIdIndex = headers.map(normalizeHeader_).indexOf("post_id");
+    if (postIdIndex !== -1) {
+      missingPostIdCount = values.slice(1).filter(function(row) {
+        return !String(row[postIdIndex] || "").trim();
+      }).length;
+    }
+  } catch (postsSheetErr) {
+    addDiagnosticsWarning_("posts sheet snapshot", postsSheetErr);
+    postsSheet = safeFindExistingSheet_("posts");
+  }
+  try {
+    rawPostRows = getPostsData_().map(normalizePostSchemaAliases_);
+    posts = rawPostRows;
+  } catch (postsErr) {
+    addDiagnosticsWarning_("getPostsData_", postsErr);
+    rawPostRows = [];
+    posts = [];
+  }
+  var mediaSheet = safeFindExistingSheet_("media");
+  var inspoSheet = safeFindExistingSheet_("inspo");
+  var notesSheet = safeFindExistingSheet_("notes");
+  var aiDraftsSheet = safeFindExistingSheet_("aiDrafts");
+  var brandFrameworkSheet = safeFindExistingSheet_("brandFramework");
+  var campaignSheet = safeFindExistingSheet_("campaign");
+  var settingsSheet = safeFindExistingSheet_("settings");
   var sheetChecks = [
     { key: "posts", sheet: postsSheet, requiredHeaders: REQUIRED_POST_HEADERS },
     { key: "media", sheet: mediaSheet, requiredHeaders: MEDIA_HEADERS },
@@ -13357,31 +13563,48 @@ function getDiagnostics(payload) {
   var rowCounts = {};
 
   sheetChecks.forEach(function(check) {
-    if (!check.sheet) {
-      missingSheets.push(check.key);
-      rowCounts[check.key] = 0;
-      return;
+    try {
+      if (!check.sheet) {
+        missingSheets.push(check.key);
+        rowCounts[check.key] = 0;
+        return;
+      }
+      rowCounts[check.key] = Math.max(check.sheet.getLastRow() - 1, 0);
+      var currentHeaders = getHeaders_(check.sheet).map(normalizeHeader_);
+      missingHeaders[check.key] = (check.requiredHeaders || []).filter(function(header) {
+        return currentHeaders.indexOf(normalizeHeader_(header)) === -1;
+      });
+    } catch (sheetCheckErr) {
+      addDiagnosticsWarning_("sheet check " + check.key, sheetCheckErr);
+      rowCounts[check.key] = rowCounts[check.key] || 0;
+      missingHeaders[check.key] = [];
     }
-    rowCounts[check.key] = Math.max(check.sheet.getLastRow() - 1, 0);
-    var currentHeaders = getHeaders_(check.sheet).map(normalizeHeader_);
-    missingHeaders[check.key] = (check.requiredHeaders || []).filter(function(header) {
-      return currentHeaders.indexOf(normalizeHeader_(header)) === -1;
-    });
   });
 
-  var posts = getPosts();
-  var notes = getNotes();
-  var media = getMedia();
-  var campaigns = getCampaigns();
-  var inspo = getInspo(true);
-  var aiDrafts = getAIDrafts();
-  var brandFramework = getBrandFramework();
-  var importJobs = getImportJobs({ includeCompleted: true });
-  var semanticMemory = getSemanticMemory(payload);
-  var socialCapabilities = getSocialImportCapabilities(payload);
-  var connectedAccounts = getConnectedAccounts();
-  var deploymentDiagnostics = getDeploymentDiagnostics();
-  var schemaFlowValidation = validateSchemaFlow();
+  posts = safeDiagnosticsValue_("getPosts", posts, function() { return getPosts(); });
+  var notes = safeDiagnosticsValue_("getNotes", [], function() { return getNotes(); });
+  var media = safeDiagnosticsValue_("getMedia", [], function() { return getMedia(); });
+  var campaigns = safeDiagnosticsValue_("getCampaigns", [], function() { return getCampaigns(); });
+  var inspo = safeDiagnosticsValue_("getInspo", [], function() { return getInspo(true); });
+  var aiDrafts = safeDiagnosticsValue_("getAIDrafts", [], function() { return getAIDrafts(); });
+  var brandFramework = safeDiagnosticsValue_("getBrandFramework", [], function() { return getBrandFramework(); });
+  var importJobs = safeDiagnosticsValue_("getImportJobs", [], function() { return getImportJobs({ includeCompleted: true }); });
+  var semanticMemory = safeDiagnosticsValue_("getSemanticMemory", {}, function() { return getSemanticMemory(payload); });
+  var socialCapabilities = safeDiagnosticsValue_("getSocialImportCapabilities", {}, function() { return getSocialImportCapabilities(payload); });
+  var connectedAccounts = safeDiagnosticsValue_("getConnectedAccounts", [], function() { return getConnectedAccounts(); });
+  var deploymentDiagnostics = safeDiagnosticsValue_("getDeploymentDiagnostics", {}, function() { return getDeploymentDiagnostics(); });
+  var schemaFlowValidation = safeDiagnosticsValue_("validateSchemaFlow", {}, function() { return validateSchemaFlow(); });
+  posts = Array.isArray(posts) ? posts : [];
+  notes = Array.isArray(notes) ? notes : [];
+  media = Array.isArray(media) ? media : [];
+  campaigns = Array.isArray(campaigns) ? campaigns : [];
+  inspo = Array.isArray(inspo) ? inspo : [];
+  aiDrafts = Array.isArray(aiDrafts) ? aiDrafts : [];
+  brandFramework = Array.isArray(brandFramework) ? brandFramework : [];
+  importJobs = Array.isArray(importJobs) ? importJobs : [];
+  semanticMemory = semanticMemory && typeof semanticMemory === "object" ? semanticMemory : {};
+  socialCapabilities = socialCapabilities && typeof socialCapabilities === "object" ? socialCapabilities : {};
+  connectedAccounts = Array.isArray(connectedAccounts) ? connectedAccounts : [];
   var openGraphStatus = socialCapabilities.openGraph || {};
   var malformedScheduledRows = posts.filter(function(post) {
     var parsed = parseSheetDate_(post.scheduledAt);
@@ -13497,7 +13720,9 @@ function getDiagnostics(payload) {
   }).map(function(post) {
     return { postId: post.postId, scheduledAt: post.scheduledAt, queueTimeLabel: post.queueTimeLabel };
   });
-  var dateRepairPreview = buildDateRepairPreview_(postsSheet ? getPostsData_().map(normalizePostSchemaAliases_) : []);
+  var dateRepairPreview = safeDiagnosticsValue_("buildDateRepairPreview", [], function() {
+    return buildDateRepairPreview_(postsSheet ? rawPostRows : []);
+  });
   var campaignLayoutIssues = campaigns.filter(function(campaign) {
     var rawShape = String(campaign.iconShape || "").trim().toLowerCase();
     var missingX = !normalizeNumber_(campaign.x);
@@ -13528,7 +13753,10 @@ function getDiagnostics(payload) {
       severity: issue === "compressed layout risk" ? "warning" : "error"
     };
   });
-  var supportedGenerationModes = getAICreationOptions().generationModes.concat([
+  var aiCreationOptions = safeDiagnosticsValue_("getAICreationOptions", { generationModes: [] }, function() {
+    return getAICreationOptions();
+  });
+  var supportedGenerationModes = (aiCreationOptions.generationModes || []).concat([
     "LinkedIn post",
     "carousel outline",
     "short video script",
@@ -13559,12 +13787,16 @@ function getDiagnostics(payload) {
     };
   });
   var brandFrameworkIssues = [];
-  var overusedHookPatterns = semanticMemory.overusedPatterns.filter(function(item) { return item.pattern.split("/").length >= 1; }).slice(0, 5);
+  var overusedHookPatterns = (semanticMemory.overusedPatterns || []).filter(function(item) { return String(item.pattern || "").split("/").length >= 1; }).slice(0, 5);
   var campaignOverlapIssues = (semanticMemory.constellation && semanticMemory.constellation.bridges || []).filter(function(item) { return item.strength >= 0.42; }).map(function(item) {
     return { campaigns: item.fromCampaign + " ↔ " + item.toCampaign, issue: "campaign overlap/confusion", strength: item.strength };
   });
-  var campaignCleanupDiagnostics = getCampaignCleanupDiagnostics_(posts, campaigns);
-  var linkedInRewriteRouteDiagnostics = testRewriteImportedLinkedInRowsRoute();
+  var campaignCleanupDiagnostics = safeDiagnosticsValue_("getCampaignCleanupDiagnostics_", {}, function() {
+    return getCampaignCleanupDiagnostics_(posts, campaigns);
+  });
+  var linkedInRewriteRouteDiagnostics = safeDiagnosticsValue_("testRewriteImportedLinkedInRowsRoute", {}, function() {
+    return testRewriteImportedLinkedInRowsRoute();
+  });
   var weakClassificationSignals = (semanticMemory.platformSignals || []).filter(function(item) { return item.weak; });
   var isolatedCampaigns = (semanticMemory.campaignClusters || []).filter(function(item) { return item.count <= 1; }).map(function(item) {
     return { campaignKey: item.campaignKey, issue: "isolated campaign" };
@@ -13576,7 +13808,9 @@ function getDiagnostics(payload) {
   }).map(function(item) {
     return { recordType: "inspo", recordId: item.inspoId, issue: "orphaned inspo" };
   }));
-  var flowIntegrityDiagnostics = buildFlowIntegrityDiagnostics_(posts, notes, inspo, campaigns, importJobs);
+  var flowIntegrityDiagnostics = safeDiagnosticsValue_("buildFlowIntegrityDiagnostics_", {}, function() {
+    return buildFlowIntegrityDiagnostics_(posts, notes, inspo, campaigns, importJobs);
+  });
   var sectionCounts = {};
   var antiPatternSeen = {};
   brandFramework.forEach(function(item) {
@@ -13622,11 +13856,22 @@ function getDiagnostics(payload) {
     "When StellarSync is hosted on GitHub Pages, the service worker controls only the app shell origin. Cross-origin Apps Script responses stay network-only and are intentionally not cached.",
     "Scheduling organizes posts inside StellarSync. Live platform posting is not connected yet."
   ];
+  var sheetNames = safeDiagnosticsValue_("spreadsheet.getSheets", [], function() {
+    return spreadsheet ? spreadsheet.getSheets().map(function(sheet) { return sheet.getName(); }) : [];
+  });
+  var legacySpreadsheetIdConfigured = safeDiagnosticsValue_("getScriptProp_(SPREADSHEET_ID)", false, function() {
+    return !!getScriptProp_("SPREADSHEET_ID");
+  });
+  var legacySheetIdConfigured = safeDiagnosticsValue_("getScriptProp_(SHEET_ID)", false, function() {
+    return !!getScriptProp_("SHEET_ID");
+  });
 
   return {
     ok: true,
     backendReachable: true,
     backendVersion: APP_BACKEND_VERSION,
+    warning: diagnosticsWarnings.join(" | "),
+    warnings: diagnosticsWarnings,
     source: "google_sheets",
     workspace_slug: receivedWorkspaceContext.workspace_slug || "",
     receivedWorkspaceContext: receivedWorkspaceContext,
@@ -13635,12 +13880,16 @@ function getDiagnostics(payload) {
     spreadsheetResolutionSource: spreadsheetResolution.source || "",
     legacyScriptPropertiesUsed: !!spreadsheetResolution.legacyScriptPropertiesUsed,
     legacyFallback: {
-      scriptPropertiesSpreadsheetIdConfigured: !!getScriptProp_("SPREADSHEET_ID"),
-      scriptPropertiesSheetIdConfigured: !!getScriptProp_("SHEET_ID")
+      scriptPropertiesSpreadsheetIdConfigured: legacySpreadsheetIdConfigured,
+      scriptPropertiesSheetIdConfigured: legacySheetIdConfigured
     },
-    sheetNames: spreadsheet ? spreadsheet.getSheets().map(function(sheet) { return sheet.getName(); }) : [],
+    sheetNames: sheetNames,
     postsSheetName: postsSheet ? postsSheet.getName() : (receivedWorkspaceContext.postsSheetName || SHEETS.POSTS),
-    postsHeaderNames: postsSheet ? getHeaders_(postsSheet) : [],
+    postsHeaderNames: headers,
+    headerNames: headers,
+    headerCount: headers.length,
+    rowCount: rowCount,
+    missingPostIdCount: missingPostIdCount,
     rowCounts: rowCounts,
     missingRequiredPostHeaders: missingHeaders.posts || [],
     missingSheets: missingSheets,
@@ -13667,7 +13916,7 @@ function getDiagnostics(payload) {
     brandFrameworkIssues: brandFrameworkIssues,
     campaignCount: campaigns.length,
     mediaCount: media.length,
-    postCount: posts.length,
+    postCount: posts.length || rowCount,
     noteCount: notes.length,
     inspoCount: inspo.length,
     aiDraftCount: aiDrafts.length,
