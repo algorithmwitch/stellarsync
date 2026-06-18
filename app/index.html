@@ -4335,7 +4335,7 @@
   </div>
 </div>
 
-<div id="upload-staging-modal" class="fixed inset-0 z-[123] bg-black/70 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-200">
+<div id="upload-staging-modal" class="fixed inset-0 z-[123] bg-black/70 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-200 hidden" onclick="if(event.target.id==='upload-staging-modal')closeUploadStagingModal()">
   <div class="w-full h-full flex items-center justify-center p-6">
     <div id="upload-staging-modal-card" class="bg-[#120c1d] border border-white/10 rounded-2xl shadow-2xl transform scale-95 transition-transform duration-200 overflow-hidden">
       <div class="media-viewer-header flex items-center justify-between px-5 py-4 border-b border-white/5 shrink-0">
@@ -4343,7 +4343,7 @@
           <h3 class="text-white font-bold text-lg">Upload Media</h3>
           <p id="upload-staging-subtitle" class="text-xs text-gray-500 mt-1">Review files before uploading</p>
         </div>
-        <button id="close-upload-staging-modal-btn" type="button" class="w-10 h-10 rounded-xl bg-[#1a1128] hover:bg-[#231738] text-gray-400 hover:text-white border border-white/5 transition-colors flex items-center justify-center">
+        <button id="close-upload-staging-modal-btn" type="button" class="w-10 h-10 rounded-xl bg-[#1a1128] hover:bg-[#231738] text-gray-400 hover:text-white border border-white/5 transition-colors flex items-center justify-center" onclick="closeUploadStagingModal()">
           <i class="ph-bold ph-x"></i>
         </button>
       </div>
@@ -4371,7 +4371,7 @@
           <div id="upload-staging-result" class="text-[11px] text-gray-500 mt-1"></div>
         </div>
         <div class="flex gap-3">
-          <button id="cancel-upload-staging-btn" type="button" class="px-4 py-2 bg-[#1a1128] hover:bg-[#231738] text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all border border-white/10">
+          <button id="cancel-upload-staging-btn" type="button" class="px-4 py-2 bg-[#1a1128] hover:bg-[#231738] text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all border border-white/10" onclick="closeUploadStagingModal()">
             Cancel
           </button>
           <button id="confirm-upload-staging-btn" type="button" class="px-4 py-2 bg-gradient-to-r from-[#9d4edd] to-[#c77dff] hover:opacity-90 text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all border border-white/10">
@@ -6757,6 +6757,31 @@ function getPublishingBadge(post) {
     draft: { label: "Draft", tone: "text-gray-300", color: "#9ca3af", icon: "ph-file-text" }
   };
   return map[status] || { label: toTitleCase(status), tone: "text-gray-300", color: "#9ca3af", icon: "ph-file-text" };
+}
+
+function getArtifactBadge(artifact) {
+  var type = String(artifact?.artifactType || artifact?.type || "").trim().toLowerCase();
+  var flowState = String(artifact?.flowState || artifact?.flow_state || "").trim().toLowerCase();
+  var draftStatus = String(artifact?.draftStatus || artifact?.draft_status || "").trim().toLowerCase();
+  if (flowState === "converted_to_post" || draftStatus === "promoted") {
+    return { label: "Promoted", tone: "text-emerald-300", color: "#00ffaa", icon: "ph-arrow-up" };
+  }
+  if (flowState === "archived" || flowState === "converted_to_inspo") {
+    return { label: "Archived", tone: "text-gray-500", color: "#6b7280", icon: "ph-archive" };
+  }
+  if (type === "note" || artifact?.noteId || artifact?.note_id) {
+    return { label: "Note", tone: "text-sky-300", color: "#38bdf8", icon: "ph-notepad" };
+  }
+  if (type === "inspo" || artifact?.inspoId || artifact?.inspo_id) {
+    return { label: "Inspo", tone: "text-violet-300", color: "#a78bfa", icon: "ph-lightbulb" };
+  }
+  if (type === "ai_draft" || type === "ai draft" || artifact?.aiDraftId || artifact?.ai_draft_id) {
+    return { label: "AI Draft", tone: "text-[#c77dff]", color: "#c77dff", icon: "ph-sparkle" };
+  }
+  if (flowState === "active") {
+    return { label: "Active", tone: "text-gray-400", color: "#9ca3af", icon: "ph-circle" };
+  }
+  return { label: toTitleCase(flowState || type || "unknown"), tone: "text-gray-500", color: "#6b7280", icon: "ph-dot" };
 }
 
 function renderPillarShape(pillar, className = "", theme = getPillarTheme(pillar)) {
@@ -11660,17 +11685,26 @@ function openUploadStagingModal(target = "vault") {
   renderUploadAttachPostSelect();
   renderUploadStagingList();
   console.log("[media-upload] modal open centered");
-  uploadStagingModal?.classList.remove("opacity-0", "pointer-events-none");
-  uploadStagingModalCard?.classList.remove("scale-95");
+  if (uploadStagingModal) {
+    uploadStagingModal.classList.remove("hidden", "opacity-0", "pointer-events-none");
+    uploadStagingModal.removeAttribute("aria-hidden");
+  }
   uploadStagingModalCard?.classList.add("scale-100");
+  document.body.classList.add("overflow-hidden");
 }
 
 function closeUploadStagingModal() {
-  uploadStagingModal?.classList.add("opacity-0", "pointer-events-none");
-  uploadStagingModalCard?.classList.remove("scale-100");
-  uploadStagingModalCard?.classList.add("scale-95");
+  console.log("[media-upload] close modal");
+  var modal = document.getElementById("upload-staging-modal");
+  if (!modal) return;
+  if (confirmUploadStagingBtn && confirmUploadStagingBtn.disabled && pendingUploadFiles.length > 0) {
+    if (!confirm("Upload in progress. Close anyway?")) return;
+  }
+  modal.classList.add("hidden");
+  modal.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("overflow-hidden");
   if (uploadStagingResult) uploadStagingResult.textContent = "";
-  pendingUploadFiles.forEach((item) => {
+  pendingUploadFiles.forEach(function(item) {
     try { URL.revokeObjectURL(item.previewUrl); } catch (_) {}
   });
   pendingUploadFiles = [];
@@ -15766,10 +15800,20 @@ function setupMediaLinkModal() {
   });
   mediaViewerPostSearch?.addEventListener("input", renderMediaPostPanel);
   document.addEventListener("keydown", (event) => {
-    if (!mediaAssetModal || mediaAssetModal.classList.contains("pointer-events-none")) return;
     if (event.key === "Escape") {
-      closeMediaAssetModal();
-    } else if (event.key === "ArrowLeft") {
+      var uploadModal = document.getElementById("upload-staging-modal");
+      if (uploadModal && !uploadModal.classList.contains("hidden")) {
+        closeUploadStagingModal();
+        return;
+      }
+      if (mediaAssetModal && !mediaAssetModal.classList.contains("pointer-events-none")) {
+        closeMediaAssetModal();
+        return;
+      }
+      return;
+    }
+    if (!mediaAssetModal || mediaAssetModal.classList.contains("pointer-events-none")) return;
+    if (event.key === "ArrowLeft") {
       navigateMediaViewer(-1);
     } else if (event.key === "ArrowRight") {
       navigateMediaViewer(1);
@@ -15778,8 +15822,6 @@ function setupMediaLinkModal() {
 }
 
 function setupUploadStagingModal() {
-  closeUploadStagingModalBtn?.addEventListener("click", closeUploadStagingModal);
-  cancelUploadStagingBtn?.addEventListener("click", closeUploadStagingModal);
   ["dragenter", "dragover"].forEach((eventName) => {
     uploadStagingDropzone?.addEventListener(eventName, (event) => {
       event.preventDefault();
@@ -15802,9 +15844,6 @@ function setupUploadStagingModal() {
       console.error(err);
       showToast("Upload failed", err.message || "Could not upload the selected files.", "ph-warning", "text-yellow-400");
     }
-  });
-  uploadStagingModal?.addEventListener("click", (event) => {
-    if (event.target === uploadStagingModal) closeUploadStagingModal();
   });
 }
 
@@ -17693,16 +17732,21 @@ function setupSaveHandler() {
       return;
     }
 
-	    if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
+	  if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
 	      try {
 	        const wasEditingPost = !!currentEditingPostId;
 	        const backendMode = getActiveWorkspaceBackendMode();
+	        const isSupabase = backendMode.mode === "supabase_native";
 	        console.log("[save] backend mode", backendMode.mode);
 	        console.log("[save] workspace", payload.workspace_slug || payload.workspace_id || "");
 	        console.log("[save] post_id", payload.post_id || payload.postId || payload.id || "");
 	        console.log("[save] rowNumber", payload._rowNumber || payload.rowNumber || payload.sheetRow || "");
 	        let result;
-	        if (noteIdToConvert && backendMode.mode !== "supabase_native") {
+	        if (noteIdToConvert && isSupabase) {
+	          result = await createSupabasePostFromNote(noteIdToConvert, payload);
+	        } else if (inspoIdToConvert && isSupabase) {
+	          result = await createSupabasePostFromInspo(inspoIdToConvert, payload);
+	        } else if (noteIdToConvert) {
 	          try {
 	            result = await apiCreatePostFromNote(noteIdToConvert, payload);
 	          } catch (noteErr) {
@@ -17721,7 +17765,7 @@ function setupSaveHandler() {
 	          rowNumber: result?.rowNumber || ""
 	        });
 	        if (inspoIdToConvert) {
-	          if (backendMode.mode !== "supabase_native") {
+	          if (!isSupabase) {
 	            await apiArchiveInspo(inspoIdToConvert, savedPost?.postId || result?.post?.postId || result?.postId || payload.id);
 	          } else {
 	            console.log("[savePost] skipped Apps Script inspo archive on supabase_native backend");
@@ -20326,10 +20370,24 @@ async function syncRemoteIfConfigured() {
       if (staleNativeErr) staleNativeErr.remove();
       var staleNativeZero = document.getElementById("zero-posts-state");
       if (staleNativeZero) staleNativeZero.remove();
-      const posts = await apiGetPosts();
+      const [supabasePosts, supabaseNotes, supabaseInspo, supabaseAIDrafts, supabaseCampaigns] = await Promise.allSettled([
+        apiGetPosts(), apiGetNotes(), apiGetInspo(), apiGetAIDrafts(), apiGetCampaigns()
+      ]);
       try { await loadAIProviders(); } catch (err) { /* silent */ }
-      if (Array.isArray(posts)) {
-        appState.posts = posts.map((post, index) => normalizeRemotePost(post, getAvailableCampaignRecords(), appState.media || [], index));
+      if (supabasePosts.status === "fulfilled" && Array.isArray(supabasePosts.value)) {
+        appState.posts = supabasePosts.value.map((post, index) => normalizeRemotePost(post, getAvailableCampaignRecords(), appState.media || [], index));
+      }
+      if (supabaseNotes.status === "fulfilled" && Array.isArray(supabaseNotes.value)) {
+        appState.notes = filterRenderableArtifacts(supabaseNotes.value.map(function(item) { return normalizeRemoteNote(item); }), "note");
+      }
+      if (supabaseInspo.status === "fulfilled" && Array.isArray(supabaseInspo.value)) {
+        appState.inspo = filterRenderableArtifacts(supabaseInspo.value.map(function(item) { return normalizeRemoteInspo(item); }), "inspo");
+      }
+      if (supabaseAIDrafts.status === "fulfilled" && Array.isArray(supabaseAIDrafts.value)) {
+        appState.aiDrafts = filterRenderableArtifacts(supabaseAIDrafts.value.map(function(item) { return normalizeRemoteAIDraft(item); }), "aiDraft");
+      }
+      if (supabaseCampaigns.status === "fulfilled" && Array.isArray(supabaseCampaigns.value)) {
+        appState.campaigns = supabaseCampaigns.value.map(function(item) { return normalizeRemoteCampaign(item); });
       }
       if (isSupabaseMediaEnabled()) {
         try {
@@ -20640,6 +20698,21 @@ function getSupabasePostId(payload = {}) {
   return "post_" + Date.now() + "_" + Math.random().toString(36).slice(2, 10);
 }
 
+function generateSupabaseNoteId() {
+  if (window.crypto && typeof window.crypto.randomUUID === "function") return "note_" + window.crypto.randomUUID();
+  return "note_" + Date.now() + "_" + Math.random().toString(36).slice(2, 10);
+}
+
+function generateSupabaseInspoId() {
+  if (window.crypto && typeof window.crypto.randomUUID === "function") return "inspo_" + window.crypto.randomUUID();
+  return "inspo_" + Date.now() + "_" + Math.random().toString(36).slice(2, 10);
+}
+
+function generateSupabaseAIDraftId() {
+  if (window.crypto && typeof window.crypto.randomUUID === "function") return "draft_" + window.crypto.randomUUID();
+  return "draft_" + Date.now() + "_" + Math.random().toString(36).slice(2, 10);
+}
+
 function buildSupabasePostRow(payload = {}) {
   const meta = getWorkspaceRequestMetadata();
   const postId = getSupabasePostId(payload);
@@ -20789,6 +20862,468 @@ async function apiSavePostToSupabase(payload = {}) {
   };
 }
 
+async function loadSupabaseNotes(workspaceId) {
+  if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase is not configured.");
+  var wid = String(workspaceId || getWorkspaceRequestMetadata().workspace_id || "").trim();
+  if (!wid) throw new Error("Workspace ID is missing for Supabase notes.");
+  var result = await STELLARSYNC_SUPABASE_CLIENT
+    .from("notes")
+    .select("*")
+    .eq("workspace_id", wid)
+    .order("updated_at", { ascending: false });
+  if (result.error) throw result.error;
+  return Array.isArray(result.data) ? result.data : [];
+}
+
+async function loadSupabaseInspo(workspaceId) {
+  if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase is not configured.");
+  var wid = String(workspaceId || getWorkspaceRequestMetadata().workspace_id || "").trim();
+  if (!wid) throw new Error("Workspace ID is missing for Supabase inspo.");
+  var result = await STELLARSYNC_SUPABASE_CLIENT
+    .from("inspo")
+    .select("*")
+    .eq("workspace_id", wid)
+    .order("updated_at", { ascending: false });
+  if (result.error) throw result.error;
+  return Array.isArray(result.data) ? result.data : [];
+}
+
+async function loadSupabaseAIDrafts(workspaceId) {
+  if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase is not configured.");
+  var wid = String(workspaceId || getWorkspaceRequestMetadata().workspace_id || "").trim();
+  if (!wid) throw new Error("Workspace ID is missing for Supabase AI drafts.");
+  var result = await STELLARSYNC_SUPABASE_CLIENT
+    .from("ai_drafts")
+    .select("*")
+    .eq("workspace_id", wid)
+    .order("updated_at", { ascending: false });
+  if (result.error) throw result.error;
+  return Array.isArray(result.data) ? result.data : [];
+}
+
+async function loadSupabaseCampaigns(workspaceId) {
+  if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase is not configured.");
+  var wid = String(workspaceId || getWorkspaceRequestMetadata().workspace_id || "").trim();
+  if (!wid) throw new Error("Workspace ID is missing for Supabase campaigns.");
+  var result = await STELLARSYNC_SUPABASE_CLIENT
+    .from("workspace_settings")
+    .select("value")
+    .eq("workspace_id", wid)
+    .eq("key", "campaigns")
+    .maybeSingle();
+  if (result.error && result.error.code !== "PGRST116") throw result.error;
+  if (result.data && result.data.value) {
+    var campaigns = typeof result.data.value === "string" ? safeJsonParse(result.data.value, []) : (Array.isArray(result.data.value) ? result.data.value : []);
+    return Array.isArray(campaigns) ? campaigns : [];
+  }
+  return [];
+}
+
+async function saveSupabaseNote(payload) {
+  if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase is not configured.");
+  var meta = getWorkspaceRequestMetadata();
+  var workspaceId = payload.workspace_id || meta.workspace_id || "";
+  if (!workspaceId) throw new Error("Workspace ID is missing.");
+  var noteId = payload.note_id || payload.noteId || generateSupabaseNoteId();
+  var row = {
+    workspace_id: workspaceId,
+    note_id: noteId,
+    title: payload.title || "",
+    body: payload.body || "",
+    summary: payload.summary || "",
+    source_type: payload.source_type || payload.sourceType || "",
+    source_url: payload.source_url || payload.sourceUrl || "",
+    campaign_id: payload.campaign_id || payload.campaignId || "",
+    campaign_name: payload.campaign_name || payload.campaignName || "",
+    pillar: payload.pillar || "",
+    linked_post_id: payload.linked_post_id || payload.linkedPostId || "",
+    linked_ai_draft_id: payload.linked_ai_draft_id || payload.linkedAiDraftId || "",
+    flow_state: payload.flow_state || payload.flowState || "active",
+    converted_post_id: payload.converted_post_id || payload.convertedPostId || "",
+    source_note_id: payload.source_note_id || payload.sourceNoteId || "",
+    source_inspo_id: payload.source_inspo_id || payload.sourceInspoId || "",
+    source_ai_draft_id: payload.source_ai_draft_id || payload.sourceAiDraftId || "",
+    created_from_flow: payload.created_from_flow || payload.createdFromFlow || "",
+    status: payload.status || "active",
+    suggested_platform: payload.suggested_platform || payload.suggestedPlatform || "",
+    suggested_pillar: payload.suggested_pillar || payload.suggestedPillar || "",
+    bullets: Array.isArray(payload.bullets) ? payload.bullets.join("\n") : (payload.bullets || ""),
+    metadata: payload.metadata || {}
+  };
+  var saved = null;
+  var upsertResult = await STELLARSYNC_SUPABASE_CLIENT
+    .from("notes")
+    .upsert(row, { onConflict: "workspace_id,note_id" })
+    .select("*")
+    .maybeSingle();
+  if (upsertResult.error) {
+    var existing = await STELLARSYNC_SUPABASE_CLIENT
+      .from("notes")
+      .select("id")
+      .eq("workspace_id", workspaceId)
+      .eq("note_id", noteId)
+      .maybeSingle();
+    if (existing.error && existing.error.code !== "PGRST116") throw upsertResult.error;
+    if (existing.data && existing.data.id) {
+      var updateResult = await STELLARSYNC_SUPABASE_CLIENT
+        .from("notes")
+        .update(row)
+        .eq("id", existing.data.id)
+        .select("*")
+        .maybeSingle();
+      if (updateResult.error) throw updateResult.error;
+      saved = updateResult.data;
+    } else {
+      var insertResult = await STELLARSYNC_SUPABASE_CLIENT
+        .from("notes")
+        .insert(row)
+        .select("*")
+        .maybeSingle();
+      if (insertResult.error) throw insertResult.error;
+      saved = insertResult.data;
+    }
+  } else {
+    saved = upsertResult.data;
+  }
+  return { ok: true, note: saved || row, noteId: noteId };
+}
+
+async function saveSupabaseInspo(payload) {
+  if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase is not configured.");
+  var meta = getWorkspaceRequestMetadata();
+  var workspaceId = payload.workspace_id || meta.workspace_id || "";
+  if (!workspaceId) throw new Error("Workspace ID is missing.");
+  var inspoId = payload.inspo_id || payload.inspoId || generateSupabaseInspoId();
+  var row = {
+    workspace_id: workspaceId,
+    inspo_id: inspoId,
+    title: payload.title || "",
+    summary: payload.summary || "",
+    body: payload.body || "",
+    source_url: payload.source_url || payload.sourceUrl || payload.url || "",
+    source_type: payload.source_type || payload.sourceType || "",
+    source_label: payload.source_label || payload.sourceLabel || "",
+    source_title: payload.source_title || payload.sourceTitle || "",
+    campaign_id: payload.campaign_id || payload.campaignId || "",
+    campaign_name: payload.campaign_name || payload.campaignName || "",
+    pillar: payload.pillar || "",
+    linked_post_id: payload.linked_post_id || payload.linkedPostId || "",
+    linked_ai_draft_id: payload.linked_ai_draft_id || payload.linkedAiDraftId || "",
+    flow_state: payload.flow_state || payload.flowState || "active",
+    converted_post_id: payload.converted_post_id || payload.convertedPostId || "",
+    source_note_id: payload.source_note_id || payload.sourceNoteId || "",
+    source_inspo_id: payload.source_inspo_id || payload.sourceInspoId || "",
+    source_ai_draft_id: payload.source_ai_draft_id || payload.sourceAiDraftId || "",
+    created_from_flow: payload.created_from_flow || payload.createdFromFlow || "",
+    status: payload.status || "active",
+    suggested_platform: payload.suggested_platform || payload.suggestedPlatform || "",
+    suggested_pillar: payload.suggested_pillar || payload.suggestedPillar || "",
+    metadata: payload.metadata || {}
+  };
+  var saved = null;
+  var upsertResult = await STELLARSYNC_SUPABASE_CLIENT
+    .from("inspo")
+    .upsert(row, { onConflict: "workspace_id,inspo_id" })
+    .select("*")
+    .maybeSingle();
+  if (upsertResult.error) {
+    var existing = await STELLARSYNC_SUPABASE_CLIENT
+      .from("inspo")
+      .select("id")
+      .eq("workspace_id", workspaceId)
+      .eq("inspo_id", inspoId)
+      .maybeSingle();
+    if (existing.error && existing.error.code !== "PGRST116") throw upsertResult.error;
+    if (existing.data && existing.data.id) {
+      var updateResult = await STELLARSYNC_SUPABASE_CLIENT
+        .from("inspo")
+        .update(row)
+        .eq("id", existing.data.id)
+        .select("*")
+        .maybeSingle();
+      if (updateResult.error) throw updateResult.error;
+      saved = updateResult.data;
+    } else {
+      var insertResult = await STELLARSYNC_SUPABASE_CLIENT
+        .from("inspo")
+        .insert(row)
+        .select("*")
+        .maybeSingle();
+      if (insertResult.error) throw insertResult.error;
+      saved = insertResult.data;
+    }
+  } else {
+    saved = upsertResult.data;
+  }
+  return { ok: true, inspo: saved || row, inspoId: inspoId };
+}
+
+async function saveSupabaseAIDraft(payload) {
+  if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase is not configured.");
+  var meta = getWorkspaceRequestMetadata();
+  var workspaceId = payload.workspace_id || meta.workspace_id || "";
+  if (!workspaceId) throw new Error("Workspace ID is missing.");
+  var aiDraftId = payload.ai_draft_id || payload.aiDraftId || generateSupabaseAIDraftId();
+  var platformTargets = Array.isArray(payload.platform_targets)
+    ? payload.platform_targets
+    : Array.isArray(payload.platformTargets)
+      ? payload.platformTargets
+      : payload.platform ? [payload.platform] : [];
+  var mediaIds = Array.isArray(payload.media_ids)
+    ? payload.media_ids
+    : Array.isArray(payload.mediaIds)
+      ? payload.mediaIds
+      : typeof payload.media_ids === "string" ? payload.media_ids.split(",").map(function(v) { return v.trim(); }).filter(Boolean) : [];
+  var row = {
+    workspace_id: workspaceId,
+    ai_draft_id: aiDraftId,
+    title: payload.title || "",
+    draft_text: payload.draft_text || payload.draftText || "",
+    generated_output: payload.generated_output || payload.generatedOutput || "",
+    source_type: payload.source_type || payload.sourceType || "",
+    source_id: payload.source_id || payload.sourceId || "",
+    prompt: payload.prompt || "",
+    generation_mode: payload.generation_mode || payload.generationMode || "",
+    draft_status: payload.draft_status || payload.draftStatus || "needs_review",
+    campaign_id: payload.campaign_id || payload.campaignId || "",
+    campaign_name: payload.campaign_name || payload.campaignName || "",
+    pillar: payload.pillar || "",
+    platform_targets: platformTargets,
+    media_ids: mediaIds,
+    created_post_id: payload.created_post_id || payload.createdPostId || "",
+    parent_artifact_id: payload.parent_artifact_id || payload.parentArtifactId || "",
+    root_artifact_id: payload.root_artifact_id || payload.rootArtifactId || "",
+    derived_from_ids: payload.derived_from_ids || payload.derivedFromIds || "",
+    metadata: payload.metadata || {}
+  };
+  var saved = null;
+  var upsertResult = await STELLARSYNC_SUPABASE_CLIENT
+    .from("ai_drafts")
+    .upsert(row, { onConflict: "workspace_id,ai_draft_id" })
+    .select("*")
+    .maybeSingle();
+  if (upsertResult.error) {
+    var existing = await STELLARSYNC_SUPABASE_CLIENT
+      .from("ai_drafts")
+      .select("id")
+      .eq("workspace_id", workspaceId)
+      .eq("ai_draft_id", aiDraftId)
+      .maybeSingle();
+    if (existing.error && existing.error.code !== "PGRST116") throw upsertResult.error;
+    if (existing.data && existing.data.id) {
+      var updateResult = await STELLARSYNC_SUPABASE_CLIENT
+        .from("ai_drafts")
+        .update(row)
+        .eq("id", existing.data.id)
+        .select("*")
+        .maybeSingle();
+      if (updateResult.error) throw updateResult.error;
+      saved = updateResult.data;
+    } else {
+      var insertResult = await STELLARSYNC_SUPABASE_CLIENT
+        .from("ai_drafts")
+        .insert(row)
+        .select("*")
+        .maybeSingle();
+      if (insertResult.error) throw insertResult.error;
+      saved = insertResult.data;
+    }
+  } else {
+    saved = upsertResult.data;
+  }
+  return { ok: true, aiDraft: saved || row, aiDraftId: aiDraftId };
+}
+
+async function promoteSupabaseAIDraftToPost(aiDraftId, postPayload) {
+  if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase is not configured.");
+  var meta = getWorkspaceRequestMetadata();
+  var workspaceId = meta.workspace_id || "";
+  if (!workspaceId) throw new Error("Workspace ID is missing.");
+  var draftResult = await STELLARSYNC_SUPABASE_CLIENT
+    .from("ai_drafts")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .eq("ai_draft_id", aiDraftId)
+    .maybeSingle();
+  if (draftResult.error && draftResult.error.code !== "PGRST116") throw draftResult.error;
+  var draft = draftResult.data || null;
+  var postId = (postPayload && (postPayload.post_id || postPayload.postId)) || getSupabasePostId({});
+  var savePayload = Object.assign({}, postPayload || {}, {
+    post_id: postId,
+    workspace_id: workspaceId,
+    title: (postPayload && (postPayload.title || postPayload.caption)) || (draft ? draft.title : "") || "",
+    description: (postPayload && (postPayload.description || postPayload.body)) || (draft ? draft.draft_text || draft.generated_output : "") || "",
+    source_ai_draft_id: aiDraftId,
+    created_from_flow: "ai_draft_to_post"
+  });
+  var postResult = await apiSavePostToSupabase(savePayload);
+  var updateResult = await STELLARSYNC_SUPABASE_CLIENT
+    .from("ai_drafts")
+    .update({ draft_status: "promoted", created_post_id: postId })
+    .eq("workspace_id", workspaceId)
+    .eq("ai_draft_id", aiDraftId);
+  if (updateResult.error) console.warn("[supabase] failed to update draft status", updateResult.error);
+  try {
+    await STELLARSYNC_SUPABASE_CLIENT.from("artifact_links").insert({
+      workspace_id: workspaceId,
+      from_type: "ai_draft",
+      from_id: aiDraftId,
+      to_type: "post",
+      to_id: postId,
+      relationship_type: "promoted"
+    });
+  } catch (linkErr) {
+    console.warn("[supabase] failed to create artifact link", linkErr);
+  }
+  return { ok: true, post: postResult.post, postId: postId, aiDraftId: aiDraftId };
+}
+
+async function createSupabasePostFromNote(noteId, postPayload) {
+  if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase is not configured.");
+  var meta = getWorkspaceRequestMetadata();
+  var workspaceId = meta.workspace_id || "";
+  if (!workspaceId) throw new Error("Workspace ID is missing.");
+  var postId = (postPayload && (postPayload.post_id || postPayload.postId)) || getSupabasePostId({});
+  var savePayload = Object.assign({}, postPayload || {}, {
+    post_id: postId,
+    workspace_id: workspaceId,
+    source_note_id: noteId,
+    created_from_flow: "note_to_post"
+  });
+  var postResult = await apiSavePostToSupabase(savePayload);
+  var updateResult = await STELLARSYNC_SUPABASE_CLIENT
+    .from("notes")
+    .update({ flow_state: "converted_to_post", converted_post_id: postId, moved_to_post_at: new Date().toISOString() })
+    .eq("workspace_id", workspaceId)
+    .eq("note_id", noteId);
+  if (updateResult.error) console.warn("[supabase] failed to update note flow_state", updateResult.error);
+  try {
+    await STELLARSYNC_SUPABASE_CLIENT.from("artifact_links").insert({
+      workspace_id: workspaceId,
+      from_type: "note",
+      from_id: noteId,
+      to_type: "post",
+      to_id: postId,
+      relationship_type: "converted"
+    });
+  } catch (linkErr) {
+    console.warn("[supabase] failed to create artifact link", linkErr);
+  }
+  return { ok: true, post: postResult.post, postId: postId };
+}
+
+async function createSupabasePostFromInspo(inspoId, postPayload) {
+  if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase is not configured.");
+  var meta = getWorkspaceRequestMetadata();
+  var workspaceId = meta.workspace_id || "";
+  if (!workspaceId) throw new Error("Workspace ID is missing.");
+  var postId = (postPayload && (postPayload.post_id || postPayload.postId)) || getSupabasePostId({});
+  var savePayload = Object.assign({}, postPayload || {}, {
+    post_id: postId,
+    workspace_id: workspaceId,
+    source_inspo_id: inspoId,
+    created_from_flow: "inspo_to_post"
+  });
+  var postResult = await apiSavePostToSupabase(savePayload);
+  var updateResult = await STELLARSYNC_SUPABASE_CLIENT
+    .from("inspo")
+    .update({ flow_state: "converted_to_post", converted_post_id: postId, moved_to_post_at: new Date().toISOString() })
+    .eq("workspace_id", workspaceId)
+    .eq("inspo_id", inspoId);
+  if (updateResult.error) console.warn("[supabase] failed to update inspo flow_state", updateResult.error);
+  try {
+    await STELLARSYNC_SUPABASE_CLIENT.from("artifact_links").insert({
+      workspace_id: workspaceId,
+      from_type: "inspo",
+      from_id: inspoId,
+      to_type: "post",
+      to_id: postId,
+      relationship_type: "converted"
+    });
+  } catch (linkErr) {
+    console.warn("[supabase] failed to create artifact link", linkErr);
+  }
+  return { ok: true, post: postResult.post, postId: postId };
+}
+
+async function createSupabaseAIDraftFromNote(noteId, payload) {
+  if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase is not configured.");
+  var meta = getWorkspaceRequestMetadata();
+  var workspaceId = meta.workspace_id || "";
+  if (!workspaceId) throw new Error("Workspace ID is missing.");
+  var noteResult = await STELLARSYNC_SUPABASE_CLIENT
+    .from("notes")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .eq("note_id", noteId)
+    .maybeSingle();
+  if (noteResult.error && noteResult.error.code !== "PGRST116") throw noteResult.error;
+  var note = noteResult.data || {};
+  var aiDraftPayload = Object.assign({}, payload || {}, {
+    source_type: "note",
+    source_id: noteId,
+    title: payload && payload.title ? payload.title : note.title || "",
+    draft_text: payload && payload.draft_text ? payload.draft_text : note.body || "",
+    parent_artifact_id: noteId,
+    root_artifact_id: noteResult.data ? noteResult.data.root_artifact_id || noteId : noteId
+  });
+  var result = await saveSupabaseAIDraft(aiDraftPayload);
+  try {
+    await STELLARSYNC_SUPABASE_CLIENT.from("artifact_links").insert({
+      workspace_id: workspaceId,
+      from_type: "note",
+      from_id: noteId,
+      to_type: "ai_draft",
+      to_id: result.aiDraftId,
+      relationship_type: "drafted"
+    });
+  } catch (linkErr) {
+    console.warn("[supabase] failed to create artifact link", linkErr);
+  }
+  return result;
+}
+
+async function createSupabaseInspoFromNote(noteId, payload) {
+  if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase is not configured.");
+  var meta = getWorkspaceRequestMetadata();
+  var workspaceId = meta.workspace_id || "";
+  if (!workspaceId) throw new Error("Workspace ID is missing.");
+  var noteResult = await STELLARSYNC_SUPABASE_CLIENT
+    .from("notes")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .eq("note_id", noteId)
+    .maybeSingle();
+  if (noteResult.error && noteResult.error.code !== "PGRST116") throw noteResult.error;
+  var note = noteResult.data || {};
+  var inspoPayload = Object.assign({}, payload || {}, {
+    source_note_id: noteId,
+    title: payload && payload.title ? payload.title : note.title || "",
+    body: payload && payload.summary ? payload.summary : note.body || "",
+    created_from_flow: "note_to_inspo"
+  });
+  var result = await saveSupabaseInspo(inspoPayload);
+  var updateResult = await STELLARSYNC_SUPABASE_CLIENT
+    .from("notes")
+    .update({ flow_state: "converted_to_inspo", linked_post_id: result.inspoId })
+    .eq("workspace_id", workspaceId)
+    .eq("note_id", noteId);
+  if (updateResult.error) console.warn("[supabase] failed to update note flow_state", updateResult.error);
+  try {
+    await STELLARSYNC_SUPABASE_CLIENT.from("artifact_links").insert({
+      workspace_id: workspaceId,
+      from_type: "note",
+      from_id: noteId,
+      to_type: "inspo",
+      to_id: result.inspoId,
+      relationship_type: "converted"
+    });
+  } catch (linkErr) {
+    console.warn("[supabase] failed to create artifact link", linkErr);
+  }
+  return result;
+}
+
 async function mirrorGoogleSheetPostsToSupabase(posts = []) {
   const backendMode = getActiveWorkspaceBackendMode();
   if (backendMode.mode === "supabase_native") return;
@@ -20921,22 +21456,54 @@ async function apiGetMedia() {
 }
 
 async function apiGetInspo() {
-  const result = await apiGet("getInspo");
+  var backendMode = getActiveWorkspaceBackendMode();
+  if (backendMode.mode === "supabase_native") {
+    try {
+      return await loadSupabaseInspo();
+    } catch (err) {
+      console.warn("[data] supabase inspo load failed, falling back to GPE", err?.message || err);
+    }
+  }
+  var result = await apiGet("getInspo");
   return result.items || result.inspo || result.data || [];
 }
 
 async function apiGetNotes() {
-  const result = await apiGet("getNotes");
+  var backendMode = getActiveWorkspaceBackendMode();
+  if (backendMode.mode === "supabase_native") {
+    try {
+      return await loadSupabaseNotes();
+    } catch (err) {
+      console.warn("[data] supabase notes load failed, falling back to GPE", err?.message || err);
+    }
+  }
+  var result = await apiGet("getNotes");
   return result.items || result.notes || result.data || [];
 }
 
 async function apiGetCampaigns() {
-  const result = await apiGet("getCampaigns");
+  var backendMode = getActiveWorkspaceBackendMode();
+  if (backendMode.mode === "supabase_native") {
+    try {
+      return await loadSupabaseCampaigns();
+    } catch (err) {
+      console.warn("[data] supabase campaigns load failed, falling back to GPE", err?.message || err);
+    }
+  }
+  var result = await apiGet("getCampaigns");
   return result.items || result.campaigns || result.data || [];
 }
 
 async function apiGetAIDrafts() {
-  const result = await apiGet("getAIDrafts");
+  var backendMode = getActiveWorkspaceBackendMode();
+  if (backendMode.mode === "supabase_native") {
+    try {
+      return await loadSupabaseAIDrafts();
+    } catch (err) {
+      console.warn("[data] supabase ai drafts load failed, falling back to GPE", err?.message || err);
+    }
+  }
+  var result = await apiGet("getAIDrafts");
   return result.items || result.data || [];
 }
 
@@ -21192,6 +21759,11 @@ function stripFormulaBackedAIDraftFields(payload = {}) {
 }
 
 async function apiSaveAIDraft(payload) {
+  var backendMode = getActiveWorkspaceBackendMode();
+  if (backendMode.mode === "supabase_native") {
+    var result = await saveSupabaseAIDraft(payload);
+    return { ok: true, draft: result.aiDraft };
+  }
   return apiPost("saveAIDraft", stripFormulaBackedAIDraftFields(payload));
 }
 
@@ -22628,10 +23200,16 @@ async function promoteCurrentAIDraftToPosts(targetStatus = "Draft") {
     let createdPostId = "";
     if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
       setProgress("Sending to Posts...", 55);
-      const result = isScheduled
-        ? await apiApproveAIDraft(aiDraftId, promotionPayload)
-        : await apiSendAIDraftToLedger(aiDraftId, promotionPayload);
-      createdPostId = String(result?.post?.postId || result?.postId || "").trim();
+      var backendMode = getActiveWorkspaceBackendMode();
+      var result;
+      if (backendMode.mode === "supabase_native") {
+        result = await promoteSupabaseAIDraftToPost(aiDraftId, promotionPayload.post);
+      } else if (isScheduled) {
+        result = await apiApproveAIDraft(aiDraftId, promotionPayload);
+      } else {
+        result = await apiSendAIDraftToLedger(aiDraftId, promotionPayload);
+      }
+      createdPostId = String(result?.post?.postId || result?.postId || result?.aiDraftId || "").trim();
     } else {
       const localPost = {
         ...promotionPayload.post,
@@ -23290,6 +23868,11 @@ async function apiUpdateCampaignColor(payload) {
 }
 
 async function apiSaveNote(note) {
+  var backendMode = getActiveWorkspaceBackendMode();
+  if (backendMode.mode === "supabase_native") {
+    var result = await saveSupabaseNote(note);
+    return { ok: true, note: result.note };
+  }
   return apiPost("saveNote", note);
 }
 
@@ -23539,6 +24122,11 @@ async function apiDuplicatePost(postId) {
 }
 
 async function apiSaveInspo(inspo) {
+  var backendMode = getActiveWorkspaceBackendMode();
+  if (backendMode.mode === "supabase_native") {
+    var result = await saveSupabaseInspo(inspo);
+    return { ok: true, inspo: result.inspo };
+  }
   return apiPost("saveInspo", inspo);
 }
 
