@@ -5529,13 +5529,18 @@ function buildWorkspaceMediaPath(workspaceSlug, postId, filename) {
   return `${slug}/${owner}/${Date.now()}-${name}`;
 }
 
+function getWorkspaceMediaPrefix(workspace = WORKSPACE_RUNTIME_CONFIG.active || loadWorkspaceConfig()) {
+  const slug = sanitizeWorkspacePathSegment(workspace?.workspace_slug || workspace?.slug || getCurrentWorkspaceSlug() || "", "");
+  return slug ? `${slug}/` : "";
+}
+
 async function uploadMediaToSupabaseStorage(file, options = {}) {
   if (!isSupabaseMediaEnabled()) {
     throw new Error("Supabase media is not configured for this workspace.");
   }
   const config = WORKSPACE_RUNTIME_CONFIG.active || loadWorkspaceConfig();
   const storagePath = buildWorkspaceMediaPath(config.workspace_slug, options.postId || "", file?.name || "media");
-  const bucket = encodeURIComponent(config.media_bucket || config.storage_bucket || "media");
+  const bucket = encodeURIComponent("media");
   const uploadUrl = `${String(config.supabase_url || "").replace(/\/+$/, "")}/storage/v1/object/${bucket}/${storagePath}`;
   const response = await fetch(uploadUrl, {
     method: "POST",
@@ -5554,7 +5559,8 @@ async function uploadMediaToSupabaseStorage(file, options = {}) {
     await callSupabaseEdgeFunction("media-index", {
       action: "index_bucket",
       workspace_id: config.workspace_id || config.id || getWorkspaceRequestMetadata().workspace_id,
-      bucket: config.media_bucket || config.storage_bucket || "media"
+      workspace_slug: config.workspace_slug || config.slug || getCurrentWorkspaceSlug() || "",
+      prefix: getWorkspaceMediaPrefix(config)
     });
   } catch (err) {
     console.warn("[media] upload index skipped", err?.message || err);
@@ -5577,7 +5583,7 @@ async function uploadMediaToSupabaseStorage(file, options = {}) {
   };
 }
 
-async function loadSupabaseMediaAssets(workspace) {
+async function loadSupabaseMediaAssets(workspace, options = {}) {
   console.log("[media-backend] loadSupabaseMediaAssets started", workspace?.workspace_slug || "unknown");
   var result = { assets: [], source: "none", error: null };
   if (!STELLARSYNC_SUPABASE_CLIENT) {
@@ -5586,14 +5592,18 @@ async function loadSupabaseMediaAssets(workspace) {
   }
   
   var config = workspace || WORKSPACE_RUNTIME_CONFIG.active || loadWorkspaceConfig();
-  var bucket = config.media_bucket || config.storage_bucket || config.bucket || "media";
+  var bucket = "media";
   var workspaceId = config.workspace_id || config.id || getWorkspaceRequestMetadata().workspace_id || "";
+  var workspaceSlug = config.workspace_slug || config.slug || getCurrentWorkspaceSlug() || "";
+  var prefix = options.prefix || getWorkspaceMediaPrefix(config);
+  var loadingToastId = options.silent ? "" : showLoadingToast("Loading media assets", "Loading media assets...");
 
   try {
     var indexed = await callSupabaseEdgeFunction("media-index", {
       action: "list_assets",
       workspace_id: workspaceId,
-      bucket
+      workspace_slug: workspaceSlug,
+      prefix
     });
     var indexedAssets = Array.isArray(indexed.assets) ? indexed.assets : [];
     console.log("[media] table query count", indexedAssets.length);
@@ -5604,6 +5614,7 @@ async function loadSupabaseMediaAssets(workspace) {
       console.log("[media] renderable count", indexedCounts.renderable);
       console.log("[media] unlinked count", result.assets.filter(asset => !String(asset.linkedPostId || asset.linked_post_id || asset.linkedNoteId || asset.linked_note_id || asset.linkedInspoId || asset.linked_inspo_id || "").trim()).length);
       console.log("[media] missing url count", indexedCounts.missingUrl);
+      if (loadingToastId) updateLoadingToastSuccess(loadingToastId, "Loading media assets", `${indexedAssets.length} media asset${indexedAssets.length === 1 ? "" : "s"} loaded.`);
       return result;
     }
   } catch (err) {
@@ -5627,8 +5638,9 @@ async function loadSupabaseMediaAssets(workspace) {
       console.log("[media] table query count", tableResult.data.length);
       result.assets = result.assets.concat(tableResult.data.map(function(asset) {
         var url = asset.media_url || asset.url || asset.file_url || "";
-        if (!url && asset.storage_path && bucket) {
-          url = `${String(config.supabase_url || "").replace(/\/+$/, "")}/storage/v1/object/public/${bucket}/${asset.storage_path}`;
+        var assetBucket = asset.bucket || bucket;
+        if (!url && asset.storage_path && assetBucket) {
+          url = `${String(config.supabase_url || "").replace(/\/+$/, "")}/storage/v1/object/public/${assetBucket}/${asset.storage_path}`;
         }
         return {
           id: asset.asset_id || asset.id || "",
@@ -5645,7 +5657,7 @@ async function loadSupabaseMediaAssets(workspace) {
           thumbnailUrl: asset.thumbnail_url || asset.thumbnailUrl || "",
           storage_path: asset.storage_path || "",
           storagePath: asset.storage_path || "",
-          bucket: asset.bucket || bucket,
+          bucket: assetBucket,
           media_type: asset.media_type || asset.type || "image",
           mimeType: asset.mime_type || asset.mime_type || "",
           source: "supabase",
@@ -5717,11 +5729,13 @@ async function loadSupabaseMediaAssets(workspace) {
     console.log("[media] unlinked count", result.assets.filter(asset => !String(asset.linkedPostId || asset.linked_post_id || asset.linkedNoteId || asset.linked_note_id || asset.linkedInspoId || asset.linked_inspo_id || "").trim()).length);
     console.log("[media] missing url count", counts.missingUrl);
     console.log("[media-backend] merged media count", result.assets.length);
+    if (loadingToastId) updateLoadingToastSuccess(loadingToastId, "Loading media assets", `${result.assets.length} media asset${result.assets.length === 1 ? "" : "s"} loaded.`);
     return result;
   }
 
   console.log("[media-backend] fallback to google_sheets only");
   result.source = "google_sheets";
+  if (loadingToastId) updateLoadingToastSuccess(loadingToastId, "Loading media assets", "No Supabase media assets found.");
   return result;
 }
 
@@ -12782,8 +12796,8 @@ async function testMondayConnection() {
 
 async function inspectMondayColumns() {
   console.log("[monday] inspect columns clicked");
+  var loadingToastId = showLoadingToast("Inspecting Monday columns", "Syncing Monday item metadata...");
   try {
-    showToast("Inspecting Monday columns...", "info");
     var meta = getWorkspaceRequestMetadata();
     var result = await callSupabaseEdgeFunction("monday-sync", {
       action: "inspect_columns",
@@ -12793,11 +12807,10 @@ async function inspectMondayColumns() {
     var used = result.columns_used || {};
     var missing = result.missing_columns || [];
     console.log("[monday] inspect columns result", result);
-    showToast(
+    updateLoadingToastSuccess(
+      loadingToastId,
       "Monday columns inspected",
-      columns.length + " columns found. " + (missing.length ? "Missing: " + missing.join(", ") : "Required aliases resolved."),
-      "ph-table",
-      missing.length ? "text-yellow-400" : "text-[#00ffaa]"
+      columns.length + " columns found. " + (missing.length ? "Missing: " + missing.join(", ") : "Required aliases resolved.")
     );
     upsertLocalWorkspaceConnection("monday", {
       status: missing.length ? "warning" : "connected",
@@ -12824,11 +12837,12 @@ async function inspectMondayColumns() {
       }
     });
     refreshConnectionCards();
-    showToast("Monday column inspection failed: " + (backend.monday_error || backend.error || e.message || String(e)), "error");
+    updateLoadingToastError(loadingToastId, "Monday column inspection failed", backend.monday_error || backend.error || e.message || String(e));
   }
 }
 
 async function syncPostToMonday() {
+  var loadingToastId = "";
   try {
     var boardId = getMondayBoardId(WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active, WORKSPACE_CONNECTIONS);
     if (!boardId) { showToast("No Monday board configured", "error"); return; }
@@ -12836,7 +12850,7 @@ async function syncPostToMonday() {
     if (!existing) { showToast("Save the post first before syncing to Monday", "error"); return; }
     var postDate = existing?.date || existing?.scheduledAt || existing?.scheduled_at || existing?.queueDateLabel || "";
     var postStatus = existing?.status || existing?.publishStatus || "draft";
-    showToast("Syncing post to Monday...", "info");
+    loadingToastId = showLoadingToast("Syncing Monday item", "Syncing Monday item...");
     var meta = getWorkspaceRequestMetadata();
     var result = await callSupabaseEdgeFunction("monday-sync", {
       action: "sync_post",
@@ -12853,7 +12867,7 @@ async function syncPostToMonday() {
     });
     if (result.ok && result.monday_item_id) {
       var warningText = Array.isArray(result.missing_columns) && result.missing_columns.length ? " Missing columns: " + result.missing_columns.join(", ") : "";
-      showToast("Post synced to Monday", "Item ID: " + result.monday_item_id + warningText, "ph-check", warningText ? "text-yellow-400" : "text-[#00ffaa]");
+      updateLoadingToastSuccess(loadingToastId, "Post synced to Monday", "Item ID: " + result.monday_item_id + warningText);
       setModalMondayFields(result.monday_item_id, result.synced_at);
       if (window.__currentModalPostData) {
         window.__currentModalPostData.mondaySyncStatus = warningText ? "synced_with_warnings" : "synced";
@@ -12869,13 +12883,13 @@ async function syncPostToMonday() {
     } else {
       var resultMissing = Array.isArray(result.missing_columns) ? result.missing_columns : [];
       var resultError = result.monday_error || result.error || "Unknown error";
-      showToast("Monday sync failed: " + resultError + (resultMissing.length ? " Missing columns: " + resultMissing.join(", ") : ""), "error");
+      updateLoadingToastError(loadingToastId, "Monday sync failed", resultError + (resultMissing.length ? " Missing columns: " + resultMissing.join(", ") : ""));
     }
   } catch (e) {
     var backend = e && e.backend || {};
     var missing = Array.isArray(backend.missing_columns) ? backend.missing_columns : [];
     var mondayError = backend.monday_error || backend.error || e.message || String(e);
-    showToast("Monday sync error: " + mondayError + (missing.length ? " Missing columns: " + missing.join(", ") : ""), "error");
+    updateLoadingToastError(loadingToastId, "Monday sync error", mondayError + (missing.length ? " Missing columns: " + missing.join(", ") : ""));
   }
 }
 
@@ -15347,20 +15361,30 @@ async function indexSupabaseStorageForMedia() {
   try {
     const meta = getWorkspaceRequestMetadata();
     const active = WORKSPACE_RUNTIME_CONFIG.active || {};
+    const prefix = getWorkspaceMediaPrefix(active);
+    const loadingToastId = showLoadingToast("Indexing media", `Indexing media from media/${prefix}...`);
     const result = await callSupabaseEdgeFunction("media-index", {
       action: "index_bucket",
       workspace_id: meta.workspace_id,
-      bucket: active.media_bucket || active.storage_bucket || "media"
+      workspace_slug: active.workspace_slug || active.slug || getCurrentWorkspaceSlug() || "",
+      prefix
     });
     console.log("[media] storage indexed count", Number(result.indexedCount || 0));
-    const mediaResult = await loadSupabaseMediaAssets(active);
+    if (!result.ok || Number(result.fileCount || 0) === 0) {
+      const bucket = result.bucket || "media";
+      const resultPrefix = result.prefix || prefix || "";
+      const message = `No files found in ${bucket}/${resultPrefix}`;
+      updateLoadingToastError(loadingToastId, "Index failed", message);
+      return;
+    }
+    const mediaResult = await loadSupabaseMediaAssets(active, { silent: true, prefix: result.prefix || prefix });
     appState.media = filterRenderableArtifacts(Array.isArray(mediaResult.assets) ? mediaResult.assets.map(normalizeRemoteMedia) : [], "media");
     persistLocalState();
     renderMedia();
-    showToast("Storage indexed", `${Number(result.indexedCount || 0)} media asset${Number(result.indexedCount || 0) === 1 ? "" : "s"} indexed.`, "ph-check", "text-[#00ffaa]");
+    updateLoadingToastSuccess(loadingToastId, "Indexing media", `Indexed ${Number(result.indexedCount || 0)} media asset${Number(result.indexedCount || 0) === 1 ? "" : "s"}.`);
   } catch (err) {
     console.warn("[media] storage index failed", err?.message || err);
-    showToast("Index failed", err?.message || "Storage could not be indexed.", "ph-warning", "text-yellow-400");
+    updateLoadingToastError("", "Index failed", err?.message || "Storage could not be indexed.");
   }
 }
 
@@ -17334,7 +17358,7 @@ async function aiGenerate(type) {
   }
 }
 
-function showToast(title, message, iconClass = "ph-sparkle", colorClass = "text-[#c77dff]") {
+function showToast(title, message, iconClass = "ph-sparkle", colorClass = "text-[#c77dff]", durationMs = 3000) {
   const toast = document.getElementById("ai-toast");
   const toastTitle = document.getElementById("ai-toast-title");
   const toastText = document.getElementById("ai-toast-text");
@@ -17347,9 +17371,27 @@ function showToast(title, message, iconClass = "ph-sparkle", colorClass = "text-
   if (iconEl) iconEl.className = `ph-bold ${iconClass} ${colorClass} text-lg`;
 
   toast.classList.remove("opacity-0", "pointer-events-none");
-  setTimeout(() => {
-    toast.classList.add("opacity-0", "pointer-events-none");
-  }, 3000);
+  if (showToast._timer) clearTimeout(showToast._timer);
+  if (durationMs > 0) {
+    showToast._timer = setTimeout(() => {
+      toast.classList.add("opacity-0", "pointer-events-none");
+    }, durationMs);
+  }
+}
+
+function showLoadingToast(label, detail = "") {
+  const id = `loading-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  showToast("Loading", detail || label || "Working...", "ph-spinner-gap", "text-[#c77dff]", 0);
+  return id;
+}
+
+function updateLoadingToastSuccess(id, label, detail = "") {
+  showToast("Loaded", detail || label || "Done.", "ph-check", "text-[#00ffaa]");
+}
+
+function updateLoadingToastError(id, label, error) {
+  const message = error?.message || error?.error || String(error || label || "Action failed.");
+  showToast(label || "Error", message, "ph-warning", "text-yellow-400");
 }
 
 function resolveConfirmAction(result) {
@@ -19452,6 +19494,8 @@ async function syncRemoteIfConfigured() {
     return;
   }
 
+  const syncLoadingToastId = showLoadingToast("Syncing workspace", "Loading workspace data...");
+
   if (backendMode.mode === "supabase_native") {
     try {
       var staleNativeErr = document.getElementById("sync-error-state");
@@ -19479,7 +19523,7 @@ async function syncRemoteIfConfigured() {
       persistLocalState();
       console.log("[data]", getAppStateCounts());
       rerenderAll();
-      showToast("Connected", "Supabase workspace data loaded.", "ph-cloud-check", "text-[#00ffaa]");
+      updateLoadingToastSuccess(syncLoadingToastId, "Workspace loaded", "Supabase workspace data loaded.");
       return;
     } catch (err) {
       console.error(err);
@@ -19488,7 +19532,7 @@ async function syncRemoteIfConfigured() {
       lastSyncError = err && err.message ? err.message : String(err);
       console.log("[data]", getAppStateCounts());
       rerenderAll();
-      showToast("Supabase sync issue", lastSyncError || "Posts could not be loaded.", "ph-warning", "text-yellow-400");
+      updateLoadingToastError(syncLoadingToastId, "Supabase sync issue", lastSyncError || "Posts could not be loaded.");
       return;
     }
   }
@@ -19626,7 +19670,7 @@ async function syncRemoteIfConfigured() {
     persistLocalState();
     console.log("[data]", getAppStateCounts());
     rerenderAll();
-    showToast("Connected", "Google Sheets data loaded.", "ph-cloud-check", "text-[#00ffaa]");
+    updateLoadingToastSuccess(syncLoadingToastId, "Workspace loaded", "Google Sheets data loaded.");
   } catch (err) {
     console.error(err);
     offlineMode = true;
@@ -19634,7 +19678,7 @@ async function syncRemoteIfConfigured() {
     lastSyncError = err && err.message ? err.message : String(err);
     console.log("[data]", getAppStateCounts());
     rerenderAll();
-    showToast("Google Sheets sync issue", "Your workspace is connected, but posts could not be loaded.", "ph-warning", "text-yellow-400");
+    updateLoadingToastError(syncLoadingToastId, "Google Sheets sync issue", "Your workspace is connected, but posts could not be loaded.");
     var syncErrEl = document.getElementById("sync-error-state");
     if (!syncErrEl) {
       syncErrEl = document.createElement("div");
@@ -19931,21 +19975,31 @@ async function mirrorGoogleSheetPostsToSupabase(posts = []) {
 async function apiGetPosts() {
   console.log("[data] getPosts request started");
   const backendMode = getActiveWorkspaceBackendMode();
+  const loadingToastId = showLoadingToast(
+    "Loading posts",
+    backendMode.mode === "supabase_native" ? "Loading posts from Supabase..." : "Loading posts from Google Sheets..."
+  );
   if (backendMode.mode === "supabase_native") {
-    const posts = await apiGetSupabasePosts();
-    MISSING_POST_ID_COUNT = 0;
-    console.log("[data] getPosts response status", "ok");
-    console.log("[data] supabase posts count", posts.length);
-    GOOGLE_SHEETS_CONNECTION_STATUS = {
-      source: "supabase_native",
-      connected: false,
-      lastSync: "",
-      postCount: 0,
-      error: "",
-      sheetName: "",
-      appsScriptUrl: ""
-    };
-    return filterBlankPostsForRender(posts);
+    try {
+      const posts = await apiGetSupabasePosts();
+      MISSING_POST_ID_COUNT = 0;
+      console.log("[data] getPosts response status", "ok");
+      console.log("[data] supabase posts count", posts.length);
+      GOOGLE_SHEETS_CONNECTION_STATUS = {
+        source: "supabase_native",
+        connected: false,
+        lastSync: "",
+        postCount: 0,
+        error: "",
+        sheetName: "",
+        appsScriptUrl: ""
+      };
+      updateLoadingToastSuccess(loadingToastId, "Loading posts", `${posts.length} post${posts.length === 1 ? "" : "s"} loaded.`);
+      return filterBlankPostsForRender(posts);
+    } catch (err) {
+      updateLoadingToastError(loadingToastId, "Post load failed", err);
+      throw err;
+    }
   }
   try {
     const result = await apiGet("getPosts");
@@ -19969,6 +20023,7 @@ async function apiGetPosts() {
     console.log("[sheets] connected", true);
     console.log("[sheets] last sync", GOOGLE_SHEETS_CONNECTION_STATUS.lastSync);
     console.log("[sheets] post count", GOOGLE_SHEETS_CONNECTION_STATUS.postCount);
+    updateLoadingToastSuccess(loadingToastId, "Loading posts", `${GOOGLE_SHEETS_CONNECTION_STATUS.postCount} post${GOOGLE_SHEETS_CONNECTION_STATUS.postCount === 1 ? "" : "s"} loaded.`);
     return filteredPosts;
   } catch (err) {
     console.log("[data] getPosts error", err && err.message ? err.message : String(err));
@@ -19983,6 +20038,7 @@ async function apiGetPosts() {
       appsScriptUrl: source.url || getWorkspaceApiUrl()
     };
     console.log("[sheets] connection source", GOOGLE_SHEETS_CONNECTION_STATUS.source);
+    updateLoadingToastError(loadingToastId, "Post load failed", err);
     console.log("[sheets] connected", false);
     console.log("[sheets] last sync", GOOGLE_SHEETS_CONNECTION_STATUS.lastSync || "none");
     console.log("[sheets] post count", GOOGLE_SHEETS_CONNECTION_STATUS.postCount || 0);
@@ -22543,14 +22599,17 @@ async function apiSavePost(post) {
   savePayload.backend_type = backendMode.mode;
   savePayload.backend_mode = backendMode.mode;
   console.log("[savePost] backend", backendMode.mode);
+  const loadingToastId = showLoadingToast("Saving post", "Saving post...");
   try {
     const response = backendMode.mode === "supabase_native"
       ? await apiSavePostToSupabase(savePayload)
       : await apiPost("savePost", savePayload);
     console.log("[savePost] response", response);
+    updateLoadingToastSuccess(loadingToastId, "Post saved", "Post saved.");
     return response;
   } catch (err) {
     console.log("[savePost] error", err);
+    updateLoadingToastError(loadingToastId, "Save failed", err);
     throw err;
   }
 }
