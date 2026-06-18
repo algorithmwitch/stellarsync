@@ -3124,22 +3124,22 @@
     </div>
   </div>
 
-  <div id="media-filter-bar" class="flex gap-4 mb-6 overflow-x-auto pb-2">
-    <button id="media-select-toggle" type="button" class="px-5 py-2 bg-transparent text-gray-500 hover:text-white rounded-lg text-xs font-medium whitespace-nowrap transition-colors" onclick="toggleMediaSelectMode()">
-      Select media
-    </button>
-    <button data-media-filter="all" class="media-filter-btn px-5 py-2 bg-[#231738] text-white rounded-lg text-xs font-semibold whitespace-nowrap">
-      All Assets
-    </button>
-    <button data-media-filter="image" class="media-filter-btn px-5 py-2 bg-transparent text-gray-500 hover:text-white rounded-lg text-xs font-medium whitespace-nowrap transition-colors">
-      Images
-    </button>
-    <button data-media-filter="video" class="media-filter-btn px-5 py-2 bg-transparent text-gray-500 hover:text-white rounded-lg text-xs font-medium whitespace-nowrap transition-colors">
-      Videos
-    </button>
-    <button data-media-filter="carousel" class="media-filter-btn px-5 py-2 bg-transparent text-gray-500 hover:text-white rounded-lg text-xs font-medium whitespace-nowrap transition-colors">
-      Carousels
-    </button>
+  <div id="media-filter-bar" class="flex flex-wrap items-center gap-3 mb-6 pb-2">
+    <div class="flex gap-4 overflow-x-auto pb-2 min-w-0 flex-1">
+      <button data-media-filter="all" class="media-filter-btn px-5 py-2 bg-[#231738] text-white rounded-lg text-xs font-semibold whitespace-nowrap">
+        All Assets
+      </button>
+      <button data-media-filter="image" class="media-filter-btn px-5 py-2 bg-transparent text-gray-500 hover:text-white rounded-lg text-xs font-medium whitespace-nowrap transition-colors">
+        Images
+      </button>
+      <button data-media-filter="video" class="media-filter-btn px-5 py-2 bg-transparent text-gray-500 hover:text-white rounded-lg text-xs font-medium whitespace-nowrap transition-colors">
+        Videos
+      </button>
+      <button data-media-filter="carousel" class="media-filter-btn px-5 py-2 bg-transparent text-gray-500 hover:text-white rounded-lg text-xs font-medium whitespace-nowrap transition-colors">
+        Carousels
+      </button>
+    </div>
+    <div id="media-select-controls" class="ml-auto flex flex-wrap items-center justify-end gap-2"></div>
   </div>
 
   <div id="media-grid-scroll" class="media-grid-scroll">
@@ -5936,7 +5936,7 @@ async function uploadMediaToSupabaseStorage(file, options = {}) {
 
 async function loadSupabaseMediaAssets(workspace, options = {}) {
   console.log("[media-backend] loadSupabaseMediaAssets started", workspace?.workspace_slug || "unknown");
-  var result = { assets: [], source: "none", error: null };
+  var result = { assets: [], postMedia: [], source: "none", error: null };
   if (!STELLARSYNC_SUPABASE_CLIENT) {
     console.log("[media-backend] no supabase client available");
     return result;
@@ -5961,6 +5961,13 @@ async function loadSupabaseMediaAssets(workspace, options = {}) {
     });
     console.log("[media-index] list_assets response FULL_OBJECT", indexed);
     var indexedAssets = Array.isArray(indexed.assets) ? indexed.assets : [];
+    var indexedPostMedia = Array.isArray(indexed.post_media) ? indexed.post_media : Array.isArray(indexed.postMedia) ? indexed.postMedia : [];
+    result.postMedia = indexedPostMedia;
+    if (typeof appState === "object" && appState) {
+      appState.postMedia = indexedPostMedia;
+      appState.post_media = indexedPostMedia;
+    }
+    console.log("[media-attach] post_media count", indexedPostMedia.length);
     console.log("[media] list_assets returned count", indexedAssets.length);
     if (indexedAssets.length) {
       result.assets = indexedAssets.map(normalizeRemoteMedia);
@@ -6032,6 +6039,23 @@ async function loadSupabaseMediaAssets(workspace, options = {}) {
     }
   } catch (err) {
     console.log("[media-backend] table query error", err?.message || err);
+  }
+
+  try {
+    var postMediaResult = await STELLARSYNC_SUPABASE_CLIENT
+      .from("post_media")
+      .select("id,workspace_id,post_id,media_asset_id,sort_order,created_at,updated_at")
+      .eq("workspace_id", workspaceId)
+      .order("sort_order", { ascending: true });
+    if (postMediaResult.error) throw postMediaResult.error;
+    result.postMedia = Array.isArray(postMediaResult.data) ? postMediaResult.data : [];
+    if (typeof appState === "object" && appState) {
+      appState.postMedia = result.postMedia;
+      appState.post_media = result.postMedia;
+    }
+    console.log("[media-attach] post_media count", result.postMedia.length);
+  } catch (err) {
+    console.warn("[media-attach] post_media load skipped", err?.message || err);
   }
   
   console.log("[media-backend] attempting storage list");
@@ -6875,47 +6899,122 @@ function findMediaAssetByAnyKey(key, mediaItems = appState.media || []) {
   }) || null;
 }
 
-function getAttachedMediaForPost(post, mediaItems = appState.media || []) {
+function getMediaIdentityKeys(item) {
+  if (!item) return [];
+  if (typeof item !== "object") return [String(item || "").trim()].filter(Boolean);
+  return [
+    item.media_asset_id,
+    item.mediaAssetId,
+    item.id,
+    item.asset_id,
+    item.assetId,
+    item.media_id,
+    item.mediaId,
+    item.storage_path,
+    item.storagePath,
+    item.media_url,
+    item.mediaUrl,
+    item.fileUrl,
+    item.url,
+    item.sourceUrl
+  ].map((value) => String(value || "").trim()).filter(Boolean);
+}
+
+function resolveAttachedMediaCandidate(item, mediaItems = appState.media || []) {
+  if (!item) return null;
+  if (typeof item === "object") {
+    return item.media_asset || item.media_assets || item.asset || item.mediaAsset || item;
+  }
+  return findMediaAssetByAnyKey(item, mediaItems) || String(item || "").trim();
+}
+
+function getAttachedMediaForPost(post, mediaItems) {
   if (!post) return [];
-  const postIds = new Set(getPostIdentityValues(post));
-  const collect = (values = []) => {
-    const seen = new Set();
-    const attached = [];
-    values.forEach((item) => {
-      if (!item) return;
-      const resolved = typeof item === "object" ? item : (findMediaAssetByAnyKey(item, mediaItems) || String(item || "").trim());
-      const key = getMediaDedupeKey(resolved);
-      if (!key || seen.has(key)) return;
-      seen.add(key);
-      attached.push(resolved);
-    });
-    return attached;
-  };
-  const firstNonEmpty = (...sources) => {
-    for (const values of sources) {
-      const attached = collect(values);
-      if (attached.length) return attached;
+  if (!Array.isArray(mediaItems)) {
+    try {
+      mediaItems = Array.isArray(appState?.media) ? appState.media : [];
+    } catch (_) {
+      mediaItems = [];
     }
-    return [];
-  };
+  }
+  const postIds = new Set(getPostIdentityValues(post));
+  const postId = Array.from(postIds)[0] || getCanonicalPostId(post) || "";
+  let globalRows = [];
+  try {
+    globalRows = appState?.postMedia || appState?.post_media || [];
+  } catch (_) {
+    globalRows = [];
+  }
+  const globalPostMediaRows = globalRows.filter((row) => postIds.has(String(row?.post_id || row?.postId || "").trim()));
+  const inlinePostMediaRows = []
+    .concat(Array.isArray(post.post_media) ? post.post_media : [])
+    .concat(Array.isArray(post.postMedia) ? post.postMedia : []);
+  const postMediaRows = inlinePostMediaRows.concat(globalPostMediaRows)
+    .filter(Boolean)
+    .sort((a, b) => {
+      const aSort = Number(a?.sort_order ?? a?.sortOrder ?? 0) || 0;
+      const bSort = Number(b?.sort_order ?? b?.sortOrder ?? 0) || 0;
+      if (aSort !== bSort) return aSort - bSort;
+      return String(a?.created_at || a?.createdAt || "").localeCompare(String(b?.created_at || b?.createdAt || ""));
+    });
+  const mediaIdValues = splitMediaIdList(post.media_ids || post.mediaIds);
+  const carouselIdValues = splitMediaIdList(post.carouselAssetIds || post.carousel_asset_ids);
   const postLinkedAssets = (mediaItems || []).filter((asset) => {
     const linkedId = String(asset.linkedPostId || asset.linked_post_id || asset.postId || asset.post_id || "").trim();
     return linkedId && postIds.has(linkedId);
-  });
+  }).sort((a, b) => String(a.created_at || a.createdAt || "").localeCompare(String(b.created_at || b.createdAt || "")));
   const single = post.media_id || post.mediaId || post.asset_id || post.assetId;
-  const postMediaRows = []
-    .concat(Array.isArray(post.post_media) ? post.post_media : [])
-    .concat(Array.isArray(post.postMedia) ? post.postMedia : [])
-    .sort((a, b) => (Number(a?.sort_order || a?.sortOrder || 0) || 0) - (Number(b?.sort_order || b?.sortOrder || 0) || 0))
-    .map((row) => row?.media_asset || row?.media_assets || row?.asset || row?.media_asset_id || row?.mediaAssetId || row?.asset_id || row?.assetId || row?.id || row);
+  const candidates = [];
+  const addSource = (values = [], sourceRank = 9, sourceLabel = "") => {
+    (values || []).forEach((item, index) => {
+      const resolved = resolveAttachedMediaCandidate(item, mediaItems);
+      if (!resolved) return;
+      const createdAt = typeof resolved === "object" ? String(resolved.created_at || resolved.createdAt || "") : "";
+      candidates.push({ item: resolved, sourceRank, sourceLabel, sourceIndex: index, createdAt });
+    });
+  };
+  addSource(postMediaRows.map((row) => row?.media_asset || row?.media_assets || row?.asset || row?.mediaAsset || row?.media_asset_id || row?.mediaAssetId || row?.asset_id || row?.assetId || row?.id || row), 1, "post_media");
+  addSource(mediaIdValues, 2, "media_ids");
+  addSource(carouselIdValues.concat(Array.isArray(post.carouselAssets) ? post.carouselAssets : []), 3, "carousel");
+  addSource(postLinkedAssets, 4, "linked_media");
+  addSource(single ? [single] : [], 5, "single");
 
-  return firstNonEmpty(
-    postMediaRows,
-    splitMediaIdList(post.media_ids || post.mediaIds),
-    splitMediaIdList(post.carouselAssetIds || post.carousel_asset_ids).concat(Array.isArray(post.carouselAssets) ? post.carouselAssets : []),
-    postLinkedAssets,
-    single ? [single] : []
-  );
+  const attached = [];
+  const keyToIndex = new Map();
+  candidates.forEach((candidate) => {
+    const keys = getMediaIdentityKeys(candidate.item);
+    const primaryKey = keys[0] || getMediaDedupeKey(candidate.item);
+    if (!primaryKey) return;
+    const existingIndex = keys.map((key) => keyToIndex.get(key)).find((index) => Number.isInteger(index));
+    if (Number.isInteger(existingIndex)) {
+      const existing = attached[existingIndex];
+      if (candidate.sourceRank < existing.sourceRank || candidate.sourceRank === existing.sourceRank && candidate.sourceIndex < existing.sourceIndex) {
+        attached[existingIndex] = { ...candidate, keys: Array.from(new Set((existing.keys || []).concat(keys))) };
+      } else if (typeof existing.item !== "object" && typeof candidate.item === "object") {
+        attached[existingIndex] = { ...existing, item: candidate.item, keys: Array.from(new Set((existing.keys || []).concat(keys))) };
+      }
+      (attached[existingIndex].keys || keys).forEach((key) => keyToIndex.set(key, existingIndex));
+      return;
+    }
+    const nextIndex = attached.length;
+    const entry = { ...candidate, keys };
+    attached.push(entry);
+    keys.forEach((key) => keyToIndex.set(key, nextIndex));
+  });
+
+  attached.sort((a, b) => {
+    if (a.sourceRank !== b.sourceRank) return a.sourceRank - b.sourceRank;
+    if (a.sourceIndex !== b.sourceIndex) return a.sourceIndex - b.sourceIndex;
+    return String(a.createdAt || "").localeCompare(String(b.createdAt || ""));
+  });
+  const finalAttached = attached.map((entry) => entry.item);
+  console.log("[media-attach] post id", postId);
+  console.log("[media-attach] post_media count", postMediaRows.length);
+  console.log("[media-attach] media_ids count", mediaIdValues.length);
+  console.log("[media-attach] linked media count", postLinkedAssets.length);
+  console.log("[media-attach] final attached count", finalAttached.length);
+  console.log("[media-attach] final order", finalAttached.map((asset) => getMediaDedupeKey(asset) || String(asset || "")));
+  return finalAttached;
 }
 
 function inferMediaKindFromAsset(asset) {
@@ -7430,6 +7529,7 @@ const DEFAULT_STATE = {
 ],
   notes: [],
   media: [],
+  postMedia: [],
   importJobs: [],
   aiDrafts: [],
   brandFramework: []
@@ -12106,7 +12206,8 @@ function renderModalCarouselPreview() {
         ondragover="event.preventDefault()"
         ondrop="dropCarouselAsset(event, ${index})"
         ondragend="endCarouselAssetDrag()">
-        <div class="w-24 h-24 rounded-xl overflow-hidden bg-[#0f0a18] border border-white/5 shrink-0 flex items-center justify-center">
+        <div class="w-24 h-24 rounded-xl overflow-hidden bg-[#0f0a18] border border-white/5 shrink-0 flex items-center justify-center relative">
+          <span class="absolute top-2 left-2 z-10 w-6 h-6 rounded-full bg-[#181125]/90 border border-white/10 text-[10px] font-bold text-white flex items-center justify-center">${index + 1}</span>
           ${previewUrl
             ? String(asset.assetType || asset.type || "").startsWith("video")
               ? `<video src="${escapeHtml(previewUrl)}" class="w-full h-full object-cover" muted playsinline preload="metadata"></video>`
@@ -12116,8 +12217,11 @@ function renderModalCarouselPreview() {
             : `<i class="ph-bold ph-image text-gray-500 text-2xl"></i>`}
         </div>
         <div class="min-w-0 flex-1">
-          <div class="text-xs font-bold text-white wrap-safe mb-1">${escapeHtml(getMediaDisplayTitle(asset, getLinkedPostForMedia(asset), `Asset ${index + 1}`))}</div>
-          <div class="text-[10px] text-gray-500 mb-3">${escapeHtml(toTitleCase(asset.assetType || asset.type || "image"))}</div>
+          <div class="flex items-start justify-between gap-3 mb-1">
+            <div class="text-xs font-bold text-white wrap-safe min-w-0">${escapeHtml(getMediaDisplayTitle(asset, getLinkedPostForMedia(asset), `Asset ${index + 1}`))}</div>
+            <div class="shrink-0 text-gray-500 cursor-grab" title="Drag to reorder"><i class="ph-bold ph-dots-six-vertical text-lg"></i></div>
+          </div>
+          <div class="text-[10px] text-gray-500 mb-3">${escapeHtml(toTitleCase(asset.assetType || asset.type || "image"))} · Order ${index + 1}</div>
           <div class="flex gap-2 flex-wrap">
             <button type="button" onclick="moveCarouselAsset(${index}, -1)" class="px-2 py-1 rounded-lg bg-[#120c1d] border border-white/5 text-[10px] font-bold text-white">Move left</button>
             <button type="button" onclick="moveCarouselAsset(${index}, 1)" class="px-2 py-1 rounded-lg bg-[#120c1d] border border-white/5 text-[10px] font-bold text-white">Move right</button>
@@ -12175,25 +12279,19 @@ async function saveCurrentCarouselOrderToSupabase() {
   const postId = String(currentEditingPostId || getCanonicalPostId(window.__currentModalPostData || {}) || "").trim();
   if (!postId) return;
   const order = getCurrentCarouselOrderPayload();
-  for (let index = 0; index < order.assets.length; index += 1) {
-    await attachMediaAssetToPost(order.assets[index], postId, index);
-  }
-  if (STELLARSYNC_SUPABASE_CLIENT) {
-    const meta = getWorkspaceRequestMetadata();
-    const derived = derivePostFormatFromMedia({ media_ids: order.ids, carouselAssets: order.assets });
-    const { error } = await STELLARSYNC_SUPABASE_CLIENT
-      .from("posts")
-      .update({
-        media_ids: order.ids,
-        media_id: order.ids[0] || null,
-        post_type: derived.post_type,
-        format: derived.format
-      })
-      .eq("workspace_id", meta.workspace_id)
-      .eq("post_id", postId);
-    if (error) throw error;
-  }
-  refreshPostMediaClassification(postId);
+  const meta = getWorkspaceRequestMetadata();
+  console.log("[carousel] saving sort_order", { postId, ids: order.ids });
+  const result = await callSupabaseEdgeFunction("media-index", {
+    action: "reorder_post_media",
+    workspace_id: meta.workspace_id,
+    workspace_slug: meta.workspace_slug || getCurrentWorkspaceSlug() || "",
+    post_id: postId,
+    ordered_media_asset_ids: order.ids
+  });
+  console.log("[carousel] save response", result);
+  applyOrderedAttachedMediaResult(postId, result);
+  const refreshed = getAttachedMediaForPost(findPostByAnyId(postId) || window.__currentModalPostData || { post_id: postId });
+  console.log("[carousel] refreshed order", refreshed.map((asset) => getMediaDedupeKey(asset) || String(asset || "")));
   console.log("[carousel] order saved", { postId, count: order.assets.length });
 }
 
@@ -12204,6 +12302,7 @@ function reorderCarouselAssets(fromIndex, toIndex, persist = true) {
   const [item] = clone.splice(fromIndex, 1);
   clone.splice(toIndex, 0, item);
   currentModalCarouselAssets = clone;
+  console.log("[carousel] local order", clone.map((asset) => getMediaDedupeKey(asset)));
   applyCurrentCarouselOrderToModalPost();
   renderModalCarouselPreview();
   if (persist) {
@@ -16709,13 +16808,17 @@ function toggleMediaSelectMode(forceValue) {
 }
 
 function renderMediaSelectToggleState() {
-  const btn = document.getElementById("media-select-toggle");
-  if (!btn) return;
-  btn.classList.toggle("bg-[#231738]", mediaSelectMode);
-  btn.classList.toggle("text-white", mediaSelectMode);
-  btn.classList.toggle("font-semibold", mediaSelectMode);
-  btn.classList.toggle("bg-transparent", !mediaSelectMode);
-  btn.classList.toggle("text-gray-500", !mediaSelectMode);
+  const target = document.getElementById("media-select-controls");
+  if (!target) return;
+  const selectedCount = selectedMediaAssetIds.size;
+  target.innerHTML = `
+    ${mediaSelectMode ? `<span class="text-xs text-gray-400 whitespace-nowrap">${selectedCount} selected</span>` : ""}
+    ${mediaSelectMode && selectedCount && canAttachMediaToPosts() ? `<button type="button" onclick="openSelectedMediaAttachPanel()" class="px-3 py-2 rounded-lg bg-[#231738] border border-white/10 text-[10px] uppercase tracking-widest font-bold text-white whitespace-nowrap">Attach selected to post</button>` : ""}
+    ${mediaSelectMode && selectedCount ? `<button type="button" onclick="clearSelectedMedia()" class="px-3 py-2 rounded-lg bg-[#181125] border border-white/5 text-[10px] uppercase tracking-widest font-bold text-gray-300 whitespace-nowrap">Clear selection</button>` : ""}
+    <button id="media-select-toggle" type="button" class="px-5 py-2 ${mediaSelectMode ? "bg-[#231738] text-white font-semibold" : "bg-transparent text-gray-500 font-medium"} hover:text-white rounded-lg text-xs whitespace-nowrap transition-colors" onclick="toggleMediaSelectMode()">
+      Select media
+    </button>
+  `;
 }
 
 function toggleMediaSelection(assetId, checked) {
@@ -16793,18 +16896,7 @@ function renderMedia() {
     return;
   }
 
-  const selectedCount = selectedMediaAssetIds.size;
-  const toolbar = `
-    <div class="col-span-full flex flex-wrap items-center justify-between gap-3 mb-1">
-      <div class="text-xs text-gray-400">${mediaSelectMode ? `${selectedCount} selected` : `${items.length} media asset${items.length === 1 ? "" : "s"}`}</div>
-      <div class="flex flex-wrap gap-2">
-        ${mediaSelectMode && selectedCount && canAttachMediaToPosts() ? `<button type="button" onclick="openSelectedMediaAttachPanel()" class="px-3 py-2 rounded-lg bg-[#231738] border border-white/10 text-[10px] uppercase tracking-widest font-bold text-white">Attach selected to post</button>` : ""}
-        ${mediaSelectMode && selectedCount ? `<button type="button" onclick="clearSelectedMedia()" class="px-3 py-2 rounded-lg bg-[#181125] border border-white/5 text-[10px] uppercase tracking-widest font-bold text-gray-300">Clear selection</button>` : ""}
-      </div>
-    </div>
-  `;
-
-  grid.innerHTML = toolbar + items.map(item => {
+  grid.innerHTML = items.map(item => {
     const itemKey = getMediaItemKey(item);
     const isSelected = selectedMediaAssetIds.has(itemKey);
     const isGroup = item.kind === "group";
@@ -16956,6 +17048,7 @@ async function attachMediaAssetToPost(item, postId, sortOrder = 0) {
   try {
     const result = await callSupabaseEdgeFunction("media-index", payload);
     console.log("[media-match] post_media response", result);
+    applyOrderedAttachedMediaResult(postId, result);
     return normalizeRemoteMedia(result.asset || {});
   } catch (err) {
     console.log("[media-match] attach error full object", {
@@ -16968,25 +17061,99 @@ async function attachMediaAssetToPost(item, postId, sortOrder = 0) {
   }
 }
 
+function mergePostMediaRowsForPost(postId, rows = []) {
+  const targetPostId = String(postId || "").trim();
+  if (!targetPostId || !Array.isArray(rows)) return;
+  const normalizedRows = rows.filter(Boolean).map((row) => ({
+    ...row,
+    post_id: row.post_id || row.postId || targetPostId,
+    media_asset_id: row.media_asset_id || row.mediaAssetId || row.id || "",
+    sort_order: Number(row.sort_order ?? row.sortOrder ?? 0) || 0
+  }));
+  const otherRows = (appState.postMedia || appState.post_media || []).filter((row) => String(row?.post_id || row?.postId || "").trim() !== targetPostId);
+  appState.postMedia = otherRows.concat(normalizedRows);
+  appState.post_media = appState.postMedia;
+}
+
+function applyOrderedAttachedMediaResult(postId, result = {}) {
+  const targetPostId = String(postId || result.post_id || result.postId || "").trim();
+  if (!targetPostId) return null;
+  const rows = Array.isArray(result.post_media) ? result.post_media : Array.isArray(result.postMedia) ? result.postMedia : [];
+  mergePostMediaRowsForPost(targetPostId, rows);
+  const hasAttachedPayload = Array.isArray(result.attached_media) || Array.isArray(result.attachedMedia);
+  const attached = (Array.isArray(result.attached_media) ? result.attached_media : Array.isArray(result.attachedMedia) ? result.attachedMedia : [])
+    .filter(Boolean)
+    .map((asset) => normalizeRemoteMedia(asset));
+  attached.forEach((asset) => upsertMediaAssetIntoAppState(asset));
+  const ids = (Array.isArray(result.ordered_media_asset_ids) ? result.ordered_media_asset_ids : [])
+    .map(String)
+    .filter(Boolean);
+  const orderedAssetIdsFromResult = (Array.isArray(result.ordered_asset_ids) ? result.ordered_asset_ids : [])
+    .map(String)
+    .filter(Boolean);
+  const assetIds = attached.map((asset) => asset.assetId || asset.asset_id || asset.mediaId || asset.media_id || asset.id).filter(Boolean);
+  const orderedIds = orderedAssetIdsFromResult.length ? orderedAssetIdsFromResult : ids.length ? ids : assetIds;
+  if (hasAttachedPayload || attached.length || orderedIds.length) {
+    appState.posts = (appState.posts || []).map((post) => {
+      if (!getPostIdentityValues(post).includes(targetPostId)) return post;
+      return applyDerivedPostMediaFormat({
+        ...post,
+        media_ids: orderedIds,
+        mediaIds: orderedIds,
+        carouselAssetIds: orderedIds,
+        carouselAssets: attached,
+        media_id: orderedIds[0] || "",
+        mediaId: orderedIds[0] || ""
+      });
+    });
+  }
+  const activePost = findPostByAnyId(targetPostId) || (window.__currentModalPostData && getPostIdentityValues(window.__currentModalPostData).includes(targetPostId) ? window.__currentModalPostData : null);
+  const refreshedPost = refreshPostMediaClassification(targetPostId) || activePost;
+  if (currentEditingPostId && String(currentEditingPostId) === targetPostId) {
+    const modalAttached = getAttachedMediaForPost(refreshedPost || { post_id: targetPostId }, appState.media || [])
+      .filter((asset) => asset && typeof asset === "object")
+      .map((asset) => normalizeRemoteMedia(asset));
+    currentModalCarouselAssets = modalAttached;
+    currentModalAsset = modalAttached[0] || null;
+    if (modalMediaStatus) modalMediaStatus.textContent = modalAttached.length ? `${modalAttached.length >= 2 ? `Carousel · ${modalAttached.length} assets` : renderPostMediaTypeBadge(refreshedPost || {})} linked` : "No media linked";
+    renderModalCarouselPreview();
+  }
+  return refreshedPost;
+}
+
+async function attachMediaAssetsToPost(items = [], postId, startSortOrder = 0) {
+  const meta = getWorkspaceRequestMetadata();
+  const mediaAssets = (items || []).filter(Boolean).map((item, index) => ({
+    ...getMediaAssetIdentifier(item),
+    sort_order: startSortOrder + index,
+    sortOrder: startSortOrder + index
+  }));
+  const payload = {
+    action: "attach_to_post",
+    workspace_id: meta.workspace_id,
+    workspace_slug: meta.workspace_slug || getCurrentWorkspaceSlug() || "",
+    post_id: postId,
+    media_assets: mediaAssets,
+    media_asset_ids: mediaAssets.map((asset) => asset.media_asset_id || asset.asset_id).filter(Boolean),
+    sort_order: startSortOrder,
+    sortOrder: startSortOrder
+  };
+  console.log("[media-match] attach request", payload);
+  const result = await callSupabaseEdgeFunction("media-index", payload);
+  console.log("[media-match] post_media response", result);
+  applyOrderedAttachedMediaResult(postId, result);
+  return (Array.isArray(result.attached_media) ? result.attached_media : Array.isArray(result.attachedMedia) ? result.attachedMedia : []).map((asset) => normalizeRemoteMedia(asset));
+}
+
 function refreshPostMediaClassification(postId) {
   const targetId = String(postId || "").trim();
   if (!targetId) return null;
   let updatedPost = null;
   appState.posts = (appState.posts || []).map((post) => {
     if (!getPostIdentityValues(post).includes(targetId)) return post;
-    const linkedAssets = (appState.media || []).filter((asset) => {
-      const linkedId = String(asset.linkedPostId || asset.linked_post_id || asset.postId || asset.post_id || "").trim();
-      return linkedId === targetId;
-    }).map((asset) => normalizeRemoteMedia(asset));
-    const preferredOrder = splitMediaIdList(post.media_ids || post.mediaIds || post.carouselAssetIds || post.carousel_asset_ids);
-    if (preferredOrder.length) {
-      const orderMap = new Map(preferredOrder.map((id, index) => [String(id), index]));
-      linkedAssets.sort((a, b) => {
-        const aKey = [a.assetId, a.asset_id, a.mediaId, a.media_id, a.id].map((value) => String(value || "")).find((value) => orderMap.has(value));
-        const bKey = [b.assetId, b.asset_id, b.mediaId, b.media_id, b.id].map((value) => String(value || "")).find((value) => orderMap.has(value));
-        return (orderMap.get(aKey) ?? Number.MAX_SAFE_INTEGER) - (orderMap.get(bKey) ?? Number.MAX_SAFE_INTEGER);
-      });
-    }
+    const linkedAssets = getAttachedMediaForPost(post, appState.media || [])
+      .filter((asset) => asset && typeof asset === "object")
+      .map((asset) => normalizeRemoteMedia(asset));
     const linkedIds = linkedAssets.map((asset) => asset.assetId || asset.asset_id || asset.mediaId || asset.media_id || asset.id).filter(Boolean);
     updatedPost = applyDerivedPostMediaFormat({
       ...post,
@@ -17022,14 +17189,17 @@ async function attachSelectedMediaToPost(postId) {
   const existingPost = findPostByAnyId(targetPostId);
   const baseSortOrder = existingPost ? getAttachedMediaForPost(existingPost).length : 0;
   const updated = [];
-  for (let index = 0; index < items.length; index += 1) {
-    const item = items[index];
-    try {
-      updated.push(await attachMediaAssetToPost(item, targetPostId, baseSortOrder + index));
-    } catch (err) {
-      console.warn("[media-match] attach failed", getMediaItemKey(item), err?.message || err);
-      throw err;
+  try {
+    const attached = await attachMediaAssetsToPost(items, targetPostId, baseSortOrder);
+    if (attached.length) updated.push(...attached);
+    else {
+      for (let index = 0; index < items.length; index += 1) {
+        updated.push(await attachMediaAssetToPost(items[index], targetPostId, baseSortOrder + index));
+      }
     }
+  } catch (err) {
+    console.warn("[media-match] attach failed", err?.message || err);
+    throw err;
   }
   updated.forEach((asset) => upsertMediaAssetIntoAppState(asset));
   if (updated[0]) currentMediaAssetDetail = updated[0];
@@ -17061,6 +17231,8 @@ async function detachMediaAssetFromPost(item) {
     workspace_id: meta.workspace_id,
     ...identifiers
   });
+  const postId = item?.linkedPostId || item?.linked_post_id || item?.postId || item?.post_id || currentEditingPostId || "";
+  if (postId) applyOrderedAttachedMediaResult(postId, result);
   return normalizeRemoteMedia(result.asset || {});
 }
 
@@ -25002,6 +25174,7 @@ function loadLocalState() {
       inspo: Array.isArray(parsed.inspo) ? parsed.inspo : structuredCloneState(DEFAULT_STATE.inspo),
       notes: Array.isArray(parsed.notes) ? parsed.notes : structuredCloneState(DEFAULT_STATE.notes),
       media: Array.isArray(parsed.media) ? parsed.media : structuredCloneState(DEFAULT_STATE.media),
+      postMedia: Array.isArray(parsed.postMedia) ? parsed.postMedia : Array.isArray(parsed.post_media) ? parsed.post_media : structuredCloneState(DEFAULT_STATE.postMedia),
       importJobs: Array.isArray(parsed.importJobs) ? parsed.importJobs : structuredCloneState(DEFAULT_STATE.importJobs),
       aiDrafts: Array.isArray(parsed.aiDrafts) ? parsed.aiDrafts : structuredCloneState(DEFAULT_STATE.aiDrafts),
       brandFramework: Array.isArray(parsed.brandFramework) ? parsed.brandFramework : structuredCloneState(DEFAULT_STATE.brandFramework)
@@ -25018,6 +25191,8 @@ function sanitizeAppStateArtifacts(state) {
   next.inspo = filterRenderableArtifacts(next.inspo || [], "inspo");
   next.notes = filterRenderableArtifacts(next.notes || [], "note");
   next.media = filterRenderableArtifacts(next.media || [], "media");
+  next.postMedia = Array.isArray(next.postMedia) ? next.postMedia : Array.isArray(next.post_media) ? next.post_media : [];
+  next.post_media = next.postMedia;
   next.posts = next.posts.map((post) => applyDerivedPostMediaFormat(post, next.media || []));
   next.aiDrafts = filterRenderableArtifacts(next.aiDrafts || [], "aiDraft");
   return next;
