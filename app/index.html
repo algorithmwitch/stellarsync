@@ -2779,9 +2779,15 @@
       <h2 class="text-4xl font-bold text-white tracking-tight">Notes</h2>
       <p class="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mt-2">Text-Only Ideas, Hooks, and Post Seeds</p>
     </div>
-    <button id="open-note-modal-btn" type="button" class="px-5 py-2 bg-[#2d1b4e] border border-[#a855f7]/30 rounded-xl text-xs text-white font-bold hover:bg-[#3d246c] transition-colors shadow-sm">
-      <i class="ph-bold ph-plus mr-1"></i> Add Note
-    </button>
+    <div class="flex items-center gap-3">
+      <label class="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#120c1d] border border-white/5 text-[10px] uppercase tracking-wider font-semibold text-gray-400 cursor-pointer hover:text-white transition-colors">
+        <input id="notes-show-archived" type="checkbox" class="accent-[#c77dff]" onchange="safeRender(renderNotes, 'renderNotes')">
+        Show archived
+      </label>
+      <button id="open-note-modal-btn" type="button" class="px-5 py-2 bg-[#2d1b4e] border border-[#a855f7]/30 rounded-xl text-xs text-white font-bold hover:bg-[#3d246c] transition-colors shadow-sm">
+        <i class="ph-bold ph-plus mr-1"></i> Add Note
+      </button>
+    </div>
   </div>
 
   <div id="notes-grid" class="grid grid-cols-3 gap-4 overflow-y-auto custom-scrollbar flex-1 pb-4 content-start"></div>
@@ -3913,7 +3919,10 @@
                       <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Carousel Media</p>
                       <p class="text-xs text-gray-400 mt-1">Upload multiple images, reorder them, and remove a single slide without deleting the whole post.</p>
                     </div>
-                    <span id="modal-carousel-count" class="px-2.5 py-1 rounded-full bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300">0 Slides</span>
+                    <div class="flex items-center gap-2 flex-wrap justify-end">
+                      <button type="button" onclick="detachAllMediaFromCurrentPost()" class="px-2.5 py-1 rounded-lg bg-[#30121b] border border-red-400/20 text-[10px] uppercase tracking-wider font-bold text-red-200">Detach all from this post</button>
+                      <span id="modal-carousel-count" class="px-2.5 py-1 rounded-full bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300">0 Slides</span>
+                    </div>
                   </div>
                   <div id="modal-carousel-preview" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
                 </div>
@@ -4739,6 +4748,21 @@
                 <span id="settings-assistant-status" class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Visible</span>
               </div>
             </div>
+            <div id="settings-sheet-mirror-card" class="platform-card hidden">
+              <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
+                <div>
+                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Sheet Mirror</div>
+                  <div id="settings-sheet-mirror-status" class="text-sm text-gray-300 mt-1">Sync status loading...</div>
+                </div>
+                <div id="settings-sheet-mirror-badge" class="px-3 py-1.5 rounded-lg bg-[#0a2016] border border-[#00ffaa]/20 text-[10px] uppercase tracking-wider font-bold text-[#00ffaa]">Connected</div>
+              </div>
+              <div id="settings-sheet-mirror-times" class="flex items-center gap-4 text-[10px] text-gray-500 mb-3"></div>
+              <div class="flex flex-wrap gap-2">
+                <button type="button" onclick="pushSupabaseToSheets()" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors flex items-center gap-1.5"><i class="ph-bold ph-upload-simple"></i> Push to Sheet</button>
+                <button type="button" onclick="pullSheetsToSupabase()" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors flex items-center gap-1.5"><i class="ph-bold ph-download-simple"></i> Pull from Sheet</button>
+                <button type="button" onclick="bidirectionalSheetSync()" class="px-3 py-2 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white hover:opacity-90 transition-colors flex items-center gap-1.5"><i class="ph-bold ph-arrows-left-right"></i> Bidirectional</button>
+              </div>
+            </div>
           </section>
           <section data-settings-panel="accounts" class="hidden space-y-4"></section>
           <section data-settings-panel="providers" class="hidden space-y-4">
@@ -5247,7 +5271,11 @@ function getSessionWorkspaceConfig() {
 	      short_name: String(parsed.short_name || "").trim(),
 	      avatar_initials: String(parsed.avatar_initials || "").trim(),
 	      avatar_mode: String(parsed.avatar_mode || parsed.avatarMode || "").trim(),
-	      icon: String(parsed.icon || parsed.avatar_icon || "").trim()
+	      icon: String(parsed.icon || parsed.avatar_icon || "").trim(),
+	      sheet_sync_enabled: Boolean(parsed.sheet_sync_enabled),
+	      sheet_sync_direction: String(parsed.sheet_sync_direction || "bidirectional").trim(),
+	      sheet_last_pushed_at: parsed.sheet_last_pushed_at || null,
+	      sheet_last_pulled_at: parsed.sheet_last_pulled_at || null
 	    };
   } catch (_) {
     return null;
@@ -5360,6 +5388,13 @@ function normalizeSupabaseWorkspaceConfig(workspace) {
     avatar_initials: String(source.avatar_initials || source.avatarInitials || "").trim(),
     avatar_mode: String(source.avatar_mode || source.avatarMode || "").trim(),
     icon: String(source.icon || source.avatar_icon || source.avatarIcon || "").trim(),
+    google_sheet_id: String(source.google_sheet_id || source.sheet_id || "").trim(),
+    sheet_id: String(source.google_sheet_id || source.sheet_id || "").trim(),
+    apps_script_url: String(source.apps_script_url || "").trim(),
+    sheet_sync_enabled: Boolean(source.sheet_sync_enabled),
+    sheet_sync_direction: String(source.sheet_sync_direction || "bidirectional").trim(),
+    sheet_last_pushed_at: source.sheet_last_pushed_at || null,
+    sheet_last_pulled_at: source.sheet_last_pulled_at || null,
     created_at: source.created_at || null,
     updated_at: source.updated_at || null
   };
@@ -5381,7 +5416,15 @@ function mergeWorkspaceSettings(workspace, settings) {
     short_name: shortName || workspace.short_name || "",
     avatar_initials: avatarInitials || workspace.avatar_initials || "",
     avatar_mode: avatarMode || workspace.avatar_mode || "",
-    icon: icon || workspace.icon || ""
+    icon: icon || workspace.icon || "",
+    backend_type: String(settings.backend_type || workspace.backend_type || "").trim(),
+    google_sheet_id: String(settings.google_sheet_id || settings.sheet_id || workspace.google_sheet_id || workspace.sheet_id || "").trim(),
+    sheet_id: String(settings.google_sheet_id || settings.sheet_id || workspace.google_sheet_id || workspace.sheet_id || "").trim(),
+    apps_script_url: String(settings.apps_script_url || workspace.apps_script_url || "").trim(),
+    sheet_sync_enabled: settings.sheet_sync_enabled !== undefined ? Boolean(settings.sheet_sync_enabled) : Boolean(workspace.sheet_sync_enabled),
+    sheet_sync_direction: String(settings.sheet_sync_direction || workspace.sheet_sync_direction || "bidirectional").trim(),
+    sheet_last_pushed_at: settings.sheet_last_pushed_at || workspace.sheet_last_pushed_at || null,
+    sheet_last_pulled_at: settings.sheet_last_pulled_at || workspace.sheet_last_pulled_at || null
   };
 }
 
@@ -12199,6 +12242,7 @@ function renderModalCarouselPreview() {
 
   modalCarouselPreview.innerHTML = items.map((asset, index) => {
     const previewUrl = asset.fileUrl || asset.sourceUrl || "";
+    const detachId = getCanonicalMediaAssetId(asset);
     return `
       <div class="p-3 rounded-xl bg-[#181125] border border-white/5 flex gap-3"
         draggable="true"
@@ -12225,7 +12269,7 @@ function renderModalCarouselPreview() {
           <div class="flex gap-2 flex-wrap">
             <button type="button" onclick="moveCarouselAsset(${index}, -1)" class="px-2 py-1 rounded-lg bg-[#120c1d] border border-white/5 text-[10px] font-bold text-white">Move left</button>
             <button type="button" onclick="moveCarouselAsset(${index}, 1)" class="px-2 py-1 rounded-lg bg-[#120c1d] border border-white/5 text-[10px] font-bold text-white">Move right</button>
-            <button type="button" onclick="removeCarouselAsset(${index})" class="px-2 py-1 rounded-lg bg-[#30121b] border border-red-400/20 text-[10px] font-bold text-red-200">Remove</button>
+            <button type="button" onclick="removeCarouselAssetById('${escapeHtml(detachId)}', ${index})" class="px-2 py-1 rounded-lg bg-[#30121b] border border-red-400/20 text-[10px] font-bold text-red-200">Remove</button>
           </div>
         </div>
       </div>
@@ -12237,6 +12281,10 @@ function getCurrentCarouselOrderPayload() {
   const assets = (currentModalCarouselAssets || []).map((asset) => normalizeRemoteMedia(asset));
   const ids = assets.map((asset) => asset.assetId || asset.asset_id || asset.mediaId || asset.media_id || asset.id).filter(Boolean);
   return { assets, ids };
+}
+
+function getCanonicalMediaAssetId(asset = {}) {
+  return String(asset.mediaAssetId || asset.media_asset_id || asset.id || asset.assetId || asset.asset_id || asset.mediaId || asset.media_id || asset.storagePath || asset.storage_path || "").trim();
 }
 
 function applyCurrentCarouselOrderToModalPost() {
@@ -12377,6 +12425,49 @@ function removeCarouselAsset(index) {
   if (!currentModalCarouselAssets.length) currentModalAsset = null;
   applyCurrentCarouselOrderToModalPost();
   renderModalCarouselPreview();
+}
+
+async function removeCarouselAssetById(mediaAssetId, fallbackIndex = -1) {
+  const targetId = String(mediaAssetId || "").trim();
+  const postId = String(currentEditingPostId || getCanonicalPostId(window.__currentModalPostData || {}) || "").trim();
+  const asset = (currentModalCarouselAssets || []).find((item) => getCanonicalMediaAssetId(item) === targetId) || currentModalCarouselAssets[fallbackIndex];
+  if (!asset) return;
+  removeCarouselAsset(fallbackIndex >= 0 ? fallbackIndex : currentModalCarouselAssets.indexOf(asset));
+  if (!postId) return;
+  try {
+    await detachMediaAssetsFromPost([asset], postId);
+    rerenderAll();
+  } catch (err) {
+    console.log("[media-match] detach error full object", {
+      message: err?.message,
+      backend: err?.backend,
+      status: err?.status
+    });
+    showToast("Detach failed", err?.message || "Asset could not be detached.", "ph-warning", "text-yellow-400");
+  }
+}
+
+async function detachAllMediaFromCurrentPost() {
+  const postId = String(currentEditingPostId || getCanonicalPostId(window.__currentModalPostData || {}) || "").trim();
+  const assets = (currentModalCarouselAssets || []).filter(Boolean);
+  if (!postId || !assets.length || !canAttachMediaToPosts()) return;
+  if (!confirm(`Detach all ${assets.length} media asset${assets.length === 1 ? "" : "s"} from this post?`)) return;
+  currentModalCarouselAssets = [];
+  currentModalAsset = null;
+  applyCurrentCarouselOrderToModalPost();
+  renderModalCarouselPreview();
+  try {
+    await detachMediaAssetsFromPost(assets, postId);
+    rerenderAll();
+    showToast("Media detached", "All media assets were unlinked from this post.", "ph-link-break", "text-[#00ffaa]");
+  } catch (err) {
+    console.log("[media-match] detach error full object", {
+      message: err?.message,
+      backend: err?.backend,
+      status: err?.status
+    });
+    showToast("Detach failed", err?.message || "Media could not be detached.", "ph-warning", "text-yellow-400");
+  }
 }
 
 function openUploadStagingModal(target = "vault") {
@@ -13343,6 +13434,7 @@ async function openWorkspaceHub(tab = "settings") {
     workspaceHubModalCard?.classList.add("scale-100");
     toggleProfileMenu(false);
     if (nextTab === "accounts") connectedAccountsStatusLoading = true;
+    if (nextTab === "settings") refreshSettingsSheetMirrorCard();
     renderWorkspaceHub();
     await refreshSocialImportContext();
   } catch (err) {
@@ -14139,6 +14231,12 @@ function refreshConnectionCards() {
   var container = document.getElementById("workspace-connections-cards");
   if (container && typeof renderWorkspaceConnectionCards === "function") {
     container.innerHTML = renderWorkspaceConnectionCards();
+    var mirrorHtml = renderSheetMirrorCard();
+    if (mirrorHtml) {
+      var div = document.createElement("div");
+      div.innerHTML = mirrorHtml;
+      while (div.firstChild) container.appendChild(div.firstChild);
+    }
   }
   var accountsPanel = document.querySelector('[data-settings-panel="accounts"]');
   if (accountsPanel && typeof getConnectedAccountsMarkup === "function") {
@@ -17223,17 +17321,59 @@ async function attachSelectedMediaToPost(postId) {
   showToast("Media attached", `${items.length} asset${items.length === 1 ? "" : "s"} linked to post.`, "ph-link", "text-[#00ffaa]");
 }
 
-async function detachMediaAssetFromPost(item) {
+async function detachMediaAssetsFromPost(items = [], postId = "") {
   const meta = getWorkspaceRequestMetadata();
-  const identifiers = getMediaAssetIdentifier(item);
-  const result = await callSupabaseEdgeFunction("media-index", {
+  const assets = (items || []).filter(Boolean);
+  const mediaAssetIds = assets.map((asset) => getCanonicalMediaAssetId(asset)).filter(Boolean);
+  const payload = {
     action: "detach_from_post",
     workspace_id: meta.workspace_id,
-    ...identifiers
-  });
+    workspace_slug: meta.workspace_slug || getCurrentWorkspaceSlug() || "",
+    post_id: postId,
+    media_asset_ids: mediaAssetIds,
+    media_assets: assets.map((asset) => getMediaAssetIdentifier(asset)),
+    media: assets.map((asset) => getMediaAssetIdentifier(asset))
+  };
+  console.log("[media-match] detach request", payload);
+  try {
+    const result = await callSupabaseEdgeFunction("media-index", payload);
+    console.log("[media-match] detach response", result);
+    applyOrderedAttachedMediaResult(postId || result.post_id || result.postId || "", result);
+    const detachedIds = (Array.isArray(result.detached_media_asset_ids) ? result.detached_media_asset_ids : mediaAssetIds).map(String);
+    appState.media = (appState.media || []).map((asset) => {
+      const key = getCanonicalMediaAssetId(asset);
+      if (!detachedIds.includes(key)) return asset;
+      return normalizeRemoteMedia({
+        ...asset,
+        linked_post_id: "",
+        linkedPostId: "",
+        post_id: "",
+        postId: ""
+      });
+    });
+    persistLocalState();
+    return result;
+  } catch (err) {
+    console.log("[media-match] detach error full object", {
+      message: err?.message,
+      backend: err?.backend,
+      status: err?.status,
+      requestPayload: err?.requestPayload || payload
+    });
+    throw err;
+  }
+}
+
+async function detachMediaAssetFromPost(item) {
   const postId = item?.linkedPostId || item?.linked_post_id || item?.postId || item?.post_id || currentEditingPostId || "";
-  if (postId) applyOrderedAttachedMediaResult(postId, result);
-  return normalizeRemoteMedia(result.asset || {});
+  const result = await detachMediaAssetsFromPost([item], postId);
+  return normalizeRemoteMedia({
+    ...(result.asset || item || {}),
+    linked_post_id: "",
+    linkedPostId: "",
+    post_id: "",
+    postId: ""
+  });
 }
 
 async function saveMediaAssetDetail() {
@@ -21484,6 +21624,260 @@ async function syncRemoteIfConfigured() {
   }
 }
 
+function getSheetMirrorConfig() {
+  var active = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active || {};
+  var sheetId = String(active.google_sheet_id || active.sheet_id || "").trim();
+  var appsScriptUrl = String(active.apps_script_url || "").trim();
+  var gsConn = getWorkspaceConnection("google_sheets");
+  if (gsConn && gsConn.config) {
+    sheetId = sheetId || String(gsConn.config.sheet_id || gsConn.config.google_sheet_id || "").trim();
+    appsScriptUrl = appsScriptUrl || String(gsConn.config.apps_script_url || "").trim();
+  }
+  var backendMode = getActiveWorkspaceBackendMode();
+  var isSupabaseNative = backendMode.mode === "supabase_native";
+  return {
+    sheetId: sheetId,
+    appsScriptUrl: appsScriptUrl,
+    syncEnabled: Boolean(active.sheet_sync_enabled),
+    syncDirection: String(active.sheet_sync_direction || "bidirectional").trim(),
+    lastPushedAt: active.sheet_last_pushed_at || null,
+    lastPulledAt: active.sheet_last_pulled_at || null,
+    isManagedMirror: !isSupabaseNative && !!sheetId && Boolean(active.sheet_sync_enabled),
+    backendMode: backendMode.mode
+  };
+}
+
+async function pushSupabaseToSheets() {
+  console.log("[sheet-mirror] push start");
+  var config = getSheetMirrorConfig();
+  if (!config.sheetId || !config.appsScriptUrl) {
+    showToast("Sheet mirror not configured", "No Google Sheet ID or Apps Script URL.", "ph-warning", "text-yellow-400");
+    return null;
+  }
+  var meta = getWorkspaceRequestMetadata();
+  var workspaceId = meta.workspace_id || "";
+  if (!workspaceId) { showToast("Sync failed", "Workspace ID is missing.", "ph-warning", "text-yellow-400"); return null; }
+  if (!STELLARSYNC_SUPABASE_CLIENT) { showToast("Sync failed", "Supabase is not configured.", "ph-warning", "text-yellow-400"); return null; }
+  var tables = ["posts","notes","inspo","ai_drafts","campaigns","media_assets","workspace_settings","brand_framework","schema_notes","ai_chain_settings","flow_event_log"];
+  var tabMap = {
+    posts: "POSTS", notes: "NOTES", inspo: "INSPO", ai_drafts: "AI_DRAFTS",
+    campaigns: "CAMPAIGNS", media_assets: "MEDIA", workspace_settings: "SETTINGS",
+    brand_framework: "BRAND_FRAMEWORK", schema_notes: "SCHEMA_NOTES",
+    ai_chain_settings: "AI_CHAIN_SETTINGS", flow_event_log: "FLOW_EVENT_LOG"
+  };
+  var idFieldMap = {
+    posts: "post_id", notes: "note_id", inspo: "inspo_id", ai_drafts: "ai_draft_id",
+    campaigns: "campaign_id", media_assets: "media_asset_id", workspace_settings: "workspace_id",
+    brand_framework: "framework_key", schema_notes: "schema_key",
+    ai_chain_settings: "workspace_id", flow_event_log: "event_id"
+  };
+  var results = {};
+  var totalCount = 0;
+  var errorCount = 0;
+  for (var t = 0; t < tables.length; t++) {
+    var table = tables[t];
+    var tab = tabMap[table];
+    var idField = idFieldMap[table];
+    try {
+      var query = STELLARSYNC_SUPABASE_CLIENT.from(table).select("*").eq("workspace_id", workspaceId);
+      var { data, error } = await query;
+      if (error) { results[table] = { ok: false, error: error.message }; errorCount++; continue; }
+      if (!Array.isArray(data)) { results[table] = { ok: false, error: "No data returned" }; errorCount++; continue; }
+      var rows = data.map(function(row) {
+        var r = {};
+        for (var k in row) {
+          if (k === "id" || k === "workspace_id") continue;
+          if (row[k] !== null && row[k] !== undefined) r[k] = row[k];
+        }
+        r.sync_status = "synced";
+        r.synced_at = new Date().toISOString();
+        return r;
+      });
+      var body = { action: "write_tab", sheet_id: config.sheetId, tab: tab, rows: rows, id_field: idField };
+      var resp = await fetch(config.appsScriptUrl, { method: "POST", mode: "cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(body) });
+      var respData = await resp.json();
+      if (respData.ok) { results[table] = { ok: true, count: rows.length }; totalCount += rows.length; }
+      else { results[table] = { ok: false, error: respData.error || "Write failed" }; errorCount++; }
+    } catch (err) {
+      results[table] = { ok: false, error: err && err.message ? err.message : String(err) };
+      errorCount++;
+    }
+  }
+  if (errorCount === 0) {
+    showToast("Sheet sync complete", totalCount + " rows pushed to Sheets.", "ph-check", "text-[#00ffaa]");
+    updateSheetMirrorTimestamps({ sheet_last_pushed_at: new Date().toISOString() });
+  } else {
+    showToast("Sheet sync partial", totalCount + " pushed, " + errorCount + " errors.", "ph-warning", "text-yellow-400");
+  }
+  console.log("[sheet-mirror] push complete", results);
+  return results;
+}
+
+async function pullSheetsToSupabase() {
+  console.log("[sheet-mirror] pull start");
+  var config = getSheetMirrorConfig();
+  if (!config.sheetId || !config.appsScriptUrl) {
+    showToast("Sheet mirror not configured", "No Google Sheet ID or Apps Script URL.", "ph-warning", "text-yellow-400");
+    return null;
+  }
+  var meta = getWorkspaceRequestMetadata();
+  var workspaceId = meta.workspace_id || "";
+  if (!workspaceId) { showToast("Sync failed", "Workspace ID is missing.", "ph-warning", "text-yellow-400"); return null; }
+  if (!STELLARSYNC_SUPABASE_CLIENT) { showToast("Sync failed", "Supabase is not configured.", "ph-warning", "text-yellow-400"); return null; }
+  var tables = ["POSTS","NOTES","INSPO","AI_DRAFTS","CAMPAIGNS","MEDIA","SETTINGS","BRAND_FRAMEWORK","SCHEMA_NOTES","AI_CHAIN_SETTINGS","FLOW_EVENT_LOG"];
+  var tableMap = {
+    POSTS: "posts", NOTES: "notes", INSPO: "inspo", AI_DRAFTS: "ai_drafts",
+    CAMPAIGNS: "campaigns", MEDIA: "media_assets", SETTINGS: "workspace_settings",
+    BRAND_FRAMEWORK: "brand_framework", SCHEMA_NOTES: "schema_notes",
+    AI_CHAIN_SETTINGS: "ai_chain_settings", FLOW_EVENT_LOG: "flow_event_log"
+  };
+  var results = {};
+  var totalCount = 0;
+  var errorCount = 0;
+  for (var t = 0; t < tables.length; t++) {
+    var tab = tables[t];
+    var supabaseTable = tableMap[tab];
+    try {
+      var resp = await fetch(config.appsScriptUrl, { method: "POST", mode: "cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "read_tab", sheet_id: config.sheetId, tab: tab }) });
+      var respData = await resp.json();
+      if (!respData.ok || !Array.isArray(respData.rows)) { results[tab] = { ok: false, error: respData.error || "Read failed" }; errorCount++; continue; }
+      var rows = respData.rows;
+      var inserted = 0;
+      var skipped = 0;
+      for (var r = 0; r < rows.length; r++) {
+        var row = rows[r];
+        var canonicalId = String(row[tab === "POSTS" ? "post_id" : tab === "NOTES" ? "note_id" : tab === "INSPO" ? "inspo_id" : tab === "AI_DRAFTS" ? "ai_draft_id" : tab === "CAMPAIGNS" ? "campaign_id" : tab === "MEDIA" ? "media_asset_id" : tab === "SETTINGS" ? "workspace_id" : tab === "BRAND_FRAMEWORK" ? "framework_key" : tab === "SCHEMA_NOTES" ? "schema_key" : tab === "AI_CHAIN_SETTINGS" ? "workspace_id" : tab === "FLOW_EVENT_LOG" ? "event_id" : "id"] || "").trim();
+        if (!canonicalId) { skipped++; continue; }
+        var payload = {};
+        for (var k in row) {
+          if (k === "sync_status" || k === "synced_at" || k === "sync_error") continue;
+          var val = row[k];
+          if (val === "" || val === null || val === undefined) continue;
+          payload[k] = val;
+        }
+        payload.workspace_id = workspaceId;
+        payload.updated_at = new Date().toISOString();
+        var idField = tab === "POSTS" ? "post_id" : tab === "NOTES" ? "note_id" : tab === "INSPO" ? "inspo_id" : tab === "AI_DRAFTS" ? "ai_draft_id" : tab === "CAMPAIGNS" ? "campaign_id" : tab === "MEDIA" ? "media_asset_id" : tab === "SETTINGS" ? "workspace_id" : tab === "BRAND_FRAMEWORK" ? "framework_key" : tab === "SCHEMA_NOTES" ? "schema_key" : tab === "AI_CHAIN_SETTINGS" ? "workspace_id" : tab === "FLOW_EVENT_LOG" ? "event_id" : "id";
+        try {
+          var { error: upsertError } = await STELLARSYNC_SUPABASE_CLIENT.from(supabaseTable).upsert(payload, { onConflict: "workspace_id," + idField });
+          if (upsertError) throw upsertError;
+          inserted++;
+        } catch (err) {
+          errorCount++;
+        }
+      }
+      results[tab] = { ok: true, inserted: inserted, skipped: skipped };
+      totalCount += inserted;
+    } catch (err) {
+      results[tab] = { ok: false, error: err && err.message ? err.message : String(err) };
+      errorCount++;
+    }
+  }
+  if (totalCount > 0) {
+    await syncRemoteIfConfigured({ silent: true });
+    showToast("Sheet pull complete", totalCount + " rows pulled from Sheets.", "ph-check", "text-[#00ffaa]");
+    updateSheetMirrorTimestamps({ sheet_last_pulled_at: new Date().toISOString() });
+  } else if (errorCount > 0) {
+    showToast("Sheet pull errors", errorCount + " errors pulling from Sheets.", "ph-warning", "text-yellow-400");
+  } else {
+    showToast("Sheet pull complete", "No new data found.", "ph-check", "text-gray-400");
+  }
+  console.log("[sheet-mirror] pull complete", results);
+  return results;
+}
+
+function updateSheetMirrorTimestamps(updates) {
+  if (!updates) return;
+  var active = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active || {};
+  if (updates.sheet_last_pushed_at) active.sheet_last_pushed_at = updates.sheet_last_pushed_at;
+  if (updates.sheet_last_pulled_at) active.sheet_last_pulled_at = updates.sheet_last_pulled_at;
+  try { storeActiveWorkspaceConfig(active); } catch (_) {}
+  refreshMirrorConnectionCards();
+}
+
+function refreshMirrorConnectionCards() {
+  var container = document.getElementById("workspace-connections-cards");
+  if (!container) return;
+  var sheetsCard = container.querySelector('[data-mirror-card="sheet-mirror"]');
+  if (sheetsCard) sheetsCard.innerHTML = renderSheetMirrorCard();
+}
+
+function renderSheetMirrorCard() {
+  var config = getSheetMirrorConfig();
+  if (!config.sheetId) return "";
+  var statusColor = "text-gray-500";
+  var statusText = "Not configured";
+  var statusIcon = "ph-plugs";
+  if (config.isManagedMirror) {
+    statusColor = "text-[#00ffaa]";
+    statusText = "Connected";
+    statusIcon = "ph-check-circle";
+  } else if (config.sheetId) {
+    statusColor = "text-yellow-400";
+    statusText = "Sync disabled";
+    statusIcon = "ph-warning";
+  }
+  var lastPush = config.lastPushedAt ? new Date(config.lastPushedAt).toLocaleString() : "Never";
+  var lastPull = config.lastPulledAt ? new Date(config.lastPulledAt).toLocaleString() : "Never";
+  var direction = config.syncDirection === "supabase_to_sheet" ? "Supabase → Sheet" :
+                  config.syncDirection === "sheet_to_supabase" ? "Sheet → Supabase" : "Bidirectional";
+  return '<div class="p-5 rounded-2xl bg-[#181125] border border-white/5" data-mirror-card="sheet-mirror">' +
+    '<div class="flex items-center justify-between gap-3 mb-4">' +
+    '<div class="flex items-center gap-3">' +
+    '<div class="w-10 h-10 rounded-xl bg-[#0a2016] flex items-center justify-center"><i class="ph-bold ' + statusIcon + ' ' + statusColor + ' text-lg"></i></div>' +
+    '<div><div class="text-sm font-bold text-white">Sheets Mirror</div>' +
+    '<div class="text-[10px] uppercase tracking-widest font-semibold ' + statusColor + '">' + statusText + '</div></div></div>' +
+    '<div class="flex items-center gap-1 text-[10px] text-gray-500 font-medium"><i class="ph-bold ph-arrows-left-right"></i> ' + direction + '</div></div>' +
+    '<div class="flex items-center justify-between gap-2 mb-4"><div class="text-[10px] text-gray-500">Last push: ' + lastPush + '</div><div class="text-[10px] text-gray-500">Last pull: ' + lastPull + '</div></div>' +
+    '<div class="flex flex-wrap gap-2">' +
+    '<button type="button" onclick="pushSupabaseToSheets()" class="flex-1 px-3 py-2 rounded-xl bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white hover:bg-[#2d1b4e] transition-colors flex items-center justify-center gap-1.5"><i class="ph-bold ph-upload-simple"></i> Push to Sheet</button>' +
+    '<button type="button" onclick="pullSheetsToSupabase()" class="flex-1 px-3 py-2 rounded-xl bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white hover:bg-[#2d1b4e] transition-colors flex items-center justify-center gap-1.5"><i class="ph-bold ph-download-simple"></i> Pull from Sheet</button>' +
+    '<button type="button" onclick="bidirectionalSheetSync()" class="flex-1 px-3 py-2 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white hover:opacity-90 transition-colors flex items-center justify-center gap-1.5"><i class="ph-bold ph-arrows-left-right"></i> Bidirectional</button>' +
+    '</div></div>';
+}
+
+function refreshSettingsSheetMirrorCard() {
+  var card = document.getElementById("settings-sheet-mirror-card");
+  if (!card) return;
+  var config = getSheetMirrorConfig();
+  if (!config.sheetId) { card.classList.add("hidden"); return; }
+  card.classList.remove("hidden");
+  var statusEl = document.getElementById("settings-sheet-mirror-status");
+  var badgeEl = document.getElementById("settings-sheet-mirror-badge");
+  var timesEl = document.getElementById("settings-sheet-mirror-times");
+  if (!config.isManagedMirror) {
+    if (statusEl) statusEl.textContent = "Sheet ID configured but sync is disabled. Enable Sheet Mirror in workspace settings.";
+    if (badgeEl) { badgeEl.textContent = "Sync Disabled"; badgeEl.className = "px-3 py-1.5 rounded-lg bg-[#1a1128] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-yellow-400"; }
+  } else {
+    if (statusEl) statusEl.textContent = "Supabase data mirrors to Google Sheets. Use the buttons below to sync.";
+    if (badgeEl) { badgeEl.textContent = "Connected"; badgeEl.className = "px-3 py-1.5 rounded-lg bg-[#0a2016] border border-[#00ffaa]/20 text-[10px] uppercase tracking-wider font-bold text-[#00ffaa]"; }
+  }
+  if (timesEl) {
+    var lastPush = config.lastPushedAt ? new Date(config.lastPushedAt).toLocaleString() : "Never";
+    var lastPull = config.lastPulledAt ? new Date(config.lastPulledAt).toLocaleString() : "Never";
+    timesEl.innerHTML = '<span><i class="ph-bold ph-upload-simple mr-1"></i>Last push: ' + lastPush + '</span><span><i class="ph-bold ph-download-simple mr-1"></i>Last pull: ' + lastPull + '</span>';
+  }
+}
+
+async function bidirectionalSheetSync() {
+  var config = getSheetMirrorConfig();
+  if (!config.isManagedMirror) {
+    showToast("Sheet mirror not enabled", "Enable sync in workspace settings first.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  showToast("Sheet sync started", "Pushing Supabase → Sheet, then pulling Sheet → Supabase...", "ph-sync", "text-[#c77dff]");
+  console.log("[sheet-mirror] bidirectional start");
+  var pushResult = await pushSupabaseToSheets();
+  var pullResult = await pullSheetsToSupabase();
+  console.log("[sheet-mirror] bidirectional complete", { push: pushResult, pull: pullResult });
+  showToast("Bidirectional sync complete", "Sheet mirror is now in sync.", "ph-check", "text-[#00ffaa]");
+}
+
+function isSheetMirrorEnabled() {
+  var config = getSheetMirrorConfig();
+  return config.isManagedMirror;
+}
+
 function isRemoteConfigured() {
   const backendMode = getActiveWorkspaceBackendMode();
   if (backendMode.mode === "supabase_native") {
@@ -21819,6 +22213,136 @@ async function loadSupabaseCampaigns(workspaceId) {
     return Array.isArray(campaigns) ? campaigns : [];
   }
   return [];
+}
+
+function getCanonicalId(item, type) {
+  if (type === "note") return item.note_id || item.noteId || item.id || "";
+  if (type === "inspo") return item.inspo_id || item.inspoId || item.id || "";
+  if (type === "aiDraft" || type === "ai_draft") return item.ai_draft_id || item.aiDraftId || item.id || "";
+  return item.id || "";
+}
+
+function getArtifactTable(type) {
+  if (type === "note") return "notes";
+  if (type === "inspo") return "inspo";
+  if (type === "aiDraft" || type === "ai_draft") return "ai_drafts";
+  return "";
+}
+
+function getCanonicalIdField(type) {
+  if (type === "note") return "note_id";
+  if (type === "inspo") return "inspo_id";
+  if (type === "aiDraft" || type === "ai_draft") return "ai_draft_id";
+  return "id";
+}
+
+function canManageArtifacts() {
+  var role = getCurrentWorkspaceRole();
+  return role === "admin" || role === "content_lead" || role === "owner";
+}
+
+function canHardDelete() {
+  return canManageArtifacts();
+}
+
+async function archiveSupabaseArtifact(type, artifact) {
+  if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase is not configured.");
+  var meta = getWorkspaceRequestMetadata();
+  var workspaceId = meta.workspace_id || "";
+  if (!workspaceId) throw new Error("Workspace ID is missing.");
+  var canonicalId = getCanonicalId(artifact, type);
+  if (!canonicalId) throw new Error("No canonical ID for artifact.");
+  var table = getArtifactTable(type);
+  var idField = getCanonicalIdField(type);
+  console.log("[artifact-delete] archive request", { type: type, canonicalId: canonicalId, table: table });
+  var result = await STELLARSYNC_SUPABASE_CLIENT
+    .from(table)
+    .update({ flow_state: "archived", status: "archived" })
+    .eq("workspace_id", workspaceId)
+    .eq(idField, canonicalId)
+    .select("*")
+    .maybeSingle();
+  if (result.error) { console.error("[artifact-delete] archive error", result.error); throw result.error; }
+  console.log("[artifact-delete] archive response", { ok: true, type: type, id: canonicalId });
+  updateLocalArtifactState(type, canonicalId, { flowState: "archived", status: "archived" });
+  return { ok: true, data: result.data };
+}
+
+async function restoreSupabaseArtifact(type, artifact) {
+  if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase is not configured.");
+  var meta = getWorkspaceRequestMetadata();
+  var workspaceId = meta.workspace_id || "";
+  if (!workspaceId) throw new Error("Workspace ID is missing.");
+  var canonicalId = getCanonicalId(artifact, type);
+  if (!canonicalId) throw new Error("No canonical ID for artifact.");
+  var table = getArtifactTable(type);
+  var idField = getCanonicalIdField(type);
+  console.log("[artifact-delete] restore request", { type: type, canonicalId: canonicalId, table: table });
+  var result = await STELLARSYNC_SUPABASE_CLIENT
+    .from(table)
+    .update({ flow_state: "active", status: "active" })
+    .eq("workspace_id", workspaceId)
+    .eq(idField, canonicalId)
+    .select("*")
+    .maybeSingle();
+  if (result.error) { console.error("[artifact-delete] restore error", result.error); throw result.error; }
+  console.log("[artifact-delete] restore response", { ok: true, type: type, id: canonicalId });
+  updateLocalArtifactState(type, canonicalId, { flowState: "active", status: "active" });
+  return { ok: true, data: result.data };
+}
+
+async function deleteSupabaseArtifact(type, artifact) {
+  if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase is not configured.");
+  if (!canHardDelete()) throw new Error("Permission denied — only admin/content_lead can hard delete.");
+  var meta = getWorkspaceRequestMetadata();
+  var workspaceId = meta.workspace_id || "";
+  if (!workspaceId) throw new Error("Workspace ID is missing.");
+  var canonicalId = getCanonicalId(artifact, type);
+  if (!canonicalId) throw new Error("No canonical ID for artifact.");
+  var table = getArtifactTable(type);
+  var idField = getCanonicalIdField(type);
+  console.log("[artifact-delete] hard delete request", { type: type, canonicalId: canonicalId, table: table });
+  var result = await STELLARSYNC_SUPABASE_CLIENT
+    .from(table)
+    .delete()
+    .eq("workspace_id", workspaceId)
+    .eq(idField, canonicalId);
+  if (result.error) { console.error("[artifact-delete] hard delete error", result.error); throw result.error; }
+  console.log("[artifact-delete] hard delete response", { ok: true, type: type, id: canonicalId });
+  removeLocalArtifact(type, canonicalId);
+  return { ok: true };
+}
+
+function updateLocalArtifactState(type, canonicalId, updates) {
+  var key = type === "note" ? "notes" : type === "inspo" ? "inspo" : "aiDrafts";
+  var items = appState[key] || [];
+  var found = false;
+  for (var i = 0; i < items.length; i++) {
+    var item = items[i];
+    var itemId = getCanonicalId(item, type);
+    if (itemId === canonicalId) {
+      items[i] = Object.assign({}, items[i], updates);
+      found = true;
+      break;
+    }
+  }
+  if (found) { persistLocalState(); rerenderArtifactView(type); }
+}
+
+function removeLocalArtifact(type, canonicalId) {
+  var key = type === "note" ? "notes" : type === "inspo" ? "inspo" : "aiDrafts";
+  var items = appState[key] || [];
+  var idx = -1;
+  for (var i = 0; i < items.length; i++) {
+    if (getCanonicalId(items[i], type) === canonicalId) { idx = i; break; }
+  }
+  if (idx >= 0) { appState[key].splice(idx, 1); persistLocalState(); rerenderArtifactView(type); }
+}
+
+function rerenderArtifactView(type) {
+  if (type === "note") { safeRender(renderNotes, "renderNotes"); }
+  else if (type === "inspo") { safeRender(renderInspo, "renderInspo"); }
+  else if (type === "aiDraft" || type === "ai_draft") { renderAIDraftList(); renderWriteIdeaDraftList(); }
 }
 
 async function saveSupabaseNote(payload) {
@@ -25570,6 +26094,8 @@ window.noteToPost = noteToPost;
 window.setPillar = setPillar;
 window.moveCarouselAsset = moveCarouselAsset;
 window.removeCarouselAsset = removeCarouselAsset;
+window.removeCarouselAssetById = removeCarouselAssetById;
+window.detachAllMediaFromCurrentPost = detachAllMediaFromCurrentPost;
 window.startCarouselAssetDrag = startCarouselAssetDrag;
 window.dropCarouselAsset = dropCarouselAsset;
 window.endCarouselAssetDrag = endCarouselAssetDrag;
