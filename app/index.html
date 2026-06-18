@@ -3125,6 +3125,9 @@
   </div>
 
   <div id="media-filter-bar" class="flex gap-4 mb-6 overflow-x-auto pb-2">
+    <button id="media-select-toggle" type="button" class="px-5 py-2 bg-transparent text-gray-500 hover:text-white rounded-lg text-xs font-medium whitespace-nowrap transition-colors" onclick="toggleMediaSelectMode()">
+      Select media
+    </button>
     <button data-media-filter="all" class="media-filter-btn px-5 py-2 bg-[#231738] text-white rounded-lg text-xs font-semibold whitespace-nowrap">
       All Assets
     </button>
@@ -6433,6 +6436,46 @@ function getMediaTitle(asset, fallback = "Untitled media") {
   return String(candidate || fallback).trim() || fallback;
 }
 
+function getExplicitMediaTitle(asset) {
+  if (!asset) return "";
+  const values = [asset.title, asset.media_title, asset.mediaTitle, asset.asset_title, asset.assetTitle, asset.assetName, asset.asset_name]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+  return values.find((value) => !isUntitledArtifact(value, "media")) || "";
+}
+
+function getLinkedPostForMedia(asset = {}) {
+  if (asset.linkedPost) return asset.linkedPost;
+  const linkedId = String(asset.postId || asset.post_id || asset.linkedPostId || asset.linked_post_id || "").trim();
+  if (!linkedId) return null;
+  return (appState.posts || []).find((post) => getPostIdentityValues(post).includes(linkedId)) || null;
+}
+
+function getMediaDisplayTitle(asset, linkedPost = getLinkedPostForMedia(asset), fallback = "Untitled media") {
+  const explicitTitle = getExplicitMediaTitle(asset);
+  const postTitle = linkedPost ? getPostDisplayTitle(linkedPost, "") : "";
+  if (explicitTitle) return explicitTitle;
+  if (postTitle) return postTitle;
+  return getMediaTitle(asset, fallback);
+}
+
+function getMediaUsageLine(asset, linkedPost = getLinkedPostForMedia(asset)) {
+  const postTitle = linkedPost ? getPostDisplayTitle(linkedPost, "") : "";
+  if (!postTitle) return "";
+  return getExplicitMediaTitle(asset) ? `Used in: ${postTitle}` : "";
+}
+
+function getMediaBadgeLabel(asset, linkedPost = getLinkedPostForMedia(asset)) {
+  if (linkedPost && getAttachedMediaForPost(linkedPost).length > 1) {
+    return `Carousel item · ${getPostDisplayTitle(linkedPost, "Post")}`;
+  }
+  const type = String(asset?.type || asset?.assetType || asset?.media_type || "").toLowerCase();
+  if (type === "video") return "Reel";
+  if (type === "carousel") return "Carousel";
+  if (type === "article") return "Article";
+  return asset?.assetBadge || "Image";
+}
+
 function isUntitledArtifact(value, type) {
   var str = String(value || "").trim().toLowerCase();
   if (!str) return true;
@@ -7035,9 +7078,37 @@ function setModalTargetPlatforms(platforms) {
   return selected;
 }
 
+function getMediaPreviewUrl(asset = {}) {
+  return String(asset.fileUrl || asset.file_url || asset.mediaUrl || asset.media_url || asset.thumbnailUrl || asset.thumbnail_url || asset.sourceUrl || asset.source_url || asset.url || "").trim();
+}
+
+function isImageMediaAsset(asset = {}) {
+  return inferMediaKindFromAsset(asset) === "image";
+}
+
+function getCarouselCoverAsset(source = {}) {
+  const assets = Array.isArray(source)
+    ? source
+    : getAttachedMediaForPost(source).filter((asset) => asset && typeof asset === "object");
+  if (!assets.length) return null;
+  const first = assets[0];
+  if (isImageMediaAsset(first) && getMediaPreviewUrl(first)) {
+    console.log("[carousel] cover selected", { assetId: first.assetId || first.id || first.mediaId || "" });
+    return first;
+  }
+  const fallback = assets.find((asset) => isImageMediaAsset(asset) && getMediaPreviewUrl(asset)) || first;
+  console.log("[carousel] cover selected", { assetId: fallback?.assetId || fallback?.id || fallback?.mediaId || "" });
+  return fallback || null;
+}
+
 function renderStackedAssetPreview(assets = []) {
-  const items = (Array.isArray(assets) ? assets : []).slice(0, 3);
-  return `<div class="stacked-preview">${items.map(() => "<span></span>").join("")}</div>`;
+  const items = Array.isArray(assets) ? assets : getAttachedMediaForPost(assets);
+  const cover = getCarouselCoverAsset(items);
+  const coverUrl = cover ? getMediaPreviewUrl(cover) : "";
+  return `<div class="stacked-preview">
+    ${coverUrl ? `<img src="${escapeHtml(coverUrl)}" alt="${escapeHtml(getMediaDisplayTitle(cover, null, "Carousel cover"))}" class="absolute inset-0 w-full h-full object-cover rounded-xl z-[2]" onerror="handleBrokenMediaPreview(this)">` : ""}
+    ${[0, 1, 2].map(() => "<span></span>").join("")}
+  </div>`;
 }
 
 function renderPublishingReadiness(post = {}) {
@@ -7372,6 +7443,7 @@ let currentMediaAssetDetail = null;
 let currentMediaViewerItems = [];
 let currentMediaViewerIndex = 0;
 let selectedMediaAssetIds = new Set();
+let mediaSelectMode = loadMediaSelectMode();
 let mediaPostsPanelOpen = false;
 let currentModalInspoId = null;
 let currentModalNoteId = null;
@@ -7383,6 +7455,7 @@ let offlineMode = false;
 let lastSyncError = "";
 let currentModalSourceContext = { type: "manual", label: "Create Post from Calendar", detail: "This post starts as a manual draft.", sourceId: "" };
 let currentModalCarouselAssets = [];
+let currentCarouselDragIndex = null;
 let pendingUploadFiles = [];
 let uploadStagingTarget = "vault";
 let currentAIDraftId = "";
@@ -10667,6 +10740,8 @@ function renderCalendarPill(post, isWeekMode = false) {
   const hydrated = hydratePostCampaign(post);
   const campaignColor = getCampaignColor(hydrated, getPostContentPillar(hydrated));
   const mediaTypeLabel = renderPostMediaTypeBadge(hydrated);
+  const carouselCover = derivePostFormatFromMedia(hydrated).isCarousel ? getCarouselCoverAsset(hydrated) : null;
+  const carouselCoverUrl = carouselCover ? getMediaPreviewUrl(carouselCover) : "";
   function buildDateDiagnosticTitle(post) {
     var pid = post.id || post.post_id || "no-id";
     var rawLabel = (post.queueDateLabel || post.queue_date_label || "").trim() || "—";
@@ -10680,7 +10755,9 @@ function renderCalendarPill(post, isWeekMode = false) {
     return `
       <button type="button" class="post-pill compact-month mt-1 text-left" onclick="event.stopPropagation();openCalendarPost(this)" title="${escapeHtml(buildDateDiagnosticTitle(post))}" style="background:${campaignColor}14;border:1px solid ${campaignColor}30;box-shadow:inset 2px 0 0 ${campaignColor};" ${renderPostIdentityDataAttributes(post)}>
         <span class="compact-month-icons">
-          <span class="calendar-mobile-dot" style="background:${campaignColor};box-shadow:0 0 10px ${campaignColor}66;"></span>
+          ${carouselCoverUrl
+            ? `<img src="${escapeHtml(carouselCoverUrl)}" alt="${escapeHtml(getMediaDisplayTitle(carouselCover, null, "Carousel cover"))}" class="w-4 h-4 rounded object-cover shrink-0 border border-white/10" onerror="handleBrokenMediaPreview(this)">`
+            : `<span class="calendar-mobile-dot" style="background:${campaignColor};box-shadow:0 0 10px ${campaignColor}66;"></span>`}
           ${iconBlock}
           <span class="w-1.5 h-1.5 rounded-full ml-auto" style="background:${statusColor}"></span>
         </span>
@@ -10692,7 +10769,9 @@ function renderCalendarPill(post, isWeekMode = false) {
   return `
     <button type="button" class="post-pill mt-1 text-left" onclick="event.stopPropagation();openCalendarPost(this)" title="${escapeHtml(buildDateDiagnosticTitle(post))}" style="background:${campaignColor}14;border:1px solid ${campaignColor}30;box-shadow:inset 3px 0 0 ${campaignColor};" ${renderPostIdentityDataAttributes(post)}>
       <div class="flex items-center gap-1.5 w-full">
-        <span class="w-2 h-2 rounded-full shrink-0" style="background:${campaignColor};box-shadow:0 0 10px ${campaignColor}66;"></span>
+        ${carouselCoverUrl
+          ? `<img src="${escapeHtml(carouselCoverUrl)}" alt="${escapeHtml(getMediaDisplayTitle(carouselCover, null, "Carousel cover"))}" class="w-5 h-5 rounded object-cover shrink-0 border border-white/10" onerror="handleBrokenMediaPreview(this)">`
+          : `<span class="w-2 h-2 rounded-full shrink-0" style="background:${campaignColor};box-shadow:0 0 10px ${campaignColor}66;"></span>`}
         ${iconBlock}
         <div class="w-1.5 h-1.5 rounded-full ml-auto" style="background:${statusColor}"></div>
       </div>
@@ -12011,16 +12090,22 @@ function setupMediaFilters() {
 function renderModalCarouselPreview() {
   if (!modalCarouselPreview || !modalCarouselCount) return;
   const items = currentModalCarouselAssets || [];
-  modalCarouselCount.textContent = `${items.length} ${items.length === 1 ? "Slide" : "Slides"}`;
+  modalCarouselCount.textContent = items.length >= 2 ? `Carousel · ${items.length} assets` : `${items.length} ${items.length === 1 ? "asset" : "assets"}`;
   if (!items.length) {
     modalCarouselPreview.innerHTML = makeEmptyState("No carousel images", "Upload or link multiple images to build a carousel sequence.", "ph-images-square").replace("glass-card", "col-span-2");
     return;
   }
+  getCarouselCoverAsset(items);
 
   modalCarouselPreview.innerHTML = items.map((asset, index) => {
     const previewUrl = asset.fileUrl || asset.sourceUrl || "";
     return `
-      <div class="p-3 rounded-xl bg-[#181125] border border-white/5 flex gap-3">
+      <div class="p-3 rounded-xl bg-[#181125] border border-white/5 flex gap-3"
+        draggable="true"
+        ondragstart="startCarouselAssetDrag(event, ${index})"
+        ondragover="event.preventDefault()"
+        ondrop="dropCarouselAsset(event, ${index})"
+        ondragend="endCarouselAssetDrag()">
         <div class="w-24 h-24 rounded-xl overflow-hidden bg-[#0f0a18] border border-white/5 shrink-0 flex items-center justify-center">
           ${previewUrl
             ? String(asset.assetType || asset.type || "").startsWith("video")
@@ -12031,17 +12116,115 @@ function renderModalCarouselPreview() {
             : `<i class="ph-bold ph-image text-gray-500 text-2xl"></i>`}
         </div>
         <div class="min-w-0 flex-1">
-          <div class="text-xs font-bold text-white wrap-safe mb-1">${escapeHtml(asset.title || asset.assetName || `Slide ${index + 1}`)}</div>
+          <div class="text-xs font-bold text-white wrap-safe mb-1">${escapeHtml(getMediaDisplayTitle(asset, getLinkedPostForMedia(asset), `Asset ${index + 1}`))}</div>
           <div class="text-[10px] text-gray-500 mb-3">${escapeHtml(toTitleCase(asset.assetType || asset.type || "image"))}</div>
           <div class="flex gap-2 flex-wrap">
-            <button type="button" onclick="moveCarouselAsset(${index}, -1)" class="px-2 py-1 rounded-lg bg-[#120c1d] border border-white/5 text-[10px] font-bold text-white">Left</button>
-            <button type="button" onclick="moveCarouselAsset(${index}, 1)" class="px-2 py-1 rounded-lg bg-[#120c1d] border border-white/5 text-[10px] font-bold text-white">Right</button>
+            <button type="button" onclick="moveCarouselAsset(${index}, -1)" class="px-2 py-1 rounded-lg bg-[#120c1d] border border-white/5 text-[10px] font-bold text-white">Move left</button>
+            <button type="button" onclick="moveCarouselAsset(${index}, 1)" class="px-2 py-1 rounded-lg bg-[#120c1d] border border-white/5 text-[10px] font-bold text-white">Move right</button>
             <button type="button" onclick="removeCarouselAsset(${index})" class="px-2 py-1 rounded-lg bg-[#30121b] border border-red-400/20 text-[10px] font-bold text-red-200">Remove</button>
           </div>
         </div>
       </div>
     `;
   }).join("");
+}
+
+function getCurrentCarouselOrderPayload() {
+  const assets = (currentModalCarouselAssets || []).map((asset) => normalizeRemoteMedia(asset));
+  const ids = assets.map((asset) => asset.assetId || asset.asset_id || asset.mediaId || asset.media_id || asset.id).filter(Boolean);
+  return { assets, ids };
+}
+
+function applyCurrentCarouselOrderToModalPost() {
+  const order = getCurrentCarouselOrderPayload();
+  currentModalCarouselAssets = order.assets;
+  currentModalAsset = order.assets[0] || null;
+  if (window.__currentModalPostData) {
+    Object.assign(window.__currentModalPostData, applyDerivedPostMediaFormat({
+      ...window.__currentModalPostData,
+      carouselAssetIds: order.ids,
+      carouselAssets: order.assets,
+      media_ids: order.ids,
+      mediaIds: order.ids,
+      media_id: order.ids[0] || "",
+      mediaId: order.ids[0] || ""
+    }));
+  }
+  const targetId = String(currentEditingPostId || getCanonicalPostId(window.__currentModalPostData || {}) || "").trim();
+  if (targetId) {
+    appState.posts = (appState.posts || []).map((post) => {
+      if (!getPostIdentityValues(post).includes(targetId)) return post;
+      return applyDerivedPostMediaFormat({
+        ...post,
+        carouselAssetIds: order.ids,
+        carouselAssets: order.assets,
+        media_ids: order.ids,
+        mediaIds: order.ids,
+        media_id: order.ids[0] || "",
+        mediaId: order.ids[0] || ""
+      });
+    });
+    persistLocalState();
+  }
+  if (modalMediaStatus) modalMediaStatus.textContent = order.assets.length ? `${order.assets.length >= 2 ? `Carousel · ${order.assets.length} assets` : renderPostMediaTypeBadge(window.__currentModalPostData || {})} linked` : "No media linked";
+}
+
+async function saveCurrentCarouselOrderToSupabase() {
+  const backendMode = getActiveWorkspaceBackendMode();
+  if (backendMode.mode !== "supabase_native") return;
+  const postId = String(currentEditingPostId || getCanonicalPostId(window.__currentModalPostData || {}) || "").trim();
+  if (!postId) return;
+  const order = getCurrentCarouselOrderPayload();
+  for (let index = 0; index < order.assets.length; index += 1) {
+    await attachMediaAssetToPost(order.assets[index], postId, index);
+  }
+  if (STELLARSYNC_SUPABASE_CLIENT) {
+    const meta = getWorkspaceRequestMetadata();
+    const derived = derivePostFormatFromMedia({ media_ids: order.ids, carouselAssets: order.assets });
+    const { error } = await STELLARSYNC_SUPABASE_CLIENT
+      .from("posts")
+      .update({
+        media_ids: order.ids,
+        media_id: order.ids[0] || null,
+        post_type: derived.post_type,
+        format: derived.format
+      })
+      .eq("workspace_id", meta.workspace_id)
+      .eq("post_id", postId);
+    if (error) throw error;
+  }
+  refreshPostMediaClassification(postId);
+  console.log("[carousel] order saved", { postId, count: order.assets.length });
+}
+
+function reorderCarouselAssets(fromIndex, toIndex, persist = true) {
+  if (fromIndex == null || toIndex == null || fromIndex === toIndex) return;
+  if (fromIndex < 0 || toIndex < 0 || fromIndex >= currentModalCarouselAssets.length || toIndex >= currentModalCarouselAssets.length) return;
+  const clone = currentModalCarouselAssets.slice();
+  const [item] = clone.splice(fromIndex, 1);
+  clone.splice(toIndex, 0, item);
+  currentModalCarouselAssets = clone;
+  applyCurrentCarouselOrderToModalPost();
+  renderModalCarouselPreview();
+  if (persist) {
+    saveCurrentCarouselOrderToSupabase().catch((err) => console.warn("[carousel] order save skipped", err?.message || err));
+  }
+}
+
+function startCarouselAssetDrag(event, index) {
+  currentCarouselDragIndex = index;
+  console.log("[carousel] reorder start", { index });
+  try { event.dataTransfer.effectAllowed = "move"; } catch (_) {}
+}
+
+function dropCarouselAsset(event, index) {
+  event.preventDefault();
+  reorderCarouselAssets(currentCarouselDragIndex, index);
+}
+
+function endCarouselAssetDrag() {
+  console.log("[carousel] reorder end", { index: currentCarouselDragIndex });
+  currentCarouselDragIndex = null;
 }
 
 function renderModalExistingMediaPicker(selectedAssetId = "") {
@@ -12087,17 +12270,13 @@ function selectExistingMediaForPost() {
 
 function moveCarouselAsset(index, delta) {
   const nextIndex = index + delta;
-  if (nextIndex < 0 || nextIndex >= currentModalCarouselAssets.length) return;
-  const clone = currentModalCarouselAssets.slice();
-  const [item] = clone.splice(index, 1);
-  clone.splice(nextIndex, 0, item);
-  currentModalCarouselAssets = clone;
-  renderModalCarouselPreview();
+  reorderCarouselAssets(index, nextIndex);
 }
 
 function removeCarouselAsset(index) {
   currentModalCarouselAssets = currentModalCarouselAssets.filter((_, itemIndex) => itemIndex !== index);
   if (!currentModalCarouselAssets.length) currentModalAsset = null;
+  applyCurrentCarouselOrderToModalPost();
   renderModalCarouselPreview();
 }
 
@@ -16502,16 +16681,65 @@ function getFilteredMediaVaultItems() {
   return items;
 }
 
+function getMediaSelectPrefsKey() {
+  const slug = String(getCurrentWorkspaceSlug?.() || WORKSPACE_RUNTIME_CONFIG?.active?.slug || WORKSPACE_RUNTIME_CONFIG?.active?.workspace_slug || "default").trim() || "default";
+  return `stellarMediaSelectMode:${slug}`;
+}
+
+function loadMediaSelectMode() {
+  try {
+    return localStorage.getItem(getMediaSelectPrefsKey()) === "true";
+  } catch (_) {
+    return false;
+  }
+}
+
+function saveMediaSelectMode() {
+  try {
+    localStorage.setItem(getMediaSelectPrefsKey(), mediaSelectMode ? "true" : "false");
+  } catch (_) {}
+}
+
+function toggleMediaSelectMode(forceValue) {
+  mediaSelectMode = typeof forceValue === "boolean" ? forceValue : !mediaSelectMode;
+  if (!mediaSelectMode) selectedMediaAssetIds.clear();
+  saveMediaSelectMode();
+  console.log("[media-select] toggle", { enabled: mediaSelectMode });
+  renderMedia();
+}
+
+function renderMediaSelectToggleState() {
+  const btn = document.getElementById("media-select-toggle");
+  if (!btn) return;
+  btn.classList.toggle("bg-[#231738]", mediaSelectMode);
+  btn.classList.toggle("text-white", mediaSelectMode);
+  btn.classList.toggle("font-semibold", mediaSelectMode);
+  btn.classList.toggle("bg-transparent", !mediaSelectMode);
+  btn.classList.toggle("text-gray-500", !mediaSelectMode);
+}
+
 function toggleMediaSelection(assetId, checked) {
   const key = String(assetId || "").trim();
   if (!key) return;
   if (checked) selectedMediaAssetIds.add(key);
   else selectedMediaAssetIds.delete(key);
+  console.log("[media-select] selected count", selectedMediaAssetIds.size);
   renderMedia();
+}
+
+function handleMediaCardClick(assetId) {
+  const key = String(assetId || "").trim();
+  if (!key) return;
+  if (mediaSelectMode) {
+    toggleMediaSelection(key, !selectedMediaAssetIds.has(key));
+    return;
+  }
+  openMediaAsset(key);
 }
 
 function clearSelectedMedia() {
   selectedMediaAssetIds.clear();
+  console.log("[media-select] selected count", 0);
   renderMedia();
 }
 
@@ -16535,6 +16763,7 @@ function renderMedia() {
     mediaUploadBtn.classList.toggle("hidden", !canManageMedia());
     mediaUploadBtn.disabled = !canManageMedia();
   }
+  renderMediaSelectToggleState();
 
   let items = getFilteredMediaVaultItems();
   var missingUrlCount = items.filter(item => !(item.url || item.media_url || item.source_url || item.fileUrl || item.file_url || item.thumbnail_url || item.thumbnailUrl || item.storage_path || item.storagePath)).length;
@@ -16567,10 +16796,10 @@ function renderMedia() {
   const selectedCount = selectedMediaAssetIds.size;
   const toolbar = `
     <div class="col-span-full flex flex-wrap items-center justify-between gap-3 mb-1">
-      <div class="text-xs text-gray-400">${selectedCount ? `${selectedCount} selected` : `${items.length} media asset${items.length === 1 ? "" : "s"}`}</div>
+      <div class="text-xs text-gray-400">${mediaSelectMode ? `${selectedCount} selected` : `${items.length} media asset${items.length === 1 ? "" : "s"}`}</div>
       <div class="flex flex-wrap gap-2">
-        ${selectedCount ? `<button type="button" onclick="clearSelectedMedia()" class="px-3 py-2 rounded-lg bg-[#181125] border border-white/5 text-[10px] uppercase tracking-widest font-bold text-gray-300">Clear</button>` : ""}
-        ${selectedCount && canAttachMediaToPosts() ? `<button type="button" onclick="openSelectedMediaAttachPanel()" class="px-3 py-2 rounded-lg bg-[#231738] border border-white/10 text-[10px] uppercase tracking-widest font-bold text-white">Attach selected to post</button>` : ""}
+        ${mediaSelectMode && selectedCount && canAttachMediaToPosts() ? `<button type="button" onclick="openSelectedMediaAttachPanel()" class="px-3 py-2 rounded-lg bg-[#231738] border border-white/10 text-[10px] uppercase tracking-widest font-bold text-white">Attach selected to post</button>` : ""}
+        ${mediaSelectMode && selectedCount ? `<button type="button" onclick="clearSelectedMedia()" class="px-3 py-2 rounded-lg bg-[#181125] border border-white/5 text-[10px] uppercase tracking-widest font-bold text-gray-300">Clear selection</button>` : ""}
       </div>
     </div>
   `;
@@ -16591,14 +16820,6 @@ function renderMedia() {
       type === "article" ? "ph-article" :
       "ph-image";
 
-    const badge =
-      item.assetBadge || (
-        type === "video" ? "Reel" :
-        type === "carousel" ? "Carousel" :
-        type === "article" ? "Article" :
-        "Image"
-      );
-
     const linkedPost = item.linkedPost || (appState.posts || []).find(post => post.id === item.postId);
     const linkedStatus = getMediaLinkedStatus(item);
     const linkedPostAssets = linkedPost ? getPostAssets(linkedPost) : [];
@@ -16616,12 +16837,16 @@ function renderMedia() {
         : item.sourceType === "external"
         ? "External URL"
         : "";
-const metaLine = [linkedStatus, item.meta || "", campaignLabel, sourceLabel].filter(Boolean).join(" - ");
-     const displayTitle = getMediaTitle(item);
+    const badge = getMediaBadgeLabel(item, linkedPost);
+    const usageLine = getMediaUsageLine(item, linkedPost);
+    const metaLine = [usageLine, linkedStatus, item.meta || "", campaignLabel, sourceLabel].filter(Boolean).join(" - ");
+    const displayTitle = getMediaDisplayTitle(item, linkedPost);
     const assetUrl = isGroup ? (item.sourceUrl || linkedPost?.sourceUrl || "") : (item.fileUrl || item.sourceUrl || "");
     const overlayLabel = item.fileUrl ? "Open Asset" : item.sourceUrl ? "Open Link" : "View";
+    const coverAsset = isCarouselPreview ? getCarouselCoverAsset(isGroup ? (item.assets || []) : linkedPost || item) : null;
+    const coverUrl = coverAsset ? getMediaPreviewUrl(coverAsset) : "";
     const previewBlock = isCarouselPreview
-      ? `<div class="stacked-preview">${["a","b","c"].map(() => "<span></span>").join("")}</div>`
+      ? renderStackedAssetPreview(isGroup ? (item.assets || []) : linkedPost || item)
       : hasImagePreview
       ? `<img src="${escapeHtml(previewUrl)}" alt="${escapeHtml(displayTitle)}" class="w-full h-full object-cover rounded-none" loading="lazy" onerror="handleBrokenMediaPreview(this)">`
       : hasVideoPreview
@@ -16629,8 +16854,8 @@ const metaLine = [linkedStatus, item.meta || "", campaignLabel, sourceLabel].fil
       : `<div class="w-full h-full flex items-center justify-center"><i class="ph-fill ${icon} text-gray-600 text-5xl"></i></div>`;
 
     return `
-      <div class="glass-card media-vault-card overflow-hidden group text-left w-full relative ${isSelected ? "ring-2 ring-[#c77dff]/70" : ""}" onclick="openMediaAsset('${escapeHtml(itemKey)}')">
-        <input type="checkbox" class="media-select-box" ${isSelected ? "checked" : ""} onclick="event.stopPropagation()" onchange="toggleMediaSelection('${escapeHtml(itemKey)}', this.checked)" aria-label="Select media">
+      <div class="glass-card media-vault-card overflow-hidden group text-left w-full relative ${isSelected ? "ring-2 ring-[#c77dff]/70" : ""}" onclick="handleMediaCardClick('${escapeHtml(itemKey)}')">
+        <input type="checkbox" class="media-select-box ${mediaSelectMode ? "" : "hidden"}" ${isSelected ? "checked" : ""} onclick="event.stopPropagation()" onchange="toggleMediaSelection('${escapeHtml(itemKey)}', this.checked)" aria-label="Select media">
         <div class="aspect-square bg-[#120c1d] border-b border-white/5 flex items-center justify-center relative p-4">
           ${previewBlock}
           <span class="absolute top-3 right-3 px-2 py-1 bg-[#181125] border border-white/5 rounded text-[8px] uppercase font-bold text-gray-300">${escapeHtml(badge)}</span>
@@ -16715,7 +16940,7 @@ async function updateMediaAssetCatalog(item, updates) {
   return updated;
 }
 
-async function attachMediaAssetToPost(item, postId) {
+async function attachMediaAssetToPost(item, postId, sortOrder = 0) {
   const meta = getWorkspaceRequestMetadata();
   const identifiers = getMediaAssetIdentifier(item);
   const payload = {
@@ -16723,7 +16948,9 @@ async function attachMediaAssetToPost(item, postId) {
     workspace_id: meta.workspace_id,
     workspace_slug: meta.workspace_slug || getCurrentWorkspaceSlug() || "",
     ...identifiers,
-    post_id: postId
+    post_id: postId,
+    sort_order: sortOrder,
+    sortOrder
   };
   console.log("[media-match] attach request", payload);
   try {
@@ -16751,6 +16978,15 @@ function refreshPostMediaClassification(postId) {
       const linkedId = String(asset.linkedPostId || asset.linked_post_id || asset.postId || asset.post_id || "").trim();
       return linkedId === targetId;
     }).map((asset) => normalizeRemoteMedia(asset));
+    const preferredOrder = splitMediaIdList(post.media_ids || post.mediaIds || post.carouselAssetIds || post.carousel_asset_ids);
+    if (preferredOrder.length) {
+      const orderMap = new Map(preferredOrder.map((id, index) => [String(id), index]));
+      linkedAssets.sort((a, b) => {
+        const aKey = [a.assetId, a.asset_id, a.mediaId, a.media_id, a.id].map((value) => String(value || "")).find((value) => orderMap.has(value));
+        const bKey = [b.assetId, b.asset_id, b.mediaId, b.media_id, b.id].map((value) => String(value || "")).find((value) => orderMap.has(value));
+        return (orderMap.get(aKey) ?? Number.MAX_SAFE_INTEGER) - (orderMap.get(bKey) ?? Number.MAX_SAFE_INTEGER);
+      });
+    }
     const linkedIds = linkedAssets.map((asset) => asset.assetId || asset.asset_id || asset.mediaId || asset.media_id || asset.id).filter(Boolean);
     updatedPost = applyDerivedPostMediaFormat({
       ...post,
@@ -16783,10 +17019,13 @@ async function attachSelectedMediaToPost(postId) {
   const selectedItems = (currentMediaViewerItems || []).filter(item => selectedMediaAssetIds.has(getMediaItemKey(item)));
   const items = selectedItems.length ? selectedItems : [currentMediaAssetDetail].filter(Boolean);
   console.log("[media-match] attach selected", { postId: targetPostId, count: items.length });
+  const existingPost = findPostByAnyId(targetPostId);
+  const baseSortOrder = existingPost ? getAttachedMediaForPost(existingPost).length : 0;
   const updated = [];
-  for (const item of items) {
+  for (let index = 0; index < items.length; index += 1) {
+    const item = items[index];
     try {
-      updated.push(await attachMediaAssetToPost(item, targetPostId));
+      updated.push(await attachMediaAssetToPost(item, targetPostId, baseSortOrder + index));
     } catch (err) {
       console.warn("[media-match] attach failed", getMediaItemKey(item), err?.message || err);
       throw err;
@@ -16959,7 +17198,7 @@ function openMediaAssetModal(item, options = {}) {
   const previewUrl = linkedAssets[0]?.fileUrl || linkedAssets[0]?.sourceUrl || item.fileUrl || item.sourceUrl || "";
 
   if (mediaAssetModalTitle) {
-    mediaAssetModalTitle.textContent = item.title || item.assetName || "Media Asset";
+    mediaAssetModalTitle.textContent = getMediaDisplayTitle(item, linkedPost, "Media Asset");
   }
 
   if (mediaAssetModalSubtitle) {
@@ -24564,13 +24803,15 @@ async function syncSelectedMediaForSavedPost(savedPostId) {
   const selectedAssets = (currentModalCarouselAssets && currentModalCarouselAssets.length)
     ? currentModalCarouselAssets
     : [currentModalAsset].filter(Boolean);
-  for (const asset of selectedAssets) {
+  for (let index = 0; index < selectedAssets.length; index += 1) {
+    const asset = selectedAssets[index];
     try {
-      await attachMediaAssetToPost(asset, postId);
+      await attachMediaAssetToPost(asset, postId, index);
     } catch (err) {
       console.warn("[media] post media sync skipped", err?.message || err);
     }
   }
+  console.log("[carousel] order saved", { postId, count: selectedAssets.length });
 }
 
 async function apiDeletePost(postId) {
@@ -24688,6 +24929,8 @@ function renderQueue(queueItems) {
     const month = badgeDate.month;
     const day = badgeDate.day;
     const postOpenId = item.id || item.postId || item.post_id || item.frontendId || "";
+    const carouselCover = derivePostFormatFromMedia(hydrated).isCarousel ? getCarouselCoverAsset(hydrated) : null;
+    const carouselCoverUrl = carouselCover ? getMediaPreviewUrl(carouselCover) : "";
 
     return `
       <div class="bg-[#181125] border border-white/5 rounded-xl p-4 flex gap-4 items-center cursor-pointer hover:border-white/10 transition-colors"
@@ -24695,8 +24938,9 @@ function renderQueue(queueItems) {
            title="${escapeHtml(item.title || "")}">
         <div class="bg-[#120c1d] rounded-lg w-12 h-12 flex flex-col items-center justify-center shrink-0"
              style="color:${color}; border:1px solid ${color}33;">
-          <span class="text-[9px] font-bold uppercase">${month}</span>
-          <span class="text-sm font-bold">${day}</span>
+          ${carouselCoverUrl
+            ? `<img src="${escapeHtml(carouselCoverUrl)}" alt="${escapeHtml(getMediaDisplayTitle(carouselCover, null, "Carousel cover"))}" class="w-full h-full object-cover rounded-lg" onerror="handleBrokenMediaPreview(this)">`
+            : `<span class="text-[9px] font-bold uppercase">${month}</span><span class="text-sm font-bold">${day}</span>`}
         </div>
         <div class="min-w-0">
           <p class="text-white text-sm font-bold wrap-safe mb-1">${escapeHtml(item.displayTitle || getDisplayTitle(item.title))}</p>
@@ -25111,7 +25355,9 @@ window.indexSupabaseStorageForMedia = indexSupabaseStorageForMedia;
 window.saveMediaAssetDetail = saveMediaAssetDetail;
 window.attachCurrentMediaAssetToPost = attachCurrentMediaAssetToPost;
 window.detachCurrentMediaAssetFromPost = detachCurrentMediaAssetFromPost;
+window.toggleMediaSelectMode = toggleMediaSelectMode;
 window.toggleMediaSelection = toggleMediaSelection;
+window.handleMediaCardClick = handleMediaCardClick;
 window.clearSelectedMedia = clearSelectedMedia;
 window.openSelectedMediaAttachPanel = openSelectedMediaAttachPanel;
 window.updatePendingUploadField = updatePendingUploadField;
@@ -25149,6 +25395,9 @@ window.noteToPost = noteToPost;
 window.setPillar = setPillar;
 window.moveCarouselAsset = moveCarouselAsset;
 window.removeCarouselAsset = removeCarouselAsset;
+window.startCarouselAssetDrag = startCarouselAssetDrag;
+window.dropCarouselAsset = dropCarouselAsset;
+window.endCarouselAssetDrag = endCarouselAssetDrag;
 window.removePendingUploadFile = removePendingUploadFile;
 window.handleBrokenMediaPreview = handleBrokenMediaPreview;
 window.loadAIDraftIntoWorkspace = loadAIDraftIntoWorkspace;
