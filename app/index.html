@@ -2416,6 +2416,10 @@
                   <span class="flex items-center gap-3"><i class="ph-bold ph-download-simple text-white"></i> Install App</span>
                   <i class="ph-bold ph-caret-right text-gray-500"></i>
                 </button>
+                <button type="button" id="dropdown-install-plugin-btn" class="workspace-menu-btn" onclick="console.log('[plugin-install] dropdown clicked'); openPluginInstallModal(); console.log('[plugin-install] in-app modal opened');">
+                  <span class="flex items-center gap-3"><i class="ph-bold ph-puzzle-piece text-[#c77dff]"></i> Install Plugin</span>
+                  <i class="ph-bold ph-caret-right text-gray-500"></i>
+                </button>
                 <button type="button" class="workspace-menu-btn" data-workspace-action="support">
                   <span class="flex items-center gap-3"><i class="ph-bold ph-bug-beetle text-[#ffd700]"></i> Report Bug</span>
                   <i class="ph-bold ph-caret-right text-gray-500"></i>
@@ -3792,7 +3796,7 @@
         <div class="w-10 h-10 rounded-xl bg-[#231738] flex items-center justify-center"><i class="ph-fill ph-puzzle-piece text-[#c77dff] text-xl"></i></div>
         <div>
           <h2 class="text-xl font-bold text-white tracking-tight">StellarSync Plugin</h2>
-          <p class="text-xs text-gray-400 mt-0.5">Capture content from anywhere on the web</p>
+          <p class="text-xs text-gray-400 mt-0.5">Use the StellarSync Plugin to capture LinkedIn posts, save ideas to Inspo, save notes, or start AI drafts.</p>
         </div>
       </div>
       <button id="close-plugin-install-modal-btn" type="button" class="text-gray-500 hover:text-white p-2 rounded-xl hover:bg-white/5 transition-colors"><i class="ph-bold ph-x text-xl"></i></button>
@@ -3840,7 +3844,7 @@
           <li>Drag the <strong class="text-white">StellarSync Capture</strong> button to your browser's bookmarks bar.</li>
           <li>Browse to any page (LinkedIn, news article, blog post, etc.)</li>
           <li>Select text on the page (optional), then click the bookmarklet.</li>
-          <li>Choose where to save it: <strong class="text-white">Inspo</strong>, <strong class="text-white">Notes</strong>, or <strong class="text-white">AI Draft</strong>.</li>
+          <li>Choose where to save it: <strong class="text-white">Inspo</strong>, <strong class="text-white">Notes</strong>, <strong class="text-white">AI Draft</strong>, or use the <strong class="text-white">LinkedIn Exporter</strong> tab.</li>
           <li>The captured content appears immediately in your workspace.</li>
         </ol>
         <div class="mt-2 px-3 py-2 rounded-lg bg-[#181125] border border-white/5 text-[10px] text-gray-500 leading-relaxed">
@@ -3865,6 +3869,7 @@
       <button id="close-plugin-capture-modal-btn" type="button" class="text-gray-500 hover:text-white p-2 rounded-xl hover:bg-white/5 transition-colors"><i class="ph-bold ph-x text-xl"></i></button>
     </div>
     <div class="flex border-b border-white/10 shrink-0">
+      <button type="button" class="plugin-capture-tab flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center bg-[#181125] text-gray-400 border-b-2 border-transparent" data-pc-tab="linkedin" onclick="switchPluginCaptureTab('linkedin')">LinkedIn Exporter</button>
       <button type="button" class="plugin-capture-tab flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center bg-[#2d1b4e] text-white border-b-2 border-[#c77dff]" data-pc-tab="inspo" onclick="switchPluginCaptureTab('inspo')">Save to Inspo</button>
       <button type="button" class="plugin-capture-tab flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center bg-[#181125] text-gray-400 border-b-2 border-transparent" data-pc-tab="note" onclick="switchPluginCaptureTab('note')">Save to Notes</button>
       <button type="button" class="plugin-capture-tab flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center bg-[#181125] text-gray-400 border-b-2 border-transparent" data-pc-tab="draft" onclick="switchPluginCaptureTab('draft')">AI Draft Source</button>
@@ -3876,6 +3881,18 @@
         <div><span class="text-gray-500">Page:</span> <span id="pc-capture-title-display" class="text-white">—</span></div>
         <div><span class="text-gray-500">Time:</span> <span id="pc-capture-time-display" class="text-gray-300">—</span></div>
       </div>
+      <!-- LinkedIn Exporter Tab -->
+      <section data-pc-panel="linkedin" class="hidden space-y-4">
+        <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">LinkedIn Post URL</div><input id="pc-linkedin-url" type="url" placeholder="https://www.linkedin.com/posts/..." class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"></div>
+        <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Pasted LinkedIn Text / JSON</div><textarea id="pc-linkedin-input" rows="4" placeholder="Paste copied LinkedIn post text, or paste JSON from the LinkedIn Export Helper..." class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 resize-y"></textarea></div>
+        <div class="flex gap-2">
+          <button type="button" class="px-4 py-2.5 rounded-xl bg-[#231738] border border-white/5 text-xs font-bold text-white hover:bg-[#2d1b4e] transition-colors" onclick="parsePluginLinkedInCapture()"><i class="ph-bold ph-magnifying-glass mr-1"></i> Parse</button>
+          <button type="button" class="px-4 py-2.5 rounded-xl bg-[#1a1128] border border-white/5 text-xs font-bold text-white hover:bg-[#231738] transition-colors" onclick="importPluginLinkedInCapture()"><i class="ph-bold ph-upload mr-1"></i> Import</button>
+          <button type="button" onclick="openLinkedInBulkImportModal()" class="px-3 py-2.5 rounded-xl bg-[#181125] border border-white/5 text-[10px] font-bold text-gray-300 hover:text-white transition-colors"><i class="ph-bold ph-arrow-square-out mr-1"></i> Open Full Importer</button>
+        </div>
+        <div id="pc-linkedin-diagnostics" class="text-[11px] text-gray-500 leading-relaxed">Paste LinkedIn text or JSON, then click Parse.</div>
+        <div id="pc-linkedin-preview" class="space-y-2"></div>
+      </section>
       <!-- Inspo Tab -->
       <section data-pc-panel="inspo" class="space-y-4">
         <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Title</div><input id="pc-inspo-title" type="text" placeholder="Inspiration title" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"></div>
@@ -3937,6 +3954,35 @@
         <div class="text-sm text-gray-400 font-bold">No captures yet</div>
         <div class="text-xs text-gray-500 mt-1">Use the StellarSync Plugin bookmarklet to capture content from any page.</div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Monday Backfill Modal -->
+<div id="monday-backfill-modal" class="fixed inset-0 z-[102] flex items-center justify-center bg-black/70 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
+  <div id="monday-backfill-card" class="modal-content w-full max-w-lg max-h-[90vh] bg-[#120c1d] border border-white/10 rounded-2xl shadow-2xl overflow-hidden scale-95 transition-transform duration-300 flex flex-col">
+    <div class="p-6 border-b border-white/10 flex justify-between items-center bg-gradient-to-r from-[#1a1128] to-[#120c1d] shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-[#231738] flex items-center justify-center"><i class="ph-fill ph-arrow-counter-clockwise text-[#c77dff] text-xl"></i></div>
+        <div>
+          <h2 class="text-xl font-bold text-white tracking-tight">Backfill Monday Board</h2>
+        </div>
+      </div>
+      <button id="close-monday-backfill-modal-btn" type="button" class="text-gray-500 hover:text-white p-2 rounded-xl hover:bg-white/5 transition-colors"><i class="ph-bold ph-x text-xl"></i></button>
+    </div>
+    <div id="monday-backfill-body" class="p-6 overflow-y-auto custom-scrollbar space-y-4">
+      <p class="text-sm text-gray-300 leading-relaxed">This will create or update Monday items for every StellarSync post in this workspace. Existing Monday items with matching Post IDs will be updated, not duplicated.</p>
+      <ul class="text-xs text-gray-400 space-y-2 list-disc list-inside">
+        <li>New posts will be placed in the matching campaign group when possible.</li>
+        <li>Posts without a matching campaign group will go to Uncategorized.</li>
+        <li>Monday-only fields like approval, assignee, priority, and brief links will be preserved.</li>
+      </ul>
+      <div id="monday-backfill-loading" class="hidden text-center py-6"><i class="ph-bold ph-circle-notch text-2xl text-[#c77dff] animate-spin block mx-auto mb-3"></i><div class="text-sm text-gray-400">Backfilling Monday board...</div></div>
+      <div id="monday-backfill-result" class="hidden space-y-3"></div>
+    </div>
+    <div id="monday-backfill-footer" class="p-6 border-t border-white/10 flex justify-end gap-3">
+      <button id="cancel-monday-backfill-btn" type="button" class="px-4 py-2.5 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300 hover:text-white transition-colors">Cancel</button>
+      <button id="confirm-monday-backfill-btn" type="button" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all">Backfill Monday Board</button>
     </div>
   </div>
 </div>
@@ -5167,29 +5213,6 @@
                 </div>
               </div>
             </div>
-            <div class="platform-card">
-              <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3">Avatar / Initials</div>
-              <div class="flex items-center gap-4 mb-3">
-                <div id="pw-profile-avatar-preview" class="w-12 h-12 rounded-xl bg-[#231738] border border-white/10 flex items-center justify-center text-white text-sm font-bold">WS</div>
-                <div class="flex-1">
-                  <input id="pw-profile-initials" type="text" maxlength="4" placeholder="AB" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 uppercase tracking-widest font-bold">
-                </div>
-              </div>
-              <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Icon</div>
-              <div id="pw-profile-icon-grid" class="flex flex-wrap gap-2">
-                <button type="button" class="pw-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="none" title="No icon / Use initials"><span class="text-[9px] font-bold text-gray-400">AB</span></button>
-                <button type="button" class="pw-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg active" data-icon="sparkle"><i class="ph-fill ph-sparkle"></i></button>
-                <button type="button" class="pw-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="leaf"><i class="ph-fill ph-leaf"></i></button>
-                <button type="button" class="pw-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="planet"><i class="ph-fill ph-planet"></i></button>
-                <button type="button" class="pw-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="star"><i class="ph-fill ph-star"></i></button>
-                <button type="button" class="pw-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="heart"><i class="ph-fill ph-heart"></i></button>
-                <button type="button" class="pw-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="megaphone"><i class="ph-fill ph-megaphone"></i></button>
-                <button type="button" class="pw-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="lightning"><i class="ph-fill ph-lightning"></i></button>
-                <button type="button" class="pw-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="users"><i class="ph-fill ph-users"></i></button>
-                <button type="button" class="pw-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="notebook"><i class="ph-fill ph-notebook"></i></button>
-                <button type="button" class="pw-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="calendar"><i class="ph-fill ph-calendar-blank"></i></button>
-              </div>
-            </div>
             <button id="pw-profile-save-btn" type="button" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all">Save Profile</button>
             <div id="pw-profile-status" class="text-xs text-gray-400 hidden"></div>
           </section>
@@ -5294,7 +5317,7 @@
               </div>
               <div class="flex items-center gap-2 flex-wrap">
                 <button type="button" id="pw-backfill-monday-btn" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 hover:text-white transition-colors">Backfill Monday Board</button>
-                <button type="button" id="pw-open-plugin-install-btn" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 hover:text-white transition-colors"><i class="ph-bold ph-puzzle-piece mr-1"></i>Plugin</button>
+                <button type="button" id="pw-open-plugin-install-btn" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 hover:text-white transition-colors"><i class="ph-bold ph-puzzle-piece mr-1"></i>StellarSync Plugin</button>
               </div>
             </div>
             <div id="pw-connections-list" class="space-y-3"></div>
@@ -9922,16 +9945,7 @@ function setupWorkspaceUI() {
   document.querySelectorAll(".pw-tab-btn").forEach(function(btn) {
     btn.addEventListener("click", function() { switchPWTab(btn.dataset.pwTab || "profile"); });
   });
-  document.querySelectorAll("#pw-profile-icon-grid .pw-icon-btn").forEach(function(btn) {
-    btn.addEventListener("click", function() {
-      console.log("[icon-save] profile path", { event: "icon_selected", icon: btn.dataset.icon || "none" });
-      document.querySelectorAll("#pw-profile-icon-grid .pw-icon-btn").forEach(function(b) { b.classList.remove("active"); });
-      btn.classList.add("active");
-      var previewEl = document.getElementById("pw-profile-avatar-preview");
-      var isInitials = btn.dataset.icon === "none";
-      if (previewEl) previewEl.innerHTML = renderWorkspaceAvatar({ avatar_mode: isInitials ? "initials" : "icon", icon: isInitials ? "" : btn.dataset.icon, avatar_initials: (document.getElementById("pw-profile-initials") || {}).value || "" });
-    });
-  });
+  console.log("[profile-workspace] profile avatar controls removed");
   document.querySelectorAll("#pw-workspace-icon-grid .pw-ws-icon-btn").forEach(function(btn) {
     btn.addEventListener("click", function() {
       console.log("[workspace-icon] selected", { icon: btn.dataset.icon || "none" });
@@ -9949,18 +9963,18 @@ function setupWorkspaceUI() {
     var previewEl = document.getElementById("pw-workspace-avatar-preview");
     if (previewEl) previewEl.innerHTML = renderWorkspaceAvatar({ avatar_mode: selected === "none" ? "initials" : "icon", icon: selected === "none" ? "" : selected, avatar_initials: this.value || "" });
   });
-  document.getElementById("pw-profile-initials")?.addEventListener("input", function() {
-    var activeBtn = document.querySelector("#pw-profile-icon-grid .pw-icon-btn.active");
-    var selected = activeBtn?.dataset?.icon || "none";
-    var previewEl = document.getElementById("pw-profile-avatar-preview");
-    if (previewEl) previewEl.innerHTML = renderWorkspaceAvatar({ avatar_mode: selected === "none" ? "initials" : "icon", icon: selected === "none" ? "" : selected, avatar_initials: this.value || "" });
-  });
   document.getElementById("pw-profile-save-btn")?.addEventListener("click", savePWProfile);
   document.getElementById("pw-workspace-save-btn")?.addEventListener("click", savePWWorkspace);
   document.getElementById("pw-backfill-monday-btn")?.addEventListener("click", function() {
     console.log("[button] fired pw-backfill-monday-btn");
     backfillMondayBoard();
   });
+  document.getElementById("close-monday-backfill-modal-btn")?.addEventListener("click", closeMondayBackfillModal);
+  document.getElementById("cancel-monday-backfill-btn")?.addEventListener("click", closeMondayBackfillModal);
+  document.getElementById("monday-backfill-modal")?.addEventListener("click", function(event) {
+    if (event.target === document.getElementById("monday-backfill-modal")) closeMondayBackfillModal();
+  });
+  document.getElementById("confirm-monday-backfill-btn")?.addEventListener("click", confirmMondayBackfill);
   document.getElementById("pw-open-plugin-install-btn")?.addEventListener("click", function() {
     console.log("[button] fired pw-open-plugin-install-btn");
     openPluginInstallModal();
@@ -15571,7 +15585,11 @@ async function syncPostToMonday() {
 }
 
 function getMondayBackfillFrontendPosts() {
-  const sourcePosts = Array.isArray(appState.posts) ? appState.posts : [];
+  var sourcePosts = Array.isArray(appState.posts) ? appState.posts : [];
+  if (!sourcePosts.length && Array.isArray(window.posts)) sourcePosts = window.posts;
+  if (!sourcePosts.length && window.__posts && Array.isArray(window.__posts)) sourcePosts = window.__posts;
+  if (!sourcePosts.length && window.state && Array.isArray(window.state.posts)) sourcePosts = window.state.posts;
+  console.log("[monday-backfill] frontend source selected", { source: sourcePosts.length ? (sourcePosts === appState.posts ? "appState.posts" : "window.posts/state") : "none", count: sourcePosts.length });
   const campaigns = getAvailableCampaignRecords();
   return sourcePosts
     .filter(function(post) { return post && typeof post === "object"; })
@@ -15611,22 +15629,74 @@ function getMondayBackfillFrontendPosts() {
     });
 }
 
-async function backfillMondayBoard() {
-  const boardId = getMondayBoardId(WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active, WORKSPACE_CONNECTIONS);
-  if (!boardId) { showToast("No Monday board configured", "error"); return; }
-  if (!canManageWorkspace()) { showToast("Backfill unavailable", "You do not have permission to run a board backfill.", "ph-warning", "text-yellow-400"); return; }
-  if (!confirm("This will create or update Monday items for all posts. Existing Post IDs will be matched to avoid duplicates.")) return;
-  console.log("[monday-backfill] started");
-  const loadingToastId = showLoadingToast("Backfilling Monday board", "Creating and updating Monday items...");
+function openMondayBackfillModal() {
+  var modal = document.getElementById("monday-backfill-modal");
+  var card = document.getElementById("monday-backfill-card");
+  if (!modal) return;
+  document.getElementById("monday-backfill-loading").classList.add("hidden");
+  document.getElementById("monday-backfill-result").classList.add("hidden");
+  document.getElementById("monday-backfill-result").innerHTML = "";
+  document.getElementById("monday-backfill-footer").classList.remove("hidden");
+  modal.classList.remove("opacity-0", "pointer-events-none");
+  if (card) { card.classList.remove("scale-95"); card.classList.add("scale-100"); }
+  console.log("[monday-backfill] in-app modal opened");
+}
+
+function closeMondayBackfillModal() {
+  var modal = document.getElementById("monday-backfill-modal");
+  var card = document.getElementById("monday-backfill-card");
+  if (modal) modal.classList.add("opacity-0", "pointer-events-none");
+  if (card) { card.classList.remove("scale-100"); card.classList.add("scale-95"); }
+}
+
+function renderMondayBackfillResult(result) {
+  var resultEl = document.getElementById("monday-backfill-result");
+  if (!resultEl) return;
+  resultEl.classList.remove("hidden");
+  if (!result || !result.ok) {
+    var errMsg = result?.error || result?.message || "Unknown error";
+    resultEl.innerHTML = '<div class="text-center py-4"><div class="w-12 h-12 mx-auto mb-3 rounded-2xl bg-[#231738] flex items-center justify-center"><i class="ph-bold ph-warning text-yellow-400 text-xl"></i></div><div class="text-sm text-red-400 font-bold">Backfill failed</div><div class="text-xs text-gray-400 mt-2">' + errMsg + '</div></div>';
+    return;
+  }
+  var total = result.total_posts_seen || result.total || 0;
+  var source = result.source_used || result.source || "unknown";
+  var errors = Array.isArray(result.errors) ? result.errors.slice(0, 5) : [];
+  var html = '<div class="text-center py-4"><div class="w-12 h-12 mx-auto mb-3 rounded-2xl bg-[#231738] flex items-center justify-center"><i class="ph-bold ph-check-circle text-emerald-400 text-xl"></i></div>';
+  html += '<div class="text-sm text-white font-bold">Backfill complete</div>';
+  html += '<div class="text-xs text-gray-400 mt-2 space-y-1">';
+  html += '<div>Posts sent: ' + total + '</div>';
+  html += '<div>Source used: ' + source + '</div>';
+  html += '<div>Created: ' + (result.created || 0) + '</div>';
+  html += '<div>Updated: ' + (result.updated || 0) + '</div>';
+  html += '<div>Skipped: ' + (result.skipped || 0) + '</div>';
+  html += '<div>Failed: ' + (result.failed || 0) + '</div>';
+  html += '</div>';
+  if (errors.length) {
+    html += '<div class="mt-3 text-left"><div class="text-[10px] uppercase tracking-widest text-yellow-400 font-bold mb-1">Errors (first ' + errors.length + ')</div>';
+    errors.forEach(function(e) { html += '<div class="text-[10px] text-yellow-300 leading-relaxed">' + (e.post_id || "?") + ': ' + (e.error || e.message || "Unknown") + '</div>'; });
+    html += '</div>';
+  }
+  html += '</div>';
+  resultEl.innerHTML = html;
+  console.log("[monday-backfill] result rendered");
+}
+
+async function confirmMondayBackfill() {
+  console.log("[monday-backfill] confirmed");
+  document.getElementById("monday-backfill-loading").classList.remove("hidden");
+  document.getElementById("monday-backfill-result").classList.add("hidden");
+  document.getElementById("monday-backfill-footer").classList.add("hidden");
   try {
+    const boardId = getMondayBoardId(WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active, WORKSPACE_CONNECTIONS);
+    if (!boardId) { showToast("No Monday board configured", "error"); closeMondayBackfillModal(); return; }
     const meta = getWorkspaceRequestMetadata();
     const backendMode = getActiveWorkspaceBackendMode();
     const activeWorkspace = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active || {};
     const payloadPosts = getMondayBackfillFrontendPosts();
+    console.log("[monday-backfill] frontend source selected");
     console.log("[monday-backfill] frontend posts count", payloadPosts.length);
-    console.log("[monday-backfill] backend_type", backendMode.mode || activeWorkspace.backend_type || "");
-    console.log("[monday-backfill] sample post ids", payloadPosts.slice(0, 5).map(function(post) { return post.post_id || post.postId || post.id || ""; }));
-    console.log("[monday-backfill] started", { boardId, postCount: payloadPosts.length });
+    console.log("[monday-backfill] sample normalized posts", payloadPosts.slice(0, 3).map(function(p) { return { post_id: p.post_id, title: p.title, campaign_name: p.campaign_name }; }));
+    console.log("[monday-backfill] payload", { board_id: boardId, postCount: payloadPosts.length });
     const result = await callSupabaseEdgeFunction("monday-sync", {
       action: "backfill_posts",
       workspace_id: meta.workspace_id || meta.workspace_slug,
@@ -15635,9 +15705,13 @@ async function backfillMondayBoard() {
       backend_type: backendMode.mode || activeWorkspace.backend_type || "",
       posts: payloadPosts
     });
+    document.getElementById("monday-backfill-loading").classList.add("hidden");
+    if (result && result.ok && result.total_posts_seen === 0) {
+      result.ok = false;
+      result.error = "No posts were sent to Monday. Calendar/Ledger may be using a different source than Monday backfill.";
+    }
+    renderMondayBackfillResult(result);
     if (result?.ok) {
-      console.log("[monday-backfill] complete", result);
-      updateLoadingToastSuccess(loadingToastId, "Monday backfill complete", `${result.updated || 0} updated, ${result.created || 0} created.`);
       if (window.__currentModalPostData && result.monday_item_ids_by_post_id && typeof result.monday_item_ids_by_post_id === "object") {
         const postId = String(window.__currentModalPostData.post_id || window.__currentModalPostData.postId || "").trim();
         const itemId = result.monday_item_ids_by_post_id[postId];
@@ -15646,7 +15720,7 @@ async function backfillMondayBoard() {
       upsertLocalWorkspaceConnection("monday", {
         status: result.failed ? "warning" : "connected",
         last_sync_at: result.completed_at || new Date().toISOString(),
-        last_error: result.failed ? `${result.failed} backfill item(s) failed` : "",
+        last_error: result.failed ? result.failed + " backfill item(s) failed" : "",
         config: {
           board_id: boardId,
           groups_found: result.groups_found,
@@ -15659,16 +15733,18 @@ async function backfillMondayBoard() {
       });
       refreshConnectionCards();
       await syncRemoteIfConfigured();
-      return result;
     }
-    console.log("[monday-backfill] error", result);
-    updateLoadingToastError(loadingToastId, "Monday backfill failed", result?.error || "Unknown error");
-    return result;
   } catch (err) {
-    console.log("[monday-backfill] error", err);
-    updateLoadingToastError(loadingToastId, "Monday backfill failed", err?.message || String(err));
-    throw err;
+    document.getElementById("monday-backfill-loading").classList.add("hidden");
+    renderMondayBackfillResult({ ok: false, error: err.message || String(err) });
   }
+}
+
+async function backfillMondayBoard() {
+  const boardId = getMondayBoardId(WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active, WORKSPACE_CONNECTIONS);
+  if (!boardId) { showToast("No Monday board configured", "error"); return; }
+  if (!canManageWorkspace()) { showToast("Backfill unavailable", "You do not have permission to run a board backfill.", "ph-warning", "text-yellow-400"); return; }
+  openMondayBackfillModal();
 }
 
 function setModalMondayFields(itemId, syncedAt) {
@@ -23752,7 +23828,7 @@ async function syncRemoteIfConfigured() {
     await maybeAutoPullMondayUpdatesForWorkspace();
     console.log("[data]", getAppStateCounts());
     rerenderAll();
-    updateLoadingToastSuccess(syncLoadingToastId, "Workspace loaded", "Google Sheets data loaded.");
+    updateLoadingToastSuccess(syncLoadingToastId, "Workspace loaded", "Syncing StellarSync connections…");
   } catch (err) {
     console.error(err);
     offlineMode = true;
@@ -23760,7 +23836,7 @@ async function syncRemoteIfConfigured() {
     lastSyncError = err && err.message ? err.message : String(err);
     console.log("[data]", getAppStateCounts());
     rerenderAll();
-    updateLoadingToastError(syncLoadingToastId, "Google Sheets sync issue", "Your workspace is connected, but posts could not be loaded.");
+    updateLoadingToastError(syncLoadingToastId, "Workspace sync issue", "Your workspace is connected, but posts could not be loaded.");
     var syncErrEl = document.getElementById("sync-error-state");
     if (!syncErrEl) {
       syncErrEl = document.createElement("div");
@@ -23770,7 +23846,7 @@ async function syncRemoteIfConfigured() {
       syncErrEl.innerHTML =
         '<div class="w-full max-w-lg bg-[#120c1d] border border-white/10 rounded-2xl p-8 text-center shadow-2xl">' +
         '<div class="w-14 h-14 rounded-2xl bg-[#231738] flex items-center justify-center mx-auto mb-6 text-yellow-400"><i class="ph-bold ph-cloud-slash text-2xl"></i></div>' +
-        '<h2 class="text-lg font-extrabold text-white mb-3">Google Sheets sync issue</h2>' +
+        '<h2 class="text-lg font-extrabold text-white mb-3">Workspace sync issue</h2>' +
         '<p class="text-sm text-gray-300 leading-relaxed mb-6">Your workspace is connected, but posts could not be loaded.</p>' +
         '<div class="flex flex-wrap gap-3 justify-center">' +
         '<button onclick="syncRemoteIfConfigured()" class="px-5 py-2.5 rounded-xl bg-[#2d1b4e] hover:bg-[#3d2b5e] text-white text-xs uppercase tracking-widest font-bold transition-colors">Retry Sync</button>' +
@@ -25193,7 +25269,7 @@ async function apiGetPosts() {
   const backendMode = getActiveWorkspaceBackendMode();
   const loadingToastId = showLoadingToast(
     "Loading posts",
-    backendMode.mode === "supabase_native" ? "Loading posts from Supabase..." : "Loading posts from Google Sheets..."
+    backendMode.mode === "supabase_native" ? "Loading posts from Supabase..." : "Loading posts from backend..."
   );
   if (backendMode.mode === "supabase_native") {
     try {
@@ -29845,8 +29921,6 @@ function populatePWModal() {
   var config = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active;
   var user = STELLARSYNC_AUTH_USER || {};
   var emailEl = document.getElementById("pw-profile-email");
-  var initialsEl = document.getElementById("pw-profile-initials");
-  var previewEl = document.getElementById("pw-profile-avatar-preview");
   var displayNameEl = document.getElementById("pw-profile-display-name");
   var wsNameEl = document.getElementById("pw-workspace-name");
   var wsSlugEl = document.getElementById("pw-workspace-slug");
@@ -29881,26 +29955,13 @@ function populatePWModal() {
   var name = config && (config.name || "");
   var slug = config && (config.workspace_slug || config.slug || "");
   var initials = getWorkspaceInitials(config || {});
-  var profileAvatarSource = {
-    name: user.user_metadata && (user.user_metadata.display_name || user.user_metadata.full_name) || user.email || "",
-    avatar_initials: user.user_metadata && user.user_metadata.avatar_initials || "",
-    avatar_mode: user.user_metadata && user.user_metadata.avatar_mode || "initials",
-    icon: user.user_metadata && user.user_metadata.icon || "",
-    avatar_url: user.user_metadata && (user.user_metadata.avatar_url || user.user_metadata.profile_image_url || user.user_metadata.profileImageUrl) || ""
-  };
-  if (previewEl) previewEl.innerHTML = renderWorkspaceAvatar(profileAvatarSource);
   if (wsPreviewEl) wsPreviewEl.innerHTML = renderWorkspaceAvatar(config || {});
-  if (initialsEl) initialsEl.value = initials;
   if (displayNameEl) displayNameEl.value = user.user_metadata && user.user_metadata.display_name || user.email && user.email.split("@")[0] || "";
   if (profileImageEl) profileImageEl.value = user.user_metadata && (user.user_metadata.avatar_url || user.user_metadata.profile_image_url || user.user_metadata.profileImageUrl) || "";
   if (wsNameEl) wsNameEl.value = name;
   if (wsSlugEl) wsSlugEl.textContent = slug;
   if (wsShortEl) wsShortEl.value = config && config.short_name || initials;
-  var profileActiveIcon = profileAvatarSource.avatar_mode === "initials" ? "none" : (profileAvatarSource.icon || "sparkle");
   var activeIcon = (config && config.avatar_mode === "initials") ? "none" : (config && config.icon || "sparkle");
-  document.querySelectorAll("#pw-profile-icon-grid .pw-icon-btn").forEach(function(btn) {
-    btn.classList.toggle("active", btn.dataset.icon === profileActiveIcon);
-  });
   document.querySelectorAll("#pw-workspace-icon-grid .pw-ws-icon-btn").forEach(function(btn) {
     btn.classList.toggle("active", btn.dataset.icon === activeIcon);
   });
@@ -29939,17 +30000,11 @@ function populatePWModal() {
 }
 
 async function savePWProfile() {
-  if (document.querySelector("#pw-workspace-icon-grid .pw-ws-icon-btn.active") && document.activeElement && document.activeElement.closest && document.activeElement.closest("#pw-workspace-icon-grid")) {
-    console.log("[icon-save] blocked wrong path", { attempted: "profile", source: "workspace_icon_grid" });
-    return;
-  }
   console.log("[icon-save] profile path", { action: "savePWProfile" });
-  const selectedProfileIcon = (document.querySelector("#pw-profile-icon-grid .pw-icon-btn.active") || {}).dataset?.icon || "none";
+  console.log("[profile-workspace] profile avatar controls removed");
   const payload = {
     display_name: (document.getElementById("pw-profile-display-name") || {}).value || "",
-    avatar_initials: (document.getElementById("pw-profile-initials") || {}).value || "",
-    avatar_mode: selectedProfileIcon === "none" ? "initials" : "icon",
-    icon: selectedProfileIcon === "none" ? "" : selectedProfileIcon
+    profile_image_url: (document.getElementById("pw-profile-image-url") || {}).value || ""
   };
   console.log("[icon-save] profile payload", payload);
   var statusEl = document.getElementById("pw-profile-status");
@@ -29966,7 +30021,7 @@ async function savePWProfile() {
     var lastProfileError = null;
     for (const tableName of ["profile_settings", "user_preferences"]) {
       const profilePayload = { ...payload, user_id: userId };
-      const upsertResult = await STELLARSYNC_SUPABASE_CLIENT.from(tableName).upsert(profilePayload, { onConflict: "user_id" }).select("user_id,display_name,avatar_mode,icon,avatar_initials").maybeSingle();
+      const upsertResult = await STELLARSYNC_SUPABASE_CLIENT.from(tableName).upsert(profilePayload, { onConflict: "user_id" }).select("user_id,display_name,profile_image_url").maybeSingle();
       console.log("[icon-save] response", { table: tableName, ok: !upsertResult?.error, error: upsertResult?.error || null });
       if (!upsertResult?.error) {
         profileTable = tableName;
@@ -29976,13 +30031,13 @@ async function savePWProfile() {
       if (!isMissingColumnError(upsertResult.error) && !String(upsertResult.error?.message || "").toLowerCase().includes("does not exist")) throw upsertResult.error;
     }
     if (!profileTable) {
-      throw new Error("Missing profile settings table/columns: expected public.profile_settings or public.user_preferences with user_id, display_name, avatar_mode, icon, avatar_initials. Last error: " + (lastProfileError?.message || "unknown"));
+      throw new Error("Missing profile settings table/columns: expected public.profile_settings or public.user_preferences with user_id, display_name. Last error: " + (lastProfileError?.message || "unknown"));
     }
-    var reloadResult = await STELLARSYNC_SUPABASE_CLIENT.from(profileTable).select("user_id,display_name,avatar_mode,icon,avatar_initials").eq("user_id", userId).maybeSingle();
+    var reloadResult = await STELLARSYNC_SUPABASE_CLIENT.from(profileTable).select("user_id,display_name,profile_image_url").eq("user_id", userId).maybeSingle();
     if (reloadResult.error) throw reloadResult.error;
     var persisted = reloadResult.data || {};
     console.log("[icon-save] reload check", { table: profileTable, data: persisted });
-    var mismatch = ["display_name", "avatar_mode", "icon", "avatar_initials"].filter(function(key) {
+    var mismatch = ["display_name", "profile_image_url"].filter(function(key) {
       return String(persisted[key] || "").trim() !== String(payload[key] || "").trim();
     });
     console.log("[icon-save] mismatch", mismatch);
@@ -30002,11 +30057,36 @@ async function savePWProfile() {
   }
 }
 
-async function savePWWorkspace() {
-  if (document.querySelector("#pw-profile-icon-grid .pw-icon-btn.active") && document.activeElement && document.activeElement.closest && document.activeElement.closest("#pw-profile-icon-grid")) {
-    console.log("[icon-save] blocked wrong path", { attempted: "workspace", source: "profile_icon_grid" });
-    return;
+var WORKSPACE_SETTINGS_COLUMNS_CACHE = null;
+
+async function getWorkspaceSettingsColumns() {
+  if (WORKSPACE_SETTINGS_COLUMNS_CACHE) return WORKSPACE_SETTINGS_COLUMNS_CACHE;
+  try {
+    if (!STELLARSYNC_SUPABASE_CLIENT) return null;
+    var colResult = await STELLARSYNC_SUPABASE_CLIENT.from("information_schema").select("column_name").eq("table_schema", "public").eq("table_name", "workspace_settings");
+    if (colResult.error || !Array.isArray(colResult.data)) return null;
+    var cols = colResult.data.map(function(r) { return r.column_name; });
+    WORKSPACE_SETTINGS_COLUMNS_CACHE = cols;
+    console.log("[workspace-save] supported columns", cols);
+    return cols;
+  } catch (_) { return null; }
+}
+
+function filterPayloadToExistingColumns(payload, columnNames) {
+  if (!columnNames || !Array.isArray(columnNames) || !columnNames.length) return payload;
+  var filtered = {};
+  var optionalBranding = ["brand_accent", "icon", "avatar_mode", "avatar_initials", "constellation_shape", "short_name", "media_prefix", "media_bucket"];
+  for (var key of Object.keys(payload)) {
+    if (columnNames.indexOf(key) !== -1) {
+      filtered[key] = payload[key];
+    } else if (optionalBranding.indexOf(key) !== -1) {
+      console.log("[workspace-save] skipped missing column " + key);
+    }
   }
+  return filtered;
+}
+
+async function savePWWorkspace() {
   console.log("[icon-save] workspace path", { action: "savePWWorkspace" });
   const activeWorkspace = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active || {};
   const selectedWorkspaceIcon = (document.querySelector("#pw-workspace-icon-grid .pw-ws-icon-btn.active") || {}).dataset?.icon || "none";
@@ -30054,6 +30134,8 @@ async function savePWWorkspace() {
       }
       var settingsPayload = { ...payload, workspace_id: workspaceId, workspace_slug: slug };
       delete settingsPayload.name;
+      var wsColumns = await getWorkspaceSettingsColumns();
+      if (wsColumns) settingsPayload = filterPayloadToExistingColumns(settingsPayload, wsColumns);
       var existing = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").select("id").eq("workspace_id", workspaceId).maybeSingle();
       if (existing.error) throw existing.error;
       if (existing && existing.data && existing.data.id) {
@@ -30081,7 +30163,9 @@ async function savePWWorkspace() {
           throw new Error("Workspace name save verification failed: persisted workspace name did not match.");
         }
       }
-      var reloadedWorkspace = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").select("workspace_id,workspace_slug,display_name,short_name,avatar_mode,icon,avatar_initials,constellation_shape,brand_accent,media_bucket,media_prefix,brand_voice,current_month,current_year").eq("workspace_id", workspaceId).maybeSingle();
+      var reloadFields = ["workspace_id","workspace_slug","display_name","short_name","avatar_mode","icon","avatar_initials","constellation_shape","brand_accent","media_bucket","media_prefix","brand_voice","current_month","current_year"];
+      if (wsColumns) reloadFields = reloadFields.filter(function(f) { return wsColumns.indexOf(f) !== -1; });
+      var reloadedWorkspace = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").select(reloadFields.join(",")).eq("workspace_id", workspaceId).maybeSingle();
       console.log("[icon-save] reload check", reloadedWorkspace?.data || null);
       if (reloadedWorkspace?.error) throw reloadedWorkspace.error;
       var persisted = reloadedWorkspace?.data || {};
@@ -30488,6 +30572,10 @@ function openPluginCaptureModal(data) {
   document.getElementById("pc-note-body").value = text || "";
   document.getElementById("pc-draft-source").value = text || "";
   document.getElementById("pc-note-source-url").value = url;
+  document.getElementById("pc-linkedin-url").value = url || "";
+  document.getElementById("pc-linkedin-input").value = text || "";
+  document.getElementById("pc-linkedin-diagnostics").textContent = "Paste LinkedIn text or JSON, then click Parse.";
+  document.getElementById("pc-linkedin-preview").innerHTML = "";
   document.getElementById("pc-save-result").className = "text-xs text-gray-400 hidden";
   window.__pluginCaptureData = data || {};
   switchPluginCaptureTab("inspo");
@@ -30503,8 +30591,9 @@ function closePluginCaptureModal() {
 }
 
 function switchPluginCaptureTab(tab) {
-  var allowed = ["inspo", "note", "draft"];
+  var allowed = ["linkedin", "inspo", "note", "draft"];
   if (allowed.indexOf(tab) === -1) return;
+  console.log("[plugin] tab " + tab);
   document.querySelectorAll(".plugin-capture-tab").forEach(function(btn) {
     var isActive = btn.dataset.pcTab === tab;
     btn.className = "plugin-capture-tab flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center " + (isActive ? "bg-[#2d1b4e] text-white border-b-2 border-[#c77dff]" : "bg-[#181125] text-gray-400 border-b-2 border-transparent");
@@ -30514,13 +30603,26 @@ function switchPluginCaptureTab(tab) {
   });
 }
 
+function getActiveWorkspaceIdForPlugin() {
+  var config = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active || {};
+  return config.workspace_id || config.id || "";
+}
+
 async function handlePluginCaptureSave(type) {
   var resultEl = document.getElementById("pc-save-result");
   var data = window.__pluginCaptureData || {};
   var url = document.getElementById("pc-capture-url-display").textContent;
   if (url === "—") url = "";
+  var workspaceId = getActiveWorkspaceIdForPlugin();
+  if (!workspaceId) {
+    resultEl.className = "text-xs text-red-400";
+    resultEl.textContent = "Choose a StellarSync workspace before saving this capture.";
+    resultEl.classList.remove("hidden");
+    return;
+  }
   try {
     if (type === "inspo") {
+      console.log("[plugin] save inspo workspace_id", workspaceId);
       var inspo = {
         title: document.getElementById("pc-inspo-title").value || data.title || "Captured inspiration",
         type: "article",
@@ -30532,24 +30634,32 @@ async function handlePluginCaptureSave(type) {
         author: document.getElementById("pc-inspo-author").value || data.author || "",
         tags: String(document.getElementById("pc-inspo-tags").value || "").split(",").map(function(v) { return v.trim(); }).filter(Boolean),
         campaign: document.getElementById("pc-inspo-campaign").value || "",
-        pillar: document.getElementById("pc-inspo-pillar").value || ""
+        pillar: document.getElementById("pc-inspo-pillar").value || "",
+        inspo_id: "inspo_" + crypto.randomUUID(),
+        provenance: { source_platform: data.platform || "linkedin", source_url: url, captured_at: new Date().toISOString(), captured_via: "stellarsync_plugin", original_author: data.author || "" }
       };
       await apiSaveInspo(inspo);
       resultEl.className = "text-xs text-emerald-400";
-      resultEl.textContent = "Saved to Inspo!";
+      resultEl.innerHTML = 'Saved to Inspo Vault. <a href="#" onclick="switchView(\'inspo\'); return false;" class="underline text-emerald-300 hover:text-white">Open Inspo Vault</a>';
+      console.log("[plugin] save result", { type: "inspo", ok: true });
     } else if (type === "note") {
+      console.log("[plugin] save note workspace_id", workspaceId);
       var note = {
         title: document.getElementById("pc-note-title").value || data.title || "Captured note",
         body: document.getElementById("pc-note-body").value || data.text || "",
         sourceUrl: url,
         sourceType: data.platform || "linkedin",
         pillar: document.getElementById("pc-note-pillar").value || "",
-        tags: String(document.getElementById("pc-note-tags").value || "").split(",").map(function(v) { return v.trim(); }).filter(Boolean)
+        tags: String(document.getElementById("pc-note-tags").value || "").split(",").map(function(v) { return v.trim(); }).filter(Boolean),
+        note_id: "note_" + crypto.randomUUID(),
+        provenance: { source_platform: data.platform || "linkedin", source_url: url, captured_at: new Date().toISOString(), captured_via: "stellarsync_plugin" }
       };
       await apiSaveNote(note);
       resultEl.className = "text-xs text-emerald-400";
-      resultEl.textContent = "Saved to Notes!";
+      resultEl.innerHTML = 'Saved to Notes. <a href="#" onclick="switchView(\'notes\'); return false;" class="underline text-emerald-300 hover:text-white">Open Notes</a>';
+      console.log("[plugin] save result", { type: "note", ok: true });
     } else if (type === "draft") {
+      console.log("[plugin] save ai_draft workspace_id", workspaceId);
       var draftPayload = {
         title: document.getElementById("pc-note-title").value || data.title || "AI Draft from capture",
         draft_text: document.getElementById("pc-draft-source").value || data.text || "",
@@ -30557,11 +30667,14 @@ async function handlePluginCaptureSave(type) {
         generation_mode: document.getElementById("pc-draft-mode").value || "rewrite",
         source_url: url,
         source_type: data.platform || "linkedin",
-        tags: String(document.getElementById("pc-draft-tags").value || "").split(",").map(function(v) { return v.trim(); }).filter(Boolean)
+        tags: String(document.getElementById("pc-draft-tags").value || "").split(",").map(function(v) { return v.trim(); }).filter(Boolean),
+        ai_draft_id: "draft_" + crypto.randomUUID(),
+        provenance: { source_platform: data.platform || "linkedin", source_url: url, captured_at: new Date().toISOString(), captured_via: "stellarsync_plugin" }
       };
       await apiSaveAIDraft(draftPayload);
       resultEl.className = "text-xs text-emerald-400";
-      resultEl.textContent = "Saved as AI Draft!";
+      resultEl.innerHTML = 'Saved to AI Drafts. <a href="#" onclick="switchView(\'ai-drafts\'); return false;" class="underline text-emerald-300 hover:text-white">Open AI Drafts</a>';
+      console.log("[plugin] save result", { type: "ai_draft", ok: true });
     }
     resultEl.classList.remove("hidden");
     setTimeout(function() { resultEl.classList.add("hidden"); }, 4000);
@@ -30569,6 +30682,59 @@ async function handlePluginCaptureSave(type) {
     resultEl.className = "text-xs text-red-400";
     resultEl.textContent = "Save failed: " + (err.message || String(err));
     resultEl.classList.remove("hidden");
+  }
+}
+
+function parsePluginLinkedInCapture() {
+  var input = document.getElementById("pc-linkedin-input");
+  var preview = document.getElementById("pc-linkedin-preview");
+  var diag = document.getElementById("pc-linkedin-diagnostics");
+  if (!input || !preview) return;
+  var raw = String(input.value || "").trim();
+  if (!raw) { if (diag) diag.textContent = "Paste LinkedIn text or JSON first."; return; }
+  try {
+    var json = JSON.parse(raw);
+    var items = json.items || json.posts || [json];
+    if (!Array.isArray(items)) items = [json];
+    var html = items.slice(0, 10).map(function(item, i) {
+      var title = item.title || item.text || item.post_text || item.headline || "LinkedIn post " + (i + 1);
+      var url = item.url || item.postUrl || item.source_url || "";
+      return '<div class="px-3 py-2 rounded-lg bg-[#0a0612] border border-white/5 text-xs"><div class="text-white font-bold truncate">' + title.slice(0, 100) + '</div>' + (url ? '<div class="text-[10px] text-gray-500 truncate mt-0.5">' + url + '</div>' : '') + '</div>';
+    }).join("");
+    preview.innerHTML = html;
+    if (diag) diag.textContent = "Parsed " + items.length + " item(s). Click Import to save.";
+  } catch (_) {
+    var lines = raw.split("\n").filter(Boolean).slice(0, 10);
+    var html = lines.map(function(line) { return '<div class="px-3 py-2 rounded-lg bg-[#0a0612] border border-white/5 text-xs text-gray-300">' + line.slice(0, 120) + '</div>'; }).join("");
+    preview.innerHTML = html;
+    if (diag) diag.textContent = "Parsed " + lines.length + " line(s) as text. Click Import to save.";
+  }
+}
+
+async function importPluginLinkedInCapture() {
+  var input = document.getElementById("pc-linkedin-input");
+  var url = document.getElementById("pc-linkedin-url");
+  var diag = document.getElementById("pc-linkedin-diagnostics");
+  var preview = document.getElementById("pc-linkedin-preview");
+  var raw = String(input ? input.value : "").trim();
+  var postUrl = String(url ? url.value : "").trim();
+  if (!raw && !postUrl) { if (diag) diag.textContent = "Paste LinkedIn text/JSON or enter a URL first."; return; }
+  try {
+    if (diag) diag.textContent = "Importing...";
+    var items = [];
+    try { var json = JSON.parse(raw); items = json.items || json.posts || [json]; if (!Array.isArray(items)) items = [json]; }
+    catch (_) { items = [{ text: raw, url: postUrl }]; }
+    var imported = 0;
+    for (var item of items) {
+      var title = item.title || item.text || item.post_text || item.headline || "LinkedIn import " + (Date.now());
+      var sourceUrl = item.url || item.postUrl || item.source_url || postUrl;
+      await apiSaveInspo({ title: title.slice(0, 200), type: "article", url: sourceUrl, notes: item.text || item.description || raw.slice(0, 500), sourceLabel: "linkedin", sourceUrl: sourceUrl, sourcePlatform: "linkedin" });
+      imported++;
+    }
+    if (diag) diag.textContent = "Imported " + imported + " item(s) to Inspo.";
+    preview.innerHTML = '<div class="text-xs text-emerald-400">Saved ' + imported + ' item(s) to Inspo Vault</div>';
+  } catch (err) {
+    if (diag) diag.textContent = "Import failed: " + (err.message || String(err));
   }
 }
 
@@ -30974,6 +31140,11 @@ window.closePluginInbox = closePluginInbox;
 window.copyPluginBookmarkletCode = copyPluginBookmarkletCode;
 window.openItemFromInbox = openItemFromInbox;
 window.showPluginInstallInstructions = showPluginInstallInstructions;
+window.parsePluginLinkedInCapture = parsePluginLinkedInCapture;
+window.importPluginLinkedInCapture = importPluginLinkedInCapture;
+window.openMondayBackfillModal = openMondayBackfillModal;
+window.closeMondayBackfillModal = closeMondayBackfillModal;
+window.confirmMondayBackfill = confirmMondayBackfill;
 
 </script>
 </body>
