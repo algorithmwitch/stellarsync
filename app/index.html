@@ -2455,6 +2455,10 @@
                 <i class="ph-fill ph-images text-2xl" vid="41"></i>
                 <span class="absolute left-16 bg-[#181125] border border-white/5 text-white text-[10px] px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-xl" vid="42">Media</span>
             </button>
+            <button id="nav-social" data-view-target="social" onclick="switchView('social')" class="w-12 h-12 rounded-xl text-gray-500 hover:text-white hover:bg-[#1a1128] flex items-center justify-center relative group nav-btn transition-colors">
+                <i class="ph-fill ph-share-network text-2xl"></i>
+                <span class="absolute left-16 bg-[#181125] border border-white/5 text-white text-[10px] px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-xl">Social Queue</span>
+            </button>
             <button id="nav-performance" data-view-target="performance" onclick="switchView('performance')" class="w-12 h-12 rounded-xl text-gray-500 hover:text-white hover:bg-[#1a1128] flex items-center justify-center relative group nav-btn transition-colors">
                 <i class="ph-fill ph-chart-line-up text-2xl"></i>
                 <span class="absolute left-16 bg-[#181125] border border-white/5 text-white text-[10px] px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-xl">Performance</span>
@@ -3131,6 +3135,15 @@
       </div>
 
       <button
+        id="media-refresh-btn"
+        type="button"
+        onclick="refreshMediaFromRemote().catch(function(err){ showToast('Refresh failed', err && err.message || String(err), 'ph-warning', 'text-yellow-400'); })"
+        class="px-4 py-2 bg-[#181125] hover:bg-[#231738] text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all flex items-center gap-2 border border-white/10"
+      >
+        <i class="ph-bold ph-arrows-clockwise"></i>
+        Refresh Media Vault
+      </button>
+      <button
         id="media-upload-btn"
         class="px-5 py-2 bg-[#2d1b4e] border border-[#a855f7]/30 rounded-xl text-xs text-white font-bold hover:bg-[#3d246c] transition-colors shadow-sm flex items-center gap-2"
       >
@@ -3168,6 +3181,50 @@
 
   <div id="media-grid-scroll" class="media-grid-scroll">
     <div id="media-grid" class="media-grid"></div>
+  </div>
+</section>
+
+<section id="view-social" class="view-section hidden w-full h-full p-8 min-h-0 flex-col overflow-y-auto custom-scrollbar bg-[#120c1d] border border-white/5 rounded-2xl">
+  <div class="flex items-center justify-between mb-6 flex-wrap gap-4">
+    <div>
+      <h2 class="text-4xl font-bold text-white tracking-tight"><i class="ph-fill ph-share-network text-[#c77dff] mr-3"></i>Social Queue</h2>
+      <p class="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mt-2 flex items-center gap-1.5">
+        Scheduled, queued, and published social posts
+      </p>
+    </div>
+    <div class="flex items-center gap-3 flex-wrap">
+      <select id="social-queue-filter-status" class="px-3 py-2 rounded-xl bg-[#0a0612] border border-white/10 text-xs text-white" onchange="loadSocialQueue()">
+        <option value="">All statuses</option>
+        <option value="draft_queue">Draft</option>
+        <option value="queued">Queued</option>
+        <option value="ready">Ready</option>
+        <option value="needs_connection">Needs Connection</option>
+        <option value="invalid_media">Invalid Media</option>
+        <option value="publishing">Publishing</option>
+        <option value="published">Published</option>
+        <option value="failed">Failed</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+      <select id="social-queue-filter-platform" class="px-3 py-2 rounded-xl bg-[#0a0612] border border-white/10 text-xs text-white" onchange="loadSocialQueue()">
+        <option value="">All platforms</option>
+        <option value="linkedin">LinkedIn</option>
+        <option value="facebook">Facebook</option>
+        <option value="instagram">Instagram</option>
+        <option value="threads">Threads</option>
+        <option value="bluesky">Bluesky</option>
+        <option value="tiktok">TikTok</option>
+      </select>
+      <button type="button" onclick="loadSocialQueue()" class="px-4 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300 hover:text-white transition-colors flex items-center gap-2"><i class="ph-bold ph-arrow-clockwise"></i> Refresh</button>
+      <button type="button" onclick="publishDueSocialQueue()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs font-bold hover:opacity-90 transition-colors flex items-center gap-2"><i class="ph-bold ph-rocket-launch"></i> Publish Due Now</button>
+    </div>
+  </div>
+  <div id="social-queue-grid" class="space-y-2">
+    <div class="text-center py-16 text-gray-500"><i class="ph-bold ph-clock text-4xl block mb-3"></i><p>Loading queue...</p></div>
+  </div>
+  <div id="social-queue-pagination" class="flex items-center justify-center gap-3 mt-4 hidden">
+    <button type="button" onclick="loadSocialQueue(0)" class="px-4 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300"><i class="ph-bold ph-caret-left"></i> Previous</button>
+    <span id="social-queue-page-info" class="text-xs text-gray-500">Page 1</span>
+    <button type="button" onclick="loadSocialQueue(1)" class="px-4 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300">Next <i class="ph-bold ph-caret-right"></i></button>
   </div>
 </section>
 
@@ -4828,6 +4885,10 @@
   <button type="button" data-view-target="media" onclick="switchView('media')" class="nav-btn">
     <i class="ph-fill ph-images"></i>
     <span>Media</span>
+  </button>
+  <button type="button" data-view-target="social" onclick="switchView('social')" class="nav-btn">
+    <i class="ph-fill ph-share-network"></i>
+    <span>Social</span>
   </button>
   <button type="button" data-view-target="inspo" onclick="switchView('inspo')" class="nav-btn">
     <i class="ph-fill ph-lightbulb"></i>
@@ -7884,6 +7945,71 @@ function renderPublishingReadiness(post = {}) {
     `;
   });
   target.innerHTML = rows.join("");
+  renderSocialValidationBadges();
+}
+
+function renderSocialValidationBadges() {
+  var scheduleEnabled = document.getElementById("modal-schedule-social-enabled");
+  var statusEl = document.getElementById("modal-social-schedule-status");
+  if (!scheduleEnabled || !statusEl) return;
+  if (!scheduleEnabled.checked) {
+    statusEl.innerHTML = "Creates one scheduled_social_posts row per selected platform when saved.";
+    return;
+  }
+  var platforms = getSelectedModalPlatforms();
+  if (!platforms.length) {
+    statusEl.innerHTML = '<span class="text-yellow-400">Select at least one platform above to schedule.</span>';
+    return;
+  }
+  var caption = (descInput && descInput.value) || "";
+  var mediaUrls = [];
+  var mediaAssetIds = [];
+  if (Array.isArray(window.__currentModalPostData?.mediaUrls)) mediaUrls = window.__currentModalPostData.mediaUrls;
+  if (Array.isArray(window.__currentModalPostData?.media_urls)) mediaUrls = window.__currentModalPostData.media_urls;
+  if (Array.isArray(window.__currentModalPostData?.mediaAssetIds)) mediaAssetIds = window.__currentModalPostData.mediaAssetIds;
+  if (Array.isArray(window.__currentModalPostData?.media_asset_ids)) mediaAssetIds = window.__currentModalPostData.media_asset_ids;
+  if (Array.isArray(window.__currentModalPostData?.carouselAssetIds)) mediaAssetIds = window.__currentModalPostData.carouselAssetIds;
+  var postType = window.__currentModalPostData?.postType || window.__currentModalPostData?.post_type || "text";
+  var badges = platforms.map(function(p) {
+    var validation = validatePlatformLocally(p, caption, postType, mediaUrls.length);
+    var connected = !!(getConnectedAccount && getConnectedAccount(p)?.connected);
+    var statusClass = "bg-[#181125] border border-white/5 text-gray-400";
+    var icon = '<i class="ph-bold ph-clock"></i>';
+    var label = "Queued on save";
+    if (validation.errors.length > 0) {
+      statusClass = "bg-[#2e1a1a] border border-red-400/20 text-red-300";
+      icon = '<i class="ph-bold ph-warning"></i>';
+      label = validation.errors[0];
+    } else if (!connected) {
+      statusClass = "bg-[#2e2a1a] border border-yellow-400/20 text-yellow-300";
+      icon = '<i class="ph-bold ph-plugs"></i>';
+      label = "Needs connection";
+    } else if (validation.warnings.length > 0) {
+      statusClass = "bg-[#2e2a1a] border border-yellow-400/20 text-yellow-300";
+      icon = '<i class="ph-bold ph-info"></i>';
+      label = validation.warnings[0];
+    }
+    return '<span class="px-2 py-1 rounded text-[10px] font-bold inline-flex items-center gap-1 ' + statusClass + '">' + icon + " " + escapeHtml(toTitleCase(p)) + ": " + escapeHtml(label) + "</span>";
+  }).join(" ");
+  statusEl.innerHTML = badges || '<span class="text-gray-500">No platforms selected.</span>';
+}
+
+function validatePlatformLocally(platform, caption, postType, mediaCount) {
+  var errors = [];
+  var warnings = [];
+  var p = String(platform).toLowerCase();
+  if (p === "bluesky" && !caption.trim()) errors.push("Bluesky requires text content");
+  if (p === "instagram" && mediaCount === 0) errors.push("Instagram requires media");
+  if (p === "instagram" && postType === "document") errors.push("Instagram does not support documents");
+  if (p === "tiktok" && postType !== "video") errors.push("TikTok requires video");
+  if (p === "linkedin" && mediaCount > 9) errors.push("LinkedIn supports at most 9 media items");
+  if (p === "facebook" && mediaCount > 10) errors.push("Facebook supports at most 10 media items");
+  if (p === "bluesky" && mediaCount > 4) errors.push("Bluesky supports at most 4 images");
+  if (p === "bluesky" && postType === "video") errors.push("Bluesky does not support video");
+  if (p === "instagram" && postType === "carousel" && (mediaCount < 2 || mediaCount > 10)) errors.push("Instagram carousel needs 2-10 items");
+  if (p === "tiktok" && postType !== "video" && !errors.length) errors.push("TikTok publishing requires a video asset");
+  if (!caption.trim() && mediaCount === 0) warnings.push("No text or media");
+  return { platform, errors, warnings };
 }
 
 function renderCampaignOptions(campaigns = getAvailableCampaignRecords(), currentValue = "") {
@@ -9770,6 +9896,7 @@ function setupWorkspaceUI() {
   });
   document.querySelectorAll("#pw-profile-icon-grid .pw-icon-btn").forEach(function(btn) {
     btn.addEventListener("click", function() {
+      console.log("[icon-save] profile path", { event: "icon_selected", icon: btn.dataset.icon || "none" });
       document.querySelectorAll("#pw-profile-icon-grid .pw-icon-btn").forEach(function(b) { b.classList.remove("active"); });
       btn.classList.add("active");
       var previewEl = document.getElementById("pw-profile-avatar-preview");
@@ -9779,6 +9906,8 @@ function setupWorkspaceUI() {
   });
   document.querySelectorAll("#pw-workspace-icon-grid .pw-ws-icon-btn").forEach(function(btn) {
     btn.addEventListener("click", function() {
+      console.log("[workspace-icon] selected", { icon: btn.dataset.icon || "none" });
+      console.log("[icon-save] workspace path", { event: "icon_selected", icon: btn.dataset.icon || "none" });
       document.querySelectorAll("#pw-workspace-icon-grid .pw-ws-icon-btn").forEach(function(b) { b.classList.remove("active"); });
       btn.classList.add("active");
       var previewEl = document.getElementById("pw-workspace-avatar-preview");
@@ -14983,6 +15112,13 @@ function renderWorkspaceConnectionCards(options = {}) {
         if (conn.config && Array.isArray(conn.config.columns_found)) detailParts.push("Columns found: " + conn.config.columns_found.length);
         if (conn.config && conn.config.columns_used) detailParts.push("Columns mapped: " + Object.keys(conn.config.columns_used).filter(function(key) { return !!conn.config.columns_used[key]; }).join(", "));
         if (conn.config && Array.isArray(conn.config.missing_columns) && conn.config.missing_columns.length) detailParts.push("Missing columns: " + conn.config.missing_columns.join(", "));
+        if (conn.config && conn.config.groups_found !== undefined) detailParts.push("Groups found: " + conn.config.groups_found);
+        if (conn.config && Array.isArray(conn.config.board_groups) && conn.config.board_groups.length) {
+          detailParts.push("Groups: " + conn.config.board_groups.map(function(g) { return g.title; }).join(", "));
+        }
+        if (conn.config && (conn.config.default_group_title || conn.config.default_group_id)) detailParts.push("Default/fallback group: " + (conn.config.default_group_title || conn.config.default_group_id));
+        if (conn.config && conn.config.group_id) detailParts.push("Last selected group: " + (conn.config.group_title || conn.config.group_id));
+        if (conn.config && conn.config.group_match_strategy) detailParts.push("Last group match strategy: " + conn.config.group_match_strategy);
         if (conn.last_sync_at) detailParts.push("Last sync: " + conn.last_sync_at);
         if (conn.last_error) detailParts.push("Last error: " + conn.last_error);
       }
@@ -15091,7 +15227,14 @@ async function testMondayConnection() {
         upsertLocalWorkspaceConnection("monday", {
           status: "connected",
           last_error: "",
-          config: { board_name: result.board_name, board_id: result.board_id || getMondayBoardId() }
+          config: {
+            board_name: result.board_name,
+            board_id: result.board_id || getMondayBoardId(),
+            groups_found: result.groups_found,
+            board_groups: result.board_groups || result.board?.groups || [],
+            default_group_id: result.default_group_id || result.diagnostics?.default_group_id || "",
+            default_group_title: result.default_group_title || result.diagnostics?.default_group_title || ""
+          }
         });
       }
       refreshConnectionCards();
@@ -15133,7 +15276,11 @@ async function inspectMondayColumns() {
         board_id: result.board_id || getMondayBoardId(),
         columns_found: columns,
         columns_used: used,
-        missing_columns: missing
+        missing_columns: missing,
+        groups_found: result.groups_found,
+        board_groups: result.board_groups || result.board?.groups || [],
+        default_group_id: result.default_group_id || result.diagnostics?.default_group_id || "",
+        default_group_title: result.default_group_title || result.diagnostics?.default_group_title || ""
       }
     });
     refreshConnectionCards();
@@ -15210,6 +15357,22 @@ async function syncPostToMonday() {
           showToast("Monday synced, save warning", saveErr.message || "Could not persist Monday fields to the backend.", "ph-warning", "text-yellow-400");
         }
       }
+      upsertLocalWorkspaceConnection("monday", {
+        status: warningText ? "warning" : "connected",
+        last_sync_at: result.synced_at || new Date().toISOString(),
+        last_error: warningText ? warningText.trim() : "",
+        config: {
+          board_id: boardId,
+          board_name: result.board_name || "",
+          groups_found: result.groups_found,
+          default_group_id: result.default_group_id || result.diagnostics?.default_group_id || "",
+          default_group_title: result.default_group_title || result.diagnostics?.default_group_title || "",
+          group_id: result.group_id || result.diagnostics?.group_id || "",
+          group_title: result.group_title || result.diagnostics?.group_title || "",
+          group_match_strategy: result.group_match_strategy || result.diagnostics?.group_match_strategy || ""
+        }
+      });
+      refreshConnectionCards();
     } else {
       var resultMissing = Array.isArray(result.missing_columns) ? result.missing_columns : [];
       var resultError = result.monday_error || result.error || "Unknown error";
@@ -15252,6 +15415,21 @@ async function backfillMondayBoard() {
         const itemId = result.monday_item_ids_by_post_id[postId];
         if (itemId) setModalMondayFields(itemId, result.completed_at || new Date().toISOString());
       }
+      upsertLocalWorkspaceConnection("monday", {
+        status: result.failed ? "warning" : "connected",
+        last_sync_at: result.completed_at || new Date().toISOString(),
+        last_error: result.failed ? `${result.failed} backfill item(s) failed` : "",
+        config: {
+          board_id: boardId,
+          groups_found: result.groups_found,
+          default_group_id: result.default_group_id || "",
+          default_group_title: result.default_group_title || "",
+          group_id: result.group_id || "",
+          group_title: result.group_title || "",
+          group_match_strategy: result.group_match_strategy || ""
+        }
+      });
+      refreshConnectionCards();
       await syncRemoteIfConfigured();
       return result;
     }
@@ -18612,7 +18790,7 @@ function renderMediaPreviewContent(item, linkedAssets, previewUrl, type) {
   const assets = (currentMediaViewerItems || []).slice(0, 20);
   const total = assets.length || 1;
   if (total <= 1) {
-    console.log("[media-viewer] single asset — original viewer style", total);
+    console.log("[media-viewer] mode single", { total });
     var src = previewUrl || (item ? item.fileUrl || item.sourceUrl : "") || "";
     if (!src) {
       return '<div class="flex items-center justify-center h-64 text-gray-500"><i class="ph-bold ph-image text-4xl"></i></div>';
@@ -18627,9 +18805,58 @@ function renderMediaPreviewContent(item, linkedAssets, previewUrl, type) {
     }
     return '<img src="' + escapeHtml(src) + '" alt="' + escapeHtml(item && (item.title || item.assetName) ? item.title || item.assetName : "Media") + '" class="max-h-[55vh] w-full object-contain rounded-lg" onerror="this.outerHTML=\'<div class=\\\'flex items-center justify-center h-64 text-gray-500\\\'><i class=\\\'ph-bold ph-image-broken text-4xl\\\'></i></div>\'">';
   }
+  console.log("[media-viewer] mode carousel", { total });
+  console.log("[media-viewer] current index", { index: currentMediaViewerIndex, total });
   const modeEnabled = Boolean(mediaViewerDetachMode);
   const selectedCount = selectedMediaViewerDetachAssetIds.size;
-  console.log("[media-manage] render count", total);
+  const mainAsset = assets[currentMediaViewerIndex] || assets[0] || item;
+  const mainUrl = getMediaPreviewUrl(mainAsset);
+  const mainKind = inferMediaKindFromAsset(mainAsset);
+  const mainTitle = getMediaDisplayTitle(mainAsset, getLinkedPostForMedia(mainAsset) || getMediaPostContext(mainAsset), `Asset ${currentMediaViewerIndex + 1}`);
+  const renderMain = function(asset, url, kind, title) {
+    if (!url) return '<div class="flex items-center justify-center h-[55vh] text-gray-500"><i class="ph-bold ph-image text-4xl"></i></div>';
+    if (kind === "video") return `<video controls src="${escapeHtml(url)}" class="max-h-[58vh] w-full object-contain rounded-lg" preload="metadata"></video>`;
+    if (kind === "document") return `<div class="flex flex-col items-center justify-center h-[55vh] text-gray-400 gap-3"><i class="ph-bold ph-file-text text-5xl"></i><span class="text-xs uppercase tracking-wider font-bold">${escapeHtml(getMediaFileTypeLabel(asset))}</span></div>`;
+    return `<img src="${escapeHtml(url)}" alt="${escapeHtml(title)}" class="max-h-[58vh] w-full object-contain rounded-lg" onerror="handleBrokenMediaPreview(this)">`;
+  };
+  const thumbnailStrip = assets.map(function(asset, index) {
+    const thumbUrl = getMediaPreviewUrl(asset);
+    const kind = inferMediaKindFromAsset(asset);
+    const title = getMediaDisplayTitle(asset, getLinkedPostForMedia(asset) || getMediaPostContext(asset), `Asset ${index + 1}`);
+    return `
+      <button type="button" onclick="selectMediaViewerIndex(${index})" class="shrink-0 w-20 h-20 rounded-lg overflow-hidden bg-[#0f0a18] border ${index === currentMediaViewerIndex ? "border-[#c77dff]" : "border-white/10"} relative" title="${escapeHtml(title)}">
+        <span class="absolute top-1 left-1 z-10 px-1.5 py-0.5 rounded bg-black/65 text-[9px] font-bold text-white">${index + 1}</span>
+        ${thumbUrl ? (
+          kind === "video"
+            ? `<video src="${escapeHtml(thumbUrl)}" class="w-full h-full object-cover" muted playsinline preload="metadata"></video>`
+            : kind === "document"
+            ? `<div class="w-full h-full flex items-center justify-center text-gray-400"><i class="ph-bold ph-file-text text-2xl"></i></div>`
+            : `<img src="${escapeHtml(thumbUrl)}" alt="${escapeHtml(title)}" class="w-full h-full object-cover" onerror="handleBrokenMediaPreview(this)">`
+        ) : `<div class="w-full h-full flex items-center justify-center text-gray-500"><i class="ph-bold ph-image text-2xl"></i></div>`}
+      </button>
+    `;
+  }).join("");
+  if (!mediaViewerReorderMode && !mediaViewerDetachMode) {
+    return `
+      <div class="w-full space-y-4">
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+          <div class="text-xs font-bold text-gray-300">${currentMediaViewerIndex + 1} of ${total}</div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <button type="button" onclick="toggleMediaViewerReorderMode(true)" class="px-3 py-2 rounded-lg bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 hover:text-white">Reorder</button>
+            <button type="button" onclick="toggleMediaViewerDetachMode(true)" class="px-3 py-2 rounded-lg bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 hover:text-white">Select to detach</button>
+          </div>
+        </div>
+        <div class="relative flex items-center justify-center min-h-[58vh]">
+          <button type="button" onclick="navigateMediaViewer(-1)" class="absolute left-2 z-10 w-10 h-10 rounded-full bg-black/50 border border-white/10 text-white flex items-center justify-center hover:bg-black/70" aria-label="Previous media"><i class="ph-bold ph-caret-left"></i></button>
+          ${renderMain(mainAsset, mainUrl, mainKind, mainTitle)}
+          <button type="button" onclick="navigateMediaViewer(1)" class="absolute right-2 z-10 w-10 h-10 rounded-full bg-black/50 border border-white/10 text-white flex items-center justify-center hover:bg-black/70" aria-label="Next media"><i class="ph-bold ph-caret-right"></i></button>
+        </div>
+        <div class="flex gap-2 overflow-x-auto pb-1">${thumbnailStrip}</div>
+      </div>
+    `;
+  }
+  if (mediaViewerReorderMode) console.log("[media-viewer] reorder mode", { total });
+  if (mediaViewerDetachMode) console.log("[media-viewer] detach mode", { selectedCount });
   const tiles = assets.map((asset, index) => {
     const thumbUrl = getMediaPreviewUrl(asset);
     const kind = inferMediaKindFromAsset(asset);
@@ -18665,10 +18892,10 @@ function renderMediaPreviewContent(item, linkedAssets, previewUrl, type) {
             <span class="px-1.5 py-0.5 rounded bg-[#120c1d] border border-white/5 text-[8px] uppercase tracking-wider font-bold text-gray-300">${escapeHtml(getMediaFileTypeLabel(asset))}</span>
             <span class="text-[10px] text-gray-500 cursor-grab" title="Drag to reorder"><i class="ph-bold ph-dots-six-vertical"></i></span>
           </div>
-          <div class="grid grid-cols-2 gap-2 pt-1">
+          ${mediaViewerReorderMode ? `<div class="grid grid-cols-2 gap-2 pt-1">
             <button type="button" onclick="moveMediaViewerAsset(${index}, -1)" ${index === 0 ? "disabled" : ""} class="px-2 py-1.5 rounded-lg bg-[#120c1d] border border-white/5 text-[10px] font-bold text-white disabled:opacity-35">Move left</button>
             <button type="button" onclick="moveMediaViewerAsset(${index}, 1)" ${index === total - 1 ? "disabled" : ""} class="px-2 py-1.5 rounded-lg bg-[#120c1d] border border-white/5 text-[10px] font-bold text-white disabled:opacity-35">Move right</button>
-          </div>
+          </div>` : ""}
         </div>
       </div>
     `;
@@ -18676,13 +18903,12 @@ function renderMediaPreviewContent(item, linkedAssets, previewUrl, type) {
   const controls = `
     <div class="flex items-center justify-between gap-3 flex-wrap">
       <div>
-        <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Manage Media Order</div>
-        <div class="text-xs text-gray-400 mt-1">${total} attached asset${total === 1 ? "" : "s"} · drag tiles or use move buttons</div>
+        <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${mediaViewerDetachMode ? "Detach Media" : "Manage Media Order"}</div>
+        <div class="text-xs text-gray-400 mt-1">${mediaViewerDetachMode ? "Choose assets to detach from this post." : `${total} attached asset${total === 1 ? "" : "s"} - drag tiles or use move buttons`}</div>
       </div>
       <div class="flex items-center gap-2 flex-wrap">
-        <button type="button" onclick="toggleMediaViewerDetachMode()" class="px-3 py-2 rounded-lg ${modeEnabled ? "bg-[#231738] text-white" : "bg-[#181125] text-gray-300"} border border-white/5 text-[10px] uppercase tracking-wider font-bold">${modeEnabled ? `${selectedCount} selected` : "Select to detach"}</button>
-        ${modeEnabled ? `<button type="button" onclick="detachSelectedMediaViewerAssets()" ${selectedCount ? "" : "disabled"} class="px-3 py-2 rounded-lg bg-[#30121b] border border-red-400/20 text-[10px] uppercase tracking-wider font-bold text-red-200 disabled:opacity-40">Detach selected</button><button type="button" onclick="toggleMediaViewerDetachMode(false)" class="px-3 py-2 rounded-lg bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300">Cancel</button>` : ""}
-        <button type="button" onclick="saveMediaViewerOrder()" class="px-3 py-2 rounded-lg bg-[#c77dff] text-[#120c1d] border border-white/5 text-[10px] uppercase tracking-wider font-bold">Save Order</button>
+        ${mediaViewerDetachMode ? `<span class="px-3 py-2 rounded-lg bg-[#231738] text-white border border-white/5 text-[10px] uppercase tracking-wider font-bold">${selectedCount} selected</span><button type="button" onclick="detachSelectedMediaViewerAssets()" ${selectedCount ? "" : "disabled"} class="px-3 py-2 rounded-lg bg-[#30121b] border border-red-400/20 text-[10px] uppercase tracking-wider font-bold text-red-200 disabled:opacity-40">Detach selected</button><button type="button" onclick="toggleMediaViewerDetachMode(false)" class="px-3 py-2 rounded-lg bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300">Cancel</button>` : ""}
+        ${mediaViewerReorderMode ? `<button type="button" onclick="saveMediaViewerOrder()" class="px-3 py-2 rounded-lg bg-[#c77dff] text-[#120c1d] border border-white/5 text-[10px] uppercase tracking-wider font-bold">Save Order</button><button type="button" onclick="cancelMediaViewerReorder()" class="px-3 py-2 rounded-lg bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300">Cancel</button>` : ""}
       </div>
     </div>
   `;
@@ -18694,6 +18920,14 @@ function renderMediaPreviewContent(item, linkedAssets, previewUrl, type) {
   `;
 }
 
+function selectMediaViewerIndex(index) {
+  if (!currentMediaViewerItems.length) return;
+  currentMediaViewerIndex = Math.max(0, Math.min(Number(index) || 0, currentMediaViewerItems.length - 1));
+  const next = currentMediaViewerItems[currentMediaViewerIndex];
+  console.log("[media-viewer] thumbnail clicked", { index: currentMediaViewerIndex, id: getMediaItemKey(next) });
+  openMediaAssetModal(next, { items: currentMediaViewerItems, openPosts: mediaPostsPanelOpen });
+}
+
 function toggleMediaViewerGalleryViewAll() {
   mediaViewerGalleryViewAll = !mediaViewerGalleryViewAll;
   console.log("[media-gallery] open carousel", { viewAll: mediaViewerGalleryViewAll });
@@ -18702,7 +18936,8 @@ function toggleMediaViewerGalleryViewAll() {
 
 function toggleMediaViewerReorderMode(forceValue) {
   mediaViewerReorderMode = typeof forceValue === "boolean" ? forceValue : !mediaViewerReorderMode;
-  console.log("[media-gallery] reorder mode", { enabled: mediaViewerReorderMode });
+  if (mediaViewerReorderMode) mediaViewerDetachMode = false;
+  console.log("[media-viewer] reorder mode", { enabled: mediaViewerReorderMode });
   if (!mediaViewerReorderMode) {
     mediaViewerDragIndex = null;
   }
@@ -18784,7 +19019,9 @@ async function refreshAttachedMediaForMediaViewer(postId) {
 
 function toggleMediaViewerDetachMode(forceValue) {
   mediaViewerDetachMode = typeof forceValue === "boolean" ? forceValue : !mediaViewerDetachMode;
+  if (mediaViewerDetachMode) mediaViewerReorderMode = false;
   if (!mediaViewerDetachMode) selectedMediaViewerDetachAssetIds.clear();
+  console.log("[media-viewer] detach mode", { enabled: mediaViewerDetachMode });
   openMediaAssetModal(currentMediaViewerItems[currentMediaViewerIndex] || currentMediaAssetDetail, { items: currentMediaViewerItems, openPosts: mediaPostsPanelOpen });
 }
 
@@ -18989,6 +19226,7 @@ function navigateMediaViewer(delta) {
   currentMediaViewerIndex = (currentMediaViewerIndex + delta + currentMediaViewerItems.length) % currentMediaViewerItems.length;
   const next = currentMediaViewerItems[currentMediaViewerIndex];
   console.log("[media-viewer] navigate", { index: currentMediaViewerIndex, id: getMediaItemKey(next) });
+  console.log("[media-viewer] current index", { index: currentMediaViewerIndex, total: currentMediaViewerItems.length });
   openMediaAssetModal(next, { items: currentMediaViewerItems, openPosts: mediaPostsPanelOpen });
 }
 
@@ -19090,12 +19328,16 @@ function createPostFromMediaItem(item, linkedPost = null) {
 async function refreshMediaFromRemote() {
   console.log("[media-refresh] force reload");
   var beforeCount = (appState.media || []).length;
+  var previousIds = new Set((appState.media || []).map(function(asset) { return getMediaAssetId(asset); }).filter(Boolean));
   console.log("[media-refresh] before count", beforeCount);
+  var reopenViewer = mediaAssetModal && !mediaAssetModal.classList.contains("pointer-events-none");
+  var reopenId = currentMediaAssetDetail ? getMediaAssetId(currentMediaAssetDetail) : "";
 
   const media = await apiGetMedia();
   var normalizedMedia = media.map(asset => normalizeRemoteMedia(asset));
   var freshMedia = filterRenderableArtifacts(normalizedMedia, "media");
   var freshIds = new Set(freshMedia.map(function(m) { return getMediaAssetId(m); }).filter(Boolean));
+  console.log("[media-refresh] backend ids", Array.from(freshIds));
 
   var prevPostMedia = (appState.postMedia || appState.post_media || []);
   var prevPostMediaCount = prevPostMedia.length;
@@ -19105,18 +19347,48 @@ async function refreshMediaFromRemote() {
   });
   appState.postMedia = validPostMedia;
   appState.post_media = validPostMedia;
-
-  freshMedia.forEach(function(asset) {
-    var linkedId = String(asset.linkedPostId || asset.linked_post_id || "").trim();
-    if (linkedId && !freshIds.has(linkedId)) {
-      delete asset.linkedPostId;
-      delete asset.linked_post_id;
-    }
-  });
+  var stalePostMediaRemoved = prevPostMediaCount - validPostMedia.length;
+  console.log("[media-refresh] stale postMedia removed", stalePostMediaRemoved);
 
   appState.media = freshMedia;
 
+  var staleCarouselRefsRemoved = 0;
   appState.posts = (appState.posts || []).map(function(post) {
+    var nextPost = { ...post };
+    var cleanIdArray = function(values) {
+      var ids = Array.isArray(values) ? values : String(values || "").split(/[|,\n]/);
+      var clean = ids.map(function(value) { return String(value || "").trim(); }).filter(function(id) { return id && freshIds.has(id); });
+      staleCarouselRefsRemoved += Math.max(0, ids.filter(function(value) { return String(value || "").trim(); }).length - clean.length);
+      return clean;
+    };
+    var carouselIds = cleanIdArray(nextPost.carouselAssetIds || nextPost.carousel_asset_ids || []);
+    var mediaIds = cleanIdArray(nextPost.media_ids || nextPost.mediaIds || []);
+    nextPost.carouselAssetIds = carouselIds;
+    nextPost.carousel_asset_ids = carouselIds;
+    nextPost.media_ids = mediaIds;
+    nextPost.mediaIds = mediaIds;
+    if (Array.isArray(nextPost.carouselAssets)) {
+      var beforeAssets = nextPost.carouselAssets.length;
+      nextPost.carouselAssets = nextPost.carouselAssets.filter(function(asset) { return freshIds.has(getMediaAssetId(asset)); });
+      staleCarouselRefsRemoved += Math.max(0, beforeAssets - nextPost.carouselAssets.length);
+    }
+    if (Array.isArray(nextPost.carousel_assets)) {
+      var beforeSnakeAssets = nextPost.carousel_assets.length;
+      nextPost.carousel_assets = nextPost.carousel_assets.filter(function(asset) { return freshIds.has(getMediaAssetId(asset)); });
+      staleCarouselRefsRemoved += Math.max(0, beforeSnakeAssets - nextPost.carousel_assets.length);
+    }
+    var directAssetId = String(nextPost.assetId || nextPost.asset_id || nextPost.mediaAssetId || nextPost.media_asset_id || "").trim();
+    if (directAssetId && !freshIds.has(directAssetId)) {
+      delete nextPost.assetId;
+      delete nextPost.asset_id;
+      delete nextPost.mediaAssetId;
+      delete nextPost.media_asset_id;
+      delete nextPost.mediaUrl;
+      delete nextPost.media_url;
+      delete nextPost.fileUrl;
+      staleCarouselRefsRemoved += 1;
+    }
+    post = applyDerivedPostMediaFormat(nextPost, appState.media);
     var linkedAsset = findLinkedAssetForPost(post, appState.media);
     if (!linkedAsset) return post;
     return {
@@ -19127,11 +19399,36 @@ async function refreshMediaFromRemote() {
   });
 
   var afterCount = appState.media.length;
+  var removedMediaIds = Array.from(previousIds).filter(function(id) { return !freshIds.has(id); });
+  console.log("[media-refresh] stale media ids removed", removedMediaIds);
+  console.log("[media-refresh] stale post carousel refs removed", staleCarouselRefsRemoved);
   console.log("[media-refresh] after count", afterCount);
-  console.log("[media-refresh] stale removed", { removedPostMedia: prevPostMediaCount - validPostMedia.length });
+  clearWorkspaceMediaCaches();
 
   persistLocalState();
   rerenderAll();
+  if (reopenViewer) {
+    var nextItem = reopenId ? (appState.media || []).find(function(asset) { return getMediaAssetId(asset) === reopenId; }) : null;
+    if (nextItem) openMediaAssetModal(nextItem);
+    else closeMediaAssetModal();
+  }
+}
+
+function clearWorkspaceMediaCaches() {
+  var slug = getCurrentWorkspaceSlug && getCurrentWorkspaceSlug() || "";
+  var workspaceId = getWorkspaceRequestMetadata && getWorkspaceRequestMetadata().workspace_id || "";
+  var keys = [
+    "STELLARSYNC_MEDIA_CACHE",
+    "stellarsync_media_cache",
+    "STELLARSYNC_MEDIA_CACHE:" + slug,
+    "stellarsync_media_cache:" + slug,
+    "STELLARSYNC_MEDIA_CACHE:" + workspaceId,
+    "stellarsync_media_cache:" + workspaceId
+  ].filter(Boolean);
+  keys.forEach(function(key) {
+    try { localStorage.removeItem(key); } catch (_) {}
+    try { sessionStorage.removeItem(key); } catch (_) {}
+  });
 }
 
 function getUniqueLedgerCampaignOptions() {
@@ -19323,6 +19620,15 @@ function setupModalControls() {
       });
     });
   });
+
+  var socialCheckbox = document.getElementById("modal-schedule-social-enabled");
+  if (socialCheckbox) {
+    socialCheckbox.addEventListener("change", renderSocialValidationBadges);
+  }
+
+  if (descInput) {
+    descInput.addEventListener("input", renderSocialValidationBadges);
+  }
 }
 
 function getPostModalElement() {
@@ -20505,6 +20811,11 @@ function switchView(viewName) {
 
       if (targetName === "media") {
         safeRender(renderMedia, "switchView/media");
+        return;
+      }
+
+      if (targetName === "social") {
+        loadSocialQueue();
         return;
       }
 
@@ -24661,36 +24972,186 @@ async function scheduleSocialPostsForTargets(post) {
   if (!workspaceId || !targets.length || !canonicalPostId) return [];
   const loadingToastId = showLoadingToast("Scheduling social posts", "Creating social scheduling queue entries...");
   const scheduledFor = post.scheduledAt || post.scheduled_at || post.date || "";
-  const results = [];
+  var mediaUrls = [];
+  var mediaAssetIds = [];
+  var captionText = post.description || post.caption || "";
+  if (Array.isArray(post.mediaUrls)) mediaUrls = post.mediaUrls;
+  if (Array.isArray(post.media_urls)) mediaUrls = post.media_urls;
+  if (Array.isArray(post.mediaAssetIds)) mediaAssetIds = post.mediaAssetIds;
+  if (Array.isArray(post.media_asset_ids)) mediaAssetIds = post.media_asset_ids;
+  if (Array.isArray(post.carouselAssetIds)) mediaAssetIds = post.carouselAssetIds;
+  if (Array.isArray(post.media_ids)) mediaAssetIds = post.media_ids;
   try {
-    for (const provider of targets) {
-      const account = getSocialAccountForPlatform(provider);
-      const result = await callSupabaseEdgeFunction("social-schedule-post", {
-        workspace_id: workspaceId,
-        source_id: canonicalPostId,
-        provider,
-        social_account_id: account?.id || null,
-        post_payload: {
-          title: post.title || "",
-          description: post.description || post.caption || "",
-          platform: provider,
-          readiness: account ? "publishing_not_implemented" : "missing_account"
-        },
-        media_payload: {
-          media_id: post.mediaId || post.media_id || post.assetId || "",
-          media_url: post.mediaUrl || post.media_url || ""
-        },
-        scheduled_for: scheduledFor || null
-      });
-      results.push({ provider, readiness: account ? "publishing_not_implemented" : "missing_account", result });
-    }
-    updateToast(loadingToastId, "success", "Social queue ready", `${results.length} scheduling entr${results.length === 1 ? "y" : "ies"} created.`);
+    const result = await callSupabaseEdgeFunction("social-schedule", {
+      action: "create_or_update_queue",
+      workspace_id: workspaceId,
+      post_id: canonicalPostId,
+      platforms: targets,
+      caption: captionText,
+      media_urls: mediaUrls,
+      media_asset_ids: mediaAssetIds,
+      post_type: post.postType || post.post_type || "text",
+      scheduled_at: scheduledFor || null,
+    });
+    var queueResults = result.results || [];
+    updateToast(loadingToastId, "success", "Social queue ready", queueResults.length + " queue entr" + (queueResults.length === 1 ? "y" : "ies") + " created.");
+    console.log("[social] schedule created", queueResults);
+    return queueResults;
   } catch (err) {
     updateToast(loadingToastId, "error", "Social scheduling failed", err);
     throw err;
   }
-  console.log("[social] schedule created", results.map((item) => ({ provider: item.provider, readiness: item.readiness })));
-  return results;
+}
+
+// ── Social Queue ──────────────────────────────────────────────────────────
+
+var socialQueuePageOffset = 0;
+var socialQueuePageLimit = 50;
+
+async function loadSocialQueue(direction) {
+  if (typeof direction === "number") {
+    socialQueuePageOffset = Math.max(0, socialQueuePageOffset + direction * socialQueuePageLimit);
+  } else {
+    socialQueuePageOffset = 0;
+  }
+  var grid = document.getElementById("social-queue-grid");
+  var pagination = document.getElementById("social-queue-pagination");
+  if (!grid) return;
+  grid.innerHTML = '<div class="text-center py-16 text-gray-500"><i class="ph-bold ph-clock text-4xl block mb-3"></i><p>Loading queue...</p></div>';
+  try {
+    var meta = getWorkspaceRequestMetadata();
+    var statusFilter = document.getElementById("social-queue-filter-status");
+    var platformFilter = document.getElementById("social-queue-filter-platform");
+    var result = await callSupabaseEdgeFunction("social-schedule", {
+      action: "list_queue",
+      workspace_id: meta.workspace_id,
+      status: statusFilter ? statusFilter.value : "",
+      platform: platformFilter ? platformFilter.value : "",
+      limit: socialQueuePageLimit,
+      offset: socialQueuePageOffset,
+    });
+    var items = result.queue || [];
+    if (!items.length) {
+      grid.innerHTML = '<div class="text-center py-16 text-gray-500"><i class="ph-bold ph-clock text-4xl block mb-3"></i><p>No queue items found. Schedule a post to see it here.</p></div>';
+      if (pagination) pagination.classList.add("hidden");
+      return;
+    }
+    grid.innerHTML = items.map(function(item) {
+      var platformIcon = getSocialPlatformIcon(item.provider || item.platform);
+      var statusBadge = getSocialStatusBadge(item.status);
+      var platformLabel = toTitleCase(item.provider || item.platform || "");
+      var scheduledAt = item.scheduled_at || item.scheduledFor || "";
+      var caption = (item.caption || "").substring(0, 80);
+      if ((item.caption || "").length > 80) caption += "...";
+      var errors = item.validation_errors && item.validation_errors.errors ? item.validation_errors.errors.join(", ") : "";
+      var warnings = item.validation_errors && item.validation_errors.warnings ? item.validation_errors.warnings.join(", ") : "";
+      return '<div class="p-4 rounded-xl bg-[#181125] border border-white/5 flex items-center justify-between gap-4 flex-wrap">' +
+        '<div class="flex items-center gap-3 min-w-0 flex-1">' +
+          '<div class="w-10 h-10 rounded-xl bg-[#231738] flex items-center justify-center text-[#c77dff] shrink-0">' + platformIcon + '</div>' +
+          '<div class="min-w-0 flex-1">' +
+            '<div class="flex items-center gap-2 flex-wrap">' +
+              '<span class="text-sm font-bold text-white">' + escapeHtml(platformLabel) + '</span>' +
+              statusBadge +
+            '</div>' +
+            '<div class="text-xs text-gray-400 mt-1 truncate">' + escapeHtml(caption || "(no caption)") + '</div>' +
+            (errors ? '<div class="text-[10px] text-red-400 mt-1">' + escapeHtml(errors) + '</div>' : "") +
+            (warnings ? '<div class="text-[10px] text-yellow-400 mt-1">' + escapeHtml(warnings) + '</div>' : "") +
+          '</div>' +
+        '</div>' +
+        '<div class="flex items-center gap-2 shrink-0">' +
+          (scheduledAt ? '<span class="text-[10px] text-gray-500">' + formatDate(scheduledAt) + '</span>' : "") +
+          (item.status === "queued" || item.status === "ready" || item.status === "needs_connection" || item.status === "invalid_media" || item.status === "draft_queue"
+            ? '<button type="button" onclick="cancelSocialQueueItem(\'' + item.id + '\')" class="px-3 py-1.5 rounded-lg bg-[#30121b] border border-red-400/20 text-[10px] font-bold text-red-200 hover:opacity-80"><i class="ph-bold ph-x"></i> Cancel</button>'
+            : "") +
+          (item.status === "queued" || item.status === "ready"
+            ? '<button type="button" onclick="publishOneSocialQueue(\'' + item.id + '\')" class="px-3 py-1.5 rounded-lg bg-[#181125] border border-white/5 text-[10px] font-bold text-gray-300 hover:text-white"><i class="ph-bold ph-rocket-launch"></i> Publish</button>'
+            : "") +
+        '</div>' +
+      '</div>';
+    }).join("");
+    if (pagination) {
+      var totalPages = Math.ceil((result.total || 0) / socialQueuePageLimit);
+      var currentPage = Math.floor(socialQueuePageOffset / socialQueuePageLimit) + 1;
+      document.getElementById("social-queue-page-info").textContent = "Page " + currentPage + " of " + Math.max(totalPages, 1);
+      pagination.classList.remove("hidden");
+    }
+  } catch (err) {
+    grid.innerHTML = '<div class="text-center py-16 text-gray-500"><i class="ph-bold ph-warning text-4xl block mb-3"></i><p>Failed to load queue: ' + escapeHtml(err.message || "") + '</p><button onclick="loadSocialQueue()" class="mt-4 px-4 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300">Retry</button></div>';
+  }
+}
+
+function getSocialPlatformIcon(platform) {
+  var p = String(platform || "").toLowerCase();
+  if (p === "linkedin") return '<i class="ph-fill ph-linkedin-logo text-xl"></i>';
+  if (p === "facebook") return '<i class="ph-fill ph-facebook-logo text-xl"></i>';
+  if (p === "instagram") return '<i class="ph-fill ph-instagram-logo text-xl"></i>';
+  if (p === "threads") return '<i class="ph-fill ph-at text-xl"></i>';
+  if (p === "bluesky") return '<i class="ph-fill ph-cloud text-xl"></i>';
+  if (p === "tiktok") return '<i class="ph-fill ph-music-note text-xl"></i>';
+  return '<i class="ph-fill ph-share-network text-xl"></i>';
+}
+
+function getSocialStatusBadge(status) {
+  var s = String(status || "").toLowerCase();
+  var colors = {
+    draft_queue: "bg-[#181125] text-gray-300 border border-white/5",
+    queued: "bg-[#1a2e1a] text-emerald-300 border border-emerald-400/20",
+    ready: "bg-[#1a2e1a] text-emerald-300 border border-emerald-400/20",
+    needs_connection: "bg-[#2e2a1a] text-yellow-300 border border-yellow-400/20",
+    invalid_media: "bg-[#2e1a1a] text-red-300 border border-red-400/20",
+    publishing: "bg-[#1a1a2e] text-blue-300 border border-blue-400/20",
+    published: "bg-[#1a2e2a] text-teal-300 border border-teal-400/20",
+    failed: "bg-[#2e1a1a] text-red-300 border border-red-400/20",
+    cancelled: "bg-[#181125] text-gray-400 border border-white/5",
+  };
+  var cls = colors[s] || "bg-[#181125] text-gray-300 border border-white/5";
+  var label = s.replace(/_/g, " ");
+  return '<span class="px-2 py-0.5 rounded text-[9px] uppercase tracking-wider font-bold ' + cls + '">' + escapeHtml(label) + '</span>';
+}
+
+async function cancelSocialQueueItem(id) {
+  if (!confirm("Cancel this scheduled social post?")) return;
+  try {
+    var meta = getWorkspaceRequestMetadata();
+    await callSupabaseEdgeFunction("social-schedule", {
+      action: "cancel_queue_item",
+      workspace_id: meta.workspace_id,
+      id: id,
+    });
+    showToast("Cancelled", "Queue item cancelled.", "ph-check", "text-emerald-400");
+    loadSocialQueue();
+  } catch (err) {
+    showToast("Cancel failed", err.message || "Could not cancel", "ph-warning", "text-yellow-400");
+  }
+}
+
+async function publishDueSocialQueue() {
+  try {
+    var meta = getWorkspaceRequestMetadata();
+    var result = await callSupabaseEdgeFunction("social-schedule", {
+      action: "publish_due_now",
+      workspace_id: meta.workspace_id,
+    });
+    showToast("Publish complete", result.processed + " items processed (" + result.succeeded + " succeeded, " + result.failed + " failed)", "ph-rocket-launch", "text-emerald-400");
+    loadSocialQueue();
+  } catch (err) {
+    showToast("Publish failed", err.message || "Could not publish due items", "ph-warning", "text-yellow-400");
+  }
+}
+
+async function publishOneSocialQueue(id) {
+  try {
+    var meta = getWorkspaceRequestMetadata();
+    var result = await callSupabaseEdgeFunction("social-schedule", {
+      action: "publish_one",
+      workspace_id: meta.workspace_id,
+      id: id,
+    });
+    showToast("Publish result", result.status === "published" ? "Published successfully!" : "Failed: " + (result.error || ""), result.status === "published" ? "ph-check" : "ph-warning", result.status === "published" ? "text-emerald-400" : "text-yellow-400");
+    loadSocialQueue();
+  } catch (err) {
+    showToast("Publish failed", err.message || "Could not publish", "ph-warning", "text-yellow-400");
+  }
 }
 
 async function apiStartPlatformAuth(platform) {
@@ -27306,7 +27767,13 @@ async function autoSyncPostToMonday(post, options = {}) {
           board_id: config.boardId,
           monday_sync_enabled: true,
           monday_sync_direction: config.direction,
-          monday_last_pushed_at: now
+          monday_last_pushed_at: now,
+          groups_found: result.groups_found,
+          default_group_id: result.default_group_id || result.diagnostics?.default_group_id || "",
+          default_group_title: result.default_group_title || result.diagnostics?.default_group_title || "",
+          group_id: result.group_id || result.diagnostics?.group_id || "",
+          group_title: result.group_title || result.diagnostics?.group_title || "",
+          group_match_strategy: result.group_match_strategy || result.diagnostics?.group_match_strategy || ""
         }
       });
       return result;
@@ -28076,7 +28543,7 @@ function getViewHealthKey(label) {
 }
 
 function getRegisteredViewNames() {
-  return ["calendar", "ledger", "constellation", "media", "inspo", "notes", "write-idea", "performance", "audit"];
+  return ["calendar", "ledger", "constellation", "media", "social", "inspo", "notes", "write-idea", "performance", "audit"];
 }
 
 function getViewRenderFunction(viewName) {
@@ -28085,6 +28552,7 @@ function getViewRenderFunction(viewName) {
     ledger: typeof renderLedger === "function" ? renderLedger : null,
     constellation: typeof renderConstellation === "function" ? renderConstellation : null,
     media: typeof renderMedia === "function" ? renderMedia : null,
+    social: typeof loadSocialQueue === "function" ? loadSocialQueue : null,
     inspo: typeof renderInspo === "function" ? renderInspo : null,
     notes: typeof renderNotes === "function" ? renderNotes : null,
     "write-idea": typeof renderWriteIdeaScaffold === "function" ? renderWriteIdeaScaffold : null,
@@ -28935,6 +29403,11 @@ function populatePWModal() {
 }
 
 async function savePWProfile() {
+  if (document.querySelector("#pw-workspace-icon-grid .pw-ws-icon-btn.active") && document.activeElement && document.activeElement.closest && document.activeElement.closest("#pw-workspace-icon-grid")) {
+    console.log("[icon-save] blocked wrong path", { attempted: "profile", source: "workspace_icon_grid" });
+    return;
+  }
+  console.log("[icon-save] profile path", { action: "savePWProfile" });
   const selectedProfileIcon = (document.querySelector("#pw-profile-icon-grid .pw-icon-btn.active") || {}).dataset?.icon || "none";
   const payload = {
     display_name: (document.getElementById("pw-profile-display-name") || {}).value || "",
@@ -28994,6 +29467,11 @@ async function savePWProfile() {
 }
 
 async function savePWWorkspace() {
+  if (document.querySelector("#pw-profile-icon-grid .pw-icon-btn.active") && document.activeElement && document.activeElement.closest && document.activeElement.closest("#pw-profile-icon-grid")) {
+    console.log("[icon-save] blocked wrong path", { attempted: "workspace", source: "profile_icon_grid" });
+    return;
+  }
+  console.log("[icon-save] workspace path", { action: "savePWWorkspace" });
   const activeWorkspace = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active || {};
   const selectedWorkspaceIcon = (document.querySelector("#pw-workspace-icon-grid .pw-ws-icon-btn.active") || {}).dataset?.icon || "none";
   const payload = {
@@ -29018,6 +29496,7 @@ async function savePWWorkspace() {
     updated_at: new Date().toISOString()
   };
   console.log("[icon-save] workspace payload", payload);
+  console.log("[workspace-icon] save payload", payload);
   var statusEl = document.getElementById("pw-workspace-status");
   var saveBtn = document.getElementById("pw-workspace-save-btn");
   if (statusEl) { statusEl.classList.add("hidden"); statusEl.textContent = ""; }
@@ -29044,13 +29523,16 @@ async function savePWWorkspace() {
       if (existing && existing.data && existing.data.id) {
         var settingsUpdate = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").update(settingsPayload).eq("id", existing.data.id);
         console.log("[icon-save] response", { table: "workspace_settings", action: "update", ok: !settingsUpdate?.error, error: settingsUpdate?.error || null });
+        console.log("[workspace-icon] save response", { table: "workspace_settings", action: "update", ok: !settingsUpdate?.error, error: settingsUpdate?.error || null });
         if (settingsUpdate.error) throw settingsUpdate.error;
       } else {
         var settingsInsert = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").insert(settingsPayload);
         console.log("[icon-save] response", { table: "workspace_settings", action: "insert", ok: !settingsInsert?.error, error: settingsInsert?.error || null });
+        console.log("[workspace-icon] save response", { table: "workspace_settings", action: "insert", ok: !settingsInsert?.error, error: settingsInsert?.error || null });
         if (settingsInsert.error) throw settingsInsert.error;
       }
       console.log("[icon-save] response", { ok: true, workspace_slug: slug });
+      console.log("[workspace-icon] save response", { ok: true, workspace_slug: slug });
       var reloadedWorkspaceRecord = null;
       if (workspaceId && payload.display_name) {
         reloadedWorkspaceRecord = await STELLARSYNC_SUPABASE_CLIENT
@@ -29083,6 +29565,7 @@ async function savePWWorkspace() {
     setTimeout(function() { if (statusEl) statusEl.classList.add("hidden"); }, 3000);
   } catch (err) {
     console.log("[icon-save] response", err);
+    console.log("[workspace-icon] save response", err);
     console.log("[branding-save] response", err);
     console.log("[constellation-save] response", err);
     var msg = "Workspace save failed: " + (err.message || String(err));
