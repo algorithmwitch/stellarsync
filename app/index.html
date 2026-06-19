@@ -15016,10 +15016,10 @@ function getConnectedAccountsMarkup(options = {}) {
       ? "text-gray-300"
       : "text-sky-300";
     const displayMessage = setupBlocked
-      ? (userCanSeeAdminDetails
-        ? getSocialSetupMissingMessage(platform, missingKeys)
-        : "App setup required by StellarSync admin. Check with your workspace admin for LinkedIn publishing access.")
-      : "");
+      ? (userCanManageMembers()
+          ? getSocialSetupMissingMessage(platform, missingKeys)
+          : "App setup required by StellarSync admin. Check with your workspace admin for LinkedIn publishing access.")
+      : "";
     return `
       <div class="platform-card">
         <div class="flex items-start justify-between gap-3 mb-4">
