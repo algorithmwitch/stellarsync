@@ -5924,15 +5924,9 @@ async function loadWorkspaceBrandingSettings(workspaceId, workspace = {}) {
   const minimalFields = "id,workspace_id,workspace_slug,display_name,plan,backend_type";
 
   async function runSettingsSelect(fields) {
-    const wid = String(workspaceId || "").trim();
-    if (wid) {
-      const byId = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").select(fields).eq("workspace_id", wid).maybeSingle();
-      if ((byId && byId.data) || !slug || (byId && byId.error && byId.error.code !== "PGRST116")) return byId;
-    }
-    if (slug) {
-      return STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").select(fields).eq("workspace_slug", slug).maybeSingle();
-    }
-    return { data: null, error: null };
+    const wsColumns = await getWorkspaceSettingsColumns();
+    const filteredFields = filterWorkspaceSettingsFieldsForKnownSchema(fields, wsColumns, "reload");
+    return selectWorkspaceSettingsByWorkspaceWithMissingColumnRetry(workspaceId, slug, filteredFields);
   }
 
   try {
@@ -30075,7 +30069,7 @@ async function savePWProfile() {
 
 var WORKSPACE_SETTINGS_COLUMNS_CACHE = null;
 var WORKSPACE_SETTINGS_OPTIONAL_FIELDS = ["brand_accent", "icon", "avatar_mode", "avatar_initials", "constellation_shape", "short_name", "media_prefix", "media_bucket", "brand_voice", "current_month", "current_year", "default_platforms", "default_pillars", "default_statuses", "default_post_types", "sheet_sync_enabled", "sheet_id", "google_sheet_id", "apps_script_url", "sheet_sync_direction", "sheet_last_pushed_at", "sheet_last_pulled_at", "monday_board_id", "monday_sync_enabled", "monday_sync_direction", "monday_last_pushed_at", "monday_last_pulled_at"];
-var WORKSPACE_SETTINGS_REQUIRE_CONFIRMED_FIELDS = ["current_month"];
+var WORKSPACE_SETTINGS_REQUIRE_CONFIRMED_FIELDS = ["brand_accent", "current_month", "default_pillars", "icon", "avatar_mode", "avatar_initials", "constellation_shape", "short_name", "media_prefix", "media_bucket"];
 
 async function getWorkspaceSettingsColumns() {
   if (WORKSPACE_SETTINGS_COLUMNS_CACHE) return WORKSPACE_SETTINGS_COLUMNS_CACHE;
@@ -30109,6 +30103,26 @@ function filterPayloadToExistingColumns(payload, columnNames) {
       console.warn("[workspace-save] removed missing column " + key);
     }
   }
+  return filtered;
+}
+
+function filterWorkspaceSettingsFieldsForKnownSchema(fields, columnNames, logLabel) {
+  var fieldList = Array.isArray(fields) ? fields.slice() : String(fields || "").split(",").map(function(f) { return f.trim(); }).filter(Boolean);
+  if (!columnNames || !Array.isArray(columnNames) || !columnNames.length) {
+    var fallbackFields = fieldList.filter(function(field) {
+      var keep = WORKSPACE_SETTINGS_REQUIRE_CONFIRMED_FIELDS.indexOf(field) === -1;
+      if (!keep) console.warn("[workspace-save] removed missing column " + field);
+      return keep;
+    });
+    if (logLabel) console.log("[workspace-save] " + logLabel + " select filtered", fallbackFields);
+    return fallbackFields;
+  }
+  var filtered = fieldList.filter(function(field) {
+    var keep = columnNames.indexOf(field) !== -1;
+    if (!keep && WORKSPACE_SETTINGS_OPTIONAL_FIELDS.indexOf(field) !== -1) console.warn("[workspace-save] removed missing column " + field);
+    return keep;
+  });
+  if (logLabel) console.log("[workspace-save] " + logLabel + " select filtered", filtered);
   return filtered;
 }
 
@@ -30147,6 +30161,42 @@ async function selectWorkspaceSettingsWithMissingColumnRetry(workspaceId, fields
     return { ...result, fields: remainingFields };
   }
   return { data: null, error: new Error("workspace_settings select failed after missing-column retries"), fields: remainingFields };
+}
+
+async function selectWorkspaceSettingsByWorkspaceWithMissingColumnRetry(workspaceId, slug, fields) {
+  var remainingFields = Array.isArray(fields) ? fields.slice() : String(fields || "").split(",").map(function(f) { return f.trim(); }).filter(Boolean);
+  var attempts = 0;
+  while (attempts < 8) {
+    attempts++;
+    var wid = String(workspaceId || "").trim();
+    var result;
+    if (wid) {
+      result = await STELLARSYNC_SUPABASE_CLIENT
+        .from("workspace_settings")
+        .select(remainingFields.join(","))
+        .eq("workspace_id", wid)
+        .maybeSingle();
+      if ((result && result.data) || !slug || (result && result.error && result.error.code !== "PGRST116")) {
+        if (!result?.error) return { ...result, fields: remainingFields };
+      }
+    }
+    if (!result || !result.data) {
+      result = slug
+        ? await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").select(remainingFields.join(",")).eq("workspace_slug", slug).maybeSingle()
+        : { data: null, error: null };
+    }
+    if (!result?.error) return { ...result, fields: remainingFields };
+    var missingCol = getMissingWorkspaceSettingsColumn(result.error);
+    console.warn("[workspace-save] exact error", { message: result.error?.message || String(result.error), column: missingCol || "" });
+    if (missingCol && remainingFields.indexOf(missingCol) !== -1) {
+      console.warn("[workspace-save] removed missing column " + missingCol);
+      remainingFields = remainingFields.filter(function(field) { return field !== missingCol; });
+      console.warn("[workspace-save] retry without missing column");
+      continue;
+    }
+    return { ...result, fields: remainingFields };
+  }
+  return { data: null, error: new Error("workspace_settings reload select failed after missing-column retries"), fields: remainingFields };
 }
 
 async function upsertWorkspaceSettings(workspaceId, payload) {
@@ -30258,11 +30308,7 @@ async function savePWWorkspace() {
       }
       var wsColumns = await getWorkspaceSettingsColumns();
       var reloadFields = ["workspace_id","workspace_slug","display_name","short_name","avatar_mode","icon","avatar_initials","constellation_shape","brand_accent","media_bucket","media_prefix","brand_voice","current_month","current_year"];
-      if (wsColumns) {
-        reloadFields = reloadFields.filter(function(f) { return wsColumns.indexOf(f) !== -1; });
-      } else {
-        reloadFields = reloadFields.filter(function(f) { return WORKSPACE_SETTINGS_REQUIRE_CONFIRMED_FIELDS.indexOf(f) === -1; });
-      }
+      reloadFields = filterWorkspaceSettingsFieldsForKnownSchema(reloadFields, wsColumns, "verification");
       var reloadedWorkspace = await selectWorkspaceSettingsWithMissingColumnRetry(workspaceId, reloadFields);
       console.log("[icon-save] reload check", reloadedWorkspace?.data || null);
       if (reloadedWorkspace?.error) throw reloadedWorkspace.error;
