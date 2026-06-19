@@ -2412,11 +2412,7 @@
                   <span class="flex items-center gap-3"><i class="ph-bold ph-arrow-u-up-left text-gray-400"></i> Workspace Login</span>
                   <i class="ph-bold ph-caret-right text-gray-500"></i>
                 </button>
-                <button type="button" class="workspace-menu-btn" data-workspace-action="install">
-                  <span class="flex items-center gap-3"><i class="ph-bold ph-download-simple text-white"></i> Install App</span>
-                  <i class="ph-bold ph-caret-right text-gray-500"></i>
-                </button>
-                <button type="button" id="dropdown-install-plugin-btn" class="workspace-menu-btn">
+                <button type="button" id="dropdown-install-plugin-btn" class="workspace-menu-btn" data-plugin-action="openPluginInstallModal">
                   <span class="flex items-center gap-3"><i class="ph-bold ph-puzzle-piece text-[#c77dff]"></i> Install Plugin</span>
                   <i class="ph-bold ph-caret-right text-gray-500"></i>
                 </button>
@@ -3612,7 +3608,7 @@
   </div>
 </div>
 
-<div id="linkedin-bulk-import-modal" class="fixed inset-0 z-[101] flex items-center justify-center bg-black/70 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
+<div id="linkedin-bulk-import-modal" class="fixed inset-0 z-[172] flex items-center justify-center bg-black/70 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
   <div id="linkedin-bulk-import-modal-card" class="modal-content w-full max-w-5xl max-h-[92vh] bg-[#120c1d] border border-white/10 rounded-2xl shadow-2xl overflow-hidden scale-95 transition-transform duration-300 flex flex-col">
     <div class="p-6 border-b border-white/10 flex justify-between items-center bg-gradient-to-r from-[#1a1128] to-[#120c1d]">
       <div class="flex items-center gap-3">
@@ -3789,7 +3785,7 @@
 </div>
 
 <!-- StellarSync Plugin Install Modal -->
-<div id="stellarsync-plugin-install-modal" class="fixed inset-0 z-[102] flex items-center justify-center bg-black/70 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
+<div id="stellarsync-plugin-install-modal" class="fixed inset-0 z-[170] flex items-center justify-center bg-black/70 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
   <div id="stellarsync-plugin-install-card" class="modal-content w-full max-w-2xl max-h-[90vh] bg-[#120c1d] border border-white/10 rounded-2xl shadow-2xl overflow-hidden scale-95 transition-transform duration-300 flex flex-col">
     <div class="p-6 border-b border-white/10 flex justify-between items-center bg-gradient-to-r from-[#1a1128] to-[#120c1d] shrink-0">
       <div class="flex items-center gap-3">
@@ -3799,7 +3795,7 @@
           <p class="text-xs text-gray-400 mt-0.5">Use the StellarSync Plugin to capture LinkedIn posts, save ideas to Inspo, save notes, or start AI drafts.</p>
         </div>
       </div>
-      <button id="close-plugin-install-modal-btn" type="button" class="text-gray-500 hover:text-white p-2 rounded-xl hover:bg-white/5 transition-colors"><i class="ph-bold ph-x text-xl"></i></button>
+      <button id="close-plugin-install-modal-btn" type="button" data-plugin-action="closePluginInstallModal" class="text-gray-500 hover:text-white p-2 rounded-xl hover:bg-white/5 transition-colors"><i class="ph-bold ph-x text-xl"></i></button>
     </div>
     <div class="p-6 overflow-y-auto custom-scrollbar space-y-6">
       <div class="platform-card space-y-4">
@@ -3809,10 +3805,10 @@
         </div>
         <p class="text-xs text-gray-400 leading-relaxed">Drag the button below to your bookmarks bar. When you find content you want to capture, click the bookmarklet to save it directly to StellarSync.</p>
         <div class="flex flex-wrap items-center gap-3">
-          <a id="plugin-bookmarklet-link" href="javascript:void(0)" class="px-5 py-3 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all shadow-lg shadow-purple-500/20 inline-flex items-center gap-2 cursor-grab active:cursor-grabbing select-none">
+          <button id="plugin-bookmarklet-link" type="button" draggable="true" data-plugin-action="copyPluginBookmarkletCode" class="px-5 py-3 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all shadow-lg shadow-purple-500/20 inline-flex items-center gap-2 cursor-grab active:cursor-grabbing select-none">
             <i class="ph-bold ph-puzzle-piece"></i> StellarSync Capture
-          </a>
-          <button id="plugin-copy-bookmarklet-btn" type="button" class="px-4 py-3 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300 hover:text-white transition-colors">Copy Code</button>
+          </button>
+          <button id="plugin-copy-bookmarklet-btn" type="button" data-plugin-action="copyPluginBookmarkletCode" class="px-4 py-3 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300 hover:text-white transition-colors">Copy Code</button>
         </div>
         <div id="plugin-bookmarklet-copy-success" class="text-xs text-emerald-400 hidden">Bookmarklet code copied! Paste it into a new bookmark URL field.</div>
       </div>
@@ -3823,8 +3819,7 @@
         </div>
         <p class="text-xs text-gray-400 leading-relaxed">A full browser extension with automatic LinkedIn post detection, media capture, and bulk import capabilities is in development.</p>
         <div class="flex items-center gap-3">
-          <a href="./linkedin-export-helper/" target="_blank" class="px-4 py-2.5 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300 hover:text-white transition-colors inline-flex items-center gap-2"><i class="ph-bold ph-archive"></i> Extension Folder</a>
-          <a href="./linkedin-export-helper/stellarsync-linkedin-export-helper.zip" download class="px-4 py-2.5 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300 hover:text-white transition-colors inline-flex items-center gap-2"><i class="ph-bold ph-download"></i> Download ZIP</a>
+          <button type="button" data-plugin-action="downloadPluginBookmarkletFile" class="px-4 py-2.5 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300 hover:text-white transition-colors inline-flex items-center gap-2"><i class="ph-bold ph-download"></i> Download Plugin</button>
         </div>
       </div>
       <div class="platform-card space-y-3">
@@ -3833,7 +3828,7 @@
           <div><div class="text-sm font-bold text-white">Manual Capture</div><div class="text-[10px] text-gray-400">Paste content directly</div></div>
         </div>
         <p class="text-xs text-gray-400 leading-relaxed">You can also paste a URL, selected text, or page content directly into the capture form below.</p>
-        <button id="plugin-open-capture-modal-btn" type="button" class="px-4 py-2.5 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300 hover:text-white transition-colors inline-flex items-center gap-2"><i class="ph-bold ph-arrow-square-in"></i> Open Capture Form</button>
+        <button id="plugin-open-capture-modal-btn" type="button" data-plugin-action="openPluginCaptureForm" class="px-4 py-2.5 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300 hover:text-white transition-colors inline-flex items-center gap-2"><i class="ph-bold ph-arrow-square-in"></i> Open Capture Form</button>
       </div>
       <div class="platform-card space-y-3">
         <div class="flex items-center gap-3">
@@ -3856,7 +3851,7 @@
 </div>
 
 <!-- Plugin Capture Modal (3 views) -->
-<div id="plugin-capture-view-modal" class="fixed inset-0 z-[102] flex items-center justify-center bg-black/70 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
+<div id="plugin-capture-view-modal" class="fixed inset-0 z-[171] flex items-center justify-center bg-black/70 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
   <div id="plugin-capture-view-card" class="modal-content w-full max-w-xl max-h-[90vh] bg-[#120c1d] border border-white/10 rounded-2xl shadow-2xl overflow-hidden scale-95 transition-transform duration-300 flex flex-col">
     <div class="p-6 border-b border-white/10 flex justify-between items-center bg-gradient-to-r from-[#1a1128] to-[#120c1d] shrink-0">
       <div class="flex items-center gap-3">
@@ -3866,13 +3861,13 @@
           <p class="text-xs text-gray-400 mt-0.5">From <span id="plugin-capture-source-label" class="text-gray-300">the web</span></p>
         </div>
       </div>
-      <button id="close-plugin-capture-modal-btn" type="button" class="text-gray-500 hover:text-white p-2 rounded-xl hover:bg-white/5 transition-colors"><i class="ph-bold ph-x text-xl"></i></button>
+      <button id="close-plugin-capture-modal-btn" type="button" data-plugin-action="closePluginCaptureModal" class="text-gray-500 hover:text-white p-2 rounded-xl hover:bg-white/5 transition-colors"><i class="ph-bold ph-x text-xl"></i></button>
     </div>
     <div class="flex border-b border-white/10 shrink-0">
-      <button type="button" class="plugin-capture-tab flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center bg-[#181125] text-gray-400 border-b-2 border-transparent" data-pc-tab="linkedin" onclick="switchPluginCaptureTab('linkedin')">LinkedIn Exporter</button>
-      <button type="button" class="plugin-capture-tab flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center bg-[#2d1b4e] text-white border-b-2 border-[#c77dff]" data-pc-tab="inspo" onclick="switchPluginCaptureTab('inspo')">Save to Inspo</button>
-      <button type="button" class="plugin-capture-tab flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center bg-[#181125] text-gray-400 border-b-2 border-transparent" data-pc-tab="note" onclick="switchPluginCaptureTab('note')">Save to Notes</button>
-      <button type="button" class="plugin-capture-tab flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center bg-[#181125] text-gray-400 border-b-2 border-transparent" data-pc-tab="draft" onclick="switchPluginCaptureTab('draft')">AI Draft Source</button>
+      <button type="button" class="plugin-capture-tab flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center bg-[#181125] text-gray-400 border-b-2 border-transparent" data-pc-tab="linkedin" data-plugin-action="switchPluginCaptureTab">LinkedIn Exporter</button>
+      <button type="button" class="plugin-capture-tab flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center bg-[#2d1b4e] text-white border-b-2 border-[#c77dff]" data-pc-tab="inspo" data-plugin-action="switchPluginCaptureTab">Save to Inspo</button>
+      <button type="button" class="plugin-capture-tab flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center bg-[#181125] text-gray-400 border-b-2 border-transparent" data-pc-tab="note" data-plugin-action="switchPluginCaptureTab">Save to Notes</button>
+      <button type="button" class="plugin-capture-tab flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center bg-[#181125] text-gray-400 border-b-2 border-transparent" data-pc-tab="draft" data-plugin-action="switchPluginCaptureTab">AI Draft Source</button>
     </div>
     <div class="p-6 overflow-y-auto custom-scrollbar space-y-4">
       <!-- Capture metadata bar (always visible) -->
@@ -3886,9 +3881,9 @@
         <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">LinkedIn Post URL</div><input id="pc-linkedin-url" type="url" placeholder="https://www.linkedin.com/posts/..." class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"></div>
         <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Pasted LinkedIn Text / JSON</div><textarea id="pc-linkedin-input" rows="4" placeholder="Paste copied LinkedIn post text, or paste JSON from the LinkedIn Export Helper..." class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 resize-y"></textarea></div>
         <div class="flex gap-2">
-          <button type="button" class="px-4 py-2.5 rounded-xl bg-[#231738] border border-white/5 text-xs font-bold text-white hover:bg-[#2d1b4e] transition-colors" onclick="parsePluginLinkedInCapture()"><i class="ph-bold ph-magnifying-glass mr-1"></i> Parse</button>
-          <button type="button" class="px-4 py-2.5 rounded-xl bg-[#1a1128] border border-white/5 text-xs font-bold text-white hover:bg-[#231738] transition-colors" onclick="importPluginLinkedInCapture()"><i class="ph-bold ph-upload mr-1"></i> Import</button>
-          <button type="button" onclick="openLinkedInBulkImportModal()" class="px-3 py-2.5 rounded-xl bg-[#181125] border border-white/5 text-[10px] font-bold text-gray-300 hover:text-white transition-colors"><i class="ph-bold ph-arrow-square-out mr-1"></i> Open Full Importer</button>
+          <button type="button" data-plugin-action="parseLinkedInExporterInput" class="px-4 py-2.5 rounded-xl bg-[#231738] border border-white/5 text-xs font-bold text-white hover:bg-[#2d1b4e] transition-colors"><i class="ph-bold ph-magnifying-glass mr-1"></i> Parse</button>
+          <button type="button" data-plugin-action="importLinkedInExporterInput" class="px-4 py-2.5 rounded-xl bg-[#1a1128] border border-white/5 text-xs font-bold text-white hover:bg-[#231738] transition-colors"><i class="ph-bold ph-upload mr-1"></i> Import</button>
+          <button type="button" data-plugin-action="openLinkedInBulkImportModal" class="px-3 py-2.5 rounded-xl bg-[#181125] border border-white/5 text-[10px] font-bold text-gray-300 hover:text-white transition-colors"><i class="ph-bold ph-arrow-square-out mr-1"></i> Open Full Importer</button>
         </div>
         <div id="pc-linkedin-diagnostics" class="text-[11px] text-gray-500 leading-relaxed">Paste LinkedIn text or JSON, then click Parse.</div>
         <div id="pc-linkedin-preview" class="space-y-2"></div>
@@ -3905,7 +3900,7 @@
           <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Campaign</div><input id="pc-inspo-campaign" type="text" placeholder="Optional" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"></div>
           <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Pillar</div><input id="pc-inspo-pillar" type="text" placeholder="Optional" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"></div>
         </div>
-        <button type="button" class="pc-save-btn w-full px-4 py-3 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all" onclick="handlePluginCaptureSave('inspo')"><i class="ph-bold ph-lightbulb mr-1"></i> Save to Inspo</button>
+        <button type="button" class="pc-save-btn w-full px-4 py-3 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all" data-plugin-action="savePluginCaptureToInspo"><i class="ph-bold ph-lightbulb mr-1"></i> Save to Inspo</button>
       </section>
       <!-- Note Tab -->
       <section data-pc-panel="note" class="hidden space-y-4">
@@ -3915,7 +3910,7 @@
           <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Tags</div><input id="pc-note-tags" type="text" placeholder="comma, separated" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"></div>
           <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Pillar</div><input id="pc-note-pillar" type="text" placeholder="Optional" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"></div>
         </div>
-        <button type="button" class="pc-save-btn w-full px-4 py-3 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all" onclick="handlePluginCaptureSave('note')"><i class="ph-bold ph-note-pencil mr-1"></i> Save to Notes</button>
+        <button type="button" class="pc-save-btn w-full px-4 py-3 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all" data-plugin-action="savePluginCaptureToNotes"><i class="ph-bold ph-note-pencil mr-1"></i> Save to Notes</button>
       </section>
       <!-- AI Draft Tab -->
       <section data-pc-panel="draft" class="hidden space-y-4">
@@ -3925,7 +3920,7 @@
           <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Generation Mode</div><select id="pc-draft-mode" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white focus:outline-none focus:border-purple-500/50"><option value="rewrite">Rewrite</option><option value="expand">Expand</option><option value="summarize">Summarize</option><option value="repurpose">Repurpose for LinkedIn</option></select></div>
           <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Tags</div><input id="pc-draft-tags" type="text" placeholder="comma, separated" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"></div>
         </div>
-        <button type="button" class="pc-save-btn w-full px-4 py-3 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all" onclick="handlePluginCaptureSave('draft')"><i class="ph-bold ph-robot mr-1"></i> Save as AI Draft</button>
+        <button type="button" class="pc-save-btn w-full px-4 py-3 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all" data-plugin-action="savePluginCaptureToAIDraft"><i class="ph-bold ph-robot mr-1"></i> Save as AI Draft</button>
       </section>
       <div id="pc-save-result" class="text-xs text-gray-400 hidden"></div>
     </div>
@@ -3933,7 +3928,7 @@
 </div>
 
 <!-- Plugin Inbox Modal -->
-<div id="plugin-inbox-modal" class="fixed inset-0 z-[102] flex items-center justify-center bg-black/70 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
+<div id="plugin-inbox-modal" class="fixed inset-0 z-[170] flex items-center justify-center bg-black/70 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
   <div id="plugin-inbox-card" class="modal-content w-full max-w-2xl max-h-[90vh] bg-[#120c1d] border border-white/10 rounded-2xl shadow-2xl overflow-hidden scale-95 transition-transform duration-300 flex flex-col">
     <div class="p-6 border-b border-white/10 flex justify-between items-center bg-gradient-to-r from-[#1a1128] to-[#120c1d] shrink-0">
       <div class="flex items-center gap-3">
@@ -3943,7 +3938,7 @@
           <p class="text-xs text-gray-400 mt-0.5">Recent content captured via the StellarSync Plugin</p>
         </div>
       </div>
-      <button id="close-plugin-inbox-modal-btn" type="button" class="text-gray-500 hover:text-white p-2 rounded-xl hover:bg-white/5 transition-colors"><i class="ph-bold ph-x text-xl"></i></button>
+      <button id="close-plugin-inbox-modal-btn" type="button" data-plugin-action="closePluginInbox" class="text-gray-500 hover:text-white p-2 rounded-xl hover:bg-white/5 transition-colors"><i class="ph-bold ph-x text-xl"></i></button>
     </div>
     <div class="p-6 overflow-y-auto custom-scrollbar">
       <div id="plugin-inbox-list" class="space-y-3">
@@ -5321,7 +5316,6 @@
               </div>
               <div class="flex items-center gap-2 flex-wrap">
                 <button type="button" id="pw-backfill-monday-btn" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 hover:text-white transition-colors">Backfill Monday Board</button>
-                <button type="button" id="pw-open-plugin-install-btn" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 hover:text-white transition-colors"><i class="ph-bold ph-puzzle-piece mr-1"></i>StellarSync Plugin</button>
               </div>
             </div>
             <div id="pw-connections-list" class="space-y-3"></div>
@@ -9996,10 +9990,6 @@ function setupWorkspaceUI() {
     if (event.target === document.getElementById("monday-backfill-modal")) closeMondayBackfillModal();
   });
   document.getElementById("confirm-monday-backfill-btn")?.addEventListener("click", confirmMondayBackfill);
-  document.getElementById("pw-open-plugin-install-btn")?.addEventListener("click", function() {
-    console.log("[button] fired pw-open-plugin-install-btn");
-    openPluginInstallModal();
-  });
   document.getElementById("pw-report-submit-btn")?.addEventListener("click", function() {
     console.log("[button] fired pw-report-submit-btn");
     submitProfileWorkspaceBugReport();
@@ -23235,26 +23225,10 @@ function setupPWAInstall() {
 
   const handleInstallAction = async () => {
     if (installContext.isStandalone) return;
-    if (!deferredInstallPrompt) {
-      console.log("[install-app] prompt unavailable");
-      if (installContext.isIos) {
-        showToast("Install tip", "iOS Safari: Share → Add to Home Screen.", "ph-device-mobile", "text-[#38bdf8]");
-      } else {
-        showToast("Install unavailable", "Chrome/Edge desktop: browser menu → Install app.", "ph-browser", "text-yellow-400");
-      }
-      openInstallHelperModal();
-      return false;
-    }
-    console.log("[install-app] browser prompt started");
-    deferredInstallPrompt.prompt();
-    try {
-      const choice = await deferredInstallPrompt.userChoice;
-      console.log("[install] user choice", choice);
-      return true;
-    } finally {
-      deferredInstallPrompt = null;
-      setInstallButtonVisibility(false);
-    }
+    console.log("[install-app] prompt unavailable");
+    showToast("Install unavailable", "Install App is not available in this browser.", "ph-browser", "text-yellow-400");
+    openInstallHelperModal();
+    return false;
   };
 
   window.addEventListener("online", () => {
@@ -23356,14 +23330,12 @@ function openInstallHelperModal() {
     installHelperInstalledState.classList.toggle("hidden", !installContext.isStandalone);
   }
   if (installHelperDesktopCopy) {
-    installHelperDesktopCopy.textContent = deferredInstallPrompt
-      ? "Use the Install App button below to trigger the browser install prompt."
-      : "If the browser supports install, the Install App button will appear in Chrome or Edge.";
+    installHelperDesktopCopy.textContent = "Install App is not available in this browser.";
   }
   if (installHelperActionBtn) {
     installHelperActionBtn.disabled = installContext.isStandalone;
     installHelperActionBtn.classList.toggle("opacity-50", installContext.isStandalone);
-    installHelperActionBtn.textContent = deferredInstallPrompt ? "Install Now" : installContext.isIos ? "Show iOS Steps" : "Install App";
+    installHelperActionBtn.textContent = "Install App";
   }
   installHelperModal.classList.remove("opacity-0", "pointer-events-none");
   installHelperModalCard.classList.remove("scale-95");
@@ -30124,7 +30096,7 @@ function filterPayloadToExistingColumns(payload, columnNames) {
     WORKSPACE_SETTINGS_REQUIRE_CONFIRMED_FIELDS.forEach(function(key) {
       if (Object.prototype.hasOwnProperty.call(fallbackFiltered, key)) {
         delete fallbackFiltered[key];
-        console.log("[workspace-save] removed missing column " + key);
+        console.warn("[workspace-save] removed missing column " + key);
       }
     });
     return fallbackFiltered;
@@ -30134,7 +30106,7 @@ function filterPayloadToExistingColumns(payload, columnNames) {
     if (columnNames.indexOf(key) !== -1) {
       filtered[key] = payload[key];
     } else if (WORKSPACE_SETTINGS_OPTIONAL_FIELDS.indexOf(key) !== -1) {
-      console.log("[workspace-save] removed missing column " + key);
+      console.warn("[workspace-save] removed missing column " + key);
     }
   }
   return filtered;
@@ -30153,6 +30125,30 @@ function getMissingWorkspaceSettingsColumn(error) {
   return "";
 }
 
+async function selectWorkspaceSettingsWithMissingColumnRetry(workspaceId, fields) {
+  var remainingFields = Array.isArray(fields) ? fields.slice() : String(fields || "").split(",").map(function(f) { return f.trim(); }).filter(Boolean);
+  var attempts = 0;
+  while (attempts < 6) {
+    attempts++;
+    var result = await STELLARSYNC_SUPABASE_CLIENT
+      .from("workspace_settings")
+      .select(remainingFields.join(","))
+      .eq("workspace_id", workspaceId)
+      .maybeSingle();
+    if (!result?.error) return { ...result, fields: remainingFields };
+    var missingCol = getMissingWorkspaceSettingsColumn(result.error);
+    console.warn("[workspace-save] exact error", { message: result.error?.message || String(result.error), column: missingCol || "" });
+    if (missingCol && remainingFields.indexOf(missingCol) !== -1) {
+      console.warn("[workspace-save] removed missing column " + missingCol);
+      remainingFields = remainingFields.filter(function(field) { return field !== missingCol; });
+      console.warn("[workspace-save] retry without missing column");
+      continue;
+    }
+    return { ...result, fields: remainingFields };
+  }
+  return { data: null, error: new Error("workspace_settings select failed after missing-column retries"), fields: remainingFields };
+}
+
 async function upsertWorkspaceSettings(workspaceId, payload) {
   if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase client not available");
   if (!workspaceId) throw new Error("Workspace ID required");
@@ -30160,7 +30156,11 @@ async function upsertWorkspaceSettings(workspaceId, payload) {
   payload = filterPayloadToExistingColumns(payload, wsColumns);
   console.log("[workspace-save] filtered payload", payload);
   var existing = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").select("id").eq("workspace_id", workspaceId).maybeSingle();
-  if (existing.error) throw existing.error;
+  if (existing.error) {
+    var existingMissingCol = getMissingWorkspaceSettingsColumn(existing.error);
+    console.warn("[workspace-save] exact error", { message: existing.error?.message || String(existing.error), column: existingMissingCol || "" });
+    throw existing.error;
+  }
   var attempt = 0;
   var maxAttempts = 2;
   var currentPayload = { ...payload };
@@ -30175,10 +30175,11 @@ async function upsertWorkspaceSettings(workspaceId, payload) {
       }
       if (result.error) {
         var missingCol = getMissingWorkspaceSettingsColumn(result.error);
+        console.warn("[workspace-save] exact error", { message: result.error?.message || String(result.error), column: missingCol || "" });
         if (missingCol && attempt < maxAttempts && Object.prototype.hasOwnProperty.call(currentPayload, missingCol)) {
-          console.log("[workspace-save] removed missing column " + missingCol);
+          console.warn("[workspace-save] removed missing column " + missingCol);
           delete currentPayload[missingCol];
-          console.log("[workspace-save] retry without missing column");
+          console.warn("[workspace-save] retry without missing column");
           continue;
         }
         throw result.error;
@@ -30262,11 +30263,13 @@ async function savePWWorkspace() {
       } else {
         reloadFields = reloadFields.filter(function(f) { return WORKSPACE_SETTINGS_REQUIRE_CONFIRMED_FIELDS.indexOf(f) === -1; });
       }
-      var reloadedWorkspace = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").select(reloadFields.join(",")).eq("workspace_id", workspaceId).maybeSingle();
+      var reloadedWorkspace = await selectWorkspaceSettingsWithMissingColumnRetry(workspaceId, reloadFields);
       console.log("[icon-save] reload check", reloadedWorkspace?.data || null);
       if (reloadedWorkspace?.error) throw reloadedWorkspace.error;
       var persisted = reloadedWorkspace?.data || {};
+      var persistedFields = reloadedWorkspace?.fields || reloadFields;
       var mismatch = ["display_name", "short_name", "avatar_mode", "icon", "avatar_initials", "constellation_shape"].filter(function(key) {
+        if (persistedFields.indexOf(key) === -1) return false;
         return String((persisted && persisted[key]) || "").trim() !== String((payload && payload[key]) || "").trim();
       });
       console.log("[icon-save] mismatch", mismatch);
@@ -30281,6 +30284,8 @@ async function savePWWorkspace() {
     updateToast(loadingToastId, "success", "Workspace saved", "Workspace settings saved.");
     setTimeout(function() { if (statusEl) statusEl.classList.add("hidden"); }, 3000);
   } catch (err) {
+    var missingCol = getMissingWorkspaceSettingsColumn(err);
+    console.warn("[workspace-save] exact error", { message: err?.message || String(err), column: missingCol || "" });
     console.log("[icon-save] response", err);
     console.log("[workspace-icon] save response", err);
     console.log("[branding-save] response", err);
@@ -30603,7 +30608,10 @@ function openPluginInstallModal() {
   if (!modal) return;
   var bookmarkletCode = generatePluginBookmarkletCode();
   var link = document.getElementById("plugin-bookmarklet-link");
-  if (link) link.href = bookmarkletCode;
+  if (link) {
+    link.dataset.bookmarkletCode = bookmarkletCode;
+    link.setAttribute("aria-label", "Copy StellarSync Capture bookmarklet");
+  }
   var isDesktop = window.innerWidth >= 1024;
   var body = modal.querySelector(".p-6.overflow-y-auto");
   if (body && !pluginInstallOriginalBodyHTML) {
@@ -30611,7 +30619,7 @@ function openPluginInstallModal() {
   }
   if (!isDesktop && body) {
     console.log("[plugin-install] desktop required");
-    body.innerHTML = '<div class="text-center py-8"><div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[#231738] flex items-center justify-center"><i class="ph-fill ph-devices text-[#c77dff] text-3xl"></i></div><h3 class="text-lg font-bold text-white tracking-tight mb-3">Desktop Install Required</h3><p class="text-sm text-gray-400 max-w-md mx-auto leading-relaxed mb-6">To install the StellarSync Plugin bookmarklet, open StellarSync on a desktop browser and drag the install button into your bookmarks bar.</p><div class="flex flex-wrap items-center justify-center gap-3"><button type="button" onclick="copyPluginBookmarkletCode()" class="px-4 py-2.5 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300 hover:text-white transition-colors inline-flex items-center gap-2"><i class="ph-bold ph-copy"></i> Copy Bookmarklet Code</button><button type="button" onclick="showPluginInstallInstructions()" class="px-4 py-2.5 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300 hover:text-white transition-colors inline-flex items-center gap-2"><i class="ph-bold ph-question"></i> View Instructions</button><button type="button" onclick="closePluginInstallModal()" class="px-4 py-2.5 rounded-xl bg-[#231738] border border-white/5 text-xs font-bold text-white hover:opacity-90 transition-colors inline-flex items-center gap-2"><i class="ph-bold ph-x"></i> Close</button></div></div>';
+    body.innerHTML = '<div class="text-center py-8"><div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[#231738] flex items-center justify-center"><i class="ph-fill ph-devices text-[#c77dff] text-3xl"></i></div><h3 class="text-lg font-bold text-white tracking-tight mb-3">Desktop Install Required</h3><p class="text-sm text-gray-400 max-w-md mx-auto leading-relaxed mb-6">To install the StellarSync Plugin bookmarklet, open StellarSync on a desktop browser and drag the install button into your bookmarks bar.</p><div class="flex flex-wrap items-center justify-center gap-3"><button type="button" data-plugin-action="copyPluginBookmarkletCode" class="px-4 py-2.5 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300 hover:text-white transition-colors inline-flex items-center gap-2"><i class="ph-bold ph-copy"></i> Copy Bookmarklet Code</button><button type="button" data-plugin-action="showPluginInstallInstructions" class="px-4 py-2.5 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300 hover:text-white transition-colors inline-flex items-center gap-2"><i class="ph-bold ph-question"></i> View Instructions</button><button type="button" data-plugin-action="closePluginInstallModal" class="px-4 py-2.5 rounded-xl bg-[#231738] border border-white/5 text-xs font-bold text-white hover:opacity-90 transition-colors inline-flex items-center gap-2"><i class="ph-bold ph-x"></i> Close</button></div></div>';
     console.log("[plugin-install] instructions shown");
   }
   modal.classList.remove("opacity-0", "pointer-events-none");
@@ -30640,12 +30648,57 @@ function closePluginInstallModal() {
 
 function copyPluginBookmarkletCode() {
   var code = generatePluginBookmarkletCode();
-  navigator.clipboard.writeText(code).then(function() {
+  var copyPromise = navigator.clipboard && navigator.clipboard.writeText
+    ? navigator.clipboard.writeText(code)
+    : new Promise(function(resolve, reject) {
+        try {
+          var textarea = document.createElement("textarea");
+          textarea.value = code;
+          textarea.setAttribute("readonly", "readonly");
+          textarea.style.position = "fixed";
+          textarea.style.left = "-9999px";
+          document.body.appendChild(textarea);
+          textarea.select();
+          var ok = document.execCommand && document.execCommand("copy");
+          document.body.removeChild(textarea);
+          ok ? resolve() : reject(new Error("Clipboard copy is unavailable."));
+        } catch (err) {
+          reject(err);
+        }
+      });
+  copyPromise.then(function() {
     var el = document.getElementById("plugin-bookmarklet-copy-success");
     if (el) { el.classList.remove("hidden"); setTimeout(function() { el.classList.add("hidden"); }, 4000); }
-  }).catch(function() {
-    showToast("Copy failed", "Could not copy bookmarklet code.", "ph-warning", "text-yellow-400");
+    showPluginMessage("Bookmarklet code copied. Paste it into a new bookmark URL field.", "success");
+  }).catch(function(err) {
+    showPluginMessage("Copy failed: " + (err?.message || String(err)), "error");
   });
+}
+
+function showPluginMessage(message, tone) {
+  var resultEl = document.getElementById("pc-save-result") || document.getElementById("plugin-bookmarklet-copy-success");
+  if (!resultEl) {
+    showToast(tone === "error" ? "Plugin action failed" : "Plugin", message, tone === "error" ? "ph-warning" : "ph-info", tone === "error" ? "text-yellow-400" : "text-[#c77dff]");
+    return;
+  }
+  resultEl.className = "text-xs " + (tone === "error" ? "text-red-400" : tone === "success" ? "text-emerald-400" : "text-gray-400");
+  resultEl.textContent = message;
+  resultEl.classList.remove("hidden");
+}
+
+function pluginActionNotWired(action) {
+  console.warn("[plugin-ui] not wired", action);
+  showPluginMessage("This action is not wired yet.", "error");
+}
+
+function downloadPluginBookmarkletFile() {
+  copyPluginBookmarkletCode();
+  showPluginMessage("Bookmarklet code copied. Add a browser bookmark and paste this code into the URL field.", "success");
+}
+
+function openPluginCaptureForm() {
+  closePluginInstallModal();
+  openPluginCaptureModal({ platform: "manual" });
 }
 
 function openPluginCaptureModal(data) {
@@ -30658,22 +30711,25 @@ function openPluginCaptureModal(data) {
   var time = data && data.time ? data.time : new Date().toISOString();
   var platform = data && data.platform ? data.platform : "";
   var author = data && data.author ? data.author : "";
-  document.getElementById("pc-capture-url-display").textContent = url || "—";
-  document.getElementById("pc-capture-title-display").textContent = title || "—";
-  document.getElementById("pc-capture-time-display").textContent = time ? new Date(time).toLocaleString() : "—";
-  document.getElementById("plugin-capture-source-label").textContent = platform || "the web";
-  document.getElementById("pc-inspo-title").value = title || "";
-  document.getElementById("pc-inspo-notes").value = text || "";
-  document.getElementById("pc-inspo-author").value = author || "";
-  document.getElementById("pc-note-title").value = title || "";
-  document.getElementById("pc-note-body").value = text || "";
-  document.getElementById("pc-draft-source").value = text || "";
-  document.getElementById("pc-note-source-url").value = url;
-  document.getElementById("pc-linkedin-url").value = url || "";
-  document.getElementById("pc-linkedin-input").value = text || "";
-  document.getElementById("pc-linkedin-diagnostics").textContent = "Paste LinkedIn text or JSON, then click Parse.";
-  document.getElementById("pc-linkedin-preview").innerHTML = "";
-  document.getElementById("pc-save-result").className = "text-xs text-gray-400 hidden";
+  var setText = function(id, value) { var el = document.getElementById(id); if (el) el.textContent = value; };
+  var setValue = function(id, value) { var el = document.getElementById(id); if (el) el.value = value; };
+  setText("pc-capture-url-display", url || "—");
+  setText("pc-capture-title-display", title || "—");
+  setText("pc-capture-time-display", time ? new Date(time).toLocaleString() : "—");
+  setText("plugin-capture-source-label", platform || "the web");
+  setValue("pc-inspo-title", title || "");
+  setValue("pc-inspo-notes", text || "");
+  setValue("pc-inspo-author", author || "");
+  setValue("pc-note-title", title || "");
+  setValue("pc-note-body", text || "");
+  setValue("pc-draft-source", text || "");
+  setValue("pc-linkedin-url", url || "");
+  setValue("pc-linkedin-input", text || "");
+  setText("pc-linkedin-diagnostics", "Paste LinkedIn text or JSON, then click Parse.");
+  var linkedinPreview = document.getElementById("pc-linkedin-preview");
+  if (linkedinPreview) linkedinPreview.innerHTML = "";
+  var saveResult = document.getElementById("pc-save-result");
+  if (saveResult) saveResult.className = "text-xs text-gray-400 hidden";
   window.__pluginCaptureData = data || {};
   switchPluginCaptureTab("inspo");
   modal.classList.remove("opacity-0", "pointer-events-none");
@@ -30712,14 +30768,11 @@ async function handlePluginCaptureSave(type) {
   if (url === "—") url = "";
   var workspaceId = getActiveWorkspaceIdForPlugin();
   if (!workspaceId) {
-    resultEl.className = "text-xs text-red-400";
-    resultEl.textContent = "Choose a StellarSync workspace before saving this capture.";
-    resultEl.classList.remove("hidden");
+    showPluginMessage("Choose a StellarSync workspace before saving this capture.", "error");
     return;
   }
   try {
     if (type === "inspo") {
-      console.log("[plugin] save inspo workspace_id", workspaceId);
       var inspo = {
         title: document.getElementById("pc-inspo-title").value || data.title || "Captured inspiration",
         type: "article",
@@ -30735,12 +30788,11 @@ async function handlePluginCaptureSave(type) {
         inspo_id: "inspo_" + crypto.randomUUID(),
         provenance: { source_platform: data.platform || "linkedin", source_url: url, captured_at: new Date().toISOString(), captured_via: "stellarsync_plugin", original_author: data.author || "" }
       };
-      await apiSaveInspo(inspo);
-      resultEl.className = "text-xs text-emerald-400";
-      resultEl.innerHTML = 'Saved to Inspo Vault. <a href="#" onclick="switchView(\'inspo\'); return false;" class="underline text-emerald-300 hover:text-white">Open Inspo Vault</a>';
-      console.log("[plugin] save result", { type: "inspo", ok: true });
+      console.log("[plugin-ui] save payload", { type: "inspo", workspace_id: workspaceId, payload: inspo });
+      var inspoResult = await apiSaveInspo(inspo);
+      console.log("[plugin-ui] save result", { type: "inspo", ok: true, result: inspoResult || null });
+      showPluginMessage("Saved to Inspo Vault.", "success");
     } else if (type === "note") {
-      console.log("[plugin] save note workspace_id", workspaceId);
       var note = {
         title: document.getElementById("pc-note-title").value || data.title || "Captured note",
         body: document.getElementById("pc-note-body").value || data.text || "",
@@ -30751,12 +30803,11 @@ async function handlePluginCaptureSave(type) {
         note_id: "note_" + crypto.randomUUID(),
         provenance: { source_platform: data.platform || "linkedin", source_url: url, captured_at: new Date().toISOString(), captured_via: "stellarsync_plugin" }
       };
-      await apiSaveNote(note);
-      resultEl.className = "text-xs text-emerald-400";
-      resultEl.innerHTML = 'Saved to Notes. <a href="#" onclick="switchView(\'notes\'); return false;" class="underline text-emerald-300 hover:text-white">Open Notes</a>';
-      console.log("[plugin] save result", { type: "note", ok: true });
+      console.log("[plugin-ui] save payload", { type: "note", workspace_id: workspaceId, payload: note });
+      var noteResult = await apiSaveNote(note);
+      console.log("[plugin-ui] save result", { type: "note", ok: true, result: noteResult || null });
+      showPluginMessage("Saved to Notes.", "success");
     } else if (type === "draft") {
-      console.log("[plugin] save ai_draft workspace_id", workspaceId);
       var draftPayload = {
         title: document.getElementById("pc-note-title").value || data.title || "AI Draft from capture",
         draft_text: document.getElementById("pc-draft-source").value || data.text || "",
@@ -30768,17 +30819,14 @@ async function handlePluginCaptureSave(type) {
         ai_draft_id: "draft_" + crypto.randomUUID(),
         provenance: { source_platform: data.platform || "linkedin", source_url: url, captured_at: new Date().toISOString(), captured_via: "stellarsync_plugin" }
       };
-      await apiSaveAIDraft(draftPayload);
-      resultEl.className = "text-xs text-emerald-400";
-      resultEl.innerHTML = 'Saved to AI Drafts. <a href="#" onclick="switchView(\'ai-drafts\'); return false;" class="underline text-emerald-300 hover:text-white">Open AI Drafts</a>';
-      console.log("[plugin] save result", { type: "ai_draft", ok: true });
+      console.log("[plugin-ui] save payload", { type: "ai_draft", workspace_id: workspaceId, payload: draftPayload });
+      var draftResult = await apiSaveAIDraft(draftPayload);
+      console.log("[plugin-ui] save result", { type: "ai_draft", ok: true, result: draftResult || null });
+      showPluginMessage("Saved to AI Drafts.", "success");
     }
-    resultEl.classList.remove("hidden");
-    setTimeout(function() { resultEl.classList.add("hidden"); }, 4000);
   } catch (err) {
-    resultEl.className = "text-xs text-red-400";
-    resultEl.textContent = "Save failed: " + (err.message || String(err));
-    resultEl.classList.remove("hidden");
+    console.log("[plugin-ui] save result", { type, ok: false, error: err?.message || String(err) });
+    showPluginMessage("Save failed: " + (err.message || String(err)), "error");
   }
 }
 
@@ -30816,6 +30864,12 @@ async function importPluginLinkedInCapture() {
   var raw = String(input ? input.value : "").trim();
   var postUrl = String(url ? url.value : "").trim();
   if (!raw && !postUrl) { if (diag) diag.textContent = "Paste LinkedIn text/JSON or enter a URL first."; return; }
+  var workspaceId = getActiveWorkspaceIdForPlugin();
+  if (!workspaceId) {
+    if (diag) diag.textContent = "Choose a StellarSync workspace before saving this capture.";
+    showPluginMessage("Choose a StellarSync workspace before saving this capture.", "error");
+    return;
+  }
   try {
     if (diag) diag.textContent = "Importing...";
     var items = [];
@@ -30825,15 +30879,61 @@ async function importPluginLinkedInCapture() {
     for (var item of items) {
       var title = item.title || item.text || item.post_text || item.headline || "LinkedIn import " + (Date.now());
       var sourceUrl = item.url || item.postUrl || item.source_url || postUrl;
-      await apiSaveInspo({ title: title.slice(0, 200), type: "article", url: sourceUrl, notes: item.text || item.description || raw.slice(0, 500), sourceLabel: "linkedin", sourceUrl: sourceUrl, sourcePlatform: "linkedin" });
+      var payload = { title: title.slice(0, 200), type: "article", url: sourceUrl, notes: item.text || item.description || raw.slice(0, 500), sourceLabel: "linkedin", sourceUrl: sourceUrl, sourcePlatform: "linkedin" };
+      console.log("[plugin-ui] save payload", { type: "linkedin_exporter_inspo", workspace_id: workspaceId, payload });
+      var saveResult = await apiSaveInspo(payload);
+      console.log("[plugin-ui] save result", { type: "linkedin_exporter_inspo", ok: true, result: saveResult || null });
       imported++;
     }
     if (diag) diag.textContent = "Imported " + imported + " item(s) to Inspo.";
     preview.innerHTML = '<div class="text-xs text-emerald-400">Saved ' + imported + ' item(s) to Inspo Vault</div>';
   } catch (err) {
+    console.log("[plugin-ui] save result", { type: "linkedin_exporter_inspo", ok: false, error: err?.message || String(err) });
     if (diag) diag.textContent = "Import failed: " + (err.message || String(err));
   }
 }
+
+function importLinkedInPostsCSV() {
+  pluginActionNotWired("importLinkedInPostsCSV");
+}
+
+function handlePluginUIAction(action, button) {
+  if (action === "openPluginInstallModal") {
+    if (typeof toggleProfileMenu === "function") toggleProfileMenu(false);
+    return openPluginInstallModal();
+  }
+  if (action === "copyPluginBookmarkletCode") return copyPluginBookmarkletCode();
+  if (action === "downloadPluginBookmarkletFile") return downloadPluginBookmarkletFile();
+  if (action === "showPluginInstallInstructions") return showPluginInstallInstructions();
+  if (action === "closePluginInstallModal") return closePluginInstallModal();
+  if (action === "closePluginCaptureModal") return closePluginCaptureModal();
+  if (action === "closePluginInbox") return closePluginInbox();
+  if (action === "openPluginCaptureForm") return openPluginCaptureForm();
+  if (action === "savePluginCaptureToInspo") return handlePluginCaptureSave("inspo");
+  if (action === "savePluginCaptureToNotes") return handlePluginCaptureSave("note");
+  if (action === "savePluginCaptureToAIDraft") return handlePluginCaptureSave("draft");
+  if (action === "parseLinkedInExporterInput") return parsePluginLinkedInCapture();
+  if (action === "importLinkedInExporterInput") return importPluginLinkedInCapture();
+  if (action === "openLinkedInBulkImportModal") {
+    closePluginCaptureModal();
+    closePluginInstallModal();
+    return typeof openLinkedInBulkImportModal === "function" ? openLinkedInBulkImportModal() : pluginActionNotWired(action);
+  }
+  if (action === "importLinkedInPostsCSV") return typeof importLinkedInPostsCSV === "function" ? importLinkedInPostsCSV() : pluginActionNotWired(action);
+  if (action === "switchPluginCaptureTab") return switchPluginCaptureTab(button?.dataset?.pcTab || "inspo");
+  return pluginActionNotWired(action);
+}
+
+document.addEventListener("click", function(event) {
+  var button = event.target.closest("[data-plugin-action]");
+  if (!button) return;
+  var action = button.dataset.pluginAction || "";
+  console.log("[plugin-ui] button clicked " + action);
+  event.preventDefault();
+  event.stopPropagation();
+  if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+  handlePluginUIAction(action, button);
+}, true);
 
 function detectPluginCaptureFromHash() {
   try {
