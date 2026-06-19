@@ -4675,7 +4675,7 @@
       <div class="flex items-center justify-between px-6 py-5 border-b border-white/5">
         <div>
           <h3 class="text-white font-bold text-lg">Workspace Settings</h3>
-          <p class="text-xs text-gray-500 mt-1">Settings, connected accounts, diagnostics, and Brand OS access.</p>
+          <p class="text-xs text-gray-500 mt-1">Settings, connected accounts, and Brand OS access.</p>
         </div>
         <button id="close-workspace-hub-btn" type="button" class="w-10 h-10 rounded-xl bg-[#1a1128] hover:bg-[#231738] text-gray-400 hover:text-white border border-white/5 transition-colors flex items-center justify-center">
           <i class="ph-bold ph-x"></i>
@@ -4685,8 +4685,8 @@
         <aside id="workspace-settings-sidebar" class="p-5 border-r border-white/5 overflow-y-auto custom-scrollbar space-y-2">
           <button type="button" class="settings-tab-btn w-full text-left px-4 py-3 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold uppercase tracking-wider text-white active" data-settings-tab="settings" data-workspace-tab="settings">Settings</button>
           <button type="button" class="settings-tab-btn w-full text-left px-4 py-3 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold uppercase tracking-wider text-gray-300" data-settings-tab="accounts" data-workspace-tab="accounts">Connected Accounts</button>
-          <button id="settings-diagnostics-tab-btn" type="button" class="settings-tab-btn w-full text-left px-4 py-3 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold uppercase tracking-wider text-gray-300" data-settings-tab="diagnostics" data-workspace-tab="diagnostics">Diagnostics</button>
-          <button type="button" class="settings-tab-btn w-full text-left px-4 py-3 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold uppercase tracking-wider text-gray-300" data-settings-tab="providers" data-workspace-tab="providers">AI Providers</button>
+          <button id="settings-diagnostics-tab-btn" type="button" class="settings-tab-btn hidden w-full text-left px-4 py-3 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold uppercase tracking-wider text-gray-300" data-settings-tab="diagnostics" data-workspace-tab="diagnostics">Diagnostics</button>
+          <button type="button" class="settings-tab-btn hidden w-full text-left px-4 py-3 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold uppercase tracking-wider text-gray-300" data-settings-tab="providers" data-workspace-tab="providers">AI Providers</button>
           <button type="button" id="workspace-open-brand-os-btn" class="w-full text-left px-4 py-3 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold uppercase tracking-wider text-gray-300">Brand OS</button>
         </aside>
         <div class="p-6 overflow-y-auto custom-scrollbar min-h-0">
@@ -5330,6 +5330,24 @@ function getCurrentWorkspaceSlug() {
   }
 }
 
+function isMissingColumnError(error, columnName = "") {
+  const msg = String(error && (error.message || error.details || error.hint || error.code) || error || "").toLowerCase();
+  if (!msg) return false;
+  if (columnName && !msg.includes(String(columnName).toLowerCase())) return false;
+  return msg.includes("column") && (msg.includes("does not exist") || msg.includes("not found") || msg.includes("schema cache"));
+}
+
+function getWorkspaceBrandingDefaults(workspace = {}) {
+  return {
+    short_name: String(workspace.short_name || "").trim(),
+    avatar_mode: String(workspace.avatar_mode || "initials").trim() || "initials",
+    icon: String(workspace.icon || "").trim(),
+    avatar_initials: String(workspace.avatar_initials || getWorkspaceInitials(workspace) || "").trim(),
+    constellation_shape: String(workspace.constellation_shape || "star").trim() || "star",
+    media_bucket: String(workspace.media_bucket || workspace.storage_bucket || "media").trim() || "media"
+  };
+}
+
 function getSessionWorkspaceConfig() {
   try {
     const raw = sessionStorage.getItem("STELLARSYNC_ACTIVE_WORKSPACE");
@@ -5361,6 +5379,7 @@ function getSessionWorkspaceConfig() {
 	      avatar_initials: String(parsed.avatar_initials || "").trim(),
 	      avatar_mode: String(parsed.avatar_mode || parsed.avatarMode || "").trim(),
 	      icon: String(parsed.icon || parsed.avatar_icon || "").trim(),
+	      constellation_shape: String(parsed.constellation_shape || parsed.constellationShape || "star").trim() || "star",
 	      sheet_sync_enabled: Boolean(parsed.sheet_sync_enabled),
 	      sheet_sync_direction: String(parsed.sheet_sync_direction || "bidirectional").trim(),
 	      sheet_last_pushed_at: parsed.sheet_last_pushed_at || null,
@@ -5421,8 +5440,9 @@ function loadWorkspaceConfig() {
 	      storage_bucket: sessionConfig.media_bucket || masterConfig.storage_bucket || "media",
 	      short_name: sessionConfig.short_name || "",
 	      avatar_initials: sessionConfig.avatar_initials || "",
-	      avatar_mode: sessionConfig.avatar_mode || "",
-	      icon: sessionConfig.icon || ""
+	      avatar_mode: sessionConfig.avatar_mode || "initials",
+	      icon: sessionConfig.icon || "",
+	      constellation_shape: sessionConfig.constellation_shape || "star"
 	    };
     if (active.backend_type && !WORKSPACE_RUNTIME_CONFIG.backend_types.includes(active.backend_type)) {
       active.backend_type = "supabase_native";
@@ -5454,9 +5474,9 @@ function loadWorkspaceConfig() {
     media_bucket: String(workspaceConfig.media_bucket || masterConfig.media_bucket || workspaceConfig.storage_bucket || masterConfig.storage_bucket || "media").trim(),
     short_name: String(workspaceConfig.short_name || masterConfig.short_name || "").trim(),
     avatar_initials: String(workspaceConfig.avatar_initials || masterConfig.avatar_initials || "").trim(),
-    avatar_mode: String(workspaceConfig.avatar_mode || workspaceConfig.avatarMode || masterConfig.avatar_mode || "").trim(),
+    avatar_mode: String(workspaceConfig.avatar_mode || workspaceConfig.avatarMode || masterConfig.avatar_mode || "initials").trim(),
     icon: String(workspaceConfig.icon || workspaceConfig.avatar_icon || masterConfig.icon || "").trim(),
-    constellation_shape: String(workspaceConfig.constellation_shape || masterConfig.constellation_shape || "").trim(),
+    constellation_shape: String(workspaceConfig.constellation_shape || masterConfig.constellation_shape || "star").trim() || "star",
     brand_accent: String(workspaceConfig.brand_accent || masterConfig.brand_accent || "").trim(),
     brand_voice: String(workspaceConfig.brand_voice || masterConfig.brand_voice || "").trim(),
     default_platforms: Array.isArray(workspaceConfig.default_platforms) ? workspaceConfig.default_platforms : Array.isArray(masterConfig.default_platforms) ? masterConfig.default_platforms : [],
@@ -5497,7 +5517,7 @@ function normalizeSupabaseWorkspaceConfig(workspace) {
     avatar_initials: String(source.avatar_initials || source.avatarInitials || "").trim(),
     avatar_mode: String(source.avatar_mode || source.avatarMode || "").trim(),
     icon: String(source.icon || source.avatar_icon || source.avatarIcon || "").trim(),
-    constellation_shape: String(source.constellation_shape || source.constellationShape || "").trim(),
+    constellation_shape: String(source.constellation_shape || source.constellationShape || "star").trim() || "star",
     brand_accent: String(source.brand_accent || source.brandAccent || "").trim(),
     brand_voice: String(source.brand_voice || source.brandVoice || "").trim(),
     media_bucket: String(source.media_bucket || source.storage_bucket || "media").trim(),
@@ -5539,9 +5559,9 @@ function mergeWorkspaceSettings(workspace, settings) {
     settings_plan: plan,
     short_name: shortName || workspace.short_name || "",
     avatar_initials: avatarInitials || workspace.avatar_initials || "",
-    avatar_mode: avatarMode || workspace.avatar_mode || "",
+    avatar_mode: avatarMode || workspace.avatar_mode || "initials",
     icon: icon || workspace.icon || "",
-    constellation_shape: String(settings.constellation_shape || workspace.constellation_shape || "").trim(),
+    constellation_shape: String(settings.constellation_shape || workspace.constellation_shape || "star").trim() || "star",
     brand_accent: String(settings.brand_accent || workspace.brand_accent || "").trim(),
     brand_voice: String(settings.brand_voice || workspace.brand_voice || "").trim(),
     media_bucket: String(settings.media_bucket || workspace.media_bucket || workspace.storage_bucket || "media").trim(),
@@ -5567,21 +5587,95 @@ function mergeWorkspaceSettings(workspace, settings) {
   };
 }
 
+async function loadWorkspaceBrandingSettings(workspaceId, workspace = {}) {
+  const defaults = getWorkspaceBrandingDefaults(workspace);
+  const slug = String(workspace.workspace_slug || workspace.slug || "").trim();
+  if (!STELLARSYNC_SUPABASE_CLIENT || (!String(workspaceId || "").trim() && !slug)) return defaults;
+  const primaryFields = [
+    "id",
+    "workspace_id",
+    "workspace_slug",
+    "display_name",
+    "plan",
+    "backend_type",
+    "short_name",
+    "avatar_mode",
+    "icon",
+    "avatar_initials",
+    "constellation_shape",
+    "brand_accent",
+    "brand_voice",
+    "media_bucket",
+    "google_sheet_id",
+    "sheet_id",
+    "apps_script_url",
+    "sheet_sync_enabled",
+    "sheet_sync_direction",
+    "sheet_last_pushed_at",
+    "sheet_last_pulled_at",
+    "monday_board_id",
+    "monday_sync_enabled",
+    "monday_sync_direction",
+    "monday_last_pushed_at",
+    "monday_last_pulled_at",
+    "monday_auto_sync_on_save",
+    "default_platforms",
+    "default_pillars",
+    "default_statuses",
+    "default_post_types",
+    "current_month",
+    "current_year"
+  ].join(",");
+  const minimalFields = "id,workspace_id,workspace_slug,display_name,plan,backend_type";
+
+  async function runSettingsSelect(fields) {
+    const wid = String(workspaceId || "").trim();
+    if (wid) {
+      const byId = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").select(fields).eq("workspace_id", wid).maybeSingle();
+      if ((byId && byId.data) || !slug || (byId && byId.error && byId.error.code !== "PGRST116")) return byId;
+    }
+    if (slug) {
+      return STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").select(fields).eq("workspace_slug", slug).maybeSingle();
+    }
+    return { data: null, error: null };
+  }
+
+  try {
+    let result = await runSettingsSelect(primaryFields);
+    if (result && result.error && isMissingColumnError(result.error)) {
+      console.warn("[boot-safe] optional column missing", result.error.message || result.error);
+      console.warn("[boot-safe] retrying minimal workspace load");
+      result = await runSettingsSelect(minimalFields);
+      if (result && result.error) {
+        console.warn("[boot-safe] continuing with defaults", result.error.message || result.error);
+        return defaults;
+      }
+      return { ...defaults, ...(result.data || {}) };
+    }
+    if (result && result.error) {
+      console.warn("[workspace-settings] load unavailable", result.error);
+      return defaults;
+    }
+    return { ...defaults, ...(result && result.data || {}) };
+  } catch (err) {
+    if (isMissingColumnError(err)) {
+      console.warn("[boot-safe] optional column missing", err.message || err);
+      console.warn("[boot-safe] continuing with defaults");
+    } else {
+      console.warn("[workspace-settings] load failed", err);
+    }
+    return defaults;
+  }
+}
+
 async function loadWorkspaceSettingsForWorkspace(workspace) {
   if (!STELLARSYNC_SUPABASE_CLIENT || !workspace) return workspace;
   const slug = String(workspace.slug || workspace.workspace_slug || "").trim();
-  if (!slug) return workspace;
+  const workspaceId = String(workspace.id || workspace.workspace_id || "").trim();
+  if (!slug && !workspaceId) return workspace;
   try {
-    const result = await STELLARSYNC_SUPABASE_CLIENT
-      .from("workspace_settings")
-      .select("*")
-      .eq("workspace_slug", slug)
-      .maybeSingle();
-    if (result && result.error) {
-      console.warn("[workspace-settings] load unavailable", result.error);
-      return workspace;
-    }
-    return mergeWorkspaceSettings(workspace, result && result.data);
+    const settings = await loadWorkspaceBrandingSettings(workspaceId, workspace);
+    return mergeWorkspaceSettings(workspace, settings);
   } catch (err) {
     console.warn("[workspace-settings] load failed", err);
     return workspace;
@@ -5622,15 +5716,6 @@ async function fetchWorkspaceMembershipsByUserId(userId, userEmail) {
     backend_type,
     supabase_media_enabled,
     media_bucket,
-    constellation_shape,
-    brand_accent,
-    brand_voice,
-    default_platforms,
-    default_pillars,
-    default_statuses,
-    default_post_types,
-    current_month,
-    current_year,
     created_at,
     updated_at
   `;
@@ -5961,7 +6046,7 @@ async function ensureSupabaseWorkspaceBeforeBoot() {
 
   // Prefer google_sheets connection apps_script_url only when hybrid mode is selected.
   const gsConn = WORKSPACE_CONNECTIONS.find(c => c && c.provider === "google_sheets");
-  const connAppsScriptUrl = gsConn && gsConn.config && String(gsConn.config.apps_script_url || "").trim();
+  const connAppsScriptUrl = String((gsConn && gsConn.config && gsConn.config.apps_script_url) || (gsConn && gsConn.metadata && gsConn.metadata.apps_script_url) || "").trim();
   if (connAppsScriptUrl) {
     activeWorkspace.apps_script_url = connAppsScriptUrl;
     console.log("[app-router] using google_sheets connection apps_script_url");
@@ -13345,11 +13430,86 @@ function getGoogleSheetsConnectionSource() {
   const conn = getWorkspaceConnection("google_sheets");
   const connUrl = String(conn?.config?.apps_script_url || "").trim();
   if (connUrl) return { source: "workspace_connections.google_sheets.config.apps_script_url", url: connUrl, connection: conn };
+  const connMetaUrl = String(conn?.metadata?.apps_script_url || "").trim();
+  if (connMetaUrl) return { source: "workspace_connections.google_sheets.metadata.apps_script_url", url: connMetaUrl, connection: conn };
   const workspaceUrl = String(WORKSPACE_RUNTIME_CONFIG?.active?.apps_script_url || "").trim();
   if (workspaceUrl) return { source: "workspaces.apps_script_url", url: workspaceUrl, connection: conn || null };
   const activeUrl = String(WORKSPACE_RUNTIME_CONFIG?.active?.api_url || WORKSPACE_RUNTIME_CONFIG?.active?.backend_url || "").trim();
   if (activeUrl) return { source: "active backend config", url: activeUrl, connection: conn || null };
   return { source: "none", url: "", connection: conn || null };
+}
+
+function getGoogleSheetsConnectionStatus(workspace = WORKSPACE_RUNTIME_CONFIG?.active, workspaceSettings = {}, workspaceConnections = WORKSPACE_CONNECTIONS) {
+  const active = workspace || {};
+  const settings = workspaceSettings || {};
+  const list = Array.isArray(workspaceConnections) ? workspaceConnections : [];
+  const conn = list.find((item) => item && item.provider === "google_sheets") || {};
+  const connConfig = conn.config || {};
+  const connMeta = conn.metadata || {};
+  const sources = {
+    sheet_id: [
+      ["workspace_settings.google_sheet_id", settings.google_sheet_id],
+      ["workspace_settings.sheet_id", settings.sheet_id],
+      ["workspace.google_sheet_id", active.google_sheet_id],
+      ["workspace.sheet_id", active.sheet_id],
+      ["workspace_connections.google_sheets.config.google_sheet_id", connConfig.google_sheet_id],
+      ["workspace_connections.google_sheets.config.sheet_id", connConfig.sheet_id],
+      ["workspace_connections.google_sheets.config.spreadsheet_id", connConfig.spreadsheet_id],
+      ["workspace_connections.google_sheets.metadata.google_sheet_id", connMeta.google_sheet_id],
+      ["workspace_connections.google_sheets.metadata.sheet_id", connMeta.sheet_id],
+      ["workspace_connections.google_sheets.metadata.spreadsheet_id", connMeta.spreadsheet_id]
+    ],
+    apps_script_url: [
+      ["workspace_settings.apps_script_url", settings.apps_script_url],
+      ["workspace.apps_script_url", active.apps_script_url],
+      ["workspace_connections.google_sheets.config.apps_script_url", connConfig.apps_script_url],
+      ["workspace_connections.google_sheets.metadata.apps_script_url", connMeta.apps_script_url]
+    ],
+    sheet_sync_enabled: [
+      ["workspace_settings.sheet_sync_enabled", settings.sheet_sync_enabled],
+      ["workspace.sheet_sync_enabled", active.sheet_sync_enabled],
+      ["workspace_connections.google_sheets.config.sheet_sync_enabled", connConfig.sheet_sync_enabled],
+      ["workspace_connections.google_sheets.metadata.sheet_sync_enabled", connMeta.sheet_sync_enabled]
+    ]
+  };
+  function firstPresent(entries) {
+    for (const pair of entries) {
+      const value = String(pair[1] ?? "").trim();
+      if (value) return { source: pair[0], value };
+    }
+    return { source: "", value: "" };
+  }
+  const sheet = firstPresent(sources.sheet_id);
+  const apps = firstPresent(sources.apps_script_url);
+  const disabled = sources.sheet_sync_enabled.some(function(pair) {
+    return pair[1] === false || String(pair[1]).trim().toLowerCase() === "false";
+  });
+  let status = "not_configured";
+  if (sheet.value && apps.value) status = disabled ? "mirror_disabled" : "connected";
+  else if (apps.value && !sheet.value) status = "missing_sheet";
+  else if (sheet.value && !apps.value) status = "missing_apps_script";
+  const labels = {
+    connected: "Connected",
+    mirror_disabled: "Connected · Mirror disabled",
+    missing_sheet: "Missing Sheet ID",
+    missing_apps_script: "Missing Apps Script URL",
+    not_configured: "Not configured"
+  };
+  const resolved = {
+    status,
+    label: labels[status] || labels.not_configured,
+    connected: status === "connected" || status === "mirror_disabled",
+    sheetId: sheet.value,
+    sheetSource: sheet.source,
+    appsScriptUrl: apps.value,
+    appsScriptSource: apps.source,
+    mirrorDisabled: status === "mirror_disabled",
+    syncEnabled: !disabled,
+    connection: conn || null
+  };
+  console.log("[sheets-status] sources", sources);
+  console.log("[sheets-status] resolved", resolved);
+  return resolved;
 }
 
 function getMondayBoardId(workspace = WORKSPACE_RUNTIME_CONFIG?.active, connections = WORKSPACE_CONNECTIONS) {
@@ -22437,23 +22597,19 @@ async function syncRemoteIfConfigured() {
 
 function getSheetMirrorConfig() {
   var active = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active || {};
-  var sheetId = String(active.google_sheet_id || active.sheet_id || "").trim();
-  var appsScriptUrl = String(active.apps_script_url || "").trim();
-  var gsConn = getWorkspaceConnection("google_sheets");
-  if (gsConn && gsConn.config) {
-    sheetId = sheetId || String(gsConn.config.sheet_id || gsConn.config.google_sheet_id || "").trim();
-    appsScriptUrl = appsScriptUrl || String(gsConn.config.apps_script_url || "").trim();
-  }
+  var status = getGoogleSheetsConnectionStatus(active, active, WORKSPACE_CONNECTIONS);
+  var sheetId = String(status.sheetId || "").trim();
+  var appsScriptUrl = String(status.appsScriptUrl || "").trim();
   var backendMode = getActiveWorkspaceBackendMode();
   var isSupabaseNative = backendMode.mode === "supabase_native";
   return {
     sheetId: sheetId,
     appsScriptUrl: appsScriptUrl,
-    syncEnabled: Boolean(active.sheet_sync_enabled),
+    syncEnabled: status.syncEnabled,
     syncDirection: String(active.sheet_sync_direction || "bidirectional").trim(),
     lastPushedAt: active.sheet_last_pushed_at || null,
     lastPulledAt: active.sheet_last_pulled_at || null,
-    isManagedMirror: !isSupabaseNative && !!sheetId && Boolean(active.sheet_sync_enabled),
+    isManagedMirror: status.status === "connected" && !isSupabaseNative,
     backendMode: backendMode.mode
   };
 }
@@ -22846,9 +23002,11 @@ async function applyMediaAttachmentSheetRows(rows = [], workspaceId = "") {
 function renderSheetMirrorCard() {
   var config = getSheetMirrorConfig();
   var active = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active || {};
+  var sheetsStatus = getGoogleSheetsConnectionStatus(active, active, WORKSPACE_CONNECTIONS);
+  console.log("[sheets-status] card render", sheetsStatus);
   var backendMode = getActiveWorkspaceBackendMode();
   var isLegacySource = backendMode.mode === "google_sheets_hybrid";
-  if (!config.sheetId) {
+  if (sheetsStatus.status === "not_configured") {
     return '<div class="platform-card" data-mirror-card="sheet-mirror">' +
       '<div class="flex items-center justify-between gap-3 mb-3">' +
       '<div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Google Sheets Mirror</div><div class="text-sm text-white mt-1">Not configured</div></div>' +
@@ -22861,15 +23019,18 @@ function renderSheetMirrorCard() {
       '</div></div>';
   }
   var statusColor = "text-gray-500";
-  var statusText = "Not configured";
+  var statusText = sheetsStatus.label;
   var statusIcon = "ph-plugs";
-  if (config.isManagedMirror) {
+  if (sheetsStatus.status === "connected") {
     statusColor = "text-[#00ffaa]";
     statusText = "Connected";
     statusIcon = "ph-check-circle";
-  } else if (config.sheetId) {
+  } else if (sheetsStatus.status === "mirror_disabled") {
     statusColor = "text-yellow-400";
-    statusText = "Sync disabled";
+    statusText = "Connected · Mirror disabled";
+    statusIcon = "ph-warning";
+  } else if (sheetsStatus.status === "missing_sheet" || sheetsStatus.status === "missing_apps_script") {
+    statusColor = "text-yellow-400";
     statusIcon = "ph-warning";
   }
   var lastPush = config.lastPushedAt ? new Date(config.lastPushedAt).toLocaleString() : "Never";
@@ -27871,9 +28032,24 @@ function renderAISemanticMemoryCards() {
   ].map(([label, value]) => `<div class="p-3 rounded-xl bg-[#181125] border border-white/5"><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${escapeHtml(label)}</div><div class="text-sm text-white wrap-safe mt-1">${escapeHtml(value)}</div></div>`).join("");
 }
 
+function formatBootDiagnostic(context, error) {
+  var raw = String(error && (error.message || error.details || error.hint || error.code) || error || "Unknown error");
+  var detail = "[" + context + "] " + raw;
+  if (isMissingColumnError(error)) {
+    var columnMatch = raw.match(/column\s+([a-z0-9_\.]+)\s+does not exist/i);
+    var columnName = columnMatch && columnMatch[1] ? columnMatch[1] : "";
+    var source = columnName.indexOf(".") !== -1 ? columnName.split(".")[0] : "unknown table";
+    detail += "\nSource: " + source + (columnName ? "\nColumn: " + columnName : "");
+    if (raw.toLowerCase().includes("constellation_shape") || raw.toLowerCase().includes("avatar_") || raw.toLowerCase().includes("media_bucket")) {
+      detail += "\nSuggested migration: add optional branding fields to public.workspace_settings, not public.workspaces.";
+    }
+  }
+  return detail;
+}
+
 function reportFrontendError(context, error) {
   try {
-    var msg = "[" + context + "] " + (error && error.message || error || "Unknown error");
+    var msg = formatBootDiagnostic(context, error);
     bootErrors.push(msg);
     pushAppError(context, error);
     console.error("Boot error:", msg, error);
@@ -27899,6 +28075,20 @@ function showBootFailurePanel(error) {
     domEl && (domEl.textContent = "yes");
     startedEl && (startedEl.textContent = window.__BOOT_STARTED ? "yes" : "no");
     completedEl && (completedEl.textContent = "failed");
+    if (isMissingColumnError(error) && panel.querySelector("#boot-safe-defaults-btn") === null) {
+      var action = document.createElement("button");
+      action.id = "boot-safe-defaults-btn";
+      action.type = "button";
+      action.className = "mt-4 px-4 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] text-white text-xs uppercase tracking-wider font-bold";
+      action.textContent = "Continue with safe defaults";
+      action.addEventListener("click", function() {
+        console.warn("[boot-safe] continuing with defaults");
+        panel.classList.add("hidden");
+        loadWorkspaceConfig();
+        bootMinimalApp();
+      });
+      panel.querySelector("div")?.appendChild(action);
+    }
     panel.classList.remove("hidden");
   } catch (_) {
     document.body.innerHTML = '<div style="padding:40px;color:white;background:#0a0514;min-height:100vh;font-family:monospace;">' +
@@ -28285,6 +28475,7 @@ async function savePWProfile() {
   try {
     if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase client not available");
     var user = STELLARSYNC_AUTH_USER;
+    if (!user) throw new Error("Authenticated user not available");
     if (user) {
       var updateResult = await STELLARSYNC_SUPABASE_CLIENT.auth.updateUser({ data: payload });
       console.log("[profile-save] response", { ok: !updateResult?.error, error: updateResult?.error || null });
@@ -28296,7 +28487,7 @@ async function savePWProfile() {
         return String(persisted[key] || "").trim() !== String(payload[key] || "").trim();
       });
       if (mismatch) {
-        showToast("Profile saved with warning", "Saved response returned, but persisted values did not match.", "ph-warning", "text-yellow-400");
+        throw new Error("Profile save verification failed: persisted values did not match the requested profile settings.");
       }
       STELLARSYNC_AUTH_USER = reloaded?.data?.user || STELLARSYNC_AUTH_USER;
       if (typeof window !== "undefined") window.__currentAuthUser = STELLARSYNC_AUTH_USER;
@@ -28344,6 +28535,7 @@ async function savePWWorkspace() {
     if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase client not available");
     var slug = (activeWorkspace && (activeWorkspace.workspace_slug || activeWorkspace.slug)) || "";
     var workspaceId = activeWorkspace.workspace_id || activeWorkspace.id || "";
+    if (!slug) throw new Error("Workspace slug missing; cannot verify workspace settings save.");
     if (slug) {
       if (workspaceId && payload.display_name) {
         var workspaceUpdate = await STELLARSYNC_SUPABASE_CLIENT
@@ -28358,10 +28550,22 @@ async function savePWWorkspace() {
         var settingsUpdate = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").update(payload).eq("id", existing.data.id);
         if (settingsUpdate.error) throw settingsUpdate.error;
       } else {
-        var settingsInsert = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").insert({ ...payload, workspace_slug: slug });
+        var settingsInsert = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").insert({ ...payload, workspace_id: workspaceId || null, workspace_slug: slug });
         if (settingsInsert.error) throw settingsInsert.error;
       }
       console.log("[workspace-save] response", { ok: true, workspace_slug: slug });
+      var reloadedWorkspaceRecord = null;
+      if (workspaceId && payload.display_name) {
+        reloadedWorkspaceRecord = await STELLARSYNC_SUPABASE_CLIENT
+          .from("workspaces")
+          .select("id,name")
+          .eq("id", workspaceId)
+          .maybeSingle();
+        if (reloadedWorkspaceRecord.error) throw reloadedWorkspaceRecord.error;
+        if (String(reloadedWorkspaceRecord?.data?.name || "").trim() !== String(payload.display_name || "").trim()) {
+          throw new Error("Workspace name save verification failed: persisted workspace name did not match.");
+        }
+      }
       var reloadedWorkspace = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").select("*").eq("workspace_slug", slug).maybeSingle();
       console.log("[workspace-save] reload check", reloadedWorkspace?.data || null);
       if (reloadedWorkspace?.error) throw reloadedWorkspace.error;
@@ -28370,7 +28574,7 @@ async function savePWWorkspace() {
         return String((persisted && persisted[key]) || "").trim() !== String((payload && payload[key]) || "").trim();
       });
       if (mismatch) {
-        showToast("Workspace saved with warning", "Saved response returned, but persisted values did not match.", "ph-warning", "text-yellow-400");
+        throw new Error("Workspace save verification failed: persisted settings did not match requested values.");
       }
       WORKSPACE_RUNTIME_CONFIG.active = mergeWorkspaceSettings(WORKSPACE_RUNTIME_CONFIG.active, payload);
       WORKSPACE_RUNTIME_CONFIG.active.name = payload.display_name || WORKSPACE_RUNTIME_CONFIG.active.name;
