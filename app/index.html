@@ -4929,6 +4929,7 @@
           <button type="button" class="pw-tab-btn w-full text-left px-4 py-2.5 rounded-xl bg-[#2d1b4e] text-white text-xs font-bold uppercase tracking-wider active" data-pw-tab="profile">Profile</button>
           <button type="button" class="pw-tab-btn w-full text-left px-4 py-2.5 rounded-xl bg-[#181125] text-gray-300 text-xs font-bold uppercase tracking-wider" data-pw-tab="workspace">Workspace</button>
           <button type="button" class="pw-tab-btn w-full text-left px-4 py-2.5 rounded-xl bg-[#181125] text-gray-300 text-xs font-bold uppercase tracking-wider" data-pw-tab="connections">Connections</button>
+          <button type="button" class="pw-tab-btn w-full text-left px-4 py-2.5 rounded-xl bg-[#181125] text-gray-300 text-xs font-bold uppercase tracking-wider" data-pw-tab="members">Members</button>
           <button type="button" class="pw-tab-btn w-full text-left px-4 py-2.5 rounded-xl bg-[#181125] text-gray-300 text-xs font-bold uppercase tracking-wider" data-pw-tab="ai-providers">AI Providers</button>
           <button type="button" class="pw-tab-btn w-full text-left px-4 py-2.5 rounded-xl bg-[#181125] text-gray-300 text-xs font-bold uppercase tracking-wider" data-pw-tab="report-bug">Report Bug</button>
           <button type="button" class="pw-tab-btn w-full text-left px-4 py-2.5 rounded-xl bg-[#181125] text-gray-300 text-xs font-bold uppercase tracking-wider" data-pw-tab="contact-support">Contact Support</button>
@@ -5033,6 +5034,10 @@
                   <input id="pw-workspace-media-bucket" type="text" placeholder="media" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50">
                 </div>
                 <div>
+                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Media Prefix</div>
+                  <input id="pw-workspace-media-prefix" type="text" placeholder="{slug}/" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50">
+                </div>
+                <div>
                   <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Current Month</div>
                   <input id="pw-workspace-current-month" type="text" placeholder="June" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50">
                 </div>
@@ -5077,6 +5082,32 @@
               <button type="button" id="pw-backfill-monday-btn" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 hover:text-white transition-colors">Backfill Monday Board</button>
             </div>
             <div id="pw-connections-list" class="space-y-3"></div>
+          </section>
+          <!-- Members Tab -->
+          <section data-pw-panel="members" class="hidden space-y-4">
+            <div class="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Workspace Members</div>
+                <div class="text-xs text-gray-400 mt-1">Manage who has access to this workspace.</div>
+              </div>
+            </div>
+            <div id="pw-members-invite-box" class="platform-card hidden space-y-3">
+              <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Invite Member</div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <input id="pw-members-invite-email" type="email" placeholder="email@example.com" class="flex-1 min-w-[200px] px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50">
+                <select id="pw-members-invite-role" class="px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white focus:outline-none focus:border-purple-500/50">
+                  <option value="viewer">Viewer</option>
+                  <option value="reviewer">Reviewer</option>
+                  <option value="content_lead">Content Lead</option>
+                  <option value="admin">Admin</option>
+                </select>
+                <button id="pw-members-invite-btn" type="button" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all">Invite</button>
+              </div>
+              <div id="pw-members-invite-result" class="text-xs text-gray-400"></div>
+            </div>
+            <div id="pw-members-list" class="space-y-2">
+              <div class="text-xs text-gray-500">Loading members...</div>
+            </div>
           </section>
           <!-- AI Providers Tab -->
           <section data-pw-panel="ai-providers" class="hidden space-y-4">
@@ -5545,6 +5576,7 @@ function normalizeSupabaseWorkspaceConfig(workspace) {
     brand_accent: String(source.brand_accent || source.brandAccent || "").trim(),
     brand_voice: String(source.brand_voice || source.brandVoice || "").trim(),
     media_bucket: String(source.media_bucket || source.storage_bucket || "media").trim(),
+    media_prefix: String(source.media_prefix || "").trim() || String(source.slug || source.workspace_slug || "").trim() + "/",
     default_platforms: Array.isArray(source.default_platforms) ? source.default_platforms : String(source.default_platforms || "").split(/[|,\n]/).map((value) => String(value || "").trim()).filter(Boolean),
     default_pillars: Array.isArray(source.default_pillars) ? source.default_pillars : String(source.default_pillars || "").split(/[|,\n]/).map((value) => String(value || "").trim()).filter(Boolean),
     default_statuses: Array.isArray(source.default_statuses) ? source.default_statuses : String(source.default_statuses || "").split(/[|,\n]/).map((value) => String(value || "").trim()).filter(Boolean),
@@ -5589,6 +5621,7 @@ function mergeWorkspaceSettings(workspace, settings) {
     brand_accent: String(settings.brand_accent || workspace.brand_accent || "").trim(),
     brand_voice: String(settings.brand_voice || workspace.brand_voice || "").trim(),
     media_bucket: String(settings.media_bucket || workspace.media_bucket || workspace.storage_bucket || "media").trim(),
+    media_prefix: String(settings.media_prefix || workspace.media_prefix || "").trim(),
     default_platforms: Array.isArray(settings.default_platforms) ? settings.default_platforms : (workspace.default_platforms || []),
     default_pillars: Array.isArray(settings.default_pillars) ? settings.default_pillars : (workspace.default_pillars || []),
     default_statuses: Array.isArray(settings.default_statuses) ? settings.default_statuses : (workspace.default_statuses || []),
@@ -5630,6 +5663,7 @@ async function loadWorkspaceBrandingSettings(workspaceId, workspace = {}) {
     "brand_accent",
     "brand_voice",
     "media_bucket",
+    "media_prefix",
     "google_sheet_id",
     "sheet_id",
     "apps_script_url",
@@ -6152,12 +6186,15 @@ function sanitizeWorkspacePathSegment(value, fallback) {
 }
 
 function buildWorkspaceMediaPath(workspaceSlug, postId, filename) {
+  const config = WORKSPACE_RUNTIME_CONFIG.active || loadWorkspaceConfig();
   const slug = sanitizeWorkspacePathSegment(workspaceSlug || getCurrentWorkspaceSlug() || "master", "master");
   const name = sanitizeWorkspacePathSegment(filename || "media", "media");
   const unique = (window.crypto && typeof window.crypto.randomUUID === "function")
     ? window.crypto.randomUUID()
     : String(Date.now());
-  return `${slug}/${unique}-${name}`;
+  var prefix = config.media_prefix || slug + "/";
+  if (!prefix.endsWith("/")) prefix += "/";
+  return prefix + unique + "-" + name;
 }
 
 function inferUploadMediaType(file) {
@@ -6820,6 +6857,13 @@ function getMediaPostContext(media) {
   return null;
 }
 
+function formatCarouselPosition(index, total) {
+  var raw = Number(index || 0);
+  var display = (raw + 1) + " of " + total;
+  console.log("[carousel-position] raw", index, "[carousel-position] display", display);
+  return display;
+}
+
 function getMediaSubtitle(asset, linkedPost, carouselIndex, carouselTotal) {
   if (!asset) return "";
   if (linkedPost) {
@@ -6827,7 +6871,8 @@ function getMediaSubtitle(asset, linkedPost, carouselIndex, carouselTotal) {
     if (mediaTitle) return "Media title: " + mediaTitle;
   }
   if (linkedPost && typeof carouselTotal === "number" && carouselTotal > 1 && typeof carouselIndex === "number" && carouselIndex >= 0) {
-    return "Carousel item \u00b7 " + (carouselIndex + 1) + " of " + carouselTotal;
+    var pos = formatCarouselPosition(carouselIndex, carouselTotal);
+    return "Carousel item \u00b7 " + pos;
   }
   return "";
 }
@@ -6855,7 +6900,12 @@ function getMediaBadgeLabel(asset, linkedPost = getLinkedPostForMedia(asset)) {
     var attached = getAttachedMediaForPost(linkedPost);
     if (attached.length > 1) {
       var idx = attached.findIndex(function(a) { return getMediaAssetId(a) === getMediaAssetId(asset); });
-      return "Carousel item \u00b7 " + (idx + 1) + " of " + attached.length;
+      if (idx === -1) {
+        console.warn("[carousel-position] raw -1 [carousel-position] display badge fallback: Attached", { attachedIds: attached.map(getMediaAssetId), assetId: getMediaAssetId(asset) });
+        return "Attached";
+      }
+      var pos = formatCarouselPosition(idx, attached.length);
+      return "Carousel item \u00b7 " + pos;
     }
     return "Attached";
   }
@@ -7603,6 +7653,7 @@ function renderMediaGalleryStrip(assets = [], options = {}) {
         const title = getMediaDisplayTitle(asset, linkedPost, `Asset ${index + 1}`);
         var carouselTotal = items.length;
         var subtitle = getMediaSubtitle(asset, linkedPost, index, carouselTotal);
+        console.log("[carousel-position] raw", index, "[carousel-position] display gallery badge", index + 1);
         return `
           <div class="shrink-0 w-28 rounded-xl bg-[#120c1d] border border-white/5 overflow-hidden">
             <div class="relative aspect-square bg-[#0f0a18]">
@@ -12699,6 +12750,7 @@ function renderModalCarouselPreview() {
     var linkedPostForCarousel = getLinkedPostForMedia(asset) || getMediaPostContext(asset);
     var carouselTitle = getMediaDisplayTitle(asset, linkedPostForCarousel, "Carousel asset");
     var carouselSubtitle = getMediaSubtitle(asset, linkedPostForCarousel, index, items.length);
+    console.log("[carousel-position] raw", index, "[carousel-position] display modal carousel badge", index + 1);
     return `
       <div class="p-3 rounded-xl bg-[#181125] border border-white/5 flex gap-3 relative"
         draggable="true"
@@ -17980,6 +18032,11 @@ function renderMedia() {
       var pmForPost = getAttachedMediaForPost(linkedPost);
       carouselTotal = pmForPost.length;
       carouselIdx = pmForPost.findIndex(function(a) { return getMediaAssetId(a) === getMediaAssetId(item); });
+      if (carouselIdx === -1) {
+        console.warn("[carousel-position] raw -1 [carousel-position] display vault card fallback: no position", { postId: linkedPost.id, assetId: getMediaAssetId(item) });
+      } else {
+        formatCarouselPosition(carouselIdx, carouselTotal);
+      }
     }
     var subtitle = getMediaSubtitle(item, linkedPost, carouselIdx, carouselTotal);
     const assetUrl = isGroup ? (item.sourceUrl || linkedPost?.sourceUrl || "") : (item.fileUrl || item.sourceUrl || "");
@@ -18399,6 +18456,7 @@ function renderMediaPreviewContent(item, linkedAssets, previewUrl, type) {
     var linkedPostForTile = getLinkedPostForMedia(asset) || getMediaPostContext(asset);
     const title = getMediaDisplayTitle(asset, linkedPostForTile, `Asset ${index + 1}`);
     var subtitle = getMediaSubtitle(asset, linkedPostForTile, index, total);
+    console.log("[carousel-position] raw", index, "[carousel-position] display manage tile badge", index + 1);
     const mediaAssetId = getMediaAssetId(asset);
     const checked = selectedMediaViewerDetachAssetIds.has(mediaAssetId);
     return `
@@ -18656,7 +18714,20 @@ function openMediaAssetModal(item, options = {}) {
   }
 
   var mediaSubtitle = linkedPost ? getMediaSubtitle(item, linkedPost) : "";
-  if (mediaAssetModalSubtitle) {
+  if (mediaAssetModalSubtitle && linkedPost) {
+    var campaignPart = linkedPost?.campaignName
+      ? formatCampaignDisplayName(linkedPost.campaignName)
+      : item.campaign
+      ? formatCampaignDisplayName(item.campaign)
+      : "";
+    var viewerAssets = getAttachedMediaForPost(linkedPost);
+    var viewerIdx = viewerAssets.findIndex(function(a) { return getMediaAssetId(a) === getMediaAssetId(item); });
+    if (viewerAssets.length > 1 && viewerIdx >= 0) {
+      var carouselPos = "Carousel item \u00b7 " + formatCarouselPosition(viewerIdx, viewerAssets.length);
+      mediaSubtitle = [mediaSubtitle, carouselPos].filter(Boolean).join(" · ");
+    }
+    mediaAssetModalSubtitle.textContent = [campaignPart, mediaSubtitle].filter(Boolean).join(" · ") || "Vault details";
+  } else if (mediaAssetModalSubtitle) {
     var campaignPart = linkedPost?.campaignName
       ? formatCampaignDisplayName(linkedPost.campaignName)
       : item.campaign
@@ -28541,7 +28612,7 @@ function closeProfileWorkspaceModal() {
 }
 
 function switchPWTab(tab) {
-  var allowed = ["profile", "workspace", "connections", "ai-providers", "report-bug", "contact-support"];
+  var allowed = ["profile", "workspace", "connections", "members", "ai-providers", "report-bug", "contact-support"];
   if (allowed.indexOf(tab) === -1) return;
   document.querySelectorAll(".pw-tab-btn").forEach(function(btn) {
     var isActive = (btn.dataset.pwTab === tab);
@@ -28583,6 +28654,7 @@ function populatePWModal() {
   var wsConstellationEl = document.getElementById("pw-workspace-constellation-shape");
   var wsBrandAccentEl = document.getElementById("pw-workspace-brand-accent");
   var wsMediaBucketEl = document.getElementById("pw-workspace-media-bucket");
+  var wsMediaPrefixEl = document.getElementById("pw-workspace-media-prefix");
   var wsBrandVoiceEl = document.getElementById("pw-workspace-brand-voice");
   var wsDefaultPlatformsEl = document.getElementById("pw-workspace-default-platforms");
   var wsDefaultPillarsEl = document.getElementById("pw-workspace-default-pillars");
@@ -28639,6 +28711,7 @@ function populatePWModal() {
   if (wsConstellationEl) wsConstellationEl.value = String(wsActive.constellation_shape || wsActive.constellationShape || "").trim();
   if (wsBrandAccentEl) wsBrandAccentEl.value = String(wsActive.brand_accent || wsActive.brandAccent || "").trim();
   if (wsMediaBucketEl) wsMediaBucketEl.value = String(wsActive.media_bucket || wsActive.storage_bucket || "media").trim();
+  if (wsMediaPrefixEl) wsMediaPrefixEl.value = String(wsActive.media_prefix || slug + "/").trim();
   if (wsBrandVoiceEl) wsBrandVoiceEl.value = String(wsActive.brand_voice || wsActive.brandVoice || "").trim();
   if (wsDefaultPlatformsEl) wsDefaultPlatformsEl.value = Array.isArray(wsActive.default_platforms) ? wsActive.default_platforms.join(", ") : String(wsActive.default_platforms || "").trim();
   if (wsDefaultPillarsEl) wsDefaultPillarsEl.value = Array.isArray(wsActive.default_pillars) ? wsActive.default_pillars.join(", ") : String(wsActive.default_pillars || "").trim();
@@ -28646,6 +28719,9 @@ function populatePWModal() {
   if (wsDefaultPostTypesEl) wsDefaultPostTypesEl.value = Array.isArray(wsActive.default_post_types) ? wsActive.default_post_types.join(", ") : String(wsActive.default_post_types || "").trim();
   if (wsCurrentMonthEl) wsCurrentMonthEl.value = String(wsActive.current_month || wsActive.currentMonth || "").trim();
   if (wsCurrentYearEl) wsCurrentYearEl.value = String(wsActive.current_year || wsActive.currentYear || "").trim();
+
+  // Members tab
+  loadPWMembers();
 }
 
 async function savePWProfile() {
@@ -28721,6 +28797,7 @@ async function savePWWorkspace() {
     constellation_shape: (document.getElementById("pw-workspace-constellation-shape") || {}).value || "",
     brand_accent: (document.getElementById("pw-workspace-brand-accent") || {}).value || "",
     media_bucket: (document.getElementById("pw-workspace-media-bucket") || {}).value || "media",
+    media_prefix: (document.getElementById("pw-workspace-media-prefix") || {}).value || (activeWorkspace.workspace_slug || activeWorkspace.slug || "") + "/",
     brand_voice: (document.getElementById("pw-workspace-brand-voice") || {}).value || "",
     default_platforms: String((document.getElementById("pw-workspace-default-platforms") || {}).value || "").split(/[|,\n]/).map((v) => v.trim()).filter(Boolean),
     default_pillars: String((document.getElementById("pw-workspace-default-pillars") || {}).value || "").split(/[|,\n]/).map((v) => v.trim()).filter(Boolean),
@@ -28776,7 +28853,7 @@ async function savePWWorkspace() {
           throw new Error("Workspace name save verification failed: persisted workspace name did not match.");
         }
       }
-      var reloadedWorkspace = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").select("workspace_id,workspace_slug,display_name,short_name,avatar_mode,icon,avatar_initials,constellation_shape,brand_accent,media_bucket,brand_voice,current_month,current_year").eq("workspace_id", workspaceId).maybeSingle();
+      var reloadedWorkspace = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").select("workspace_id,workspace_slug,display_name,short_name,avatar_mode,icon,avatar_initials,constellation_shape,brand_accent,media_bucket,media_prefix,brand_voice,current_month,current_year").eq("workspace_id", workspaceId).maybeSingle();
       console.log("[icon-save] reload check", reloadedWorkspace?.data || null);
       if (reloadedWorkspace?.error) throw reloadedWorkspace.error;
       var persisted = reloadedWorkspace?.data || {};
@@ -28807,6 +28884,295 @@ async function savePWWorkspace() {
   } finally {
     if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "Save Workspace"; }
   }
+}
+
+// ── Members / Invites ──────────────────────────────────────────────────
+
+function getPWMembersWorkspaceId() {
+  var config = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active || {};
+  return config.workspace_id || config.id || "";
+}
+
+function getPWMembersCallerRole() {
+  return String((WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active && WORKSPACE_RUNTIME_CONFIG.active.role) || "").trim().toLowerCase();
+}
+
+function userCanManageMembers() {
+  return ["owner", "admin"].includes(getPWMembersCallerRole());
+}
+
+async function loadPWMembers() {
+  var workspaceId = getPWMembersWorkspaceId();
+  if (!workspaceId) return;
+  console.log("[members] list loading", { workspaceId });
+  var listEl = document.getElementById("pw-members-list");
+  var inviteBox = document.getElementById("pw-members-invite-box");
+  if (!listEl) return;
+  if (!userCanManageMembers()) {
+    if (inviteBox) inviteBox.classList.add("hidden");
+  } else {
+    if (inviteBox) inviteBox.classList.remove("hidden");
+  }
+  try {
+    var result = await callSupabaseEdgeFunction("workspace-members", {
+      action: "list_members",
+      workspace_id: workspaceId
+    });
+    console.log("[members] list", result);
+    if (!result || !result.ok) {
+      listEl.innerHTML = '<div class="text-xs text-red-400">Failed to load members: ' + (result?.error || "Unknown") + '</div>';
+      return;
+    }
+    renderPWMembersList(result.members || []);
+  } catch (err) {
+    console.warn("[members] list error", err);
+    listEl.innerHTML = '<div class="text-xs text-red-400">Error loading members: ' + (err?.message || String(err)) + '</div>';
+  }
+  loadPWInvites();
+}
+
+function renderPWMembersList(members) {
+  var listEl = document.getElementById("pw-members-list");
+  if (!listEl) return;
+  if (!members.length) {
+    listEl.innerHTML = '<div class="text-xs text-gray-500">No members found.</div>';
+    return;
+  }
+  var html = '';
+  var callerRole = getPWMembersCallerRole();
+  var canManage = userCanManageMembers();
+  members.forEach(function(member) {
+    var roleBadge = getPWMemberRoleBadge(member.role);
+    var profileName = member.profile ? (member.profile.display_name || "") : "";
+    var displayName = profileName || member.email || member.user_id || "Unknown";
+    var isSelf = member.user_id === (STELLARSYNC_AUTH_USER && STELLARSYNC_AUTH_USER.id);
+    var actionsHtml = '';
+    if (canManage && !isSelf) {
+      var roleOptions = ["owner", "admin", "content_lead", "reviewer", "viewer"].map(function(r) {
+        var selected = r === member.role ? "selected" : "";
+        return '<option value="' + r + '" ' + selected + '>' + toTitleCase(r.replace("_", " ")) + '</option>';
+      }).join("");
+      actionsHtml += '<select class="pw-member-role-select text-[10px] px-2 py-1 rounded-lg bg-[#0a0612] border border-white/10 text-white" data-member-id="' + member.id + '" data-current-role="' + member.role + '" onchange="handlePWMemberRoleChange(this)">' + roleOptions + '</select>';
+      if (member.role !== "owner") {
+        actionsHtml += '<button type="button" class="px-2 py-1 rounded-lg bg-[#30121b] border border-red-400/20 text-[10px] font-bold text-red-200 hover:opacity-80" onclick="handlePWMemberRemove(\'' + member.id + '\', \'' + escapeHtml(displayName) + '\')">Remove</button>';
+      }
+    }
+    html += '<div class="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-[#181125] border border-white/5">' +
+      '<div class="flex items-center gap-3 min-w-0">' +
+      '<div class="w-8 h-8 rounded-full bg-[#231738] border border-white/10 flex items-center justify-center text-[10px] font-bold text-white shrink-0">' + getWorkspaceInitials({ name: displayName }) + '</div>' +
+      '<div class="min-w-0">' +
+      '<div class="text-sm font-bold text-white truncate">' + escapeHtml(displayName) + '</div>' +
+      (member.email ? '<div class="text-[10px] text-gray-500">' + escapeHtml(member.email) + '</div>' : '') +
+      '</div></div>' +
+      '<div class="flex items-center gap-2 shrink-0">' +
+      roleBadge +
+      actionsHtml +
+      '</div></div>';
+  });
+  listEl.innerHTML = html;
+}
+
+function getPWMemberRoleBadge(role) {
+  var colors = {
+    owner: "bg-amber-900/30 text-amber-300 border-amber-500/30",
+    admin: "bg-purple-900/30 text-purple-300 border-purple-500/30",
+    content_lead: "bg-blue-900/30 text-blue-300 border-blue-500/30",
+    reviewer: "bg-green-900/30 text-green-300 border-green-500/30",
+    viewer: "bg-gray-800/30 text-gray-400 border-gray-500/30"
+  };
+  var colorClass = colors[role] || "bg-gray-800/30 text-gray-400 border-gray-500/30";
+  return '<span class="px-2 py-0.5 rounded-full border text-[9px] uppercase tracking-wider font-bold ' + colorClass + '">' + toTitleCase(role.replace("_", " ")) + '</span>';
+}
+
+async function loadPWInvites() {
+  var workspaceId = getPWMembersWorkspaceId();
+  if (!workspaceId || !userCanManageMembers()) return;
+  try {
+    var result = await callSupabaseEdgeFunction("workspace-members", {
+      action: "list_invites",
+      workspace_id: workspaceId
+    });
+    console.log("[members] invites list", result);
+    if (!result || !result.ok) return;
+    renderPWInvitesList(result.invites || []);
+  } catch (err) {
+    console.warn("[members] invites error", err);
+  }
+}
+
+function renderPWInvitesList(invites) {
+  var container = document.getElementById("pw-members-invite-result");
+  if (!container) return;
+  var pending = invites.filter(function(i) { return i.status === "pending"; });
+  if (!pending.length) {
+    container.innerHTML = '';
+    return;
+  }
+  var html = '<div class="mt-3 space-y-2">';
+  html += '<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Pending Invites</div>';
+  pending.forEach(function(invite) {
+    var expires = invite.expires_at ? new Date(invite.expires_at).toLocaleDateString() : "No expiry";
+    var inviteLink = (typeof window !== "undefined" ? window.location.origin : "https://stellarsync.app") + "/invite?token=" + invite.token;
+    html += '<div class="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-[#120c1d] border border-white/5">' +
+      '<div class="min-w-0">' +
+      '<div class="text-sm font-bold text-white truncate">' + escapeHtml(invite.email) + '</div>' +
+      '<div class="text-[10px] text-gray-500">' + toTitleCase(invite.role.replace("_", " ")) + ' · Expires ' + expires + '</div>' +
+      '</div>' +
+      '<div class="flex items-center gap-2 shrink-0">' +
+      '<button type="button" class="px-2 py-1 rounded-lg bg-[#181125] border border-white/5 text-[10px] font-bold text-gray-300 hover:text-white" onclick="copyPWInviteLink(\'' + invite.token + '\')">Copy Link</button>' +
+      '<button type="button" class="px-2 py-1 rounded-lg bg-[#30121b] border border-red-400/20 text-[10px] font-bold text-red-200 hover:opacity-80" onclick="cancelPWInvite(\'' + invite.id + '\')">Cancel</button>' +
+      '</div></div>';
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+async function handlePWInviteCreate() {
+  var emailEl = document.getElementById("pw-members-invite-email");
+  var roleEl = document.getElementById("pw-members-invite-role");
+  var resultEl = document.getElementById("pw-members-invite-result");
+  var btn = document.getElementById("pw-members-invite-btn");
+  var email = emailEl ? String(emailEl.value || "").trim() : "";
+  var role = roleEl ? String(roleEl.value || "").trim().toLowerCase() : "viewer";
+  if (!email || !email.includes("@")) {
+    if (resultEl) resultEl.innerHTML = '<span class="text-red-400">Enter a valid email address.</span>';
+    return;
+  }
+  if (btn) { btn.disabled = true; btn.textContent = "Inviting..."; }
+  console.log("[members] invite create", { email, role });
+  try {
+    var result = await callSupabaseEdgeFunction("workspace-members", {
+      action: "create_invite",
+      workspace_id: getPWMembersWorkspaceId(),
+      email: email,
+      role: role
+    });
+    console.log("[members] invite create result", result);
+    if (result && result.ok) {
+      if (resultEl) {
+        var inviteLink = result.invite_link || "";
+        resultEl.innerHTML = '<div class="space-y-2">' +
+          '<span class="text-emerald-400">Invite sent to ' + escapeHtml(email) + '</span>' +
+          (inviteLink ? '<div class="flex items-center gap-2"><input type="text" readonly value="' + escapeHtml(inviteLink) + '" class="flex-1 px-2 py-1 rounded-lg bg-[#0a0612] border border-white/10 text-[10px] text-white"><button type="button" class="px-2 py-1 rounded-lg bg-[#181125] border border-white/5 text-[10px] font-bold text-gray-300 hover:text-white" onclick="navigator.clipboard.writeText(\'' + escapeHtml(inviteLink) + '\');showToast(\'Copied\',\'Invite link copied.\',\'ph-check\',\'text-emerald-400\')">Copy</button></div>' : '') +
+          '</div>';
+      }
+      if (emailEl) emailEl.value = "";
+      loadPWMembers();
+    } else {
+      if (resultEl) resultEl.innerHTML = '<span class="text-red-400">' + (result?.error || "Invite failed") + '</span>';
+    }
+  } catch (err) {
+    console.warn("[members] invite create error", err);
+    if (resultEl) resultEl.innerHTML = '<span class="text-red-400">' + (err?.message || String(err)) + '</span>';
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "Invite"; }
+  }
+}
+
+async function cancelPWInvite(inviteId) {
+  if (!inviteId) return;
+  console.log("[members] invite cancel", { inviteId });
+  try {
+    var result = await callSupabaseEdgeFunction("workspace-members", {
+      action: "cancel_invite",
+      workspace_id: getPWMembersWorkspaceId(),
+      invite_id: inviteId
+    });
+    console.log("[members] invite cancel result", result);
+    if (result && result.ok) {
+      loadPWMembers();
+    } else {
+      showToast("Cancel failed", result?.error || "Unknown error", "ph-warning", "text-yellow-400");
+    }
+  } catch (err) {
+    console.warn("[members] invite cancel error", err);
+  }
+}
+
+async function handlePWMemberRoleChange(selectEl) {
+  var memberId = selectEl.dataset.memberId;
+  var newRole = selectEl.value;
+  var prevRole = selectEl.dataset.currentRole;
+  if (newRole === prevRole) return;
+  console.log("[members] role change", { memberId, prevRole, newRole });
+  try {
+    var result = await callSupabaseEdgeFunction("workspace-members", {
+      action: "change_role",
+      workspace_id: getPWMembersWorkspaceId(),
+      member_id: memberId,
+      role: newRole
+    });
+    console.log("[members] role change result", result);
+    if (result && result.ok) {
+      selectEl.dataset.currentRole = newRole;
+      showToast("Role updated", "Member role changed to " + toTitleCase(newRole.replace("_", " ")), "ph-check", "text-emerald-400");
+      loadPWMembers();
+    } else {
+      var msg = result?.error || "Role change failed";
+      selectEl.value = prevRole;
+      showToast("Role change failed", msg, "ph-warning", "text-yellow-400");
+    }
+  } catch (err) {
+    selectEl.value = prevRole;
+    console.warn("[members] role change error", err);
+    showToast("Role change failed", err?.message || String(err), "ph-warning", "text-yellow-400");
+  }
+}
+
+async function handlePWMemberRemove(memberId, displayName) {
+  if (!memberId) return;
+  if (!confirm('Remove "' + displayName + '" from this workspace? This cannot be undone.')) return;
+  console.log("[members] remove", { memberId, displayName });
+  try {
+    var result = await callSupabaseEdgeFunction("workspace-members", {
+      action: "remove_member",
+      workspace_id: getPWMembersWorkspaceId(),
+      member_id: memberId
+    });
+    console.log("[members] remove result", result);
+    if (result && result.ok) {
+      showToast("Member removed", displayName + " removed from workspace.", "ph-check", "text-emerald-400");
+      loadPWMembers();
+    } else {
+      showToast("Remove failed", result?.error || "Unknown error", "ph-warning", "text-yellow-400");
+    }
+  } catch (err) {
+    console.warn("[members] remove error", err);
+    showToast("Remove failed", err?.message || String(err), "ph-warning", "text-yellow-400");
+  }
+}
+
+function copyPWInviteLink(token) {
+  if (!token) return;
+  var link = (typeof window !== "undefined" ? window.location.origin : "https://stellarsync.app") + "/invite?token=" + token;
+  navigator.clipboard.writeText(link).then(function() {
+    showToast("Copied", "Invite link copied to clipboard.", "ph-check", "text-emerald-400");
+  }).catch(function() {
+    showToast("Copy failed", "Could not copy invite link. Link: " + link, "ph-warning", "text-yellow-400");
+  });
+}
+
+(function() {
+  var btn = document.getElementById("pw-members-invite-btn");
+  if (btn) btn.addEventListener("click", handlePWInviteCreate);
+  var emailInput = document.getElementById("pw-members-invite-email");
+  if (emailInput) emailInput.addEventListener("keydown", function(e) {
+    if (e.key === "Enter") handlePWInviteCreate();
+  });
+})();
+
+async function createNewWorkspace(name, slug, plan) {
+  if (!name || !slug) throw new Error("Workspace name and slug are required");
+  console.log("[workspace] create", { name, slug, plan: plan || "starter" });
+  var result = await callSupabaseEdgeFunction("workspace-members", {
+    action: "create_workspace",
+    name: name,
+    slug: slug,
+    plan: plan || "starter"
+  });
+  console.log("[workspace] create result", result);
+  if (!result || !result.ok) throw new Error(result?.error || "Workspace creation failed");
+  return result.workspace;
 }
 
 async function submitProfileWorkspaceSupport(kind) {
@@ -29044,6 +29410,14 @@ async function bootAppWithWorkspaceRouter() {
 }
 
 bootAppWithWorkspaceRouter();
+
+// Member function exports (for onclick handlers)
+window.loadPWMembers = loadPWMembers;
+window.handlePWInviteCreate = handlePWInviteCreate;
+window.cancelPWInvite = cancelPWInvite;
+window.handlePWMemberRoleChange = handlePWMemberRoleChange;
+window.handlePWMemberRemove = handlePWMemberRemove;
+window.copyPWInviteLink = copyPWInviteLink;
 
 </script>
 </body>
