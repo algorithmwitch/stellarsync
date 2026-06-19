@@ -4019,6 +4019,7 @@
                         <button id="modal-pull-monday-fields-btn" type="button" onclick="pullMondayFields()" class="px-2.5 py-1.5 rounded-lg bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[9px] uppercase tracking-wider font-bold text-gray-400 hover:text-white transition-colors hidden">Pull Fields</button>
                         <button id="modal-pull-monday-updates-btn" type="button" onclick="pullMondayUpdates()" class="px-2.5 py-1.5 rounded-lg bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[9px] uppercase tracking-wider font-bold text-gray-400 hover:text-white transition-colors hidden">Pull Updates</button>
                         <button id="modal-sync-monday-btn" type="button" onclick="syncPostToMonday()" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Sync Post to Monday</button>
+                        <button id="modal-backfill-monday-btn" type="button" onclick="backfillMondayBoard()" class="hidden px-3 py-2 rounded-xl bg-[#0f0a18] hover:bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 transition-colors">Backfill Monday Board</button>
                       </div>
                     </div>
                     <div id="modal-monday-preview-card" class="hidden p-2 rounded-lg bg-[#120c1d] border border-white/5 text-[10px] leading-relaxed space-y-1">
@@ -7644,6 +7645,7 @@ let currentModalCarouselAssets = [];
 let currentCarouselDragIndex = null;
 let modalCarouselDetachSelectMode = false;
 let selectedCarouselDetachAssetIds = new Set();
+window.mediaDetachSelectionMode = false;
 let pendingUploadFiles = [];
 let uploadStagingTarget = "vault";
 let currentAIDraftId = "";
@@ -12277,7 +12279,11 @@ function setupMediaFilters() {
 
 function renderModalCarouselPreview() {
   if (!modalCarouselPreview || !modalCarouselCount) return;
+  console.log("[detach-ui] render path hit");
   const items = currentModalCarouselAssets || [];
+  const modeEnabled = Boolean(window.mediaDetachSelectionMode || modalCarouselDetachSelectMode);
+  window.mediaDetachSelectionMode = modeEnabled;
+  modalCarouselDetachSelectMode = modeEnabled;
   modalCarouselCount.textContent = items.length >= 2 ? `Carousel · ${items.length} assets` : `${items.length} ${items.length === 1 ? "asset" : "assets"}`;
   const toolbar = document.getElementById("modal-carousel-detach-toolbar");
   const toggleBtn = document.getElementById("modal-carousel-detach-toggle");
@@ -12287,19 +12293,19 @@ function renderModalCarouselPreview() {
   const cancelBtn = document.getElementById("modal-carousel-detach-cancel");
   if (toolbar) toolbar.classList.toggle("hidden", !items.length);
   if (toggleBtn) {
-    toggleBtn.textContent = modalCarouselDetachSelectMode ? "Detach mode on" : "Select to detach";
-    toggleBtn.classList.toggle("bg-[#231738]", modalCarouselDetachSelectMode);
-    toggleBtn.classList.toggle("text-white", modalCarouselDetachSelectMode);
-    toggleBtn.classList.toggle("bg-transparent", !modalCarouselDetachSelectMode);
-    toggleBtn.classList.toggle("text-gray-400", !modalCarouselDetachSelectMode);
+    toggleBtn.textContent = modeEnabled ? "Detach mode on" : "Select to detach";
+    toggleBtn.classList.toggle("bg-[#231738]", modeEnabled);
+    toggleBtn.classList.toggle("text-white", modeEnabled);
+    toggleBtn.classList.toggle("bg-transparent", !modeEnabled);
+    toggleBtn.classList.toggle("text-gray-400", !modeEnabled);
   }
   if (countEl) {
     countEl.textContent = `${selectedCarouselDetachAssetIds.size} selected`;
-    countEl.classList.toggle("hidden", !modalCarouselDetachSelectMode);
+    countEl.classList.toggle("hidden", !modeEnabled);
   }
-  if (detachBtn) detachBtn.classList.toggle("hidden", !modalCarouselDetachSelectMode || !selectedCarouselDetachAssetIds.size);
-  if (detachAllBtn) detachAllBtn.classList.toggle("hidden", !modalCarouselDetachSelectMode);
-  if (cancelBtn) cancelBtn.classList.toggle("hidden", !modalCarouselDetachSelectMode);
+  if (detachBtn) detachBtn.classList.toggle("hidden", !modeEnabled || !selectedCarouselDetachAssetIds.size);
+  if (detachAllBtn) detachAllBtn.classList.toggle("hidden", !modeEnabled);
+  if (cancelBtn) cancelBtn.classList.toggle("hidden", !modeEnabled);
   if (!items.length) {
     modalCarouselPreview.innerHTML = makeEmptyState("No carousel images", "Upload or link multiple images to build a carousel sequence.", "ph-images-square").replace("glass-card", "col-span-2");
     return;
@@ -12309,7 +12315,8 @@ function renderModalCarouselPreview() {
   modalCarouselPreview.innerHTML = items.map((asset, index) => {
     const previewUrl = asset.fileUrl || asset.sourceUrl || "";
     const detachId = getCanonicalMediaAssetId(asset);
-    const isSelected = selectedCarouselDetachAssetIds.has(detachId);
+    const canonicalUuid = String(detachId || asset.id || asset.media_asset_id || "").trim();
+    const isSelected = selectedCarouselDetachAssetIds.has(canonicalUuid);
     return `
       <div class="p-3 rounded-xl bg-[#181125] border border-white/5 flex gap-3 relative"
         draggable="true"
@@ -12317,7 +12324,7 @@ function renderModalCarouselPreview() {
         ondragover="event.preventDefault()"
         ondrop="dropCarouselAsset(event, ${index})"
         ondragend="endCarouselAssetDrag()">
-        ${modalCarouselDetachSelectMode ? `<input type="checkbox" class="media-select-box" style="position:absolute;left:.75rem;top:.75rem;" ${isSelected ? "checked" : ""} onchange="toggleCarouselDetachSelection('${escapeHtml(detachId)}', this.checked)" aria-label="Select slide for detach">` : ""}
+        ${modeEnabled ? `<input type="checkbox" class="media-select-box" style="position:absolute;left:.75rem;top:.75rem;" ${isSelected ? "checked" : ""} onchange="toggleCarouselDetachSelection('${escapeHtml(canonicalUuid)}', this.checked)" aria-label="Select slide for detach">` : ""}
         <div class="w-24 h-24 rounded-xl overflow-hidden bg-[#0f0a18] border border-white/5 shrink-0 flex items-center justify-center relative">
           <span class="absolute top-2 left-2 z-10 w-6 h-6 rounded-full bg-[#181125]/90 border border-white/10 text-[10px] font-bold text-white flex items-center justify-center">${index + 1}</span>
           ${previewUrl
@@ -12342,6 +12349,8 @@ function renderModalCarouselPreview() {
       </div>
     `;
   }).join("");
+  if (modeEnabled) console.log("[detach-ui] checkbox rendered count", items.length);
+  console.log("[detach-ui] selected ids", Array.from(selectedCarouselDetachAssetIds));
 }
 
 function getCurrentCarouselOrderPayload() {
@@ -12490,9 +12499,10 @@ function endCarouselAssetDrag() {
 }
 
 function toggleCarouselDetachSelectMode(forceValue) {
-  modalCarouselDetachSelectMode = typeof forceValue === "boolean" ? forceValue : !modalCarouselDetachSelectMode;
+  window.mediaDetachSelectionMode = typeof forceValue === "boolean" ? forceValue : !Boolean(window.mediaDetachSelectionMode);
+  modalCarouselDetachSelectMode = Boolean(window.mediaDetachSelectionMode);
   if (!modalCarouselDetachSelectMode) selectedCarouselDetachAssetIds.clear();
-  console.log("[media-detach-select] toggle", { enabled: modalCarouselDetachSelectMode });
+  console.log("[detach-ui] mode", modalCarouselDetachSelectMode);
   renderModalCarouselPreview();
 }
 
@@ -12501,7 +12511,7 @@ function toggleCarouselDetachSelection(mediaAssetId, checked) {
   if (!key) return;
   if (checked) selectedCarouselDetachAssetIds.add(key);
   else selectedCarouselDetachAssetIds.delete(key);
-  console.log("[media-detach-select] selected count", selectedCarouselDetachAssetIds.size);
+  console.log("[detach-ui] selected ids", Array.from(selectedCarouselDetachAssetIds));
   renderModalCarouselPreview();
 }
 
@@ -12514,9 +12524,29 @@ async function detachSelectedCarouselMedia() {
   const postId = String(currentEditingPostId || getCanonicalPostId(window.__currentModalPostData || {}) || "").trim();
   const selected = getSelectedCarouselDetachAssets();
   if (!postId || !selected.length) return;
-  console.log("[media-detach-select] detach selected", { postId, count: selected.length });
+  const mediaAssetIds = [];
+  for (const asset of selected) {
+    const uuid = String(getCanonicalMediaAssetId(asset) || asset.id || asset.media_asset_id || "").trim();
+    if (!uuid || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid)) {
+      console.warn("[detach-ui] selected ids", { skipped: true, asset });
+      showToast("Detach skipped", "One or more selected items do not have a canonical UUID.", "ph-warning", "text-yellow-400");
+      continue;
+    }
+    mediaAssetIds.push(uuid);
+  }
+  if (!mediaAssetIds.length) return;
+  console.log("[detach-ui] detach payload", { workspace_id: getWorkspaceRequestMetadata().workspace_id, post_id: postId, media_asset_ids: mediaAssetIds });
   try {
-    const result = await detachMediaAssetsFromPost(selected, postId);
+    const meta = getWorkspaceRequestMetadata();
+    const result = await callSupabaseEdgeFunction("media-index", {
+      action: "detach_from_post",
+      workspace_id: meta.workspace_id,
+      workspace_slug: meta.workspace_slug || getCurrentWorkspaceSlug() || "",
+      post_id: postId,
+      media_asset_ids: mediaAssetIds
+    });
+    console.log("[media-match] detach response", result);
+    window.mediaDetachSelectionMode = false;
     modalCarouselDetachSelectMode = false;
     selectedCarouselDetachAssetIds.clear();
     if (result) {
@@ -12595,7 +12625,18 @@ async function removeCarouselAssetById(mediaAssetId, fallbackIndex = -1) {
   removeCarouselAsset(fallbackIndex >= 0 ? fallbackIndex : currentModalCarouselAssets.indexOf(asset));
   if (!postId) return;
   try {
-    await detachMediaAssetsFromPost([asset], postId);
+    const canonicalId = String(getCanonicalMediaAssetId(asset) || asset.id || asset.media_asset_id || "").trim();
+    if (!canonicalId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(canonicalId)) {
+      showToast("Detach skipped", "No canonical UUID was found for this media item.", "ph-warning", "text-yellow-400");
+      return;
+    }
+    await callSupabaseEdgeFunction("media-index", {
+      action: "detach_from_post",
+      workspace_id: getWorkspaceRequestMetadata().workspace_id,
+      workspace_slug: getWorkspaceRequestMetadata().workspace_slug || getCurrentWorkspaceSlug() || "",
+      post_id: postId,
+      media_asset_ids: [canonicalId]
+    });
     rerenderAll();
   } catch (err) {
     console.log("[media-match] detach error full object", {
@@ -12614,12 +12655,28 @@ async function detachAllMediaFromCurrentPost() {
   if (!confirm(`Detach all ${assets.length} media asset${assets.length === 1 ? "" : "s"} from this post?`)) return;
   modalCarouselDetachSelectMode = false;
   selectedCarouselDetachAssetIds.clear();
-  currentModalCarouselAssets = [];
-  currentModalAsset = null;
-  applyCurrentCarouselOrderToModalPost();
-  renderModalCarouselPreview();
   try {
-    await detachMediaAssetsFromPost(assets, postId);
+    const meta = getWorkspaceRequestMetadata();
+    const mediaAssetIds = [];
+    for (const asset of assets) {
+      const uuid = String(getCanonicalMediaAssetId(asset) || asset.id || asset.media_asset_id || "").trim();
+      if (!uuid || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid)) continue;
+      mediaAssetIds.push(uuid);
+    }
+    if (!mediaAssetIds.length) {
+      showToast("Detach skipped", "No canonical UUIDs were found for the attached media.", "ph-warning", "text-yellow-400");
+      return;
+    }
+    console.log("[detach-ui] detach payload", { workspace_id: meta.workspace_id, post_id: postId, media_asset_ids: mediaAssetIds });
+    const result = await callSupabaseEdgeFunction("media-index", {
+      action: "detach_from_post",
+      workspace_id: meta.workspace_id,
+      workspace_slug: meta.workspace_slug || getCurrentWorkspaceSlug() || "",
+      post_id: postId,
+      media_asset_ids: mediaAssetIds
+    });
+    console.log("[media-match] detach response", result);
+    applyOrderedAttachedMediaResult(postId, result);
     rerenderAll();
     showToast("Media detached", "All media assets were unlinked from this post.", "ph-link-break", "text-[#00ffaa]");
   } catch (err) {
@@ -14465,6 +14522,45 @@ async function syncPostToMonday() {
     updateLoadingToastError(loadingToastId, "Monday sync error", mondayError + (missing.length ? " Missing columns: " + missing.join(", ") : ""));
     var diagnosticsEl2 = document.getElementById("modal-monday-diagnostics");
     if (diagnosticsEl2) diagnosticsEl2.textContent = JSON.stringify(backend, null, 2);
+  }
+}
+
+async function backfillMondayBoard() {
+  const boardId = getMondayBoardId(WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active, WORKSPACE_CONNECTIONS);
+  if (!boardId) { showToast("No Monday board configured", "error"); return; }
+  if (!canManageWorkspace()) { showToast("Backfill unavailable", "You do not have permission to run a board backfill.", "ph-warning", "text-yellow-400"); return; }
+  if (!confirm("This will create or update Monday items for all posts. Existing Post IDs will be matched to avoid duplicates.")) return;
+  console.log("[monday-backfill] started");
+  const loadingToastId = showLoadingToast("Backfilling Monday board", "Creating and updating Monday items...");
+  try {
+    const meta = getWorkspaceRequestMetadata();
+    const backendMode = getActiveWorkspaceBackendMode();
+    const payloadPosts = backendMode.mode === "google_sheets_hybrid" ? (appState.posts || []) : (appState.posts || []);
+    const result = await callSupabaseEdgeFunction("monday-sync", {
+      action: "backfill_posts",
+      workspace_id: meta.workspace_id || meta.workspace_slug,
+      workspace_slug: meta.workspace_slug || getCurrentWorkspaceSlug() || "",
+      board_id: boardId,
+      posts: payloadPosts
+    });
+    if (result?.ok) {
+      console.log("[monday-backfill] complete", result);
+      updateLoadingToastSuccess(loadingToastId, "Monday backfill complete", `${result.updated || 0} updated, ${result.created || 0} created.`);
+      if (window.__currentModalPostData && result.monday_item_ids_by_post_id && typeof result.monday_item_ids_by_post_id === "object") {
+        const postId = String(window.__currentModalPostData.post_id || window.__currentModalPostData.postId || "").trim();
+        const itemId = result.monday_item_ids_by_post_id[postId];
+        if (itemId) setModalMondayFields(itemId, result.completed_at || new Date().toISOString());
+      }
+      await syncRemoteIfConfigured();
+      return result;
+    }
+    console.log("[monday-backfill] error", result);
+    updateLoadingToastError(loadingToastId, "Monday backfill failed", result?.error || "Unknown error");
+    return result;
+  } catch (err) {
+    console.log("[monday-backfill] error", err);
+    updateLoadingToastError(loadingToastId, "Monday backfill failed", err?.message || String(err));
+    throw err;
   }
 }
 
@@ -17687,19 +17783,17 @@ async function detachMediaAssetsFromPost(items, postId) {
   if (!Array.isArray(items)) items = items ? [items] : [];
   var meta = getWorkspaceRequestMetadata();
   var assets = items.filter(Boolean);
-  var mediaAssetIds = assets.map(function(a) { return getMediaAssetId(a); }).filter(Boolean);
-  var mediaAssetObjects = assets.map(function(a) {
-    return { media_asset_id: getMediaAssetId(a), storage_path: a.storage_path || a.storagePath || "" };
-  }).filter(function(a) { return a.media_asset_id || a.storage_path; });
+  var mediaAssetIds = assets.map(function(a) {
+    return String(getMediaAssetId(a) || a.id || a.media_asset_id || "").trim();
+  }).filter(function(id) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(id || ""));
+  });
   var payload = {
     action: "detach_from_post",
     workspace_id: meta.workspace_id,
     workspace_slug: meta.workspace_slug || getCurrentWorkspaceSlug() || "",
     post_id: postId,
-    media_asset_ids: mediaAssetIds,
-    media_assets: mediaAssetObjects,
-    media: mediaAssetObjects,
-    ids: mediaAssetIds
+    media_asset_ids: mediaAssetIds
   };
   console.log("[media-match] detach request", payload);
   try {
@@ -18753,6 +18847,8 @@ function openPostModal(
   var mondayBoardId = getMondayBoardId(WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active, WORKSPACE_CONNECTIONS);
   if (mondayBoardId && mondaySection) {
     mondaySection.classList.remove("hidden");
+    var backfillBtn = document.getElementById("modal-backfill-monday-btn");
+    if (backfillBtn) backfillBtn.classList.toggle("hidden", !canManageWorkspace());
     var itemId = matched?.mondayItemId || matched?.monday_item_id || "";
     var syncedAt = matched?.mondayLastSyncedAt || matched?.monday_last_synced_at || "";
     if (itemId && mondayItemIdInput) mondayItemIdInput.value = itemId;
