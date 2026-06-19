@@ -14969,12 +14969,13 @@ function getConnectedAccountsMarkup(options = {}) {
           </div>
           <span class="diagnostic-chip">Checking backend</span>
         </div>
-        <div class="text-sm text-gray-300 wrap-safe">Connected Accounts is hydrating from backend connection records.</div>
+        <div class="text-sm text-gray-400 wrap-safe">Connected Accounts is hydrating from backend connection records.</div>
       </div>
     `).join("");
   }
   const accounts = Array.isArray(connectedAccounts) ? connectedAccounts : [];
   const platforms = CONNECTED_ACCOUNT_PLATFORMS;
+  const userCanSeeAdminDetails = userCanManageMembers();
   return platforms.map((platform) => {
     const account = accounts.find((item) => item.platform === platform) || {
       platform,
@@ -15014,6 +15015,11 @@ function getConnectedAccountsMarkup(options = {}) {
       : missingKeys.length
       ? "text-gray-300"
       : "text-sky-300";
+    const displayMessage = setupBlocked
+      ? (userCanSeeAdminDetails
+        ? getSocialSetupMissingMessage(platform, missingKeys)
+        : "App setup required by StellarSync admin. Check with your workspace admin for LinkedIn publishing access.")
+      : "");
     return `
       <div class="platform-card">
         <div class="flex items-start justify-between gap-3 mb-4">
@@ -15034,20 +15040,20 @@ function getConnectedAccountsMarkup(options = {}) {
         <div class="mt-4">
           <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Required Supabase Secrets</div>
           ${setupBlocked ? `<div class="mb-3 rounded-xl border border-yellow-400/20 bg-yellow-900/20 p-3 text-xs text-yellow-200 wrap-safe">
-            ${escapeHtml(getSocialSetupMissingMessage(platform, missingKeys))}
+            ${escapeHtml(displayMessage)}
           </div>` : ""}
-          <div class="space-y-2">
+          ${userCanSeeAdminDetails && setupBlocked ? `<div class="space-y-2">
             ${setupKeys.map((key) => `
               <div class="flex items-center justify-between gap-3 text-xs">
                 <span class="text-gray-300 wrap-safe">${escapeHtml(missingKeys.includes(key) ? "Missing Supabase Secret: " + key : "Supabase Secret: " + key)}</span>
                 <span class="${missingKeys.includes(key) ? "text-yellow-300" : "text-emerald-300"} font-semibold">${missingKeys.includes(key) ? "Missing" : "Ready"}</span>
               </div>
             `).join("") || `<div class="text-sm text-gray-400">No Supabase Secrets declared by backend diagnostics.</div>`}
-          </div>
-          <div class="mt-3 rounded-xl border border-white/5 bg-[#0f0a18] p-3 text-xs text-gray-300 space-y-1">
+          </div>` : ""}
+          ${userCanSeeAdminDetails ? `<div class="mt-3 rounded-xl border border-white/5 bg-[#0f0a18] p-3 text-xs text-gray-300 space-y-1">
             ${setupInfo.bullets.map((item) => `<div class="wrap-safe">${escapeHtml(item)}</div>`).join("")}
           </div>
-          <button type="button" onclick="copySocialSetupChecklist('${escapeHtml(platform)}')" class="mt-3 px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors"><i class="ph-bold ph-copy mr-1"></i> Copy Setup Checklist</button>
+          <button type="button" onclick="copySocialSetupChecklist('${escapeHtml(platform)}')" class="mt-3 px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors"><i class="ph-bold ph-copy mr-1"></i> Copy Setup Checklist</button>` : ""}
         </div>
         ${platform === "linkedin" ? `
         <div class="mt-4">
@@ -24085,7 +24091,7 @@ async function disconnectSheetMirror() {
       sheet_last_pulled_at: null,
       updated_at: new Date().toISOString()
     };
-    await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").update(payload).eq("workspace_id", workspaceId);
+    await upsertWorkspaceSettings(workspaceId, payload);
     WORKSPACE_RUNTIME_CONFIG.active = mergeWorkspaceSettings(WORKSPACE_RUNTIME_CONFIG.active || {}, payload);
     storeActiveWorkspaceConfig(WORKSPACE_RUNTIME_CONFIG.active);
     refreshConnectionCards();
@@ -24114,7 +24120,7 @@ async function disconnectMondayBoard() {
       monday_last_pulled_at: null,
       updated_at: new Date().toISOString()
     };
-    await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").update(payload).eq("workspace_id", workspaceId);
+    await upsertWorkspaceSettings(workspaceId, payload);
     WORKSPACE_RUNTIME_CONFIG.active = mergeWorkspaceSettings(WORKSPACE_RUNTIME_CONFIG.active || {}, payload);
     storeActiveWorkspaceConfig(WORKSPACE_RUNTIME_CONFIG.active);
     refreshConnectionCards();
@@ -30075,15 +30081,57 @@ async function getWorkspaceSettingsColumns() {
 function filterPayloadToExistingColumns(payload, columnNames) {
   if (!columnNames || !Array.isArray(columnNames) || !columnNames.length) return payload;
   var filtered = {};
-  var optionalBranding = ["brand_accent", "icon", "avatar_mode", "avatar_initials", "constellation_shape", "short_name", "media_prefix", "media_bucket"];
+  var optionalBranding = ["brand_accent", "icon", "avatar_mode", "avatar_initials", "constellation_shape", "short_name", "media_prefix", "media_bucket", "brand_voice", "current_month", "current_year", "default_platforms", "default_pillars", "default_statuses", "default_post_types"];
   for (var key of Object.keys(payload)) {
     if (columnNames.indexOf(key) !== -1) {
       filtered[key] = payload[key];
     } else if (optionalBranding.indexOf(key) !== -1) {
-      console.log("[workspace-save] skipped missing column " + key);
+      console.log("[workspace-save] removed missing column " + key);
     }
   }
   return filtered;
+}
+
+async function upsertWorkspaceSettings(workspaceId, payload) {
+  if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase client not available");
+  if (!workspaceId) throw new Error("Workspace ID required");
+  var wsColumns = await getWorkspaceSettingsColumns();
+  if (wsColumns) payload = filterPayloadToExistingColumns(payload, wsColumns);
+  console.log("[workspace-save] raw payload", payload);
+  var existing = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").select("id").eq("workspace_id", workspaceId).maybeSingle();
+  if (existing.error) throw existing.error;
+  var attempt = 0;
+  var maxAttempts = 2;
+  var currentPayload = { ...payload };
+  while (attempt < maxAttempts) {
+    attempt++;
+    try {
+      var result;
+      if (existing && existing.data && existing.data.id) {
+        result = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").update(currentPayload).eq("id", existing.data.id);
+      } else {
+        result = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").insert(currentPayload);
+      }
+      if (result.error) {
+        var errMsg = String(result.error?.message || "");
+        if (errMsg.includes("column") && errMsg.includes("does not exist") && attempt < maxAttempts) {
+          var missingMatch = errMsg.match(/column\s+['"](\w+)['"]/i);
+          if (missingMatch) {
+            var missingCol = missingMatch[1];
+            console.log("[workspace-save] retry without missing column " + missingCol);
+            delete currentPayload[missingCol];
+            continue;
+          }
+        }
+        throw result.error;
+      }
+      console.log("[workspace-save] upsert success", { attempt, action: existing?.data?.id ? "update" : "insert" });
+      return { ok: true, data: result.data };
+    } catch (err) {
+      if (attempt >= maxAttempts) throw err;
+    }
+  }
+  throw new Error("upsertWorkspaceSettings failed after retries");
 }
 
 async function savePWWorkspace() {
@@ -30134,21 +30182,7 @@ async function savePWWorkspace() {
       }
       var settingsPayload = { ...payload, workspace_id: workspaceId, workspace_slug: slug };
       delete settingsPayload.name;
-      var wsColumns = await getWorkspaceSettingsColumns();
-      if (wsColumns) settingsPayload = filterPayloadToExistingColumns(settingsPayload, wsColumns);
-      var existing = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").select("id").eq("workspace_id", workspaceId).maybeSingle();
-      if (existing.error) throw existing.error;
-      if (existing && existing.data && existing.data.id) {
-        var settingsUpdate = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").update(settingsPayload).eq("id", existing.data.id);
-        console.log("[icon-save] response", { table: "workspace_settings", action: "update", ok: !settingsUpdate?.error, error: settingsUpdate?.error || null });
-        console.log("[workspace-icon] save response", { table: "workspace_settings", action: "update", ok: !settingsUpdate?.error, error: settingsUpdate?.error || null });
-        if (settingsUpdate.error) throw settingsUpdate.error;
-      } else {
-        var settingsInsert = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").insert(settingsPayload);
-        console.log("[icon-save] response", { table: "workspace_settings", action: "insert", ok: !settingsInsert?.error, error: settingsInsert?.error || null });
-        console.log("[workspace-icon] save response", { table: "workspace_settings", action: "insert", ok: !settingsInsert?.error, error: settingsInsert?.error || null });
-        if (settingsInsert.error) throw settingsInsert.error;
-      }
+      await upsertWorkspaceSettings(workspaceId, settingsPayload);
       console.log("[icon-save] response", { ok: true, workspace_slug: slug });
       console.log("[workspace-icon] save response", { ok: true, workspace_slug: slug });
       var reloadedWorkspaceRecord = null;
@@ -30163,6 +30197,7 @@ async function savePWWorkspace() {
           throw new Error("Workspace name save verification failed: persisted workspace name did not match.");
         }
       }
+      var wsColumns = await getWorkspaceSettingsColumns();
       var reloadFields = ["workspace_id","workspace_slug","display_name","short_name","avatar_mode","icon","avatar_initials","constellation_shape","brand_accent","media_bucket","media_prefix","brand_voice","current_month","current_year"];
       if (wsColumns) reloadFields = reloadFields.filter(function(f) { return wsColumns.indexOf(f) !== -1; });
       var reloadedWorkspace = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").select(reloadFields.join(",")).eq("workspace_id", workspaceId).maybeSingle();
