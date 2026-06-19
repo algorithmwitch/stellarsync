@@ -3728,6 +3728,163 @@
   </div>
 </div>
 
+<!-- StellarSync Plugin Install Modal -->
+<div id="stellarsync-plugin-install-modal" class="fixed inset-0 z-[102] flex items-center justify-center bg-black/70 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
+  <div id="stellarsync-plugin-install-card" class="modal-content w-full max-w-2xl max-h-[90vh] bg-[#120c1d] border border-white/10 rounded-2xl shadow-2xl overflow-hidden scale-95 transition-transform duration-300 flex flex-col">
+    <div class="p-6 border-b border-white/10 flex justify-between items-center bg-gradient-to-r from-[#1a1128] to-[#120c1d] shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-[#231738] flex items-center justify-center"><i class="ph-fill ph-puzzle-piece text-[#c77dff] text-xl"></i></div>
+        <div>
+          <h2 class="text-xl font-bold text-white tracking-tight">StellarSync Plugin</h2>
+          <p class="text-xs text-gray-400 mt-0.5">Capture content from anywhere on the web</p>
+        </div>
+      </div>
+      <button id="close-plugin-install-modal-btn" type="button" class="text-gray-500 hover:text-white p-2 rounded-xl hover:bg-white/5 transition-colors"><i class="ph-bold ph-x text-xl"></i></button>
+    </div>
+    <div class="p-6 overflow-y-auto custom-scrollbar space-y-6">
+      <div class="platform-card space-y-4">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-[#231738] flex items-center justify-center"><i class="ph-fill ph-bookmarks text-[#c77dff]"></i></div>
+          <div><div class="text-sm font-bold text-white">Bookmarklet</div><div class="text-[10px] text-gray-400">One-click capture from any page</div></div>
+        </div>
+        <p class="text-xs text-gray-400 leading-relaxed">Drag the button below to your bookmarks bar. When you find content you want to capture, click the bookmarklet to save it directly to StellarSync.</p>
+        <div class="flex flex-wrap items-center gap-3">
+          <a id="plugin-bookmarklet-link" href="javascript:void(0)" class="px-5 py-3 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all shadow-lg shadow-purple-500/20 inline-flex items-center gap-2 cursor-grab active:cursor-grabbing select-none">
+            <i class="ph-bold ph-puzzle-piece"></i> StellarSync Capture
+          </a>
+          <button id="plugin-copy-bookmarklet-btn" type="button" class="px-4 py-3 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300 hover:text-white transition-colors">Copy Code</button>
+        </div>
+        <div id="plugin-bookmarklet-copy-success" class="text-xs text-emerald-400 hidden">Bookmarklet code copied! Paste it into a new bookmark URL field.</div>
+      </div>
+      <div class="platform-card space-y-3">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-[#231738] flex items-center justify-center"><i class="ph-fill ph-puzzle-piece text-[#c77dff]"></i></div>
+          <div><div class="text-sm font-bold text-white">Browser Extension</div><div class="text-[10px] text-gray-400">Full-featured capture (coming soon)</div></div>
+        </div>
+        <p class="text-xs text-gray-400 leading-relaxed">A full browser extension with automatic LinkedIn post detection, media capture, and bulk import capabilities is in development.</p>
+        <div class="flex items-center gap-3">
+          <a href="./linkedin-export-helper/" target="_blank" class="px-4 py-2.5 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300 hover:text-white transition-colors inline-flex items-center gap-2"><i class="ph-bold ph-archive"></i> Extension Folder</a>
+          <a href="./linkedin-export-helper/stellarsync-linkedin-export-helper.zip" download class="px-4 py-2.5 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300 hover:text-white transition-colors inline-flex items-center gap-2"><i class="ph-bold ph-download"></i> Download ZIP</a>
+        </div>
+      </div>
+      <div class="platform-card space-y-3">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-[#231738] flex items-center justify-center"><i class="ph-fill ph-textbox text-[#c77dff]"></i></div>
+          <div><div class="text-sm font-bold text-white">Manual Capture</div><div class="text-[10px] text-gray-400">Paste content directly</div></div>
+        </div>
+        <p class="text-xs text-gray-400 leading-relaxed">You can also paste a URL, selected text, or page content directly into the capture form below.</p>
+        <button id="plugin-open-capture-modal-btn" type="button" class="px-4 py-2.5 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300 hover:text-white transition-colors inline-flex items-center gap-2"><i class="ph-bold ph-arrow-square-in"></i> Open Capture Form</button>
+      </div>
+      <div class="platform-card space-y-3">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-[#231738] flex items-center justify-center"><i class="ph-fill ph-question text-[#c77dff]"></i></div>
+          <div><div class="text-sm font-bold text-white">How to Use</div></div>
+        </div>
+        <ol class="text-xs text-gray-400 leading-relaxed space-y-2 list-decimal list-inside">
+          <li>Drag the <strong class="text-white">StellarSync Capture</strong> button to your browser's bookmarks bar.</li>
+          <li>Browse to any page (LinkedIn, news article, blog post, etc.)</li>
+          <li>Select text on the page (optional), then click the bookmarklet.</li>
+          <li>Choose where to save it: <strong class="text-white">Inspo</strong>, <strong class="text-white">Notes</strong>, or <strong class="text-white">AI Draft</strong>.</li>
+          <li>The captured content appears immediately in your workspace.</li>
+        </ol>
+        <div class="mt-2 px-3 py-2 rounded-lg bg-[#181125] border border-white/5 text-[10px] text-gray-500 leading-relaxed">
+          <strong class="text-gray-300">Tip:</strong> The bookmarklet captures the page URL, title, your selected text, and a timestamp. No authentication tokens are stored in the bookmarklet.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Plugin Capture Modal (3 views) -->
+<div id="plugin-capture-view-modal" class="fixed inset-0 z-[102] flex items-center justify-center bg-black/70 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
+  <div id="plugin-capture-view-card" class="modal-content w-full max-w-xl max-h-[90vh] bg-[#120c1d] border border-white/10 rounded-2xl shadow-2xl overflow-hidden scale-95 transition-transform duration-300 flex flex-col">
+    <div class="p-6 border-b border-white/10 flex justify-between items-center bg-gradient-to-r from-[#1a1128] to-[#120c1d] shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-[#231738] flex items-center justify-center"><i class="ph-fill ph-arrow-square-in text-[#c77dff] text-xl"></i></div>
+        <div>
+          <h2 id="plugin-capture-title" class="text-xl font-bold text-white tracking-tight">Capture Content</h2>
+          <p class="text-xs text-gray-400 mt-0.5">From <span id="plugin-capture-source-label" class="text-gray-300">the web</span></p>
+        </div>
+      </div>
+      <button id="close-plugin-capture-modal-btn" type="button" class="text-gray-500 hover:text-white p-2 rounded-xl hover:bg-white/5 transition-colors"><i class="ph-bold ph-x text-xl"></i></button>
+    </div>
+    <div class="flex border-b border-white/10 shrink-0">
+      <button type="button" class="plugin-capture-tab flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center bg-[#2d1b4e] text-white border-b-2 border-[#c77dff]" data-pc-tab="inspo" onclick="switchPluginCaptureTab('inspo')">Save to Inspo</button>
+      <button type="button" class="plugin-capture-tab flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center bg-[#181125] text-gray-400 border-b-2 border-transparent" data-pc-tab="note" onclick="switchPluginCaptureTab('note')">Save to Notes</button>
+      <button type="button" class="plugin-capture-tab flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center bg-[#181125] text-gray-400 border-b-2 border-transparent" data-pc-tab="draft" onclick="switchPluginCaptureTab('draft')">AI Draft Source</button>
+    </div>
+    <div class="p-6 overflow-y-auto custom-scrollbar space-y-4">
+      <!-- Capture metadata bar (always visible) -->
+      <div class="px-3 py-2 rounded-lg bg-[#181125] border border-white/5 text-[10px] text-gray-400 space-y-1">
+        <div><span class="text-gray-500">URL:</span> <span id="pc-capture-url-display" class="text-white break-all">—</span></div>
+        <div><span class="text-gray-500">Page:</span> <span id="pc-capture-title-display" class="text-white">—</span></div>
+        <div><span class="text-gray-500">Time:</span> <span id="pc-capture-time-display" class="text-gray-300">—</span></div>
+      </div>
+      <!-- Inspo Tab -->
+      <section data-pc-panel="inspo" class="space-y-4">
+        <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Title</div><input id="pc-inspo-title" type="text" placeholder="Inspiration title" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"></div>
+        <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Excerpt / Notes</div><textarea id="pc-inspo-notes" rows="4" placeholder="Key takeaways, thoughts..." class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 resize-y"></textarea></div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Author</div><input id="pc-inspo-author" type="text" placeholder="Author name" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"></div>
+          <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Tags</div><input id="pc-inspo-tags" type="text" placeholder="comma, separated" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Campaign</div><input id="pc-inspo-campaign" type="text" placeholder="Optional" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"></div>
+          <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Pillar</div><input id="pc-inspo-pillar" type="text" placeholder="Optional" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"></div>
+        </div>
+        <button type="button" class="pc-save-btn w-full px-4 py-3 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all" onclick="handlePluginCaptureSave('inspo')"><i class="ph-bold ph-lightbulb mr-1"></i> Save to Inspo</button>
+      </section>
+      <!-- Note Tab -->
+      <section data-pc-panel="note" class="hidden space-y-4">
+        <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Title</div><input id="pc-note-title" type="text" placeholder="Note title" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"></div>
+        <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Note Body</div><textarea id="pc-note-body" rows="5" placeholder="Your notes from this source..." class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 resize-y"></textarea></div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Tags</div><input id="pc-note-tags" type="text" placeholder="comma, separated" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"></div>
+          <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Pillar</div><input id="pc-note-pillar" type="text" placeholder="Optional" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"></div>
+        </div>
+        <button type="button" class="pc-save-btn w-full px-4 py-3 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all" onclick="handlePluginCaptureSave('note')"><i class="ph-bold ph-note-pencil mr-1"></i> Save to Notes</button>
+      </section>
+      <!-- AI Draft Tab -->
+      <section data-pc-panel="draft" class="hidden space-y-4">
+        <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Source Text</div><textarea id="pc-draft-source" rows="5" placeholder="Paste source text from the page..." class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 resize-y"></textarea></div>
+        <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Prompt / Context</div><textarea id="pc-draft-prompt" rows="3" placeholder="What kind of draft do you want? e.g. 'Turn this into a LinkedIn post'" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 resize-y"></textarea></div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Generation Mode</div><select id="pc-draft-mode" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white focus:outline-none focus:border-purple-500/50"><option value="rewrite">Rewrite</option><option value="expand">Expand</option><option value="summarize">Summarize</option><option value="repurpose">Repurpose for LinkedIn</option></select></div>
+          <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Tags</div><input id="pc-draft-tags" type="text" placeholder="comma, separated" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"></div>
+        </div>
+        <button type="button" class="pc-save-btn w-full px-4 py-3 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all" onclick="handlePluginCaptureSave('draft')"><i class="ph-bold ph-robot mr-1"></i> Save as AI Draft</button>
+      </section>
+      <div id="pc-save-result" class="text-xs text-gray-400 hidden"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Plugin Inbox Modal -->
+<div id="plugin-inbox-modal" class="fixed inset-0 z-[102] flex items-center justify-center bg-black/70 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
+  <div id="plugin-inbox-card" class="modal-content w-full max-w-2xl max-h-[90vh] bg-[#120c1d] border border-white/10 rounded-2xl shadow-2xl overflow-hidden scale-95 transition-transform duration-300 flex flex-col">
+    <div class="p-6 border-b border-white/10 flex justify-between items-center bg-gradient-to-r from-[#1a1128] to-[#120c1d] shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-[#231738] flex items-center justify-center"><i class="ph-fill ph-arrow-square-in text-[#c77dff] text-xl"></i></div>
+        <div>
+          <h2 class="text-xl font-bold text-white tracking-tight">Captured Sources</h2>
+          <p class="text-xs text-gray-400 mt-0.5">Recent content captured via the StellarSync Plugin</p>
+        </div>
+      </div>
+      <button id="close-plugin-inbox-modal-btn" type="button" class="text-gray-500 hover:text-white p-2 rounded-xl hover:bg-white/5 transition-colors"><i class="ph-bold ph-x text-xl"></i></button>
+    </div>
+    <div class="p-6 overflow-y-auto custom-scrollbar">
+      <div id="plugin-inbox-list" class="space-y-3">
+        <div class="text-xs text-gray-500">Loading captured sources...</div>
+      </div>
+      <div id="plugin-inbox-empty" class="hidden text-center py-8">
+        <i class="ph-fill ph-arrow-square-in text-4xl text-gray-600 mb-3"></i>
+        <div class="text-sm text-gray-400 font-bold">No captures yet</div>
+        <div class="text-xs text-gray-500 mt-1">Use the StellarSync Plugin bookmarklet to capture content from any page.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="note-modal" class="fixed inset-0 z-[101] flex items-center justify-center bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
   <div id="note-modal-card" class="modal-content w-full max-w-2xl bg-[#120c1d] border border-white/10 rounded-2xl shadow-2xl overflow-hidden scale-95 transition-transform duration-300">
     <div class="p-6 border-b border-white/10 flex justify-between items-center bg-gradient-to-r from-[#1a1128] to-[#120c1d]">
@@ -5079,7 +5236,10 @@
                 <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Connected Workspace Integrations</div>
                 <div class="text-xs text-gray-400 mt-1">Google Sheets, Monday.com, and Drive/files stay here.</div>
               </div>
-              <button type="button" id="pw-backfill-monday-btn" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 hover:text-white transition-colors">Backfill Monday Board</button>
+              <div class="flex items-center gap-2 flex-wrap">
+                <button type="button" id="pw-backfill-monday-btn" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 hover:text-white transition-colors">Backfill Monday Board</button>
+                <button type="button" id="pw-open-plugin-install-btn" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 hover:text-white transition-colors"><i class="ph-bold ph-puzzle-piece mr-1"></i>Plugin</button>
+              </div>
             </div>
             <div id="pw-connections-list" class="space-y-3"></div>
           </section>
@@ -9643,6 +9803,10 @@ function setupWorkspaceUI() {
   document.getElementById("pw-backfill-monday-btn")?.addEventListener("click", function() {
     console.log("[button] fired pw-backfill-monday-btn");
     backfillMondayBoard();
+  });
+  document.getElementById("pw-open-plugin-install-btn")?.addEventListener("click", function() {
+    console.log("[button] fired pw-open-plugin-install-btn");
+    openPluginInstallModal();
   });
   document.getElementById("pw-report-submit-btn")?.addEventListener("click", function() {
     console.log("[button] fired pw-report-submit-btn");
@@ -18447,6 +18611,22 @@ async function detachCurrentMediaAssetFromPost() {
 function renderMediaPreviewContent(item, linkedAssets, previewUrl, type) {
   const assets = (currentMediaViewerItems || []).slice(0, 20);
   const total = assets.length || 1;
+  if (total <= 1) {
+    console.log("[media-viewer] single asset — original viewer style", total);
+    var src = previewUrl || (item ? item.fileUrl || item.sourceUrl : "") || "";
+    if (!src) {
+      return '<div class="flex items-center justify-center h-64 text-gray-500"><i class="ph-bold ph-image text-4xl"></i></div>';
+    }
+    var kind = (type || (item ? String(item.type || item.assetType || "").toLowerCase() : ""));
+    if (kind === "video") {
+      return '<video controls src="' + escapeHtml(src) + '" class="max-h-[55vh] w-full object-contain rounded-lg" preload="metadata"></video>';
+    }
+    if (kind === "document") {
+      var docLabel = getMediaFileTypeLabel ? getMediaFileTypeLabel(item) : "Document";
+      return '<div class="flex flex-col items-center justify-center h-64 text-gray-400 gap-3"><i class="ph-bold ph-file-text text-5xl"></i><span class="text-xs uppercase tracking-wider font-bold">' + escapeHtml(docLabel) + '</span></div>';
+    }
+    return '<img src="' + escapeHtml(src) + '" alt="' + escapeHtml(item && (item.title || item.assetName) ? item.title || item.assetName : "Media") + '" class="max-h-[55vh] w-full object-contain rounded-lg" onerror="this.outerHTML=\'<div class=\\\'flex items-center justify-center h-64 text-gray-500\\\'><i class=\\\'ph-bold ph-image-broken text-4xl\\\'></i></div>\'">';
+  }
   const modeEnabled = Boolean(mediaViewerDetachMode);
   const selectedCount = selectedMediaViewerDetachAssetIds.size;
   console.log("[media-manage] render count", total);
@@ -18583,6 +18763,7 @@ async function saveMediaViewerOrder() {
     mediaViewerOriginalOrder = currentMediaViewerItems.slice();
     mediaViewerReorderMode = false;
     mediaViewerDragIndex = null;
+    safeRender(renderMedia, "renderMedia");
     openMediaAssetModal(currentMediaViewerItems[currentMediaViewerIndex] || currentMediaAssetDetail, { items: currentMediaViewerItems, openPosts: mediaPostsPanelOpen });
   } catch (err) {
     console.log("[media-gallery] order saved", err);
@@ -18907,13 +19088,36 @@ function createPostFromMediaItem(item, linkedPost = null) {
 }
 
 async function refreshMediaFromRemote() {
+  console.log("[media-refresh] force reload");
+  var beforeCount = (appState.media || []).length;
+  console.log("[media-refresh] before count", beforeCount);
+
   const media = await apiGetMedia();
-
   var normalizedMedia = media.map(asset => normalizeRemoteMedia(asset));
-  appState.media = filterRenderableArtifacts(normalizedMedia, "media");
+  var freshMedia = filterRenderableArtifacts(normalizedMedia, "media");
+  var freshIds = new Set(freshMedia.map(function(m) { return getMediaAssetId(m); }).filter(Boolean));
 
-  appState.posts = (appState.posts || []).map((post) => {
-    const linkedAsset = findLinkedAssetForPost(post, appState.media);
+  var prevPostMedia = (appState.postMedia || appState.post_media || []);
+  var prevPostMediaCount = prevPostMedia.length;
+  var validPostMedia = prevPostMedia.filter(function(pm) {
+    var id = pm.media_asset_id || pm.mediaAssetId || "";
+    return id && freshIds.has(id);
+  });
+  appState.postMedia = validPostMedia;
+  appState.post_media = validPostMedia;
+
+  freshMedia.forEach(function(asset) {
+    var linkedId = String(asset.linkedPostId || asset.linked_post_id || "").trim();
+    if (linkedId && !freshIds.has(linkedId)) {
+      delete asset.linkedPostId;
+      delete asset.linked_post_id;
+    }
+  });
+
+  appState.media = freshMedia;
+
+  appState.posts = (appState.posts || []).map(function(post) {
+    var linkedAsset = findLinkedAssetForPost(post, appState.media);
     if (!linkedAsset) return post;
     return {
       ...post,
@@ -18921,6 +19125,10 @@ async function refreshMediaFromRemote() {
       mediaLabel: post.mediaLabel || linkedAsset.title || ""
     };
   });
+
+  var afterCount = appState.media.length;
+  console.log("[media-refresh] after count", afterCount);
+  console.log("[media-refresh] stale removed", { removedPostMedia: prevPostMediaCount - validPostMedia.length });
 
   persistLocalState();
   rerenderAll();
@@ -28571,6 +28779,8 @@ function initApp() {
   var renderEl = document.getElementById("boot-diag-render");
   renderEl && (renderEl.textContent = "scheduled");
 
+  guardedCall(detectPluginCaptureFromHash, "detectPluginCaptureFromHash");
+
   var panel = document.getElementById("boot-diagnostics");
   if (panel && bootErrors.length === 0 && __setupErrors.length === 0 && !window.__SHOW_BOOT_DIAGNOSTICS) {
     panel.classList.add("hidden");
@@ -29175,6 +29385,320 @@ async function createNewWorkspace(name, slug, plan) {
   return result.workspace;
 }
 
+// ── StellarSync Plugin / Bookmarklet ────────────────────────────────────
+
+function generatePluginBookmarkletCode() {
+  var origin = window.location.origin || "https://stellarsync.app";
+  return "javascript:(function(){var d=document,u=location.href,t=d.title,s=window.getSelection?window.getSelection().toString():'';var p={url:u,title:t,text:s,time:new Date().toISOString(),v:1};var json=encodeURIComponent(JSON.stringify(p));window.location.href='" + origin + "/app/?plugin_capture='+json;})();";
+}
+
+function getPluginCaptureModal() { return document.getElementById("plugin-capture-view-modal"); }
+function getPluginCaptureCard() { return document.getElementById("plugin-capture-view-card"); }
+
+var pluginInstallOriginalBodyHTML = null;
+
+function openPluginInstallModal() {
+  var modal = document.getElementById("stellarsync-plugin-install-modal");
+  var card = document.getElementById("stellarsync-plugin-install-card");
+  if (!modal) return;
+  var bookmarkletCode = generatePluginBookmarkletCode();
+  var link = document.getElementById("plugin-bookmarklet-link");
+  if (link) link.href = bookmarkletCode;
+  var isDesktop = window.innerWidth >= 1024;
+  var body = modal.querySelector(".p-6.overflow-y-auto");
+  if (body && !pluginInstallOriginalBodyHTML) {
+    pluginInstallOriginalBodyHTML = body.innerHTML;
+  }
+  if (!isDesktop && body) {
+    console.log("[plugin-install] desktop required");
+    body.innerHTML = '<div class="text-center py-8"><div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[#231738] flex items-center justify-center"><i class="ph-fill ph-devices text-[#c77dff] text-3xl"></i></div><h3 class="text-lg font-bold text-white tracking-tight mb-3">Desktop Install Required</h3><p class="text-sm text-gray-400 max-w-md mx-auto leading-relaxed mb-6">To install the StellarSync Plugin bookmarklet, open StellarSync on a desktop browser and drag the install button into your bookmarks bar.</p><div class="flex flex-wrap items-center justify-center gap-3"><button type="button" onclick="copyPluginBookmarkletCode()" class="px-4 py-2.5 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300 hover:text-white transition-colors inline-flex items-center gap-2"><i class="ph-bold ph-copy"></i> Copy Bookmarklet Code</button><button type="button" onclick="showPluginInstallInstructions()" class="px-4 py-2.5 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300 hover:text-white transition-colors inline-flex items-center gap-2"><i class="ph-bold ph-question"></i> View Instructions</button><button type="button" onclick="closePluginInstallModal()" class="px-4 py-2.5 rounded-xl bg-[#231738] border border-white/5 text-xs font-bold text-white hover:opacity-90 transition-colors inline-flex items-center gap-2"><i class="ph-bold ph-x"></i> Close</button></div></div>';
+    console.log("[plugin-install] instructions shown");
+  }
+  modal.classList.remove("opacity-0", "pointer-events-none");
+  if (card) { card.classList.remove("scale-95"); card.classList.add("scale-100"); }
+}
+
+function showPluginInstallInstructions() {
+  console.log("[plugin-install] instructions shown");
+  var modal = document.getElementById("stellarsync-plugin-install-modal");
+  if (!modal) return;
+  var body = modal.querySelector(".p-6.overflow-y-auto");
+  if (body && pluginInstallOriginalBodyHTML) {
+    body.innerHTML = pluginInstallOriginalBodyHTML;
+    var bookmarkletCode = generatePluginBookmarkletCode();
+    var link = document.getElementById("plugin-bookmarklet-link");
+    if (link) link.href = bookmarkletCode;
+  }
+}
+
+function closePluginInstallModal() {
+  var modal = document.getElementById("stellarsync-plugin-install-modal");
+  var card = document.getElementById("stellarsync-plugin-install-card");
+  if (modal) modal.classList.add("opacity-0", "pointer-events-none");
+  if (card) { card.classList.remove("scale-100"); card.classList.add("scale-95"); }
+}
+
+function copyPluginBookmarkletCode() {
+  var code = generatePluginBookmarkletCode();
+  navigator.clipboard.writeText(code).then(function() {
+    var el = document.getElementById("plugin-bookmarklet-copy-success");
+    if (el) { el.classList.remove("hidden"); setTimeout(function() { el.classList.add("hidden"); }, 4000); }
+  }).catch(function() {
+    showToast("Copy failed", "Could not copy bookmarklet code.", "ph-warning", "text-yellow-400");
+  });
+}
+
+function openPluginCaptureModal(data) {
+  var modal = getPluginCaptureModal();
+  var card = getPluginCaptureCard();
+  if (!modal) return;
+  var url = data && data.url ? data.url : "";
+  var title = data && data.title ? data.title : "";
+  var text = data && data.text ? data.text : "";
+  var time = data && data.time ? data.time : new Date().toISOString();
+  var platform = data && data.platform ? data.platform : "";
+  var author = data && data.author ? data.author : "";
+  document.getElementById("pc-capture-url-display").textContent = url || "—";
+  document.getElementById("pc-capture-title-display").textContent = title || "—";
+  document.getElementById("pc-capture-time-display").textContent = time ? new Date(time).toLocaleString() : "—";
+  document.getElementById("plugin-capture-source-label").textContent = platform || "the web";
+  document.getElementById("pc-inspo-title").value = title || "";
+  document.getElementById("pc-inspo-notes").value = text || "";
+  document.getElementById("pc-inspo-author").value = author || "";
+  document.getElementById("pc-note-title").value = title || "";
+  document.getElementById("pc-note-body").value = text || "";
+  document.getElementById("pc-draft-source").value = text || "";
+  document.getElementById("pc-note-source-url").value = url;
+  document.getElementById("pc-save-result").className = "text-xs text-gray-400 hidden";
+  window.__pluginCaptureData = data || {};
+  switchPluginCaptureTab("inspo");
+  modal.classList.remove("opacity-0", "pointer-events-none");
+  if (card) { card.classList.remove("scale-95"); card.classList.add("scale-100"); }
+}
+
+function closePluginCaptureModal() {
+  var modal = getPluginCaptureModal();
+  var card = getPluginCaptureCard();
+  if (modal) modal.classList.add("opacity-0", "pointer-events-none");
+  if (card) { card.classList.remove("scale-100"); card.classList.add("scale-95"); }
+}
+
+function switchPluginCaptureTab(tab) {
+  var allowed = ["inspo", "note", "draft"];
+  if (allowed.indexOf(tab) === -1) return;
+  document.querySelectorAll(".plugin-capture-tab").forEach(function(btn) {
+    var isActive = btn.dataset.pcTab === tab;
+    btn.className = "plugin-capture-tab flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center " + (isActive ? "bg-[#2d1b4e] text-white border-b-2 border-[#c77dff]" : "bg-[#181125] text-gray-400 border-b-2 border-transparent");
+  });
+  document.querySelectorAll("[data-pc-panel]").forEach(function(panel) {
+    panel.classList.toggle("hidden", panel.dataset.pcPanel !== tab);
+  });
+}
+
+async function handlePluginCaptureSave(type) {
+  var resultEl = document.getElementById("pc-save-result");
+  var data = window.__pluginCaptureData || {};
+  var url = document.getElementById("pc-capture-url-display").textContent;
+  if (url === "—") url = "";
+  try {
+    if (type === "inspo") {
+      var inspo = {
+        title: document.getElementById("pc-inspo-title").value || data.title || "Captured inspiration",
+        type: "article",
+        url: url,
+        notes: document.getElementById("pc-inspo-notes").value || data.text || "",
+        sourceLabel: data.platform || "external",
+        sourceUrl: url,
+        sourcePlatform: data.platform || "",
+        author: document.getElementById("pc-inspo-author").value || data.author || "",
+        tags: String(document.getElementById("pc-inspo-tags").value || "").split(",").map(function(v) { return v.trim(); }).filter(Boolean),
+        campaign: document.getElementById("pc-inspo-campaign").value || "",
+        pillar: document.getElementById("pc-inspo-pillar").value || ""
+      };
+      await apiSaveInspo(inspo);
+      resultEl.className = "text-xs text-emerald-400";
+      resultEl.textContent = "Saved to Inspo!";
+    } else if (type === "note") {
+      var note = {
+        title: document.getElementById("pc-note-title").value || data.title || "Captured note",
+        body: document.getElementById("pc-note-body").value || data.text || "",
+        sourceUrl: url,
+        sourceType: data.platform || "linkedin",
+        pillar: document.getElementById("pc-note-pillar").value || "",
+        tags: String(document.getElementById("pc-note-tags").value || "").split(",").map(function(v) { return v.trim(); }).filter(Boolean)
+      };
+      await apiSaveNote(note);
+      resultEl.className = "text-xs text-emerald-400";
+      resultEl.textContent = "Saved to Notes!";
+    } else if (type === "draft") {
+      var draftPayload = {
+        title: document.getElementById("pc-note-title").value || data.title || "AI Draft from capture",
+        draft_text: document.getElementById("pc-draft-source").value || data.text || "",
+        prompt: document.getElementById("pc-draft-prompt").value || "Turn this into a LinkedIn post",
+        generation_mode: document.getElementById("pc-draft-mode").value || "rewrite",
+        source_url: url,
+        source_type: data.platform || "linkedin",
+        tags: String(document.getElementById("pc-draft-tags").value || "").split(",").map(function(v) { return v.trim(); }).filter(Boolean)
+      };
+      await apiSaveAIDraft(draftPayload);
+      resultEl.className = "text-xs text-emerald-400";
+      resultEl.textContent = "Saved as AI Draft!";
+    }
+    resultEl.classList.remove("hidden");
+    setTimeout(function() { resultEl.classList.add("hidden"); }, 4000);
+  } catch (err) {
+    resultEl.className = "text-xs text-red-400";
+    resultEl.textContent = "Save failed: " + (err.message || String(err));
+    resultEl.classList.remove("hidden");
+  }
+}
+
+function detectPluginCaptureFromHash() {
+  try {
+    var params = new URLSearchParams(window.location.search);
+    var raw = params.get("plugin_capture") || params.get("capture") || "";
+    if (!raw && window.location.hash) {
+      var hash = window.location.hash.replace(/^#/, "");
+      if (hash.startsWith("plugin_capture=")) raw = hash.split("=").slice(1).join("=");
+    }
+    if (!raw) return;
+    var decoded = JSON.parse(decodeURIComponent(raw));
+    if (decoded && decoded.v) {
+      console.log("[plugin] capture detected from hash", decoded);
+      // Clean the URL
+      if (window.history && window.history.replaceState) {
+        var clean = window.location.pathname + window.location.search.replace(/[?&](plugin_capture|capture)=[^&]+/g, "").replace(/^[?&]/, function(m) { return m ? "?" : ""; });
+        window.history.replaceState({}, document.title, clean || "/");
+      }
+      setTimeout(function() { openPluginCaptureModal(decoded); }, 1000);
+    }
+  } catch (_) {}
+}
+
+function openPluginInbox() {
+  var modal = document.getElementById("plugin-inbox-modal");
+  var card = document.getElementById("plugin-inbox-card");
+  if (!modal) return;
+  modal.classList.remove("opacity-0", "pointer-events-none");
+  if (card) { card.classList.remove("scale-95"); card.classList.add("scale-100"); }
+  loadPluginInbox();
+}
+
+function closePluginInbox() {
+  var modal = document.getElementById("plugin-inbox-modal");
+  var card = document.getElementById("plugin-inbox-card");
+  if (modal) modal.classList.add("opacity-0", "pointer-events-none");
+  if (card) { card.classList.remove("scale-100"); card.classList.add("scale-95"); }
+}
+
+function loadPluginInbox() {
+  var listEl = document.getElementById("plugin-inbox-list");
+  var emptyEl = document.getElementById("plugin-inbox-empty");
+  if (!listEl) return;
+  var all = [];
+  var promises = [];
+  var wsId = (WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active && WORKSPACE_RUNTIME_CONFIG.active.workspace_id) || "";
+  if (!wsId || !STELLARSYNC_SUPABASE_CLIENT) {
+    if (listEl) listEl.innerHTML = '<div class="text-xs text-gray-500">Supabase workspace required.</div>';
+    return;
+  }
+  try {
+    promises.push(
+      STELLARSYNC_SUPABASE_CLIENT.from("inspo").select("inspo_id,title,source_url,source_platform,created_at,summary").eq("workspace_id", wsId).order("created_at", { ascending: false }).limit(10).then(function(r) {
+        if (r.data) (r.data || []).forEach(function(i) { all.push({ id: i.inspo_id, type: "inspo", title: i.title || "Untitled", source: i.source_url || "", platform: i.source_platform || "", created: i.created_at, summary: i.summary || i.title || "" }); });
+      }).catch(function(){})
+    );
+    promises.push(
+      STELLARSYNC_SUPABASE_CLIENT.from("notes").select("note_id,title,source_url,source_type,created_at,body").eq("workspace_id", wsId).order("created_at", { ascending: false }).limit(10).then(function(r) {
+        if (r.data) (r.data || []).forEach(function(n) { all.push({ id: n.note_id, type: "note", title: n.title || "Untitled", source: n.source_url || "", platform: n.source_type || "", created: n.created_at, summary: (n.body || "").substring(0, 120) }); });
+      }).catch(function(){})
+    );
+    promises.push(
+      STELLARSYNC_SUPABASE_CLIENT.from("ai_drafts").select("ai_draft_id,title,source_url,source_type,created_at,draft_text").eq("workspace_id", wsId).order("created_at", { ascending: false }).limit(10).then(function(r) {
+        if (r.data) (r.data || []).forEach(function(d) { all.push({ id: d.ai_draft_id, type: "draft", title: d.title || "Untitled", source: d.source_url || "", platform: d.source_type || "", created: d.created_at, summary: (d.draft_text || "").substring(0, 120) }); });
+      }).catch(function(){})
+    );
+    Promise.all(promises).then(function() {
+      all.sort(function(a, b) { return new Date(b.created || 0) - new Date(a.created || 0); });
+      if (all.length === 0) {
+        if (listEl) listEl.classList.add("hidden");
+        if (emptyEl) emptyEl.classList.remove("hidden");
+        return;
+      }
+      if (listEl) listEl.classList.remove("hidden");
+      if (emptyEl) emptyEl.classList.add("hidden");
+      if (listEl) {
+        listEl.innerHTML = all.slice(0, 20).map(function(item) {
+          var typeIcon = item.type === "inspo" ? "ph-lightbulb" : item.type === "note" ? "ph-note-pencil" : "ph-robot";
+          var typeColor = item.type === "inspo" ? "text-[#c77dff]" : item.type === "note" ? "text-emerald-400" : "text-amber-400";
+          var time = item.created ? new Date(item.created).toLocaleDateString() : "";
+          return '<div class="flex items-start gap-3 px-4 py-3 rounded-xl bg-[#181125] border border-white/5 cursor-pointer hover:bg-[#1e1533] transition-colors" onclick="openItemFromInbox(\'' + item.id + '\',\'' + item.type + '\')">' +
+            '<div class="w-8 h-8 rounded-lg bg-[#231738] flex items-center justify-center shrink-0"><i class="ph-fill ' + typeIcon + ' ' + typeColor + '"></i></div>' +
+            '<div class="min-w-0 flex-1">' +
+            '<div class="text-sm font-bold text-white truncate">' + escapeHtml(item.title) + '</div>' +
+            (item.source ? '<div class="text-[10px] text-gray-500 truncate">' + escapeHtml(item.source) + '</div>' : '') +
+            (item.summary ? '<div class="text-[10px] text-gray-400 mt-0.5 line-clamp-1">' + escapeHtml(item.summary) + '</div>' : '') +
+            '</div>' +
+            '<div class="text-[9px] text-gray-600 shrink-0">' + time + '</div>' +
+            '</div>';
+        }).join("");
+      }
+    });
+  } catch (_) {}
+}
+
+function openItemFromInbox(itemId, type) {
+  if (type === "inspo") {
+    var el = document.querySelector('[data-inspo-id="' + itemId + '"]');
+    if (el) { el.click(); return; }
+    showToast("Open Inspo", "Inspo ID: " + itemId + ". Open the Inspo view to see it.", "ph-lightbulb", "text-[#c77dff]");
+  } else if (type === "note") {
+    var el = document.querySelector('[data-note-id="' + itemId + '"]');
+    if (el) { el.click(); return; }
+    showToast("Open Note", "Note ID: " + itemId + ". Open the Notes view to see it.", "ph-note-pencil", "text-emerald-400");
+  } else if (type === "draft") {
+    showToast("Open AI Draft", "Draft ID: " + itemId + ". Open AI Drafts to see it.", "ph-robot", "text-amber-400");
+  }
+}
+
+// Event wiring for plugin modals
+(function() {
+  // Install modal
+  var closeInstallBtn = document.getElementById("close-plugin-install-modal-btn");
+  if (closeInstallBtn) closeInstallBtn.addEventListener("click", closePluginInstallModal);
+  var copyBookmarkletBtn = document.getElementById("plugin-copy-bookmarklet-btn");
+  if (copyBookmarkletBtn) copyBookmarkletBtn.addEventListener("click", copyPluginBookmarkletCode);
+  var openCaptureBtn = document.getElementById("plugin-open-capture-modal-btn");
+  if (openCaptureBtn) openCaptureBtn.addEventListener("click", function() {
+    closePluginInstallModal();
+    setTimeout(function() { openPluginCaptureModal({ platform: "manual" }); }, 300);
+  });
+  // Capture modal
+  var closeCaptureBtn = document.getElementById("close-plugin-capture-modal-btn");
+  if (closeCaptureBtn) closeCaptureBtn.addEventListener("click", closePluginCaptureModal);
+  // Inbox modal
+  var closeInboxBtn = document.getElementById("close-plugin-inbox-modal-btn");
+  if (closeInboxBtn) closeInboxBtn.addEventListener("click", closePluginInbox);
+  // Close on backdrop click
+  document.querySelectorAll("#stellarsync-plugin-install-modal, #plugin-capture-view-modal, #plugin-inbox-modal").forEach(function(modal) {
+    modal.addEventListener("click", function(e) {
+      if (e.target === modal) {
+        if (modal.id === "stellarsync-plugin-install-modal") closePluginInstallModal();
+        else if (modal.id === "plugin-capture-view-modal") closePluginCaptureModal();
+        else if (modal.id === "plugin-inbox-modal") closePluginInbox();
+      }
+    });
+  });
+  // Close on Escape
+  document.addEventListener("keydown", function(e) {
+    if (e.key === "Escape") {
+      closePluginInstallModal();
+      closePluginCaptureModal();
+      closePluginInbox();
+    }
+  });
+})();
+
 async function submitProfileWorkspaceSupport(kind) {
   const isBug = kind === "bug";
   const statusEl = document.getElementById(isBug ? "pw-report-status" : "pw-support-status");
@@ -29418,6 +29942,19 @@ window.cancelPWInvite = cancelPWInvite;
 window.handlePWMemberRoleChange = handlePWMemberRoleChange;
 window.handlePWMemberRemove = handlePWMemberRemove;
 window.copyPWInviteLink = copyPWInviteLink;
+
+// Plugin function exports
+window.openPluginInstallModal = openPluginInstallModal;
+window.closePluginInstallModal = closePluginInstallModal;
+window.openPluginCaptureModal = openPluginCaptureModal;
+window.closePluginCaptureModal = closePluginCaptureModal;
+window.switchPluginCaptureTab = switchPluginCaptureTab;
+window.handlePluginCaptureSave = handlePluginCaptureSave;
+window.openPluginInbox = openPluginInbox;
+window.closePluginInbox = closePluginInbox;
+window.copyPluginBookmarkletCode = copyPluginBookmarkletCode;
+window.openItemFromInbox = openItemFromInbox;
+window.showPluginInstallInstructions = showPluginInstallInstructions;
 
 </script>
 </body>
