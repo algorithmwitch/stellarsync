@@ -208,15 +208,16 @@
 
   #media-asset-modal {
     z-index: 122;
-    padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
+    padding: max(16px, env(safe-area-inset-top)) 12px max(16px, env(safe-area-inset-bottom));
   }
 
   #media-asset-modal-card {
-    width: min(1100px, calc(100vw - 32px));
-    max-width: min(1100px, calc(100vw - 32px));
-    max-height: min(860px, calc(100dvh - 40px));
+    width: min(1120px, calc(100vw - 24px));
+    max-width: min(1120px, calc(100vw - 24px));
+    max-height: calc(100dvh - 32px);
     display: flex;
     flex-direction: column;
+    overflow: hidden;
   }
 
   #upload-staging-modal {
@@ -265,13 +266,13 @@
   }
 
   .media-viewer-scroll {
-    overflow: auto;
+    overflow-y: auto;
     min-height: 0;
+    flex: 1 1 auto;
   }
 
   .media-viewer-body {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+    display: block;
     min-height: 0;
   }
 
@@ -281,9 +282,9 @@
 
   #media-asset-modal-preview {
     position: relative;
-    min-height: 260px;
-    max-height: 58dvh;
-    overflow: hidden;
+    min-height: 0;
+    max-height: none;
+    overflow: visible;
   }
 
   #media-asset-modal-preview img,
@@ -293,39 +294,56 @@
     object-fit: contain;
   }
 
-  .media-viewer-nav {
-    position: absolute;
-    right: 0.85rem;
-    top: 50%;
-    transform: translateY(-50%);
-    display: grid;
-    gap: 0.6rem;
-    z-index: 3;
-  }
-
-  .media-viewer-nav button {
-    width: 2.35rem;
-    height: 2.35rem;
-    border-radius: 999px;
-    background: rgba(18, 12, 29, 0.86);
-    border: 1px solid rgba(255,255,255,0.12);
-    color: #fff;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .media-viewer-nav button:disabled {
-    opacity: 0.32;
-    cursor: not-allowed;
-  }
-
   .media-viewer-posts-panel {
     border-left: 1px solid rgba(255,255,255,0.06);
     background: rgba(15, 10, 24, 0.92);
     overflow: auto;
     max-height: calc(100dvh - 190px);
     display: none;
+  }
+
+  .media-manage-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.85rem;
+  }
+
+  .media-manage-tile {
+    min-width: 0;
+    border-radius: 0.85rem;
+    background: #181125;
+    border: 1px solid rgba(255,255,255,0.06);
+    overflow: hidden;
+  }
+
+  .media-manage-thumb {
+    aspect-ratio: 1 / 1;
+    background: #0f0a18;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .media-manage-thumb img,
+  .media-manage-thumb video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  @media (max-width: 980px) {
+    .media-manage-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 640px) {
+    .media-manage-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.65rem;
+    }
   }
 
   .media-viewer-posts-panel.open {
@@ -4616,6 +4634,9 @@
           <p class="text-xs text-gray-500 mt-1">Canonical editable source of truth for AI drafting, editing, review, and campaign planning.</p>
         </div>
         <div class="flex items-center gap-3">
+          <button id="brand-os-back-btn" type="button" onclick="returnFromBrandOSToWorkspaceSettings()" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-400 hover:text-white transition-colors flex items-center gap-1.5">
+            <i class="ph-bold ph-arrow-left"></i> Back to Workspace Settings
+          </button>
           <button id="save-brand-framework-btn" type="button" class="px-4 py-2 bg-gradient-to-r from-[#9d4edd] to-[#c77dff] hover:opacity-90 text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all border border-white/10">Save Framework</button>
           <button id="close-brand-framework-modal-btn" type="button" class="w-10 h-10 rounded-xl bg-[#1a1128] hover:bg-[#231738] text-gray-400 hover:text-white border border-white/5 transition-colors flex items-center justify-center">
             <i class="ph-bold ph-x"></i>
@@ -4973,7 +4994,10 @@
                 </div>
                 <div>
                   <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Short Name</div>
-                  <input id="pw-workspace-short-name" type="text" maxlength="8" placeholder="Short name or initials" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50">
+                  <div class="flex items-center gap-4">
+                    <div id="pw-workspace-avatar-preview" class="w-12 h-12 rounded-xl bg-[#231738] border border-white/10 flex items-center justify-center text-white text-sm font-bold">WS</div>
+                    <input id="pw-workspace-short-name" type="text" maxlength="8" placeholder="Short name or initials" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50">
+                  </div>
                 </div>
                 <div>
                   <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Workspace Icon</div>
@@ -5682,6 +5706,32 @@ async function loadWorkspaceSettingsForWorkspace(workspace) {
   }
 }
 
+async function loadProfileSettingsForUser(user) {
+  if (!STELLARSYNC_SUPABASE_CLIENT || !user || !user.id) return user;
+  for (const tableName of ["profile_settings", "user_preferences"]) {
+    try {
+      const result = await STELLARSYNC_SUPABASE_CLIENT
+        .from(tableName)
+        .select("display_name,avatar_mode,icon,avatar_initials")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (result.error) {
+        if (isMissingColumnError(result.error) || String(result.error.message || "").toLowerCase().includes("does not exist")) continue;
+        console.warn("[icon-save] profile load skipped", result.error.message || result.error);
+        continue;
+      }
+      if (result.data) {
+        return { ...user, user_metadata: { ...(user.user_metadata || {}), ...result.data } };
+      }
+    } catch (err) {
+      if (!isMissingColumnError(err) && !String(err?.message || err).toLowerCase().includes("does not exist")) {
+        console.warn("[icon-save] profile load skipped", err?.message || err);
+      }
+    }
+  }
+  return user;
+}
+
 function mergeWorkspaceRole(workspace, role) {
   return {
     ...normalizeSupabaseWorkspaceConfig(workspace),
@@ -5980,7 +6030,8 @@ async function ensureSupabaseWorkspaceBeforeBoot() {
     window.location.replace("/login/");
     return null;
   }
-  STELLARSYNC_AUTH_USER = session.user;
+  STELLARSYNC_AUTH_USER = await loadProfileSettingsForUser(session.user);
+  if (typeof window !== "undefined") window.__currentAuthUser = STELLARSYNC_AUTH_USER;
   console.log("[app-router] session found", session.user.email || session.user.id);
   console.log("[app-router] user email", session.user.email || "(none)");
 
@@ -6751,23 +6802,62 @@ function getLinkedPostForMedia(asset = {}) {
   return (appState.posts || []).find((post) => getPostIdentityValues(post).includes(linkedId)) || null;
 }
 
+function getMediaPostContext(media) {
+  if (!media || typeof media !== "object") return null;
+  var postId = String(media.post_id || media.postId || media.linked_post_id || media.linkedPostId || "").trim();
+  if (postId) {
+    var found = (appState.posts || []).find(function(p) { return getPostIdentityValues(p).includes(postId) || String(p.id || "").trim() === postId || String(p.post_id || "").trim() === postId; });
+    if (found) return found;
+  }
+  var mediaAssetId = getMediaAssetId(media);
+  if (mediaAssetId) {
+    var pmRow = (appState.postMedia || appState.post_media || []).find(function(r) { return String(r.media_asset_id || "").trim() === mediaAssetId; });
+    if (pmRow && pmRow.post_id) {
+      var foundByPm = (appState.posts || []).find(function(p) { return getPostIdentityValues(p).includes(String(pmRow.post_id)); });
+      if (foundByPm) return foundByPm;
+    }
+  }
+  return null;
+}
+
+function getMediaSubtitle(asset, linkedPost, carouselIndex, carouselTotal) {
+  if (!asset) return "";
+  if (linkedPost) {
+    var mediaTitle = getExplicitMediaTitle(asset) || getMediaTitle(asset, "");
+    if (mediaTitle) return "Media title: " + mediaTitle;
+  }
+  if (linkedPost && typeof carouselTotal === "number" && carouselTotal > 1 && typeof carouselIndex === "number" && carouselIndex >= 0) {
+    return "Carousel item \u00b7 " + (carouselIndex + 1) + " of " + carouselTotal;
+  }
+  return "";
+}
+
 function getMediaDisplayTitle(asset, linkedPost = getLinkedPostForMedia(asset), fallback = "Untitled media") {
-  const explicitTitle = getExplicitMediaTitle(asset);
-  const postTitle = linkedPost ? getPostDisplayTitle(linkedPost, "") : "";
-  if (explicitTitle) return explicitTitle;
-  if (postTitle) return postTitle;
-  return getMediaTitle(asset, fallback);
+  if (!asset) return fallback;
+  var postTitle = linkedPost ? getPostDisplayTitle(linkedPost, "") : "";
+  var mediaTitle = getExplicitMediaTitle(asset) || getMediaTitle(asset, "");
+  if (postTitle) {
+    console.log("[media-title] linked post title resolved", postTitle);
+    return postTitle;
+  }
+  console.log("[media-title] fallback title used", mediaTitle || fallback);
+  return mediaTitle || fallback;
 }
 
 function getMediaUsageLine(asset, linkedPost = getLinkedPostForMedia(asset)) {
   const postTitle = linkedPost ? getPostDisplayTitle(linkedPost, "") : "";
   if (!postTitle) return "";
-  return getExplicitMediaTitle(asset) ? `Used in: ${postTitle}` : "";
+  return "Used in: " + postTitle;
 }
 
 function getMediaBadgeLabel(asset, linkedPost = getLinkedPostForMedia(asset)) {
-  if (linkedPost && getAttachedMediaForPost(linkedPost).length > 1) {
-    return `Carousel item · ${getPostDisplayTitle(linkedPost, "Post")}`;
+  if (linkedPost) {
+    var attached = getAttachedMediaForPost(linkedPost);
+    if (attached.length > 1) {
+      var idx = attached.findIndex(function(a) { return getMediaAssetId(a) === getMediaAssetId(asset); });
+      return "Carousel item \u00b7 " + (idx + 1) + " of " + attached.length;
+    }
+    return "Attached";
   }
   const type = inferMediaKindFromAsset(asset);
   if (type === "video") return "Video";
@@ -7509,7 +7599,10 @@ function renderMediaGalleryStrip(assets = [], options = {}) {
       ${items.map((asset, index) => {
         const previewUrl = getMediaPreviewUrl(asset);
         const kind = inferMediaKindFromAsset(asset);
-        const title = getMediaDisplayTitle(asset, getLinkedPostForMedia(asset), `Asset ${index + 1}`);
+        var linkedPost = getLinkedPostForMedia(asset) || getMediaPostContext(asset);
+        const title = getMediaDisplayTitle(asset, linkedPost, `Asset ${index + 1}`);
+        var carouselTotal = items.length;
+        var subtitle = getMediaSubtitle(asset, linkedPost, index, carouselTotal);
         return `
           <div class="shrink-0 w-28 rounded-xl bg-[#120c1d] border border-white/5 overflow-hidden">
             <div class="relative aspect-square bg-[#0f0a18]">
@@ -7524,6 +7617,7 @@ function renderMediaGalleryStrip(assets = [], options = {}) {
             </div>
             <div class="p-2 space-y-1">
               <div class="text-[10px] font-bold text-white wrap-safe">${escapeHtml(title)}</div>
+              ${subtitle ? `<div class="text-[8px] text-gray-500 wrap-safe">${escapeHtml(subtitle)}</div>` : ""}
               <div class="flex flex-wrap gap-1">
                 <span class="px-1.5 py-0.5 rounded bg-[#181125] border border-white/5 text-[8px] uppercase tracking-wider font-bold text-gray-300">${escapeHtml(getMediaFileTypeLabel(asset))}</span>
                 <span class="px-1.5 py-0.5 rounded bg-[#181125] border border-white/5 text-[8px] uppercase tracking-wider font-bold text-gray-300">Order ${index + 1}</span>
@@ -7872,6 +7966,8 @@ let mediaViewerGalleryViewAll = false;
 let mediaViewerReorderMode = false;
 let mediaViewerDragIndex = null;
 let mediaViewerOriginalOrder = [];
+let mediaViewerDetachMode = false;
+let selectedMediaViewerDetachAssetIds = new Set();
 let selectedMediaAssetIds = new Set();
 let mediaSelectMode = loadMediaSelectMode();
 let mediaPostsPanelOpen = false;
@@ -9474,10 +9570,22 @@ function setupWorkspaceUI() {
     btn.addEventListener("click", function() {
       document.querySelectorAll("#pw-workspace-icon-grid .pw-ws-icon-btn").forEach(function(b) { b.classList.remove("active"); });
       btn.classList.add("active");
-      var previewEl = document.getElementById("pw-profile-avatar-preview");
+      var previewEl = document.getElementById("pw-workspace-avatar-preview");
       var isInitials = btn.dataset.icon === "none";
       if (previewEl) previewEl.innerHTML = renderWorkspaceAvatar({ avatar_mode: isInitials ? "initials" : "icon", icon: isInitials ? "" : btn.dataset.icon, avatar_initials: (document.getElementById("pw-workspace-short-name") || {}).value || "" });
     });
+  });
+  document.getElementById("pw-workspace-short-name")?.addEventListener("input", function() {
+    var activeBtn = document.querySelector("#pw-workspace-icon-grid .pw-ws-icon-btn.active");
+    var selected = activeBtn?.dataset?.icon || "none";
+    var previewEl = document.getElementById("pw-workspace-avatar-preview");
+    if (previewEl) previewEl.innerHTML = renderWorkspaceAvatar({ avatar_mode: selected === "none" ? "initials" : "icon", icon: selected === "none" ? "" : selected, avatar_initials: this.value || "" });
+  });
+  document.getElementById("pw-profile-initials")?.addEventListener("input", function() {
+    var activeBtn = document.querySelector("#pw-profile-icon-grid .pw-icon-btn.active");
+    var selected = activeBtn?.dataset?.icon || "none";
+    var previewEl = document.getElementById("pw-profile-avatar-preview");
+    if (previewEl) previewEl.innerHTML = renderWorkspaceAvatar({ avatar_mode: selected === "none" ? "initials" : "icon", icon: selected === "none" ? "" : selected, avatar_initials: this.value || "" });
   });
   document.getElementById("pw-profile-save-btn")?.addEventListener("click", savePWProfile);
   document.getElementById("pw-workspace-save-btn")?.addEventListener("click", savePWWorkspace);
@@ -12588,6 +12696,9 @@ function renderModalCarouselPreview() {
     const detachId = getCanonicalMediaAssetId(asset);
     const canonicalUuid = String(detachId || asset.id || asset.media_asset_id || "").trim();
     const isSelected = selectedCarouselDetachAssetIds.has(canonicalUuid);
+    var linkedPostForCarousel = getLinkedPostForMedia(asset) || getMediaPostContext(asset);
+    var carouselTitle = getMediaDisplayTitle(asset, linkedPostForCarousel, "Carousel asset");
+    var carouselSubtitle = getMediaSubtitle(asset, linkedPostForCarousel, index, items.length);
     return `
       <div class="p-3 rounded-xl bg-[#181125] border border-white/5 flex gap-3 relative"
         draggable="true"
@@ -12603,14 +12714,15 @@ function renderModalCarouselPreview() {
               ? `<video src="${escapeHtml(previewUrl)}" class="w-full h-full object-cover" muted playsinline preload="metadata"></video>`
               : /pdf|document|doc|presentation|spreadsheet|text/i.test(String(asset.assetType || asset.type || asset.mimeType || ""))
               ? `<div class="w-full h-full flex flex-col items-center justify-center text-gray-400"><i class="ph-bold ph-file-text text-2xl mb-1"></i><span class="text-[10px] uppercase tracking-wider font-bold">Document</span></div>`
-              : `<img src="${escapeHtml(previewUrl)}" alt="${escapeHtml(asset.title || asset.assetName || "Carousel asset")}" class="w-full h-full object-cover" onerror="handleBrokenMediaPreview(this)">`
+              : `<img src="${escapeHtml(previewUrl)}" alt="${escapeHtml(carouselTitle)}" class="w-full h-full object-cover" onerror="handleBrokenMediaPreview(this)">`
             : `<i class="ph-bold ph-image text-gray-500 text-2xl"></i>`}
         </div>
         <div class="min-w-0 flex-1">
           <div class="flex items-start justify-between gap-3 mb-1">
-            <div class="text-xs font-bold text-white wrap-safe min-w-0">${escapeHtml(getMediaDisplayTitle(asset, getLinkedPostForMedia(asset), `Asset ${index + 1}`))}</div>
+            <div class="text-xs font-bold text-white wrap-safe min-w-0">${escapeHtml(carouselTitle)}</div>
             <div class="shrink-0 text-gray-500 cursor-grab" title="Drag to reorder"><i class="ph-bold ph-dots-six-vertical text-lg"></i></div>
           </div>
+          ${carouselSubtitle ? `<div class="text-[9px] text-gray-500 mb-1">${escapeHtml(carouselSubtitle)}</div>` : ""}
           <div class="text-[10px] text-gray-500 mb-3">${escapeHtml(toTitleCase(asset.assetType || asset.type || "image"))} · Order ${index + 1}</div>
           <div class="flex gap-2 flex-wrap">
             <button type="button" onclick="moveCarouselAsset(${index}, -1)" class="px-2 py-1 rounded-lg bg-[#120c1d] border border-white/5 text-[10px] font-bold text-white">Move left</button>
@@ -17841,7 +17953,7 @@ function renderMedia() {
       type === "article" ? "ph-article" :
       "ph-image";
 
-    const linkedPost = item.linkedPost || (appState.posts || []).find(post => post.id === item.postId);
+    const linkedPost = item.linkedPost || (appState.posts || []).find(post => post.id === item.postId) || getMediaPostContext(item);
     const linkedStatus = getMediaLinkedStatus(item);
     const linkedPostAssets = linkedPost ? getAttachedMediaForPost(linkedPost).slice(0, 20).map((asset) => normalizeRemoteMedia(asset)) : [];
     const isCarouselPreview = isGroup || (linkedPost && linkedPostAssets.length > 1) || type === "carousel";
@@ -17862,6 +17974,14 @@ function renderMedia() {
     const usageLine = getMediaUsageLine(item, linkedPost);
     const metaLine = [usageLine, linkedStatus, item.meta || "", campaignLabel, sourceLabel].filter(Boolean).join(" - ");
     const displayTitle = getMediaDisplayTitle(item, linkedPost);
+    var carouselIdx = -1;
+    var carouselTotal = 0;
+    if (linkedPost) {
+      var pmForPost = getAttachedMediaForPost(linkedPost);
+      carouselTotal = pmForPost.length;
+      carouselIdx = pmForPost.findIndex(function(a) { return getMediaAssetId(a) === getMediaAssetId(item); });
+    }
+    var subtitle = getMediaSubtitle(item, linkedPost, carouselIdx, carouselTotal);
     const assetUrl = isGroup ? (item.sourceUrl || linkedPost?.sourceUrl || "") : (item.fileUrl || item.sourceUrl || "");
     const overlayLabel = item.fileUrl ? "Open Asset" : item.sourceUrl ? "Open Link" : "View";
     const coverAsset = isCarouselPreview ? getCarouselCoverAsset(isGroup ? (item.assets || []) : linkedPostAssets.length ? linkedPostAssets : linkedPost || item) : null;
@@ -17893,6 +18013,7 @@ function renderMedia() {
         </div>
         <div class="p-4">
           <p class="text-white text-sm font-semibold wrap-safe mb-1" title="${escapeHtml(displayTitle)}">${escapeHtml(displayTitle)}</p>
+          ${subtitle ? `<p class="text-gray-500 text-[9px] font-medium wrap-safe">${escapeHtml(subtitle)}</p>` : ""}
           <p class="text-gray-500 text-[10px] font-medium wrap-safe">${escapeHtml(metaLine)}</p>
           ${isCarouselPreview ? `<p class="text-gray-600 text-[10px] font-medium wrap-safe mt-1">Carousel · ${(item.assets?.length || linkedPostAssets.length || getAttachedMediaForPost(linkedPost).length)} assets</p>` : ""}
           ${assetUrl ? `<p class="text-gray-600 text-[10px] font-medium wrap-safe mt-1">${escapeHtml(getDisplayExcerpt(assetUrl, assetUrl))}</p>` : ""}
@@ -18269,28 +18390,28 @@ async function detachCurrentMediaAssetFromPost() {
 function renderMediaPreviewContent(item, linkedAssets, previewUrl, type) {
   const assets = (currentMediaViewerItems || []).slice(0, 20);
   const total = assets.length || 1;
-  const activeIndex = Math.max(0, Math.min(currentMediaViewerIndex, total - 1));
-  const activeAsset = assets[activeIndex] || item;
-  const activePreviewUrl = getMediaPreviewUrl(activeAsset) || previewUrl || "";
-  const activeKind = inferMediaKindFromAsset(activeAsset);
-  const preview = activePreviewUrl
-    ? activeKind === "video"
-      ? `<video src="${escapeHtml(activePreviewUrl)}" controls playsinline preload="metadata" class="max-h-[56dvh] w-full"></video>`
-      : activeKind === "document"
-      ? `<div class="w-full max-w-lg rounded-2xl bg-[#181125] border border-white/5 p-8 text-center"><i class="ph-bold ph-file-text text-gray-300 text-5xl block mb-3"></i><div class="text-white text-sm font-bold wrap-safe">${escapeHtml(getMediaDisplayTitle(activeAsset, getLinkedPostForMedia(activeAsset), "Document"))}</div><div class="text-xs text-gray-500 mt-1">${escapeHtml(getMediaFileTypeLabel(activeAsset))}</div></div>`
-      : `<img src="${escapeHtml(activePreviewUrl)}" alt="${escapeHtml(getMediaDisplayTitle(activeAsset, getLinkedPostForMedia(activeAsset), "Media asset"))}" class="max-h-[56dvh] w-full object-contain" loading="lazy" onerror="handleBrokenMediaPreview(this)">`
-    : `<div class="w-full max-w-lg rounded-2xl bg-[#181125] border border-white/5 p-8 text-center"><i class="ph-bold ph-image text-gray-500 text-5xl block mb-3"></i><div class="text-white text-sm font-bold wrap-safe">${escapeHtml(activeAsset.filename || activeAsset.assetName || activeAsset.title || "File")}</div><div class="text-xs text-gray-500 mt-1">${escapeHtml(getMediaFileTypeLabel(activeAsset))}</div></div>`;
-  const thumbs = assets.map((asset, index) => {
+  const modeEnabled = Boolean(mediaViewerDetachMode);
+  const selectedCount = selectedMediaViewerDetachAssetIds.size;
+  console.log("[media-manage] render count", total);
+  const tiles = assets.map((asset, index) => {
     const thumbUrl = getMediaPreviewUrl(asset);
     const kind = inferMediaKindFromAsset(asset);
-    const title = getMediaDisplayTitle(asset, getLinkedPostForMedia(asset), `Asset ${index + 1}`);
+    var linkedPostForTile = getLinkedPostForMedia(asset) || getMediaPostContext(asset);
+    const title = getMediaDisplayTitle(asset, linkedPostForTile, `Asset ${index + 1}`);
+    var subtitle = getMediaSubtitle(asset, linkedPostForTile, index, total);
+    const mediaAssetId = getMediaAssetId(asset);
+    const checked = selectedMediaViewerDetachAssetIds.has(mediaAssetId);
     return `
-      <button type="button"
-        class="relative min-w-0 rounded-xl overflow-hidden border ${index === activeIndex ? "border-[#c77dff]/70 ring-1 ring-[#c77dff]/40" : "border-white/5"} bg-[#181125] text-left"
-        onclick="${mediaViewerReorderMode ? "" : `openMediaAssetModal(currentMediaViewerItems[${index}], { items: currentMediaViewerItems, openPosts: mediaPostsPanelOpen })`}">
-        <div class="aspect-square bg-[#0f0a18] flex items-center justify-center relative"
-          ${mediaViewerReorderMode ? `draggable="true" ondragstart="startMediaViewerAssetDrag(event, ${index})" ondragover="event.preventDefault()" ondrop="dropMediaViewerAsset(event, ${index})" ondragend="endMediaViewerAssetDrag()"` : ""}>
+      <div class="media-manage-tile ${index === 0 ? "border-[#c77dff]/50" : ""}"
+        draggable="true"
+        ondragstart="startMediaViewerAssetDrag(event, ${index})"
+        ondragover="event.preventDefault()"
+        ondrop="dropMediaViewerAsset(event, ${index})"
+        ondragend="endMediaViewerAssetDrag()">
+        <div class="media-manage-thumb">
+          ${modeEnabled ? `<input type="checkbox" class="media-select-box" ${checked ? "checked" : ""} onchange="toggleMediaViewerDetachSelection('${escapeHtml(mediaAssetId)}', this.checked)" aria-label="Select media to detach">` : ""}
           <span class="absolute top-2 left-2 z-10 w-6 h-6 rounded-full bg-[#181125]/90 border border-white/10 text-[10px] font-bold text-white flex items-center justify-center">${index + 1}</span>
+          ${index === 0 ? `<span class="absolute top-2 right-2 z-10 px-2 py-1 rounded-full bg-[#231738]/95 border border-[#c77dff]/30 text-[8px] uppercase tracking-wider font-bold text-[#c77dff]">Cover</span>` : ""}
           ${thumbUrl ? (
             kind === "video"
               ? `<video src="${escapeHtml(thumbUrl)}" class="w-full h-full object-cover" muted playsinline preload="metadata"></video>`
@@ -18298,44 +18419,39 @@ function renderMediaPreviewContent(item, linkedAssets, previewUrl, type) {
               ? `<div class="w-full h-full flex flex-col items-center justify-center gap-1 text-gray-400 p-2"><i class="ph-bold ph-file-text text-2xl"></i><span class="text-[9px] uppercase tracking-wider font-bold text-center">${escapeHtml(getMediaFileTypeLabel(asset))}</span></div>`
               : `<img src="${escapeHtml(thumbUrl)}" alt="${escapeHtml(title)}" class="w-full h-full object-cover" onerror="handleBrokenMediaPreview(this)">`
           ) : `<div class="w-full h-full flex items-center justify-center text-gray-500"><i class="ph-bold ph-image text-2xl"></i></div>`}
-          ${mediaViewerReorderMode ? `<div class="absolute inset-0 bg-black/0 hover:bg-black/15 transition-colors"></div>` : ""}
         </div>
-        <div class="p-2 space-y-1">
-          <div class="text-[10px] font-bold text-white wrap-safe">${escapeHtml(title)}</div>
+        <div class="p-3 space-y-2">
+          <div class="text-xs font-bold text-white wrap-safe">${escapeHtml(title)}</div>
+          ${subtitle ? `<div class="text-[9px] text-gray-500 wrap-safe">${escapeHtml(subtitle)}</div>` : ""}
           <div class="flex items-center justify-between gap-2">
-            <span class="px-1.5 py-0.5 rounded bg-[#181125] border border-white/5 text-[8px] uppercase tracking-wider font-bold text-gray-300">${escapeHtml(getMediaFileTypeLabel(asset))}</span>
-            ${mediaViewerReorderMode ? `<span class="text-[9px] text-gray-500 cursor-grab"><i class="ph-bold ph-dots-six-vertical"></i></span>` : ""}
+            <span class="px-1.5 py-0.5 rounded bg-[#120c1d] border border-white/5 text-[8px] uppercase tracking-wider font-bold text-gray-300">${escapeHtml(getMediaFileTypeLabel(asset))}</span>
+            <span class="text-[10px] text-gray-500 cursor-grab" title="Drag to reorder"><i class="ph-bold ph-dots-six-vertical"></i></span>
           </div>
-          ${mediaViewerReorderMode ? `<div class="flex gap-2 flex-wrap pt-1">
-            <button type="button" onclick="moveMediaViewerAsset(${index}, -1)" class="px-2 py-1 rounded-lg bg-[#120c1d] border border-white/5 text-[10px] font-bold text-white">Move left</button>
-            <button type="button" onclick="moveMediaViewerAsset(${index}, 1)" class="px-2 py-1 rounded-lg bg-[#120c1d] border border-white/5 text-[10px] font-bold text-white">Move right</button>
-          </div>` : ""}
+          <div class="grid grid-cols-2 gap-2 pt-1">
+            <button type="button" onclick="moveMediaViewerAsset(${index}, -1)" ${index === 0 ? "disabled" : ""} class="px-2 py-1.5 rounded-lg bg-[#120c1d] border border-white/5 text-[10px] font-bold text-white disabled:opacity-35">Move left</button>
+            <button type="button" onclick="moveMediaViewerAsset(${index}, 1)" ${index === total - 1 ? "disabled" : ""} class="px-2 py-1.5 rounded-lg bg-[#120c1d] border border-white/5 text-[10px] font-bold text-white disabled:opacity-35">Move right</button>
+          </div>
         </div>
-      </button>
+      </div>
     `;
   }).join("");
-  const controls = total > 1 ? `
+  const controls = `
     <div class="flex items-center justify-between gap-3 flex-wrap">
-      <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${activeIndex + 1} of ${total}</div>
+      <div>
+        <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Manage Media Order</div>
+        <div class="text-xs text-gray-400 mt-1">${total} attached asset${total === 1 ? "" : "s"} · drag tiles or use move buttons</div>
+      </div>
       <div class="flex items-center gap-2 flex-wrap">
-        <button type="button" onclick="navigateMediaViewer(-1)" class="px-3 py-2 rounded-lg bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white">Previous</button>
-        <button type="button" onclick="navigateMediaViewer(1)" class="px-3 py-2 rounded-lg bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white">Next</button>
-        <button type="button" onclick="toggleMediaViewerGalleryViewAll()" class="px-3 py-2 rounded-lg ${mediaViewerGalleryViewAll ? "bg-[#231738] text-white" : "bg-[#181125] text-gray-300"} border border-white/5 text-[10px] uppercase tracking-wider font-bold">View all</button>
-        <button type="button" onclick="toggleMediaViewerReorderMode()" class="px-3 py-2 rounded-lg ${mediaViewerReorderMode ? "bg-[#231738] text-white" : "bg-[#181125] text-gray-300"} border border-white/5 text-[10px] uppercase tracking-wider font-bold">Reorder</button>
-        ${mediaViewerReorderMode ? `<button type="button" onclick="saveMediaViewerOrder()" class="px-3 py-2 rounded-lg bg-[#30121b] border border-red-400/20 text-[10px] uppercase tracking-wider font-bold text-red-200">Save order</button><button type="button" onclick="cancelMediaViewerReorder()" class="px-3 py-2 rounded-lg bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300">Cancel reorder</button>` : ""}
+        <button type="button" onclick="toggleMediaViewerDetachMode()" class="px-3 py-2 rounded-lg ${modeEnabled ? "bg-[#231738] text-white" : "bg-[#181125] text-gray-300"} border border-white/5 text-[10px] uppercase tracking-wider font-bold">${modeEnabled ? `${selectedCount} selected` : "Select to detach"}</button>
+        ${modeEnabled ? `<button type="button" onclick="detachSelectedMediaViewerAssets()" ${selectedCount ? "" : "disabled"} class="px-3 py-2 rounded-lg bg-[#30121b] border border-red-400/20 text-[10px] uppercase tracking-wider font-bold text-red-200 disabled:opacity-40">Detach selected</button><button type="button" onclick="toggleMediaViewerDetachMode(false)" class="px-3 py-2 rounded-lg bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300">Cancel</button>` : ""}
+        <button type="button" onclick="saveMediaViewerOrder()" class="px-3 py-2 rounded-lg bg-[#c77dff] text-[#120c1d] border border-white/5 text-[10px] uppercase tracking-wider font-bold">Save Order</button>
       </div>
     </div>
-  ` : "";
-  const gallery = mediaViewerGalleryViewAll
-    ? `<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">${thumbs}</div>`
-    : `<div class="flex gap-3 overflow-x-auto pb-2">${thumbs}</div>`;
+  `;
   return `
     <div class="space-y-4 w-full">
-      <div class="flex items-center justify-center min-h-[260px] bg-[#0f0a18] border border-white/5 rounded-2xl p-4">${preview}</div>
       ${controls}
-      <div class="space-y-2">
-        ${gallery}
-      </div>
+      <div class="media-manage-grid">${tiles}</div>
     </div>
   `;
 }
@@ -18363,7 +18479,6 @@ function startMediaViewerAssetDrag(event, index) {
 
 function dropMediaViewerAsset(event, index) {
   event.preventDefault();
-  if (!mediaViewerReorderMode) return;
   reorderMediaViewerAssets(mediaViewerDragIndex, index);
 }
 
@@ -18382,8 +18497,9 @@ function reorderMediaViewerAssets(fromIndex, toIndex) {
   const [item] = clone.splice(fromIndex, 1);
   clone.splice(toIndex, 0, item);
   currentMediaViewerItems = clone;
-  currentMediaViewerIndex = Math.max(0, clone.findIndex(asset => getMediaItemKey(asset) === getMediaItemKey(currentMediaAssetDetail)));
-  console.log("[media-gallery] item selected", clone.map((asset) => getMediaItemKey(asset)));
+  currentMediaViewerIndex = toIndex;
+  currentMediaAssetDetail = normalizeRemoteMedia(item);
+  console.log("[media-manage] reorder payload", { fromIndex, toIndex, ordered_media_asset_ids: clone.map((asset) => getMediaAssetId(asset)).filter(Boolean) });
   openMediaAssetModal(currentMediaViewerItems[currentMediaViewerIndex] || clone[0], { items: currentMediaViewerItems, openPosts: mediaPostsPanelOpen });
 }
 
@@ -18391,7 +18507,7 @@ async function saveMediaViewerOrder() {
   const linkedPost = currentMediaAssetDetail?.linkedPost || currentMediaViewerItems.find((asset) => asset.linkedPost)?.linkedPost || getLinkedPostForMedia(currentMediaAssetDetail);
   const postId = String(linkedPost ? getCanonicalPostId(linkedPost) : currentMediaAssetDetail?.postId || currentMediaAssetDetail?.linkedPostId || currentMediaAssetDetail?.linked_post_id || "").trim();
   const orderedIds = currentMediaViewerItems.map((asset) => getMediaAssetId(asset)).filter(Boolean);
-  console.log("[media-gallery] order payload", { post_id: postId, ordered_media_asset_ids: orderedIds });
+  console.log("[media-manage] reorder payload", { post_id: postId, ordered_media_asset_ids: orderedIds });
   if (!postId || !orderedIds.length) return;
   try {
     const meta = getWorkspaceRequestMetadata();
@@ -18403,8 +18519,9 @@ async function saveMediaViewerOrder() {
       ordered_media_asset_ids: orderedIds,
       orderedMediaAssetIds: orderedIds
     });
-    console.log("[media-gallery] order saved", result);
+    console.log("[media-manage] save response", result);
     applyOrderedAttachedMediaResult(postId, result);
+    await refreshAttachedMediaForMediaViewer(postId);
     mediaViewerOriginalOrder = currentMediaViewerItems.slice();
     mediaViewerReorderMode = false;
     mediaViewerDragIndex = null;
@@ -18412,6 +18529,54 @@ async function saveMediaViewerOrder() {
   } catch (err) {
     console.log("[media-gallery] order saved", err);
     showToast("Reorder failed", err.message || "Could not save the new order.", "ph-warning", "text-yellow-400");
+  }
+}
+
+async function refreshAttachedMediaForMediaViewer(postId) {
+  const post = findPostByAnyId(postId) || getLinkedPostForMedia(currentMediaAssetDetail) || { post_id: postId };
+  const refreshed = getAttachedMediaForPost(post).filter(Boolean).map(function(asset) { return normalizeAttachedMedia(asset); }).slice(0, 20);
+  if (refreshed.length) {
+    currentMediaViewerItems = refreshed;
+    currentMediaViewerIndex = 0;
+    currentMediaAssetDetail = refreshed[0];
+  }
+  return refreshed;
+}
+
+function toggleMediaViewerDetachMode(forceValue) {
+  mediaViewerDetachMode = typeof forceValue === "boolean" ? forceValue : !mediaViewerDetachMode;
+  if (!mediaViewerDetachMode) selectedMediaViewerDetachAssetIds.clear();
+  openMediaAssetModal(currentMediaViewerItems[currentMediaViewerIndex] || currentMediaAssetDetail, { items: currentMediaViewerItems, openPosts: mediaPostsPanelOpen });
+}
+
+function toggleMediaViewerDetachSelection(mediaAssetId, checked) {
+  const key = String(mediaAssetId || "").trim();
+  if (!key) return;
+  if (checked) selectedMediaViewerDetachAssetIds.add(key);
+  else selectedMediaViewerDetachAssetIds.delete(key);
+  openMediaAssetModal(currentMediaViewerItems[currentMediaViewerIndex] || currentMediaAssetDetail, { items: currentMediaViewerItems, openPosts: mediaPostsPanelOpen });
+}
+
+async function detachSelectedMediaViewerAssets() {
+  const linkedPost = currentMediaAssetDetail?.linkedPost || currentMediaViewerItems.find((asset) => asset.linkedPost)?.linkedPost || getLinkedPostForMedia(currentMediaAssetDetail);
+  const postId = String(linkedPost ? getCanonicalPostId(linkedPost) : currentMediaAssetDetail?.postId || currentMediaAssetDetail?.linkedPostId || currentMediaAssetDetail?.linked_post_id || "").trim();
+  const selected = currentMediaViewerItems.filter(function(asset) { return selectedMediaViewerDetachAssetIds.has(getMediaAssetId(asset)); });
+  if (!postId || !selected.length) return;
+  const mediaAssetIds = selected.map(function(asset) { return getMediaAssetId(asset); }).filter(Boolean);
+  console.log("[media-manage] detach payload", { post_id: postId, media_asset_ids: mediaAssetIds });
+  try {
+    const result = await detachMediaAssetsFromPost(selected, postId);
+    console.log("[media-manage] save response", result);
+    mediaViewerDetachMode = false;
+    selectedMediaViewerDetachAssetIds.clear();
+    await refreshAttachedMediaForMediaViewer(postId);
+    if (!currentMediaViewerItems.length) closeMediaAssetModal();
+    else openMediaAssetModal(currentMediaViewerItems[0], { items: currentMediaViewerItems, openPosts: mediaPostsPanelOpen });
+    rerenderAll();
+    showToast("Media detached", `${mediaAssetIds.length} asset${mediaAssetIds.length === 1 ? "" : "s"} detached.`, "ph-link-break", "text-[#00ffaa]");
+  } catch (err) {
+    console.log("[media-manage] save response", err);
+    showToast("Detach failed", err?.message || "Selected media could not be detached.", "ph-warning", "text-yellow-400");
   }
 }
 
@@ -18470,13 +18635,15 @@ function openMediaAssetModal(item, options = {}) {
   if (currentMediaViewerIndex < 0) currentMediaViewerIndex = 0;
   if (wasHidden) {
     mediaViewerOriginalOrder = currentMediaViewerItems.slice();
-    mediaViewerGalleryViewAll = false;
+    mediaViewerGalleryViewAll = true;
     mediaViewerReorderMode = false;
     mediaViewerDragIndex = null;
+    mediaViewerDetachMode = false;
+    selectedMediaViewerDetachAssetIds.clear();
   }
   currentMediaAssetDetail = normalizeRemoteMedia(item);
   item = currentMediaAssetDetail;
-  console.log("[media-viewer] open", { id: getMediaItemKey(item), index: currentMediaViewerIndex, total: currentMediaViewerItems.length });
+  console.log("[media-manage] modal open", { id: getMediaItemKey(item), index: currentMediaViewerIndex, total: currentMediaViewerItems.length });
 
   const linkedPostKey = String(item.postId || item.linkedPostId || item.linked_post_id || "").trim();
   const linkedPost = item.linkedPost || (appState.posts || []).find(post => [post.id, post.postId, post.post_id, post.frontendId].map(value => String(value || "").trim()).includes(linkedPostKey));
@@ -18488,12 +18655,14 @@ function openMediaAssetModal(item, options = {}) {
     mediaAssetModalTitle.textContent = getMediaDisplayTitle(item, linkedPost, "Media Asset");
   }
 
+  var mediaSubtitle = linkedPost ? getMediaSubtitle(item, linkedPost) : "";
   if (mediaAssetModalSubtitle) {
-    mediaAssetModalSubtitle.textContent = linkedPost?.campaignName
+    var campaignPart = linkedPost?.campaignName
       ? formatCampaignDisplayName(linkedPost.campaignName)
       : item.campaign
       ? formatCampaignDisplayName(item.campaign)
-      : "Vault details";
+      : "";
+    mediaAssetModalSubtitle.textContent = [campaignPart, mediaSubtitle].filter(Boolean).join(" · ") || "Vault details";
   }
 
   if (mediaAssetModalPreview) {
@@ -18626,13 +18795,18 @@ function closeMediaAssetModal() {
   mediaViewerReorderMode = false;
   mediaViewerDragIndex = null;
   mediaViewerOriginalOrder = [];
+  mediaViewerDetachMode = false;
+  selectedMediaViewerDetachAssetIds.clear();
 }
 
 function openMediaAsset(assetId) {
   const item = getFilteredMediaVaultItems().find(asset => getMediaItemKey(asset) === String(assetId || ""));
   if (!item) return;
   if (item.kind === "group" && Array.isArray(item.assets) && item.assets.length) {
-    openMediaAssetModal(item.assets[0], { items: item.assets.slice(0, 20), openPosts: selectedMediaAssetIds.size > 0 });
+    const groupAssets = item.assets.slice(0, 20).map(function(asset) {
+      return { ...asset, linkedPost: item.linkedPost || asset.linkedPost || null, linkedPostId: item.postId || asset.linkedPostId || asset.linked_post_id || "", postId: item.postId || asset.postId || asset.post_id || "" };
+    });
+    openMediaAssetModal(groupAssets[0], { items: groupAssets, openPosts: selectedMediaAssetIds.size > 0 });
     return;
   }
   const selectedItems = selectedMediaAssetIds.size
@@ -25439,6 +25613,7 @@ function renderAIDraftList() {
 }
 
 function renderBrandFrameworkEditor() {
+  console.log("[brand-os] render panel");
   if (!brandFrameworkSectionList || !brandFrameworkEditor || !brandFrameworkDiagnostics) return;
   const items = (appState.brandFramework || []).slice().sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
   if (!items.length) {
@@ -25574,6 +25749,12 @@ function closeBrandFrameworkModal() {
   brandFrameworkModal?.classList.add("opacity-0", "pointer-events-none");
   brandFrameworkModalCard?.classList.remove("scale-100");
   brandFrameworkModalCard?.classList.add("scale-95");
+}
+
+function returnFromBrandOSToWorkspaceSettings() {
+  console.log("[brand-os] back to workspace settings");
+  closeBrandFrameworkModal();
+  openWorkspaceHub(currentWorkspaceSettingsTab || "settings");
 }
 
 function setAiDraftLoading(state, message = "", progress = 0) {
@@ -28385,6 +28566,7 @@ function populatePWModal() {
   var wsNameEl = document.getElementById("pw-workspace-name");
   var wsSlugEl = document.getElementById("pw-workspace-slug");
   var wsShortEl = document.getElementById("pw-workspace-short-name");
+  var wsPreviewEl = document.getElementById("pw-workspace-avatar-preview");
   var connectionsList = document.getElementById("pw-connections-list");
   var aiProvidersList = document.getElementById("pw-ai-providers-list");
   var reportBugTitle = document.getElementById("pw-report-title");
@@ -28413,16 +28595,25 @@ function populatePWModal() {
   var name = config && (config.name || "");
   var slug = config && (config.workspace_slug || config.slug || "");
   var initials = getWorkspaceInitials(config || {});
-  if (previewEl) previewEl.innerHTML = renderWorkspaceAvatar(config || {});
+  var profileAvatarSource = {
+    name: user.user_metadata && (user.user_metadata.display_name || user.user_metadata.full_name) || user.email || "",
+    avatar_initials: user.user_metadata && user.user_metadata.avatar_initials || "",
+    avatar_mode: user.user_metadata && user.user_metadata.avatar_mode || "initials",
+    icon: user.user_metadata && user.user_metadata.icon || "",
+    avatar_url: user.user_metadata && (user.user_metadata.avatar_url || user.user_metadata.profile_image_url || user.user_metadata.profileImageUrl) || ""
+  };
+  if (previewEl) previewEl.innerHTML = renderWorkspaceAvatar(profileAvatarSource);
+  if (wsPreviewEl) wsPreviewEl.innerHTML = renderWorkspaceAvatar(config || {});
   if (initialsEl) initialsEl.value = initials;
   if (displayNameEl) displayNameEl.value = user.user_metadata && user.user_metadata.display_name || user.email && user.email.split("@")[0] || "";
   if (profileImageEl) profileImageEl.value = user.user_metadata && (user.user_metadata.avatar_url || user.user_metadata.profile_image_url || user.user_metadata.profileImageUrl) || "";
   if (wsNameEl) wsNameEl.value = name;
   if (wsSlugEl) wsSlugEl.textContent = slug;
   if (wsShortEl) wsShortEl.value = config && config.short_name || initials;
+  var profileActiveIcon = profileAvatarSource.avatar_mode === "initials" ? "none" : (profileAvatarSource.icon || "sparkle");
   var activeIcon = (config && config.avatar_mode === "initials") ? "none" : (config && config.icon || "sparkle");
   document.querySelectorAll("#pw-profile-icon-grid .pw-icon-btn").forEach(function(btn) {
-    btn.classList.toggle("active", btn.dataset.icon === activeIcon);
+    btn.classList.toggle("active", btn.dataset.icon === profileActiveIcon);
   });
   document.querySelectorAll("#pw-workspace-icon-grid .pw-ws-icon-btn").forEach(function(btn) {
     btn.classList.toggle("active", btn.dataset.icon === activeIcon);
@@ -28458,15 +28649,14 @@ function populatePWModal() {
 }
 
 async function savePWProfile() {
+  const selectedProfileIcon = (document.querySelector("#pw-profile-icon-grid .pw-icon-btn.active") || {}).dataset?.icon || "none";
   const payload = {
     display_name: (document.getElementById("pw-profile-display-name") || {}).value || "",
     avatar_initials: (document.getElementById("pw-profile-initials") || {}).value || "",
-    avatar_mode: (document.querySelector("#pw-profile-icon-grid .pw-icon-btn.active") || {}).dataset?.icon === "none" ? "initials" : "icon",
-    icon: (document.querySelector("#pw-profile-icon-grid .pw-icon-btn.active") || {}).dataset?.icon || "sparkle",
-    avatar_url: (document.getElementById("pw-profile-image-url") || {}).value || "",
-    profile_image_url: (document.getElementById("pw-profile-image-url") || {}).value || ""
+    avatar_mode: selectedProfileIcon === "none" ? "initials" : "icon",
+    icon: selectedProfileIcon === "none" ? "" : selectedProfileIcon
   };
-  console.log("[profile-save] payload", payload);
+  console.log("[icon-save] profile payload", payload);
   var statusEl = document.getElementById("pw-profile-status");
   var saveBtn = document.getElementById("pw-profile-save-btn");
   if (statusEl) { statusEl.classList.add("hidden"); statusEl.textContent = ""; }
@@ -28476,28 +28666,40 @@ async function savePWProfile() {
     if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase client not available");
     var user = STELLARSYNC_AUTH_USER;
     if (!user) throw new Error("Authenticated user not available");
-    if (user) {
-      var updateResult = await STELLARSYNC_SUPABASE_CLIENT.auth.updateUser({ data: payload });
-      console.log("[profile-save] response", { ok: !updateResult?.error, error: updateResult?.error || null });
-      if (updateResult?.error) throw updateResult.error;
-      var reloaded = await STELLARSYNC_SUPABASE_CLIENT.auth.getUser();
-      var persisted = reloaded?.data?.user?.user_metadata || {};
-      console.log("[profile-save] reload check", persisted);
-      var mismatch = ["display_name", "avatar_mode", "icon", "avatar_initials", "avatar_url", "profile_image_url"].some(function(key) {
-        return String(persisted[key] || "").trim() !== String(payload[key] || "").trim();
-      });
-      if (mismatch) {
-        throw new Error("Profile save verification failed: persisted values did not match the requested profile settings.");
+    var userId = String(user.id || "").trim();
+    var profileTable = "";
+    var lastProfileError = null;
+    for (const tableName of ["profile_settings", "user_preferences"]) {
+      const profilePayload = { ...payload, user_id: userId };
+      const upsertResult = await STELLARSYNC_SUPABASE_CLIENT.from(tableName).upsert(profilePayload, { onConflict: "user_id" }).select("user_id,display_name,avatar_mode,icon,avatar_initials").maybeSingle();
+      console.log("[icon-save] response", { table: tableName, ok: !upsertResult?.error, error: upsertResult?.error || null });
+      if (!upsertResult?.error) {
+        profileTable = tableName;
+        break;
       }
-      STELLARSYNC_AUTH_USER = reloaded?.data?.user || STELLARSYNC_AUTH_USER;
-      if (typeof window !== "undefined") window.__currentAuthUser = STELLARSYNC_AUTH_USER;
+      lastProfileError = upsertResult.error;
+      if (!isMissingColumnError(upsertResult.error) && !String(upsertResult.error?.message || "").toLowerCase().includes("does not exist")) throw upsertResult.error;
     }
+    if (!profileTable) {
+      throw new Error("Missing profile settings table/columns: expected public.profile_settings or public.user_preferences with user_id, display_name, avatar_mode, icon, avatar_initials. Last error: " + (lastProfileError?.message || "unknown"));
+    }
+    var reloadResult = await STELLARSYNC_SUPABASE_CLIENT.from(profileTable).select("user_id,display_name,avatar_mode,icon,avatar_initials").eq("user_id", userId).maybeSingle();
+    if (reloadResult.error) throw reloadResult.error;
+    var persisted = reloadResult.data || {};
+    console.log("[icon-save] reload check", { table: profileTable, data: persisted });
+    var mismatch = ["display_name", "avatar_mode", "icon", "avatar_initials"].filter(function(key) {
+      return String(persisted[key] || "").trim() !== String(payload[key] || "").trim();
+    });
+    console.log("[icon-save] mismatch", mismatch);
+    if (mismatch.length) throw new Error("Profile save verification failed: " + mismatch.join(", "));
+    STELLARSYNC_AUTH_USER = { ...user, user_metadata: { ...(user.user_metadata || {}), ...payload } };
+    if (typeof window !== "undefined") window.__currentAuthUser = STELLARSYNC_AUTH_USER;
     if (statusEl) { statusEl.textContent = "Profile saved."; statusEl.className = "text-xs text-emerald-400"; statusEl.classList.remove("hidden"); }
     renderWorkspaceBranding();
     updateToast(loadingToastId, "success", "Profile saved", "Profile settings saved.");
     setTimeout(function() { if (statusEl) statusEl.classList.add("hidden"); }, 3000);
   } catch (err) {
-    console.log("[profile-save] response", err);
+    console.log("[icon-save] response", err);
     if (statusEl) { statusEl.textContent = "Save failed: " + (err.message || String(err)); statusEl.className = "text-xs text-red-400"; statusEl.classList.remove("hidden"); }
     updateToast(loadingToastId, "error", "Profile save failed", err);
   } finally {
@@ -28507,12 +28709,15 @@ async function savePWProfile() {
 
 async function savePWWorkspace() {
   const activeWorkspace = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active || {};
+  const selectedWorkspaceIcon = (document.querySelector("#pw-workspace-icon-grid .pw-ws-icon-btn.active") || {}).dataset?.icon || "none";
   const payload = {
+    workspace_id: activeWorkspace.workspace_id || activeWorkspace.id || "",
     display_name: (document.getElementById("pw-workspace-name") || {}).value || "",
+    name: (document.getElementById("pw-workspace-name") || {}).value || "",
     short_name: (document.getElementById("pw-workspace-short-name") || {}).value || "",
     avatar_initials: (document.getElementById("pw-workspace-short-name") || {}).value || getWorkspaceInitials(activeWorkspace),
-    avatar_mode: (document.querySelector("#pw-workspace-icon-grid .pw-ws-icon-btn.active") || {}).dataset?.icon === "none" ? "initials" : "icon",
-    icon: (document.querySelector("#pw-workspace-icon-grid .pw-ws-icon-btn.active") || {}).dataset?.icon || "sparkle",
+    avatar_mode: selectedWorkspaceIcon === "none" ? "initials" : "icon",
+    icon: selectedWorkspaceIcon === "none" ? "" : selectedWorkspaceIcon,
     constellation_shape: (document.getElementById("pw-workspace-constellation-shape") || {}).value || "",
     brand_accent: (document.getElementById("pw-workspace-brand-accent") || {}).value || "",
     media_bucket: (document.getElementById("pw-workspace-media-bucket") || {}).value || "media",
@@ -28525,7 +28730,7 @@ async function savePWWorkspace() {
     current_year: (document.getElementById("pw-workspace-current-year") || {}).value || "",
     updated_at: new Date().toISOString()
   };
-  console.log("[workspace-save] payload", payload);
+  console.log("[icon-save] workspace payload", payload);
   var statusEl = document.getElementById("pw-workspace-status");
   var saveBtn = document.getElementById("pw-workspace-save-btn");
   if (statusEl) { statusEl.classList.add("hidden"); statusEl.textContent = ""; }
@@ -28536,6 +28741,7 @@ async function savePWWorkspace() {
     var slug = (activeWorkspace && (activeWorkspace.workspace_slug || activeWorkspace.slug)) || "";
     var workspaceId = activeWorkspace.workspace_id || activeWorkspace.id || "";
     if (!slug) throw new Error("Workspace slug missing; cannot verify workspace settings save.");
+    if (!workspaceId) throw new Error("Workspace ID missing; cannot save workspace_settings.");
     if (slug) {
       if (workspaceId && payload.display_name) {
         var workspaceUpdate = await STELLARSYNC_SUPABASE_CLIENT
@@ -28544,16 +28750,20 @@ async function savePWWorkspace() {
           .eq("id", workspaceId);
         if (workspaceUpdate.error) throw workspaceUpdate.error;
       }
-      var existing = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").select("id").eq("workspace_slug", slug).maybeSingle();
+      var settingsPayload = { ...payload, workspace_id: workspaceId, workspace_slug: slug };
+      delete settingsPayload.name;
+      var existing = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").select("id").eq("workspace_id", workspaceId).maybeSingle();
       if (existing.error) throw existing.error;
       if (existing && existing.data && existing.data.id) {
-        var settingsUpdate = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").update(payload).eq("id", existing.data.id);
+        var settingsUpdate = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").update(settingsPayload).eq("id", existing.data.id);
+        console.log("[icon-save] response", { table: "workspace_settings", action: "update", ok: !settingsUpdate?.error, error: settingsUpdate?.error || null });
         if (settingsUpdate.error) throw settingsUpdate.error;
       } else {
-        var settingsInsert = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").insert({ ...payload, workspace_id: workspaceId || null, workspace_slug: slug });
+        var settingsInsert = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").insert(settingsPayload);
+        console.log("[icon-save] response", { table: "workspace_settings", action: "insert", ok: !settingsInsert?.error, error: settingsInsert?.error || null });
         if (settingsInsert.error) throw settingsInsert.error;
       }
-      console.log("[workspace-save] response", { ok: true, workspace_slug: slug });
+      console.log("[icon-save] response", { ok: true, workspace_slug: slug });
       var reloadedWorkspaceRecord = null;
       if (workspaceId && payload.display_name) {
         reloadedWorkspaceRecord = await STELLARSYNC_SUPABASE_CLIENT
@@ -28566,16 +28776,15 @@ async function savePWWorkspace() {
           throw new Error("Workspace name save verification failed: persisted workspace name did not match.");
         }
       }
-      var reloadedWorkspace = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").select("*").eq("workspace_slug", slug).maybeSingle();
-      console.log("[workspace-save] reload check", reloadedWorkspace?.data || null);
+      var reloadedWorkspace = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").select("workspace_id,workspace_slug,display_name,short_name,avatar_mode,icon,avatar_initials,constellation_shape,brand_accent,media_bucket,brand_voice,current_month,current_year").eq("workspace_id", workspaceId).maybeSingle();
+      console.log("[icon-save] reload check", reloadedWorkspace?.data || null);
       if (reloadedWorkspace?.error) throw reloadedWorkspace.error;
       var persisted = reloadedWorkspace?.data || {};
-      var mismatch = ["display_name", "short_name", "avatar_mode", "icon", "avatar_initials", "constellation_shape", "brand_accent", "media_bucket", "brand_voice", "current_month", "current_year"].some(function(key) {
+      var mismatch = ["display_name", "short_name", "avatar_mode", "icon", "avatar_initials", "constellation_shape"].filter(function(key) {
         return String((persisted && persisted[key]) || "").trim() !== String((payload && payload[key]) || "").trim();
       });
-      if (mismatch) {
-        throw new Error("Workspace save verification failed: persisted settings did not match requested values.");
-      }
+      console.log("[icon-save] mismatch", mismatch);
+      if (mismatch.length) throw new Error("Workspace save verification failed: " + mismatch.join(", "));
       WORKSPACE_RUNTIME_CONFIG.active = mergeWorkspaceSettings(WORKSPACE_RUNTIME_CONFIG.active, payload);
       WORKSPACE_RUNTIME_CONFIG.active.name = payload.display_name || WORKSPACE_RUNTIME_CONFIG.active.name;
       storeActiveWorkspaceConfig(WORKSPACE_RUNTIME_CONFIG.active);
@@ -28586,7 +28795,7 @@ async function savePWWorkspace() {
     updateToast(loadingToastId, "success", "Workspace saved", "Workspace settings saved.");
     setTimeout(function() { if (statusEl) statusEl.classList.add("hidden"); }, 3000);
   } catch (err) {
-    console.log("[workspace-save] response", err);
+    console.log("[icon-save] response", err);
     console.log("[branding-save] response", err);
     console.log("[constellation-save] response", err);
     var msg = "Workspace save failed: " + (err.message || String(err));
