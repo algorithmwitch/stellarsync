@@ -24091,7 +24091,7 @@ async function disconnectSheetMirror() {
       sheet_last_pulled_at: null,
       updated_at: new Date().toISOString()
     };
-    await upsertWorkspaceSettings(workspaceId, payload);
+    await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").update(payload).eq("workspace_id", workspaceId);
     WORKSPACE_RUNTIME_CONFIG.active = mergeWorkspaceSettings(WORKSPACE_RUNTIME_CONFIG.active || {}, payload);
     storeActiveWorkspaceConfig(WORKSPACE_RUNTIME_CONFIG.active);
     refreshConnectionCards();
@@ -24120,7 +24120,7 @@ async function disconnectMondayBoard() {
       monday_last_pulled_at: null,
       updated_at: new Date().toISOString()
     };
-    await upsertWorkspaceSettings(workspaceId, payload);
+    await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").update(payload).eq("workspace_id", workspaceId);
     WORKSPACE_RUNTIME_CONFIG.active = mergeWorkspaceSettings(WORKSPACE_RUNTIME_CONFIG.active || {}, payload);
     storeActiveWorkspaceConfig(WORKSPACE_RUNTIME_CONFIG.active);
     refreshConnectionCards();
