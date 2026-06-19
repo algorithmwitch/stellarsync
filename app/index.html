@@ -4700,30 +4700,11 @@
             <div class="platform-card">
               <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
                 <div>
-                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Workspace Integrations</div>
-                  <div class="text-sm text-white mt-1">Google Sheets, Monday.com, and Drive are workspace mirrors, not connected accounts.</div>
-                </div>
-                <button type="button" id="settings-open-accounts-btn" class="px-4 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300 hover:text-white transition-colors">Connected Accounts</button>
-              </div>
-              <div id="settings-workspace-integrations-inline" class="space-y-3"></div>
-            </div>
-            <div class="platform-card">
-              <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
-                <div>
                   <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Connected Accounts</div>
                   <div class="text-sm text-white mt-1">Social platforms and AI providers only.</div>
                 </div>
               </div>
               <div id="settings-connected-accounts-inline" class="space-y-3"></div>
-            </div>
-            <div class="platform-card">
-              <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
-                <div>
-                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">AI Providers</div>
-                  <div class="text-sm text-white mt-1">Configure API keys for AI generation. Local Creator Engine is always available.</div>
-                </div>
-              </div>
-              <div id="settings-ai-providers-inline" class="space-y-3"></div>
             </div>
             <div class="platform-card">
               <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
@@ -4926,9 +4907,10 @@
         <aside class="p-4 border-r border-white/5 overflow-y-auto custom-scrollbar space-y-1">
           <button type="button" class="pw-tab-btn w-full text-left px-4 py-2.5 rounded-xl bg-[#2d1b4e] text-white text-xs font-bold uppercase tracking-wider active" data-pw-tab="profile">Profile</button>
           <button type="button" class="pw-tab-btn w-full text-left px-4 py-2.5 rounded-xl bg-[#181125] text-gray-300 text-xs font-bold uppercase tracking-wider" data-pw-tab="workspace">Workspace</button>
-          <button type="button" class="pw-tab-btn w-full text-left px-4 py-2.5 rounded-xl bg-[#181125] text-gray-300 text-xs font-bold uppercase tracking-wider" data-pw-tab="billing">Billing</button>
           <button type="button" class="pw-tab-btn w-full text-left px-4 py-2.5 rounded-xl bg-[#181125] text-gray-300 text-xs font-bold uppercase tracking-wider" data-pw-tab="connections">Connections</button>
-          <button type="button" class="pw-tab-btn w-full text-left px-4 py-2.5 rounded-xl bg-[#181125] text-gray-300 text-xs font-bold uppercase tracking-wider" data-pw-tab="security">Security</button>
+          <button type="button" class="pw-tab-btn w-full text-left px-4 py-2.5 rounded-xl bg-[#181125] text-gray-300 text-xs font-bold uppercase tracking-wider" data-pw-tab="ai-providers">AI Providers</button>
+          <button type="button" class="pw-tab-btn w-full text-left px-4 py-2.5 rounded-xl bg-[#181125] text-gray-300 text-xs font-bold uppercase tracking-wider" data-pw-tab="report-bug">Report Bug</button>
+          <button type="button" class="pw-tab-btn w-full text-left px-4 py-2.5 rounded-xl bg-[#181125] text-gray-300 text-xs font-bold uppercase tracking-wider" data-pw-tab="contact-support">Contact Support</button>
         </aside>
         <div class="p-6 overflow-y-auto custom-scrollbar min-h-0 space-y-6">
           <!-- Profile Tab -->
@@ -4943,6 +4925,10 @@
                 <div>
                   <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Display Name</div>
                   <input id="pw-profile-display-name" type="text" placeholder="Your display name" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50">
+                </div>
+                <div>
+                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Profile Image URL</div>
+                  <input id="pw-profile-image-url" type="url" placeholder="https://..." class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50">
                 </div>
               </div>
             </div>
@@ -5007,42 +4993,145 @@
                 </div>
               </div>
             </div>
+            <div class="platform-card space-y-4">
+              <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Brand / Defaults</div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Constellation Shape</div>
+                  <input id="pw-workspace-constellation-shape" type="text" placeholder="star" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50">
+                </div>
+                <div>
+                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Brand Accent / Color</div>
+                  <input id="pw-workspace-brand-accent" type="text" placeholder="#c77dff" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50">
+                </div>
+                <div>
+                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Media Bucket</div>
+                  <input id="pw-workspace-media-bucket" type="text" placeholder="media" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50">
+                </div>
+                <div>
+                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Current Month</div>
+                  <input id="pw-workspace-current-month" type="text" placeholder="June" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50">
+                </div>
+                <div>
+                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Current Year</div>
+                  <input id="pw-workspace-current-year" type="text" placeholder="2026" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50">
+                </div>
+                <div>
+                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Brand Voice</div>
+                  <textarea id="pw-workspace-brand-voice" rows="3" placeholder="Clear, concise, practical..." class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 resize-y"></textarea>
+                </div>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Default Platforms</div>
+                  <input id="pw-workspace-default-platforms" type="text" placeholder="linkedin, instagram" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50">
+                </div>
+                <div>
+                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Default Pillars</div>
+                  <input id="pw-workspace-default-pillars" type="text" placeholder="authority, distribution" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50">
+                </div>
+                <div>
+                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Default Statuses</div>
+                  <input id="pw-workspace-default-statuses" type="text" placeholder="draft, scheduled, published" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50">
+                </div>
+                <div>
+                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Default Post Types</div>
+                  <input id="pw-workspace-default-post-types" type="text" placeholder="image, carousel, video" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50">
+                </div>
+              </div>
+            </div>
             <button id="pw-workspace-save-btn" type="button" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all">Save Workspace</button>
             <div id="pw-workspace-status" class="text-xs text-gray-400 hidden"></div>
           </section>
-          <!-- Billing Tab -->
-          <section data-pw-panel="billing" class="hidden space-y-5">
-            <div class="platform-card">
-              <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3">Subscription</div>
-              <div class="grid grid-cols-2 gap-4 mb-4">
-                <div>
-                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Plan</div>
-                  <div id="pw-billing-plan" class="text-lg font-bold text-white">—</div>
-                </div>
-                <div>
-                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Status</div>
-                  <div id="pw-billing-status" class="text-lg font-bold text-gray-300">—</div>
-                </div>
-              </div>
-              <div id="pw-billing-cta-container" class="mt-4"></div>
-            </div>
-            <div id="pw-billing-stripe-status" class="hidden platform-card">
-              <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Payment Provider</div>
-              <div id="pw-billing-stripe-detail" class="text-sm text-gray-300"></div>
-            </div>
-          </section>
           <!-- Connections Tab -->
           <section data-pw-panel="connections" class="hidden space-y-4">
-            <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Connected Services</div>
+            <div class="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Connected Workspace Integrations</div>
+                <div class="text-xs text-gray-400 mt-1">Google Sheets, Monday.com, and Drive/files stay here.</div>
+              </div>
+              <button type="button" id="pw-backfill-monday-btn" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 hover:text-white transition-colors">Backfill Monday Board</button>
+            </div>
             <div id="pw-connections-list" class="space-y-3"></div>
           </section>
-          <!-- Security Tab -->
-          <section data-pw-panel="security" class="hidden space-y-5">
-            <div class="platform-card">
-              <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3">Password</div>
-              <p class="text-sm text-gray-300 mb-4">Send a password reset email to your account.</p>
-              <button id="pw-security-reset-btn" type="button" class="px-5 py-2.5 rounded-xl bg-[#2d1b4e] hover:bg-[#3d2b5e] text-white text-xs font-bold uppercase tracking-widest transition-colors">Send Reset Email</button>
-              <div id="pw-security-status" class="text-xs text-gray-400 hidden mt-3"></div>
+          <!-- AI Providers Tab -->
+          <section data-pw-panel="ai-providers" class="hidden space-y-4">
+            <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">AI Providers</div>
+            <div id="pw-ai-providers-list" class="space-y-3"></div>
+          </section>
+          <!-- Report Bug Tab -->
+          <section data-pw-panel="report-bug" class="hidden space-y-4">
+            <div class="platform-card space-y-4">
+              <div>
+                <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Report Bug</div>
+                <div class="text-xs text-gray-400 mt-1">Send a structured bug report through the existing support route.</div>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Title</div>
+                  <input id="pw-report-title" type="text" placeholder="Short issue summary" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50">
+                </div>
+                <div>
+                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Severity</div>
+                  <select id="pw-report-severity" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white focus:outline-none focus:border-purple-500/50">
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="critical">Critical</option>
+                  </select>
+                </div>
+                <div>
+                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Page / View</div>
+                  <input id="pw-report-page" type="text" placeholder="Calendar, Media Vault, etc." class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50">
+                </div>
+                <div>
+                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Console Context</div>
+                  <input id="pw-report-console" type="text" placeholder="Optional notes" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50">
+                </div>
+              </div>
+              <div>
+                <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Description</div>
+                <textarea id="pw-report-description" rows="5" placeholder="What happened, what you expected, and steps to reproduce." class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 resize-y"></textarea>
+              </div>
+              <label class="flex items-center gap-3 cursor-pointer">
+                <input id="pw-report-include-console" type="checkbox" class="w-4 h-4 rounded border-white/10 bg-[#0a0612] text-purple-500 focus:ring-purple-500/40">
+                <span class="text-[11px] text-gray-400">Include current console / workspace diagnostics</span>
+              </label>
+              <div class="flex items-center justify-between gap-3 flex-wrap">
+                <div id="pw-report-status" class="text-xs text-gray-400 hidden"></div>
+                <button id="pw-report-submit-btn" type="button" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all">Submit Bug Report</button>
+              </div>
+            </div>
+          </section>
+          <!-- Contact Support Tab -->
+          <section data-pw-panel="contact-support" class="hidden space-y-4">
+            <div class="platform-card space-y-4">
+              <div>
+                <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Contact Support</div>
+                <div class="text-xs text-gray-400 mt-1">Send a support request through the existing support route.</div>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Name</div>
+                  <input id="pw-support-name" type="text" placeholder="Your name" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50">
+                </div>
+                <div>
+                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Email</div>
+                  <input id="pw-support-email" type="email" placeholder="you@example.com" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50">
+                </div>
+                <div>
+                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Topic</div>
+                  <input id="pw-support-topic" type="text" placeholder="Integration setup, billing, etc." class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50">
+                </div>
+              </div>
+              <div>
+                <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Message</div>
+                <textarea id="pw-support-message" rows="5" placeholder="Tell us what you need help with." class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 resize-y"></textarea>
+              </div>
+              <div class="flex items-center justify-between gap-3 flex-wrap">
+                <div id="pw-support-status" class="text-xs text-gray-400 hidden"></div>
+                <button id="pw-support-submit-btn" type="button" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all">Send Support Request</button>
+              </div>
             </div>
           </section>
         </div>
@@ -5362,10 +5451,20 @@ function loadWorkspaceConfig() {
     monday_last_pulled_at: workspaceConfig.monday_last_pulled_at || masterConfig.monday_last_pulled_at || null,
     monday_auto_sync_on_save: workspaceConfig.monday_auto_sync_on_save !== undefined ? Boolean(workspaceConfig.monday_auto_sync_on_save) : (masterConfig.monday_auto_sync_on_save !== undefined ? Boolean(masterConfig.monday_auto_sync_on_save) : true),
     storage_bucket: String(workspaceConfig.storage_bucket || masterConfig.storage_bucket || "media").trim(),
+    media_bucket: String(workspaceConfig.media_bucket || masterConfig.media_bucket || workspaceConfig.storage_bucket || masterConfig.storage_bucket || "media").trim(),
     short_name: String(workspaceConfig.short_name || masterConfig.short_name || "").trim(),
     avatar_initials: String(workspaceConfig.avatar_initials || masterConfig.avatar_initials || "").trim(),
     avatar_mode: String(workspaceConfig.avatar_mode || workspaceConfig.avatarMode || masterConfig.avatar_mode || "").trim(),
-    icon: String(workspaceConfig.icon || workspaceConfig.avatar_icon || masterConfig.icon || "").trim()
+    icon: String(workspaceConfig.icon || workspaceConfig.avatar_icon || masterConfig.icon || "").trim(),
+    constellation_shape: String(workspaceConfig.constellation_shape || masterConfig.constellation_shape || "").trim(),
+    brand_accent: String(workspaceConfig.brand_accent || masterConfig.brand_accent || "").trim(),
+    brand_voice: String(workspaceConfig.brand_voice || masterConfig.brand_voice || "").trim(),
+    default_platforms: Array.isArray(workspaceConfig.default_platforms) ? workspaceConfig.default_platforms : Array.isArray(masterConfig.default_platforms) ? masterConfig.default_platforms : [],
+    default_pillars: Array.isArray(workspaceConfig.default_pillars) ? workspaceConfig.default_pillars : Array.isArray(masterConfig.default_pillars) ? masterConfig.default_pillars : [],
+    default_statuses: Array.isArray(workspaceConfig.default_statuses) ? workspaceConfig.default_statuses : Array.isArray(masterConfig.default_statuses) ? masterConfig.default_statuses : [],
+    default_post_types: Array.isArray(workspaceConfig.default_post_types) ? workspaceConfig.default_post_types : Array.isArray(masterConfig.default_post_types) ? masterConfig.default_post_types : [],
+    current_month: String(workspaceConfig.current_month || masterConfig.current_month || "").trim(),
+    current_year: String(workspaceConfig.current_year || masterConfig.current_year || "").trim()
   };
   if (active.backend_type && !WORKSPACE_RUNTIME_CONFIG.backend_types.includes(active.backend_type)) {
     active.backend_type = "supabase_native";
@@ -5398,6 +5497,16 @@ function normalizeSupabaseWorkspaceConfig(workspace) {
     avatar_initials: String(source.avatar_initials || source.avatarInitials || "").trim(),
     avatar_mode: String(source.avatar_mode || source.avatarMode || "").trim(),
     icon: String(source.icon || source.avatar_icon || source.avatarIcon || "").trim(),
+    constellation_shape: String(source.constellation_shape || source.constellationShape || "").trim(),
+    brand_accent: String(source.brand_accent || source.brandAccent || "").trim(),
+    brand_voice: String(source.brand_voice || source.brandVoice || "").trim(),
+    media_bucket: String(source.media_bucket || source.storage_bucket || "media").trim(),
+    default_platforms: Array.isArray(source.default_platforms) ? source.default_platforms : String(source.default_platforms || "").split(/[|,\n]/).map((value) => String(value || "").trim()).filter(Boolean),
+    default_pillars: Array.isArray(source.default_pillars) ? source.default_pillars : String(source.default_pillars || "").split(/[|,\n]/).map((value) => String(value || "").trim()).filter(Boolean),
+    default_statuses: Array.isArray(source.default_statuses) ? source.default_statuses : String(source.default_statuses || "").split(/[|,\n]/).map((value) => String(value || "").trim()).filter(Boolean),
+    default_post_types: Array.isArray(source.default_post_types) ? source.default_post_types : String(source.default_post_types || "").split(/[|,\n]/).map((value) => String(value || "").trim()).filter(Boolean),
+    current_month: String(source.current_month || source.currentMonth || "").trim(),
+    current_year: String(source.current_year || source.currentYear || "").trim(),
     google_sheet_id: String(source.google_sheet_id || source.sheet_id || "").trim(),
     sheet_id: String(source.google_sheet_id || source.sheet_id || "").trim(),
     apps_script_url: String(source.apps_script_url || "").trim(),
@@ -5432,6 +5541,16 @@ function mergeWorkspaceSettings(workspace, settings) {
     avatar_initials: avatarInitials || workspace.avatar_initials || "",
     avatar_mode: avatarMode || workspace.avatar_mode || "",
     icon: icon || workspace.icon || "",
+    constellation_shape: String(settings.constellation_shape || workspace.constellation_shape || "").trim(),
+    brand_accent: String(settings.brand_accent || workspace.brand_accent || "").trim(),
+    brand_voice: String(settings.brand_voice || workspace.brand_voice || "").trim(),
+    media_bucket: String(settings.media_bucket || workspace.media_bucket || workspace.storage_bucket || "media").trim(),
+    default_platforms: Array.isArray(settings.default_platforms) ? settings.default_platforms : (workspace.default_platforms || []),
+    default_pillars: Array.isArray(settings.default_pillars) ? settings.default_pillars : (workspace.default_pillars || []),
+    default_statuses: Array.isArray(settings.default_statuses) ? settings.default_statuses : (workspace.default_statuses || []),
+    default_post_types: Array.isArray(settings.default_post_types) ? settings.default_post_types : (workspace.default_post_types || []),
+    current_month: String(settings.current_month || settings.currentMonth || workspace.current_month || workspace.currentMonth || "").trim(),
+    current_year: String(settings.current_year || settings.currentYear || workspace.current_year || workspace.currentYear || "").trim(),
     backend_type: String(settings.backend_type || workspace.backend_type || "").trim(),
     google_sheet_id: String(settings.google_sheet_id || settings.sheet_id || workspace.google_sheet_id || workspace.sheet_id || "").trim(),
     sheet_id: String(settings.google_sheet_id || settings.sheet_id || workspace.google_sheet_id || workspace.sheet_id || "").trim(),
@@ -5503,6 +5622,15 @@ async function fetchWorkspaceMembershipsByUserId(userId, userEmail) {
     backend_type,
     supabase_media_enabled,
     media_bucket,
+    constellation_shape,
+    brand_accent,
+    brand_voice,
+    default_platforms,
+    default_pillars,
+    default_statuses,
+    default_post_types,
+    current_month,
+    current_year,
     created_at,
     updated_at
   `;
@@ -7655,6 +7783,10 @@ let currentModalAsset = null;
 let currentMediaAssetDetail = null;
 let currentMediaViewerItems = [];
 let currentMediaViewerIndex = 0;
+let mediaViewerGalleryViewAll = false;
+let mediaViewerReorderMode = false;
+let mediaViewerDragIndex = null;
+let mediaViewerOriginalOrder = [];
 let selectedMediaAssetIds = new Set();
 let mediaSelectMode = loadMediaSelectMode();
 let mediaPostsPanelOpen = false;
@@ -7674,6 +7806,7 @@ let selectedCarouselDetachAssetIds = new Set();
 window.mediaDetachSelectionMode = false;
 let pendingUploadFiles = [];
 let uploadStagingTarget = "vault";
+let uploadStagingTargetPostId = "";
 let currentAIDraftId = "";
 let currentAIGenerationResult = null;
 let currentBrandFrameworkSection = "";
@@ -9263,7 +9396,18 @@ function setupWorkspaceUI() {
   });
   document.getElementById("pw-profile-save-btn")?.addEventListener("click", savePWProfile);
   document.getElementById("pw-workspace-save-btn")?.addEventListener("click", savePWWorkspace);
-  document.getElementById("pw-security-reset-btn")?.addEventListener("click", doPWResetPassword);
+  document.getElementById("pw-backfill-monday-btn")?.addEventListener("click", function() {
+    console.log("[button] fired pw-backfill-monday-btn");
+    backfillMondayBoard();
+  });
+  document.getElementById("pw-report-submit-btn")?.addEventListener("click", function() {
+    console.log("[button] fired pw-report-submit-btn");
+    submitProfileWorkspaceBugReport();
+  });
+  document.getElementById("pw-support-submit-btn")?.addEventListener("click", function() {
+    console.log("[button] fired pw-support-submit-btn");
+    submitProfileWorkspaceContact();
+  });
   document.getElementById("write-idea-open-ai-settings-link")?.addEventListener("click", function() {
     openWorkspaceHub("providers");
   });
@@ -12815,9 +12959,13 @@ function openUploadStagingModal(target = "vault") {
     showToast("Upload unavailable", "Your role can view media but cannot upload.", "ph-warning", "text-yellow-400");
     return;
   }
-  console.log("[modal] open upload-staging", target);
+  const normalizedTarget = typeof target === "object"
+    ? (target.source === "post-modal" ? "post" : String(target.target || target.source || "vault").trim() || "vault")
+    : String(target || "vault").trim() || "vault";
+  uploadStagingTargetPostId = typeof target === "object" ? String(target.targetPostId || currentEditingPostId || "").trim() : "";
+  console.log("[modal] open upload-staging", normalizedTarget);
   console.log("[upload] modal open");
-  uploadStagingTarget = target;
+  uploadStagingTarget = normalizedTarget;
   if (uploadStagingSubtitle) uploadStagingSubtitle.textContent = describeUploadTarget();
   if (uploadStagingResult) uploadStagingResult.textContent = "";
   renderUploadAttachPostSelect();
@@ -12851,6 +12999,7 @@ function closeUploadStagingModal() {
     try { URL.revokeObjectURL(item.previewUrl); } catch (_) {}
   });
   pendingUploadFiles = [];
+  uploadStagingTargetPostId = "";
   if (confirmUploadStagingBtn) { confirmUploadStagingBtn.disabled = false; confirmUploadStagingBtn.textContent = "Upload"; }
   var input = document.getElementById("media-upload-input");
   if (input) input.value = "";
@@ -12979,7 +13128,7 @@ async function commitPendingUploads() {
       const item = validItems[index];
       uploadStagingStatus.textContent = `Uploading ${index + 1} of ${validItems.length}`;
       const selectedPostId = String(uploadStagingAttachPostSelect?.value || "").trim();
-      const linkedPostId = uploadStagingTarget === "post" ? (selectedPostId || currentEditingPostId || "") : "";
+      const linkedPostId = uploadStagingTarget === "post" ? (selectedPostId || uploadStagingTargetPostId || currentEditingPostId || "") : "";
       const campaign = uploadStagingTarget === "post" ? getCurrentModalCampaignLabel() : "";
       let result = null;
       const uploadTags = String(item.tags || "")
@@ -13016,6 +13165,7 @@ async function commitPendingUploads() {
       const normalized = upsertMediaAssetIntoAppState(result.asset);
       lastUploadedAsset = normalized;
       console.log("[upload] upload complete", { index: index + 1, total: validItems.length, assetId: getMediaItemKey(normalized) });
+      console.log("[post-upload] uploaded", { assetId: getMediaItemKey(normalized), target: uploadStagingTarget });
       if (uploadStagingTarget === "post") {
         if (!currentModalAsset) currentModalAsset = normalized;
         const key = getMediaItemKey(normalized);
@@ -13024,6 +13174,7 @@ async function commitPendingUploads() {
         }
         const refreshedPost = linkedPostId ? refreshPostMediaClassification(linkedPostId) : null;
         if (modalMediaStatus) modalMediaStatus.textContent = refreshedPost ? `${renderPostMediaTypeBadge(refreshedPost)} linked` : `${currentModalCarouselAssets.length} linked asset${currentModalCarouselAssets.length === 1 ? "" : "s"}`;
+        if (linkedPostId) console.log("[post-upload] attached", { postId: linkedPostId, assetId: key });
       }
     }
     if (uploadStagingResult) {
@@ -13038,6 +13189,7 @@ async function commitPendingUploads() {
       await refreshMediaFromRemote();
     }
     renderModalCarouselPreview();
+    console.log("[post-upload] refreshed modal");
     if (lastUploadedAsset) {
       const key = getMediaItemKey(lastUploadedAsset);
       const refreshed = getFilteredMediaVaultItems().find(item => getMediaItemKey(item) === key || String(item.assetId || "") === String(lastUploadedAsset.assetId || ""));
@@ -14219,7 +14371,8 @@ function getConnectedAccountsMarkup(options = {}) {
   }).join("");
 }
 
-function renderWorkspaceConnectionCards() {
+function renderWorkspaceConnectionCards(options = {}) {
+  const showBackfill = options.showBackfill === true;
   const providers = WORKSPACE_CONNECTION_PROVIDERS.filter((provider) => provider !== "google_sheets");
   var mondayBoardId = getMondayBoardId(WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active, WORKSPACE_CONNECTIONS);
   var planFeatures = ACTIVE_PLAN_FEATURES || getWorkspacePlanFeatures(WORKSPACE_RUNTIME_CONFIG?.active || {});
@@ -14362,7 +14515,7 @@ function renderWorkspaceConnectionCards() {
           }
           actions += '<button type="button" onclick="testMondayConnection()" class="px-3 py-2 rounded-xl bg-[#00a86b] hover:bg-[#00cc77] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Test Monday Connection</button>';
           actions += '<button type="button" onclick="inspectMondayColumns()" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Inspect Monday Columns</button>';
-          actions += '<button type="button" onclick="backfillMondayBoard()" class="px-3 py-2 rounded-xl bg-[#0f0a18] hover:bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 transition-colors">Backfill Monday Board</button>';
+          if (showBackfill) actions += '<button type="button" onclick="backfillMondayBoard()" class="px-3 py-2 rounded-xl bg-[#0f0a18] hover:bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 transition-colors">Backfill Monday Board</button>';
           actions += '<button type="button" onclick="disconnectMondayBoard()" class="px-3 py-2 rounded-xl bg-[#30121b] hover:bg-[#3b1720] border border-red-400/20 text-[10px] uppercase tracking-wider font-bold text-red-200 transition-colors">Disconnect</button>';
         }
         actions += '<button type="button" onclick="openSupportModal(\'Integration setup\')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Request Monday Setup</button>';
@@ -14407,7 +14560,7 @@ function renderWorkspaceConnectionCards() {
         if (mondayBoardId) {
           actions += '<button type="button" onclick="testMondayConnection()" class="px-3 py-2 rounded-xl bg-[#00a86b] hover:bg-[#00cc77] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Test Monday Connection</button>';
           actions += '<button type="button" onclick="inspectMondayColumns()" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Inspect Monday Columns</button>';
-          actions += '<button type="button" onclick="backfillMondayBoard()" class="px-3 py-2 rounded-xl bg-[#0f0a18] hover:bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 transition-colors">Backfill Monday Board</button>';
+          if (showBackfill) actions += '<button type="button" onclick="backfillMondayBoard()" class="px-3 py-2 rounded-xl bg-[#0f0a18] hover:bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 transition-colors">Backfill Monday Board</button>';
           actions += '<button type="button" onclick="disconnectMondayBoard()" class="px-3 py-2 rounded-xl bg-[#30121b] hover:bg-[#3b1720] border border-red-400/20 text-[10px] uppercase tracking-wider font-bold text-red-200 transition-colors">Disconnect</button>';
         }
         actions += '<button type="button" onclick="openSupportModal(\'Integration setup\')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Request Monday Setup</button>';
@@ -14741,7 +14894,7 @@ async function pullMondayUpdates() {
 }
 
 function refreshConnectionCards() {
-  var container = document.getElementById("settings-workspace-integrations-inline") || document.getElementById("workspace-connections-cards");
+  var container = document.getElementById("workspace-connections-cards");
   if (container && typeof renderWorkspaceConnectionCards === "function") {
     container.innerHTML = renderWorkspaceConnectionCards();
   }
@@ -14914,12 +15067,8 @@ function renderWorkspaceHub() {
   if (pillarSummary) pillarSummary.textContent = (settings.pillars || []).map(formatContentPillarLabel).join(", ") || "None";
   if (postTypeSummary) postTypeSummary.textContent = (settings.postTypes || []).map(toTitleCase).join(", ") || "None";
   if (queueSummary) queueSummary.textContent = settings.queueLimit || "No queue limit";
-  var workspaceIntegrationsInline = document.getElementById("settings-workspace-integrations-inline");
-  if (workspaceIntegrationsInline) workspaceIntegrationsInline.innerHTML = renderWorkspaceConnectionCards();
   renderConnectedAccounts();
   try {
-    var aiInlineContainer = document.getElementById("settings-ai-providers-inline");
-    if (aiInlineContainer) aiInlineContainer.innerHTML = renderAIProviderCards();
     if (workspaceAIProvidersPanel) workspaceAIProvidersPanel.innerHTML = renderAIProviderCards();
   } catch (err) {
     if (window.__workspaceHubHealth) window.__workspaceHubHealth.lastError = err && err.message ? err.message : String(err);
@@ -17182,7 +17331,9 @@ function setupModalMediaUpload() {
 
   modalMediaUploadTrigger.addEventListener("click", () => {
     console.log("[button] fired modal-media-upload-trigger");
-    openUploadStagingModal("post");
+    console.log("[post-upload] clicked");
+    openUploadStagingModal({ targetPostId: currentEditingPostId || getCanonicalPostId(window.__currentModalPostData || {}) || "", source: "post-modal" });
+    console.log("[post-upload] modal opened");
   });
 
   modalMediaUploadInput.setAttribute("multiple", "multiple");
@@ -17315,12 +17466,17 @@ async function indexSupabaseStorageForMedia(options = {}) {
 function buildMediaVaultItems() {
   const assets = [...(appState.media || [])];
   const groupedPostIds = new Set();
+  const groupedAssetIds = new Set();
   const items = [];
 
   (appState.posts || []).forEach((post) => {
-    const postAssets = getPostAssets(post);
+    const postAssets = getAttachedMediaForPost(post).slice(0, 20).map((asset) => normalizeRemoteMedia(asset));
     if (postAssets.length > 1) {
       groupedPostIds.add(getCanonicalPostId(post) || getPostLookupId(post));
+      postAssets.forEach((asset) => {
+        const key = getMediaItemKey(asset) || getMediaAssetId(asset);
+        if (key) groupedAssetIds.add(key);
+      });
       items.push({
         id: `group:${getCanonicalPostId(post) || getPostLookupId(post)}`,
         kind: "group",
@@ -17336,7 +17492,9 @@ function buildMediaVaultItems() {
   });
 
   assets.forEach((asset) => {
-    if (groupedPostIds.has(asset.postId || asset.linkedPostId)) return;
+    const assetKey = getMediaItemKey(asset) || getMediaAssetId(asset);
+    if (groupedAssetIds.has(assetKey)) return;
+    if (groupedPostIds.has(asset.postId || asset.linkedPostId || asset.linked_post_id)) return;
     items.push({
       ...asset,
       kind: "asset",
@@ -17949,39 +18107,160 @@ async function detachCurrentMediaAssetFromPost() {
 }
 
 function renderMediaPreviewContent(item, linkedAssets, previewUrl, type) {
-  const nav = currentMediaViewerItems.length > 1 ? `
-    <div class="media-viewer-nav">
-      <button type="button" onclick="navigateMediaViewer(-1)" aria-label="Previous media"><i class="ph-bold ph-caret-left"></i></button>
-      <button type="button" onclick="navigateMediaViewer(1)" aria-label="Next media"><i class="ph-bold ph-caret-right"></i></button>
+  const assets = (currentMediaViewerItems || []).slice(0, 20);
+  const total = assets.length || 1;
+  const activeIndex = Math.max(0, Math.min(currentMediaViewerIndex, total - 1));
+  const activeAsset = assets[activeIndex] || item;
+  const activePreviewUrl = getMediaPreviewUrl(activeAsset) || previewUrl || "";
+  const activeKind = inferMediaKindFromAsset(activeAsset);
+  const preview = activePreviewUrl
+    ? activeKind === "video"
+      ? `<video src="${escapeHtml(activePreviewUrl)}" controls playsinline preload="metadata" class="max-h-[56dvh] w-full"></video>`
+      : activeKind === "document"
+      ? `<div class="w-full max-w-lg rounded-2xl bg-[#181125] border border-white/5 p-8 text-center"><i class="ph-bold ph-file-text text-gray-300 text-5xl block mb-3"></i><div class="text-white text-sm font-bold wrap-safe">${escapeHtml(getMediaDisplayTitle(activeAsset, getLinkedPostForMedia(activeAsset), "Document"))}</div><div class="text-xs text-gray-500 mt-1">${escapeHtml(getMediaFileTypeLabel(activeAsset))}</div></div>`
+      : `<img src="${escapeHtml(activePreviewUrl)}" alt="${escapeHtml(getMediaDisplayTitle(activeAsset, getLinkedPostForMedia(activeAsset), "Media asset"))}" class="max-h-[56dvh] w-full object-contain" loading="lazy" onerror="handleBrokenMediaPreview(this)">`
+    : `<div class="w-full max-w-lg rounded-2xl bg-[#181125] border border-white/5 p-8 text-center"><i class="ph-bold ph-image text-gray-500 text-5xl block mb-3"></i><div class="text-white text-sm font-bold wrap-safe">${escapeHtml(activeAsset.filename || activeAsset.assetName || activeAsset.title || "File")}</div><div class="text-xs text-gray-500 mt-1">${escapeHtml(getMediaFileTypeLabel(activeAsset))}</div></div>`;
+  const thumbs = assets.map((asset, index) => {
+    const thumbUrl = getMediaPreviewUrl(asset);
+    const kind = inferMediaKindFromAsset(asset);
+    const title = getMediaDisplayTitle(asset, getLinkedPostForMedia(asset), `Asset ${index + 1}`);
+    return `
+      <button type="button"
+        class="relative min-w-0 rounded-xl overflow-hidden border ${index === activeIndex ? "border-[#c77dff]/70 ring-1 ring-[#c77dff]/40" : "border-white/5"} bg-[#181125] text-left"
+        onclick="${mediaViewerReorderMode ? "" : `openMediaAssetModal(currentMediaViewerItems[${index}], { items: currentMediaViewerItems, openPosts: mediaPostsPanelOpen })`}">
+        <div class="aspect-square bg-[#0f0a18] flex items-center justify-center relative"
+          ${mediaViewerReorderMode ? `draggable="true" ondragstart="startMediaViewerAssetDrag(event, ${index})" ondragover="event.preventDefault()" ondrop="dropMediaViewerAsset(event, ${index})" ondragend="endMediaViewerAssetDrag()"` : ""}>
+          <span class="absolute top-2 left-2 z-10 w-6 h-6 rounded-full bg-[#181125]/90 border border-white/10 text-[10px] font-bold text-white flex items-center justify-center">${index + 1}</span>
+          ${thumbUrl ? (
+            kind === "video"
+              ? `<video src="${escapeHtml(thumbUrl)}" class="w-full h-full object-cover" muted playsinline preload="metadata"></video>`
+              : kind === "document"
+              ? `<div class="w-full h-full flex flex-col items-center justify-center gap-1 text-gray-400 p-2"><i class="ph-bold ph-file-text text-2xl"></i><span class="text-[9px] uppercase tracking-wider font-bold text-center">${escapeHtml(getMediaFileTypeLabel(asset))}</span></div>`
+              : `<img src="${escapeHtml(thumbUrl)}" alt="${escapeHtml(title)}" class="w-full h-full object-cover" onerror="handleBrokenMediaPreview(this)">`
+          ) : `<div class="w-full h-full flex items-center justify-center text-gray-500"><i class="ph-bold ph-image text-2xl"></i></div>`}
+          ${mediaViewerReorderMode ? `<div class="absolute inset-0 bg-black/0 hover:bg-black/15 transition-colors"></div>` : ""}
+        </div>
+        <div class="p-2 space-y-1">
+          <div class="text-[10px] font-bold text-white wrap-safe">${escapeHtml(title)}</div>
+          <div class="flex items-center justify-between gap-2">
+            <span class="px-1.5 py-0.5 rounded bg-[#181125] border border-white/5 text-[8px] uppercase tracking-wider font-bold text-gray-300">${escapeHtml(getMediaFileTypeLabel(asset))}</span>
+            ${mediaViewerReorderMode ? `<span class="text-[9px] text-gray-500 cursor-grab"><i class="ph-bold ph-dots-six-vertical"></i></span>` : ""}
+          </div>
+          ${mediaViewerReorderMode ? `<div class="flex gap-2 flex-wrap pt-1">
+            <button type="button" onclick="moveMediaViewerAsset(${index}, -1)" class="px-2 py-1 rounded-lg bg-[#120c1d] border border-white/5 text-[10px] font-bold text-white">Move left</button>
+            <button type="button" onclick="moveMediaViewerAsset(${index}, 1)" class="px-2 py-1 rounded-lg bg-[#120c1d] border border-white/5 text-[10px] font-bold text-white">Move right</button>
+          </div>` : ""}
+        </div>
+      </button>
+    `;
+  }).join("");
+  const controls = total > 1 ? `
+    <div class="flex items-center justify-between gap-3 flex-wrap">
+      <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${activeIndex + 1} of ${total}</div>
+      <div class="flex items-center gap-2 flex-wrap">
+        <button type="button" onclick="navigateMediaViewer(-1)" class="px-3 py-2 rounded-lg bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white">Previous</button>
+        <button type="button" onclick="navigateMediaViewer(1)" class="px-3 py-2 rounded-lg bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white">Next</button>
+        <button type="button" onclick="toggleMediaViewerGalleryViewAll()" class="px-3 py-2 rounded-lg ${mediaViewerGalleryViewAll ? "bg-[#231738] text-white" : "bg-[#181125] text-gray-300"} border border-white/5 text-[10px] uppercase tracking-wider font-bold">View all</button>
+        <button type="button" onclick="toggleMediaViewerReorderMode()" class="px-3 py-2 rounded-lg ${mediaViewerReorderMode ? "bg-[#231738] text-white" : "bg-[#181125] text-gray-300"} border border-white/5 text-[10px] uppercase tracking-wider font-bold">Reorder</button>
+        ${mediaViewerReorderMode ? `<button type="button" onclick="saveMediaViewerOrder()" class="px-3 py-2 rounded-lg bg-[#30121b] border border-red-400/20 text-[10px] uppercase tracking-wider font-bold text-red-200">Save order</button><button type="button" onclick="cancelMediaViewerReorder()" class="px-3 py-2 rounded-lg bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300">Cancel reorder</button>` : ""}
+      </div>
     </div>
   ` : "";
-  if (linkedAssets.length > 1) {
-    return `
-      ${nav}
-      <div class="w-full h-full overflow-auto">
-        <div class="grid grid-cols-2 gap-3">
-          ${linkedAssets.slice(0, 4).map((asset) => {
-            const assetPreview = asset.fileUrl || asset.sourceUrl || "";
-            return `<div class="aspect-square rounded-xl overflow-hidden bg-[#181125] border border-white/5 flex items-center justify-center">
-              ${assetPreview ? `<img src="${escapeHtml(assetPreview)}" alt="${escapeHtml(asset.title || asset.assetName || "Carousel asset")}" class="w-full h-full object-contain" onerror="handleBrokenMediaPreview(this)">` : `<i class="ph-bold ph-image text-gray-500 text-2xl"></i>`}
-            </div>`;
-          }).join("")}
-        </div>
+  const gallery = mediaViewerGalleryViewAll
+    ? `<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">${thumbs}</div>`
+    : `<div class="flex gap-3 overflow-x-auto pb-2">${thumbs}</div>`;
+  return `
+    <div class="space-y-4 w-full">
+      <div class="flex items-center justify-center min-h-[260px] bg-[#0f0a18] border border-white/5 rounded-2xl p-4">${preview}</div>
+      ${controls}
+      <div class="space-y-2">
+        ${gallery}
       </div>
-    `;
+    </div>
+  `;
+}
+
+function toggleMediaViewerGalleryViewAll() {
+  mediaViewerGalleryViewAll = !mediaViewerGalleryViewAll;
+  console.log("[media-gallery] open carousel", { viewAll: mediaViewerGalleryViewAll });
+  openMediaAssetModal(currentMediaViewerItems[currentMediaViewerIndex] || currentMediaAssetDetail, { items: currentMediaViewerItems, openPosts: mediaPostsPanelOpen });
+}
+
+function toggleMediaViewerReorderMode(forceValue) {
+  mediaViewerReorderMode = typeof forceValue === "boolean" ? forceValue : !mediaViewerReorderMode;
+  console.log("[media-gallery] reorder mode", { enabled: mediaViewerReorderMode });
+  if (!mediaViewerReorderMode) {
+    mediaViewerDragIndex = null;
   }
-  if (previewUrl && type === "image") {
-    return `${nav}<img src="${escapeHtml(previewUrl)}" alt="${escapeHtml(item.title || "Media asset")}" loading="lazy">`;
+  openMediaAssetModal(currentMediaViewerItems[currentMediaViewerIndex] || currentMediaAssetDetail, { items: currentMediaViewerItems, openPosts: mediaPostsPanelOpen });
+}
+
+function startMediaViewerAssetDrag(event, index) {
+  mediaViewerDragIndex = index;
+  console.log("[media-gallery] reorder mode", { dragStart: index });
+  try { event.dataTransfer.effectAllowed = "move"; } catch (_) {}
+}
+
+function dropMediaViewerAsset(event, index) {
+  event.preventDefault();
+  if (!mediaViewerReorderMode) return;
+  reorderMediaViewerAssets(mediaViewerDragIndex, index);
+}
+
+function endMediaViewerAssetDrag() {
+  mediaViewerDragIndex = null;
+}
+
+function moveMediaViewerAsset(index, delta) {
+  reorderMediaViewerAssets(index, index + delta);
+}
+
+function reorderMediaViewerAssets(fromIndex, toIndex) {
+  if (fromIndex == null || toIndex == null || fromIndex === toIndex) return;
+  if (fromIndex < 0 || toIndex < 0 || fromIndex >= currentMediaViewerItems.length || toIndex >= currentMediaViewerItems.length) return;
+  const clone = currentMediaViewerItems.slice();
+  const [item] = clone.splice(fromIndex, 1);
+  clone.splice(toIndex, 0, item);
+  currentMediaViewerItems = clone;
+  currentMediaViewerIndex = Math.max(0, clone.findIndex(asset => getMediaItemKey(asset) === getMediaItemKey(currentMediaAssetDetail)));
+  console.log("[media-gallery] item selected", clone.map((asset) => getMediaItemKey(asset)));
+  openMediaAssetModal(currentMediaViewerItems[currentMediaViewerIndex] || clone[0], { items: currentMediaViewerItems, openPosts: mediaPostsPanelOpen });
+}
+
+async function saveMediaViewerOrder() {
+  const linkedPost = currentMediaAssetDetail?.linkedPost || currentMediaViewerItems.find((asset) => asset.linkedPost)?.linkedPost || getLinkedPostForMedia(currentMediaAssetDetail);
+  const postId = String(linkedPost ? getCanonicalPostId(linkedPost) : currentMediaAssetDetail?.postId || currentMediaAssetDetail?.linkedPostId || currentMediaAssetDetail?.linked_post_id || "").trim();
+  const orderedIds = currentMediaViewerItems.map((asset) => getMediaAssetId(asset)).filter(Boolean);
+  console.log("[media-gallery] order payload", { post_id: postId, ordered_media_asset_ids: orderedIds });
+  if (!postId || !orderedIds.length) return;
+  try {
+    const meta = getWorkspaceRequestMetadata();
+    const result = await callSupabaseEdgeFunction("media-index", {
+      action: "reorder_post_media",
+      workspace_id: meta.workspace_id,
+      workspace_slug: meta.workspace_slug || getCurrentWorkspaceSlug() || "",
+      post_id: postId,
+      ordered_media_asset_ids: orderedIds,
+      orderedMediaAssetIds: orderedIds
+    });
+    console.log("[media-gallery] order saved", result);
+    applyOrderedAttachedMediaResult(postId, result);
+    mediaViewerOriginalOrder = currentMediaViewerItems.slice();
+    mediaViewerReorderMode = false;
+    mediaViewerDragIndex = null;
+    openMediaAssetModal(currentMediaViewerItems[currentMediaViewerIndex] || currentMediaAssetDetail, { items: currentMediaViewerItems, openPosts: mediaPostsPanelOpen });
+  } catch (err) {
+    console.log("[media-gallery] order saved", err);
+    showToast("Reorder failed", err.message || "Could not save the new order.", "ph-warning", "text-yellow-400");
   }
-  if (previewUrl && type === "video") {
-    return `${nav}<video src="${escapeHtml(previewUrl)}" controls playsinline preload="metadata"></video>`;
-  }
-  const icon = type === "carousel" ? "ph-images" : type === "article" || type === "document" || type === "file" ? "ph-file-text" : "ph-image";
-  return `${nav}<div class="w-full max-w-sm rounded-2xl bg-[#181125] border border-white/5 p-6 text-center">
-    <i class="ph-fill ${icon} text-gray-500 text-5xl block mb-3"></i>
-    <div class="text-white text-sm font-bold wrap-safe">${escapeHtml(item.filename || item.assetName || item.title || "File")}</div>
-    <div class="text-xs text-gray-500 mt-1">${escapeHtml(toTitleCase(type || "file"))}</div>
-  </div>`;
+}
+
+function cancelMediaViewerReorder() {
+  mediaViewerReorderMode = false;
+  mediaViewerDragIndex = null;
+  currentMediaViewerItems = Array.isArray(mediaViewerOriginalOrder) ? mediaViewerOriginalOrder.slice() : currentMediaViewerItems;
+  console.log("[media-gallery] order saved", { cancelled: true });
+  openMediaAssetModal(currentMediaViewerItems[currentMediaViewerIndex] || currentMediaAssetDetail, { items: currentMediaViewerItems, openPosts: mediaPostsPanelOpen });
 }
 
 function renderTaggedContent(item, linkedPost) {
@@ -18018,14 +18297,23 @@ function openMediaAssetModal(item, options = {}) {
   console.log("[modal] open media-viewer");
   console.log("[assistant-ui] modal minimize");
   minimizeAssistantPanel();
+  const wasHidden = mediaAssetModal.classList.contains("opacity-0") || mediaAssetModal.classList.contains("pointer-events-none");
   if (Array.isArray(options.items) && options.items.length) {
-    currentMediaViewerItems = options.items;
+    currentMediaViewerItems = options.items.slice(0, 20);
   } else if (!currentMediaViewerItems.length || !currentMediaViewerItems.some(asset => getMediaItemKey(asset) === getMediaItemKey(item))) {
     currentMediaViewerItems = selectedMediaAssetIds.size
       ? getFilteredMediaVaultItems().filter(asset => selectedMediaAssetIds.has(getMediaItemKey(asset)))
       : getFilteredMediaVaultItems();
   }
+  currentMediaViewerItems = (currentMediaViewerItems || []).slice(0, 20);
   currentMediaViewerIndex = Math.max(0, currentMediaViewerItems.findIndex(asset => getMediaItemKey(asset) === getMediaItemKey(item)));
+  if (currentMediaViewerIndex < 0) currentMediaViewerIndex = 0;
+  if (wasHidden) {
+    mediaViewerOriginalOrder = currentMediaViewerItems.slice();
+    mediaViewerGalleryViewAll = false;
+    mediaViewerReorderMode = false;
+    mediaViewerDragIndex = null;
+  }
   currentMediaAssetDetail = normalizeRemoteMedia(item);
   item = currentMediaAssetDetail;
   console.log("[media-viewer] open", { id: getMediaItemKey(item), index: currentMediaViewerIndex, total: currentMediaViewerItems.length });
@@ -18174,11 +18462,19 @@ function closeMediaAssetModal() {
   mediaAssetModalCard.classList.remove("scale-100");
   mediaAssetModalCard.classList.add("scale-95");
   toggleMediaPostsPanel(false);
+  mediaViewerGalleryViewAll = false;
+  mediaViewerReorderMode = false;
+  mediaViewerDragIndex = null;
+  mediaViewerOriginalOrder = [];
 }
 
 function openMediaAsset(assetId) {
   const item = getFilteredMediaVaultItems().find(asset => getMediaItemKey(asset) === String(assetId || ""));
   if (!item) return;
+  if (item.kind === "group" && Array.isArray(item.assets) && item.assets.length) {
+    openMediaAssetModal(item.assets[0], { items: item.assets.slice(0, 20), openPosts: selectedMediaAssetIds.size > 0 });
+    return;
+  }
   const selectedItems = selectedMediaAssetIds.size
     ? getFilteredMediaVaultItems().filter(asset => selectedMediaAssetIds.has(getMediaItemKey(asset)))
     : [];
@@ -22610,8 +22906,6 @@ function renderSheetMirrorCard() {
 
 function refreshSettingsSheetMirrorCard() {
   var card = document.getElementById("settings-sheet-mirror-card");
-  var inline = document.getElementById("settings-workspace-integrations-inline");
-  if (inline) inline.innerHTML = renderWorkspaceConnectionCards();
   if (!card) return;
   var config = getSheetMirrorConfig();
   if (!config.sheetId) { card.classList.add("hidden"); return; }
@@ -27876,7 +28170,7 @@ function closeProfileWorkspaceModal() {
 }
 
 function switchPWTab(tab) {
-  var allowed = ["profile", "workspace", "billing", "connections", "security"];
+  var allowed = ["profile", "workspace", "connections", "ai-providers", "report-bug", "contact-support"];
   if (allowed.indexOf(tab) === -1) return;
   document.querySelectorAll(".pw-tab-btn").forEach(function(btn) {
     var isActive = (btn.dataset.pwTab === tab);
@@ -27901,12 +28195,29 @@ function populatePWModal() {
   var wsNameEl = document.getElementById("pw-workspace-name");
   var wsSlugEl = document.getElementById("pw-workspace-slug");
   var wsShortEl = document.getElementById("pw-workspace-short-name");
-  var planEl = document.getElementById("pw-billing-plan");
-  var statusEl = document.getElementById("pw-billing-status");
-  var ctaContainer = document.getElementById("pw-billing-cta-container");
-  var stripeStatusEl = document.getElementById("pw-billing-stripe-status");
-  var stripeDetailEl = document.getElementById("pw-billing-stripe-detail");
   var connectionsList = document.getElementById("pw-connections-list");
+  var aiProvidersList = document.getElementById("pw-ai-providers-list");
+  var reportBugTitle = document.getElementById("pw-report-title");
+  var reportBugSeverity = document.getElementById("pw-report-severity");
+  var reportBugPage = document.getElementById("pw-report-page");
+  var reportBugConsole = document.getElementById("pw-report-console");
+  var reportBugDescription = document.getElementById("pw-report-description");
+  var reportBugIncludeConsole = document.getElementById("pw-report-include-console");
+  var supportName = document.getElementById("pw-support-name");
+  var supportEmail = document.getElementById("pw-support-email");
+  var supportTopic = document.getElementById("pw-support-topic");
+  var supportMessage = document.getElementById("pw-support-message");
+  var profileImageEl = document.getElementById("pw-profile-image-url");
+  var wsConstellationEl = document.getElementById("pw-workspace-constellation-shape");
+  var wsBrandAccentEl = document.getElementById("pw-workspace-brand-accent");
+  var wsMediaBucketEl = document.getElementById("pw-workspace-media-bucket");
+  var wsBrandVoiceEl = document.getElementById("pw-workspace-brand-voice");
+  var wsDefaultPlatformsEl = document.getElementById("pw-workspace-default-platforms");
+  var wsDefaultPillarsEl = document.getElementById("pw-workspace-default-pillars");
+  var wsDefaultStatusesEl = document.getElementById("pw-workspace-default-statuses");
+  var wsDefaultPostTypesEl = document.getElementById("pw-workspace-default-post-types");
+  var wsCurrentMonthEl = document.getElementById("pw-workspace-current-month");
+  var wsCurrentYearEl = document.getElementById("pw-workspace-current-year");
 
   if (emailEl) emailEl.textContent = user.email || "—";
   var name = config && (config.name || "");
@@ -27915,6 +28226,7 @@ function populatePWModal() {
   if (previewEl) previewEl.innerHTML = renderWorkspaceAvatar(config || {});
   if (initialsEl) initialsEl.value = initials;
   if (displayNameEl) displayNameEl.value = user.user_metadata && user.user_metadata.display_name || user.email && user.email.split("@")[0] || "";
+  if (profileImageEl) profileImageEl.value = user.user_metadata && (user.user_metadata.avatar_url || user.user_metadata.profile_image_url || user.user_metadata.profileImageUrl) || "";
   if (wsNameEl) wsNameEl.value = name;
   if (wsSlugEl) wsSlugEl.textContent = slug;
   if (wsShortEl) wsShortEl.value = config && config.short_name || initials;
@@ -27926,69 +28238,69 @@ function populatePWModal() {
     btn.classList.toggle("active", btn.dataset.icon === activeIcon);
   });
 
-  // Billing tab
-  var plan = config && (config.plan || "");
-  var subStatus = config && (config.subscription_status || "");
-  if (planEl) planEl.textContent = plan || "Free";
-  if (statusEl) statusEl.textContent = subStatus || "Active";
-  if (ctaContainer) {
-    if (plan === "Managed") {
-      ctaContainer.innerHTML = '<a href="/contact/?topic=billing" class="inline-block px-5 py-2.5 rounded-xl bg-[#2d1b4e] hover:bg-[#3d2b5e] text-white text-xs font-bold uppercase tracking-widest transition-colors">Contact Billing Support</a>';
-    } else {
-      var checkoutPlan = plan || "growth";
-      ctaContainer.innerHTML = '<a href="/checkout/?plan=' + encodeURIComponent(checkoutPlan.toLowerCase()) + '" class="inline-block px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all">Manage Billing</a>';
-    }
-  }
-
-  // Stripe status from workspace_connections
-  var stripeConn = Array.isArray(WORKSPACE_CONNECTIONS) ? WORKSPACE_CONNECTIONS.find(function(c) { return c && c.provider === "stripe"; }) : null;
-  if (stripeConn && stripeStatusEl && stripeDetailEl) {
-    stripeStatusEl.classList.remove("hidden");
-    stripeDetailEl.textContent = "Connected: " + (stripeConn.last_connected_at || stripeConn.status || "Active");
-  } else if (stripeStatusEl) {
-    stripeStatusEl.classList.add("hidden");
-  }
-
   // Connections tab
   if (connectionsList) {
-    var providers = typeof WORKSPACE_CONNECTION_PROVIDERS !== "undefined" ? WORKSPACE_CONNECTION_PROVIDERS : [];
-    connectionsList.innerHTML = providers.map(function(provider) {
-      var conn = typeof getWorkspaceConnection === "function" ? getWorkspaceConnection(provider) : null;
-      var label = provider.replace(/_/g, " ").replace(/\b\w/g, function(c) { return c.toUpperCase(); });
-      var status = conn ? "Connected" : "Setup Needed";
-      var tone = conn ? "text-emerald-300" : "text-gray-300";
-      var chip = conn ? "Connected" : "Setup Required";
-      var cta = conn
-        ? '<button type="button" onclick="showToast(\'' + label + ' is connected.\', \'info\')" class="px-3 py-1.5 rounded-lg bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Connected</button>'
-        : '<button type="button" onclick="openSupportModal(\'Integration setup\')" class="px-3 py-1.5 rounded-lg bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Request Setup</button>';
-      return '<div class="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#181125] border border-white/5"><div><div class="text-xs text-gray-500 font-bold uppercase tracking-wider">' + label + '</div><div class="text-sm font-bold ' + tone + '">' + status + '</div></div><span class="diagnostic-chip">' + chip + '</span><div class="flex gap-2 shrink-0">' + cta + '</div></div>';
-    }).join("");
+    connectionsList.innerHTML = renderWorkspaceConnectionCards({ showBackfill: true });
   }
+
+  if (aiProvidersList) aiProvidersList.innerHTML = renderAIProviderCards();
+  if (reportBugTitle) reportBugTitle.value = "";
+  if (reportBugSeverity) reportBugSeverity.value = "medium";
+  if (reportBugPage) reportBugPage.value = window.currentView || "Workspace";
+  if (reportBugConsole) reportBugConsole.value = "";
+  if (reportBugDescription) reportBugDescription.value = "";
+  if (reportBugIncludeConsole) reportBugIncludeConsole.checked = false;
+  if (supportName) supportName.value = user.user_metadata && user.user_metadata.full_name || user.user_metadata && user.user_metadata.display_name || user.email && user.email.split("@")[0] || "";
+  if (supportEmail) supportEmail.value = user.email || "";
+  if (supportTopic) supportTopic.value = "";
+  if (supportMessage) supportMessage.value = "";
+  var wsActive = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active || {};
+  if (wsConstellationEl) wsConstellationEl.value = String(wsActive.constellation_shape || wsActive.constellationShape || "").trim();
+  if (wsBrandAccentEl) wsBrandAccentEl.value = String(wsActive.brand_accent || wsActive.brandAccent || "").trim();
+  if (wsMediaBucketEl) wsMediaBucketEl.value = String(wsActive.media_bucket || wsActive.storage_bucket || "media").trim();
+  if (wsBrandVoiceEl) wsBrandVoiceEl.value = String(wsActive.brand_voice || wsActive.brandVoice || "").trim();
+  if (wsDefaultPlatformsEl) wsDefaultPlatformsEl.value = Array.isArray(wsActive.default_platforms) ? wsActive.default_platforms.join(", ") : String(wsActive.default_platforms || "").trim();
+  if (wsDefaultPillarsEl) wsDefaultPillarsEl.value = Array.isArray(wsActive.default_pillars) ? wsActive.default_pillars.join(", ") : String(wsActive.default_pillars || "").trim();
+  if (wsDefaultStatusesEl) wsDefaultStatusesEl.value = Array.isArray(wsActive.default_statuses) ? wsActive.default_statuses.join(", ") : String(wsActive.default_statuses || "").trim();
+  if (wsDefaultPostTypesEl) wsDefaultPostTypesEl.value = Array.isArray(wsActive.default_post_types) ? wsActive.default_post_types.join(", ") : String(wsActive.default_post_types || "").trim();
+  if (wsCurrentMonthEl) wsCurrentMonthEl.value = String(wsActive.current_month || wsActive.currentMonth || "").trim();
+  if (wsCurrentYearEl) wsCurrentYearEl.value = String(wsActive.current_year || wsActive.currentYear || "").trim();
 }
 
 async function savePWProfile() {
-  console.log("[profile-save] payload", {
-    initials: (document.getElementById("pw-profile-initials") || {}).value || "",
-    displayName: (document.getElementById("pw-profile-display-name") || {}).value || "",
-    icon: (document.querySelector("#pw-profile-icon-grid .pw-icon-btn.active") || {}).dataset?.icon || "sparkle"
-  });
+  const payload = {
+    display_name: (document.getElementById("pw-profile-display-name") || {}).value || "",
+    avatar_initials: (document.getElementById("pw-profile-initials") || {}).value || "",
+    avatar_mode: (document.querySelector("#pw-profile-icon-grid .pw-icon-btn.active") || {}).dataset?.icon === "none" ? "initials" : "icon",
+    icon: (document.querySelector("#pw-profile-icon-grid .pw-icon-btn.active") || {}).dataset?.icon || "sparkle",
+    avatar_url: (document.getElementById("pw-profile-image-url") || {}).value || "",
+    profile_image_url: (document.getElementById("pw-profile-image-url") || {}).value || ""
+  };
+  console.log("[profile-save] payload", payload);
   var statusEl = document.getElementById("pw-profile-status");
   var saveBtn = document.getElementById("pw-profile-save-btn");
   if (statusEl) { statusEl.classList.add("hidden"); statusEl.textContent = ""; }
   if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = "Saving..."; }
   var loadingToastId = showLoadingToast("Saving profile", "Saving profile settings...");
   try {
-    var initials = (document.getElementById("pw-profile-initials") || {}).value || "";
-    var displayName = (document.getElementById("pw-profile-display-name") || {}).value || "";
-    var selectedIcon = document.querySelector("#pw-profile-icon-grid .pw-icon-btn.active");
-    var icon = selectedIcon ? selectedIcon.dataset.icon : "sparkle";
-    var avatarMode = icon === "none" ? "initials" : "icon";
     if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase client not available");
     var user = STELLARSYNC_AUTH_USER;
-    if (user && displayName) {
-      await STELLARSYNC_SUPABASE_CLIENT.auth.updateUser({ data: { display_name: displayName, avatar_initials: initials, avatar_mode: avatarMode, icon: icon } });
+    if (user) {
+      var updateResult = await STELLARSYNC_SUPABASE_CLIENT.auth.updateUser({ data: payload });
+      console.log("[profile-save] response", { ok: !updateResult?.error, error: updateResult?.error || null });
+      if (updateResult?.error) throw updateResult.error;
+      var reloaded = await STELLARSYNC_SUPABASE_CLIENT.auth.getUser();
+      var persisted = reloaded?.data?.user?.user_metadata || {};
+      console.log("[profile-save] reload check", persisted);
+      var mismatch = ["display_name", "avatar_mode", "icon", "avatar_initials", "avatar_url", "profile_image_url"].some(function(key) {
+        return String(persisted[key] || "").trim() !== String(payload[key] || "").trim();
+      });
+      if (mismatch) {
+        showToast("Profile saved with warning", "Saved response returned, but persisted values did not match.", "ph-warning", "text-yellow-400");
+      }
+      STELLARSYNC_AUTH_USER = reloaded?.data?.user || STELLARSYNC_AUTH_USER;
+      if (typeof window !== "undefined") window.__currentAuthUser = STELLARSYNC_AUTH_USER;
     }
-    console.log("[profile-save] response", { ok: true });
     if (statusEl) { statusEl.textContent = "Profile saved."; statusEl.className = "text-xs text-emerald-400"; statusEl.classList.remove("hidden"); }
     renderWorkspaceBranding();
     updateToast(loadingToastId, "success", "Profile saved", "Profile settings saved.");
@@ -28003,31 +28315,40 @@ async function savePWProfile() {
 }
 
 async function savePWWorkspace() {
+  const activeWorkspace = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active || {};
+  const payload = {
+    display_name: (document.getElementById("pw-workspace-name") || {}).value || "",
+    short_name: (document.getElementById("pw-workspace-short-name") || {}).value || "",
+    avatar_initials: (document.getElementById("pw-workspace-short-name") || {}).value || getWorkspaceInitials(activeWorkspace),
+    avatar_mode: (document.querySelector("#pw-workspace-icon-grid .pw-ws-icon-btn.active") || {}).dataset?.icon === "none" ? "initials" : "icon",
+    icon: (document.querySelector("#pw-workspace-icon-grid .pw-ws-icon-btn.active") || {}).dataset?.icon || "sparkle",
+    constellation_shape: (document.getElementById("pw-workspace-constellation-shape") || {}).value || "",
+    brand_accent: (document.getElementById("pw-workspace-brand-accent") || {}).value || "",
+    media_bucket: (document.getElementById("pw-workspace-media-bucket") || {}).value || "media",
+    brand_voice: (document.getElementById("pw-workspace-brand-voice") || {}).value || "",
+    default_platforms: String((document.getElementById("pw-workspace-default-platforms") || {}).value || "").split(/[|,\n]/).map((v) => v.trim()).filter(Boolean),
+    default_pillars: String((document.getElementById("pw-workspace-default-pillars") || {}).value || "").split(/[|,\n]/).map((v) => v.trim()).filter(Boolean),
+    default_statuses: String((document.getElementById("pw-workspace-default-statuses") || {}).value || "").split(/[|,\n]/).map((v) => v.trim()).filter(Boolean),
+    default_post_types: String((document.getElementById("pw-workspace-default-post-types") || {}).value || "").split(/[|,\n]/).map((v) => v.trim()).filter(Boolean),
+    current_month: (document.getElementById("pw-workspace-current-month") || {}).value || "",
+    current_year: (document.getElementById("pw-workspace-current-year") || {}).value || "",
+    updated_at: new Date().toISOString()
+  };
+  console.log("[workspace-save] payload", payload);
   var statusEl = document.getElementById("pw-workspace-status");
   var saveBtn = document.getElementById("pw-workspace-save-btn");
   if (statusEl) { statusEl.classList.add("hidden"); statusEl.textContent = ""; }
   if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = "Saving..."; }
   var loadingToastId = showLoadingToast("Saving workspace settings", "Saving workspace settings...");
   try {
-    var name = (document.getElementById("pw-workspace-name") || {}).value || "";
-    var shortName = (document.getElementById("pw-workspace-short-name") || {}).value || "";
-    var selectedIcon = document.querySelector("#pw-workspace-icon-grid .pw-ws-icon-btn.active");
-    var icon = selectedIcon ? selectedIcon.dataset.icon : "sparkle";
-    var avatarMode = icon === "none" ? "initials" : "icon";
-    var initials = shortName || getWorkspaceInitials(WORKSPACE_RUNTIME_CONFIG.active);
     if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase client not available");
-    var activeWorkspace = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active || {};
     var slug = (activeWorkspace && (activeWorkspace.workspace_slug || activeWorkspace.slug)) || "";
     var workspaceId = activeWorkspace.workspace_id || activeWorkspace.id || "";
-    var payload = { workspace_slug: slug, display_name: name, short_name: shortName, avatar_initials: initials, avatar_mode: avatarMode, icon: icon, updated_at: new Date().toISOString() };
-    console.log("[workspace-save] payload", payload);
-    console.log("[branding-save] payload", payload);
-    console.log("[constellation-save] payload", payload);
     if (slug) {
-      if (workspaceId && name) {
+      if (workspaceId && payload.display_name) {
         var workspaceUpdate = await STELLARSYNC_SUPABASE_CLIENT
           .from("workspaces")
-          .update({ name: name, updated_at: new Date().toISOString() })
+          .update({ name: payload.display_name, updated_at: new Date().toISOString() })
           .eq("id", workspaceId);
         if (workspaceUpdate.error) throw workspaceUpdate.error;
       }
@@ -28037,14 +28358,22 @@ async function savePWWorkspace() {
         var settingsUpdate = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").update(payload).eq("id", existing.data.id);
         if (settingsUpdate.error) throw settingsUpdate.error;
       } else {
-        var settingsInsert = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").insert(payload);
+        var settingsInsert = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").insert({ ...payload, workspace_slug: slug });
         if (settingsInsert.error) throw settingsInsert.error;
       }
-      console.log("[branding-save] response", { ok: true, workspace_slug: slug });
       console.log("[workspace-save] response", { ok: true, workspace_slug: slug });
-      console.log("[constellation-save] response", { ok: true, workspace_slug: slug });
-      WORKSPACE_RUNTIME_CONFIG.active = mergeWorkspaceSettings(WORKSPACE_RUNTIME_CONFIG.active, { display_name: name, short_name: shortName, avatar_initials: initials, avatar_mode: avatarMode, icon: icon });
-      WORKSPACE_RUNTIME_CONFIG.active.name = name || WORKSPACE_RUNTIME_CONFIG.active.name;
+      var reloadedWorkspace = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").select("*").eq("workspace_slug", slug).maybeSingle();
+      console.log("[workspace-save] reload check", reloadedWorkspace?.data || null);
+      if (reloadedWorkspace?.error) throw reloadedWorkspace.error;
+      var persisted = reloadedWorkspace?.data || {};
+      var mismatch = ["display_name", "short_name", "avatar_mode", "icon", "avatar_initials", "constellation_shape", "brand_accent", "media_bucket", "brand_voice", "current_month", "current_year"].some(function(key) {
+        return String((persisted && persisted[key]) || "").trim() !== String((payload && payload[key]) || "").trim();
+      });
+      if (mismatch) {
+        showToast("Workspace saved with warning", "Saved response returned, but persisted values did not match.", "ph-warning", "text-yellow-400");
+      }
+      WORKSPACE_RUNTIME_CONFIG.active = mergeWorkspaceSettings(WORKSPACE_RUNTIME_CONFIG.active, payload);
+      WORKSPACE_RUNTIME_CONFIG.active.name = payload.display_name || WORKSPACE_RUNTIME_CONFIG.active.name;
       storeActiveWorkspaceConfig(WORKSPACE_RUNTIME_CONFIG.active);
     }
     if (statusEl) { statusEl.textContent = "Workspace saved."; statusEl.className = "text-xs text-emerald-400"; statusEl.classList.remove("hidden"); }
@@ -28065,6 +28394,77 @@ async function savePWWorkspace() {
   } finally {
     if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "Save Workspace"; }
   }
+}
+
+async function submitProfileWorkspaceSupport(kind) {
+  const isBug = kind === "bug";
+  const statusEl = document.getElementById(isBug ? "pw-report-status" : "pw-support-status");
+  const submitBtn = document.getElementById(isBug ? "pw-report-submit-btn" : "pw-support-submit-btn");
+  const config = (typeof WORKSPACE_RUNTIME_CONFIG !== "undefined" && WORKSPACE_RUNTIME_CONFIG.active) || {};
+  const user = (typeof STELLARSYNC_AUTH_USER !== "undefined" && STELLARSYNC_AUTH_USER) || {};
+  const supportUrl = typeof SUPABASE_URL !== "undefined" ? `${SUPABASE_URL}/functions/v1/contact-form` : "";
+  const payload = isBug ? {
+    name: user.user_metadata?.display_name || user.user_metadata?.full_name || user.email || "StellarSync User",
+    organization: config.workspace_slug || config.slug || "",
+    email: user.email || "",
+    website: window.location.origin,
+    team_size: "",
+    plan_interest: `Bug Report: ${String(document.getElementById("pw-report-severity")?.value || "medium").toUpperCase()}`,
+    message: [
+      `Title: ${String(document.getElementById("pw-report-title")?.value || "").trim()}`,
+      `Page/View: ${String(document.getElementById("pw-report-page")?.value || "").trim()}`,
+      `Console Context: ${String(document.getElementById("pw-report-console")?.value || "").trim()}`,
+      "",
+      String(document.getElementById("pw-report-description")?.value || "").trim(),
+      document.getElementById("pw-report-include-console")?.checked ? `\n\nDiagnostics: ${JSON.stringify({ href: window.location.href, view: window.currentView || "", workspace: config.workspace_slug || config.slug || "" })}` : ""
+    ].join("\n")
+  } : {
+    name: String(document.getElementById("pw-support-name")?.value || user.user_metadata?.display_name || user.user_metadata?.full_name || user.email || "StellarSync User").trim(),
+    organization: config.workspace_slug || config.slug || "",
+    email: String(document.getElementById("pw-support-email")?.value || user.email || "").trim(),
+    website: window.location.origin,
+    team_size: "",
+    plan_interest: String(document.getElementById("pw-support-topic")?.value || "Support Request").trim(),
+    message: String(document.getElementById("pw-support-message")?.value || "").trim()
+  };
+  console.log(isBug ? "[support] report bug submit" : "[support] contact submit", payload);
+  if (!payload.message) {
+    if (statusEl) { statusEl.textContent = "Please add a message."; statusEl.classList.remove("hidden"); }
+    return;
+  }
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Sending..."; }
+  if (statusEl) { statusEl.classList.add("hidden"); statusEl.textContent = ""; }
+  const loadingToastId = showLoadingToast(isBug ? "Sending bug report" : "Sending support request", "Submitting support request...");
+  try {
+    if (!supportUrl) throw new Error("Support route unavailable");
+    const resp = await fetch(supportUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY },
+      body: JSON.stringify(payload)
+    });
+    const text = await resp.text().catch(() => "");
+    if (!resp.ok) throw new Error(text || `Server responded with ${resp.status}`);
+    updateToast(loadingToastId, "success", isBug ? "Bug report sent" : "Support request sent", "Your request was submitted.");
+    if (statusEl) { statusEl.textContent = "Submitted."; statusEl.className = "text-xs text-emerald-400"; statusEl.classList.remove("hidden"); }
+  } catch (err) {
+    console.log("[support] report bug submit", err);
+    if (statusEl) {
+      statusEl.innerHTML = `Could not submit: ${escapeHtml(err.message || String(err))}. <a class="text-[#c77dff] underline" href="/contact/?topic=support">Use the contact page</a>.`;
+      statusEl.classList.remove("hidden");
+    }
+    updateToast(loadingToastId, "error", isBug ? "Bug report failed" : "Support request failed", err);
+    if (!supportUrl) window.location.href = "/contact/?topic=support";
+  } finally {
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = isBug ? "Submit Bug Report" : "Send Support Request"; }
+  }
+}
+
+async function submitProfileWorkspaceBugReport() {
+  return submitProfileWorkspaceSupport("bug");
+}
+
+async function submitProfileWorkspaceContact() {
+  return submitProfileWorkspaceSupport("contact");
 }
 
 async function doPWResetPassword() {
@@ -28136,7 +28536,11 @@ function getWorkspaceAvatarIconClass(icon) {
 function renderWorkspaceAvatar(workspace) {
   var source = workspace || {};
   var avatarMode = String(source.avatar_mode || source.avatarMode || "").trim().toLowerCase();
+  var avatarUrl = String(source.avatar_url || source.profile_image_url || source.profileImageUrl || "").trim();
   var icon = String(source.icon || source.avatar_icon || source.avatarIcon || "").trim();
+  if (avatarUrl) {
+    return '<img src="' + escapeHtml(avatarUrl) + '" alt="Workspace avatar" class="w-full h-full object-cover rounded-xl" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'"><div class="hidden w-full h-full items-center justify-center text-white text-sm font-bold">' + escapeHtml(getWorkspaceInitials(source)) + '</div>';
+  }
   if (avatarMode === "icon") {
     var iconClass = getWorkspaceAvatarIconClass(icon);
     if (iconClass) {
