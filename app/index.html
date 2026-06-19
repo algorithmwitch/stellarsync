@@ -3920,7 +3920,9 @@
                       <p class="text-xs text-gray-400 mt-1">Upload multiple images, reorder them, and remove a single slide without deleting the whole post.</p>
                     </div>
                     <div class="flex items-center gap-2 flex-wrap justify-end">
-                      <button type="button" onclick="detachAllMediaFromCurrentPost()" class="px-2.5 py-1 rounded-lg bg-[#30121b] border border-red-400/20 text-[10px] uppercase tracking-wider font-bold text-red-200">Detach all from this post</button>
+                      <button type="button" onclick="refreshAttachedMediaForModal()" class="px-2.5 py-1 rounded-lg bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 hover:text-white transition-colors" title="Reload attached media from server"><i class="ph-bold ph-arrow-clockwise"></i> Refresh</button>
+                      <button type="button" onclick="repairMediaOrderForModal()" class="px-2.5 py-1 rounded-lg bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 hover:text-white transition-colors"><i class="ph-bold ph-wrench"></i> Repair order</button>
+                      <button type="button" onclick="detachAllMediaFromCurrentPost()" class="px-2.5 py-1 rounded-lg bg-[#30121b] border border-red-400/20 text-[10px] uppercase tracking-wider font-bold text-red-200">Detach all</button>
                       <span id="modal-carousel-count" class="px-2.5 py-1 rounded-full bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300">0 Slides</span>
                     </div>
                   </div>
@@ -4003,8 +4005,29 @@
                         <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Monday.com Sync</p>
                         <p id="modal-monday-sync-status" class="text-[11px] text-gray-500 leading-relaxed">Not synced to Monday</p>
                       </div>
-                      <button id="modal-sync-monday-btn" type="button" onclick="syncPostToMonday()" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Sync Post to Monday</button>
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <button id="modal-pull-monday-fields-btn" type="button" onclick="pullMondayFields()" class="px-2.5 py-1.5 rounded-lg bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[9px] uppercase tracking-wider font-bold text-gray-400 hover:text-white transition-colors hidden">Pull Fields</button>
+                        <button id="modal-pull-monday-updates-btn" type="button" onclick="pullMondayUpdates()" class="px-2.5 py-1.5 rounded-lg bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[9px] uppercase tracking-wider font-bold text-gray-400 hover:text-white transition-colors hidden">Pull Updates</button>
+                        <button id="modal-sync-monday-btn" type="button" onclick="syncPostToMonday()" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Sync Post to Monday</button>
+                      </div>
                     </div>
+                    <div id="modal-monday-preview-card" class="hidden p-2 rounded-lg bg-[#120c1d] border border-white/5 text-[10px] leading-relaxed space-y-1">
+                      <div class="text-[9px] uppercase tracking-widest text-gray-600 font-bold mb-1">StellarSync Preview</div>
+                      <div id="modal-monday-fields-list" class="grid grid-cols-2 gap-x-3 gap-y-0.5 text-gray-400">
+                        <span>Campaign:</span><span id="monday-preview-campaign" class="text-gray-200"></span>
+                        <span>Platform:</span><span id="monday-preview-platform" class="text-gray-200"></span>
+                        <span>Description:</span><span id="monday-preview-description" class="text-gray-200 truncate"></span>
+                        <span>Pillar:</span><span id="monday-preview-pillar" class="text-gray-200"></span>
+                        <span>Status:</span><span id="monday-preview-status" class="text-gray-200"></span>
+                        <span>Date:</span><span id="monday-preview-date" class="text-gray-200"></span>
+                        <span>Impressions:</span><span id="monday-preview-impressions" class="text-gray-200"></span>
+                        <span>Post ID:</span><span id="monday-preview-post-id" class="text-gray-200"></span>
+                      </div>
+                    </div>
+                    <details class="text-[9px] text-gray-600">
+                      <summary class="cursor-pointer font-bold uppercase tracking-wider">Diagnostics</summary>
+                      <div id="modal-monday-diagnostics" class="mt-1 whitespace-pre-wrap break-words font-mono text-[10px] leading-relaxed text-gray-500"></div>
+                    </details>
                     <input id="modal-monday-item-id" type="hidden" value="">
                     <input id="modal-monday-synced-at" type="hidden" value="">
                   </div>
@@ -6974,90 +6997,75 @@ function resolveAttachedMediaCandidate(item, mediaItems = appState.media || []) 
 function getAttachedMediaForPost(post, mediaItems) {
   if (!post) return [];
   if (!Array.isArray(mediaItems)) {
-    try {
-      mediaItems = Array.isArray(appState?.media) ? appState.media : [];
-    } catch (_) {
-      mediaItems = [];
-    }
+    try { mediaItems = Array.isArray(appState && appState.media) ? appState.media : []; } catch (_) { mediaItems = []; }
   }
-  const postIds = new Set(getPostIdentityValues(post));
-  const postId = Array.from(postIds)[0] || getCanonicalPostId(post) || "";
-  let globalRows = [];
-  try {
-    globalRows = appState?.postMedia || appState?.post_media || [];
-  } catch (_) {
-    globalRows = [];
-  }
-  const globalPostMediaRows = globalRows.filter((row) => postIds.has(String(row?.post_id || row?.postId || "").trim()));
-  const inlinePostMediaRows = []
+  var postIds = new Set(getPostIdentityValues(post));
+  var postId = Array.from(postIds)[0] || getCanonicalPostId(post) || "";
+  var globalRows = [];
+  try { globalRows = appState && (appState.postMedia || appState.post_media || []); } catch (_) { globalRows = []; }
+  var postMediaRows = globalRows.filter(function(row) { return postIds.has(String(row.post_id || row.postId || "").trim()); })
     .concat(Array.isArray(post.post_media) ? post.post_media : [])
-    .concat(Array.isArray(post.postMedia) ? post.postMedia : []);
-  const postMediaRows = inlinePostMediaRows.concat(globalPostMediaRows)
+    .concat(Array.isArray(post.postMedia) ? post.postMedia : [])
     .filter(Boolean)
-    .sort((a, b) => {
-      const aSort = Number(a?.sort_order ?? a?.sortOrder ?? 0) || 0;
-      const bSort = Number(b?.sort_order ?? b?.sortOrder ?? 0) || 0;
+    .sort(function(a, b) {
+      var aSort = Number(a.sort_order || a.sortOrder || 0) || 0;
+      var bSort = Number(b.sort_order || b.sortOrder || 0) || 0;
       if (aSort !== bSort) return aSort - bSort;
-      return String(a?.created_at || a?.createdAt || "").localeCompare(String(b?.created_at || b?.createdAt || ""));
+      return String(a.created_at || a.createdAt || "").localeCompare(String(b.created_at || b.createdAt || ""));
     });
-  const mediaIdValues = splitMediaIdList(post.media_ids || post.mediaIds);
-  const carouselIdValues = splitMediaIdList(post.carouselAssetIds || post.carousel_asset_ids);
-  const postLinkedAssets = (mediaItems || []).filter((asset) => {
-    const linkedId = String(asset.linkedPostId || asset.linked_post_id || asset.postId || asset.post_id || "").trim();
-    return linkedId && postIds.has(linkedId);
-  }).sort((a, b) => String(a.created_at || a.createdAt || "").localeCompare(String(b.created_at || b.createdAt || "")));
-  const single = post.media_id || post.mediaId || post.asset_id || post.assetId;
-  const candidates = [];
-  const addSource = (values = [], sourceRank = 9, sourceLabel = "") => {
-    (values || []).forEach((item, index) => {
-      const resolved = resolveAttachedMediaCandidate(item, mediaItems);
-      if (!resolved) return;
-      const createdAt = typeof resolved === "object" ? String(resolved.created_at || resolved.createdAt || "") : "";
-      candidates.push({ item: resolved, sourceRank, sourceLabel, sourceIndex: index, createdAt });
-    });
-  };
-  addSource(postMediaRows.map((row) => row?.media_asset || row?.media_assets || row?.asset || row?.mediaAsset || row?.media_asset_id || row?.mediaAssetId || row?.asset_id || row?.assetId || row?.id || row), 1, "post_media");
-  addSource(mediaIdValues, 2, "media_ids");
-  addSource(carouselIdValues.concat(Array.isArray(post.carouselAssets) ? post.carouselAssets : []), 3, "carousel");
-  addSource(postLinkedAssets, 4, "linked_media");
-  addSource(single ? [single] : [], 5, "single");
-
-  const attached = [];
-  const keyToIndex = new Map();
-  candidates.forEach((candidate) => {
-    const keys = getMediaIdentityKeys(candidate.item);
-    const primaryKey = keys[0] || getMediaDedupeKey(candidate.item);
-    if (!primaryKey) return;
-    const existingIndex = keys.map((key) => keyToIndex.get(key)).find((index) => Number.isInteger(index));
-    if (Number.isInteger(existingIndex)) {
-      const existing = attached[existingIndex];
-      if (candidate.sourceRank < existing.sourceRank || candidate.sourceRank === existing.sourceRank && candidate.sourceIndex < existing.sourceIndex) {
-        attached[existingIndex] = { ...candidate, keys: Array.from(new Set((existing.keys || []).concat(keys))) };
-      } else if (typeof existing.item !== "object" && typeof candidate.item === "object") {
-        attached[existingIndex] = { ...existing, item: candidate.item, keys: Array.from(new Set((existing.keys || []).concat(keys))) };
+  if (postMediaRows.length) {
+    var result = [];
+    var seenIds = new Set();
+    postMediaRows.forEach(function(row) {
+      var assetId = getMediaAssetId(row);
+      if (!assetId) return;
+      if (seenIds.has(assetId)) return;
+      seenIds.add(assetId);
+      var asset = findMediaAssetByAnyKey(assetId, mediaItems);
+      if (asset) {
+        result.push(normalizeAttachedMedia(asset));
+      } else {
+        result.push(normalizeAttachedMedia({
+          id: assetId,
+          media_asset_id: assetId,
+          linked_post_id: postId,
+          sort_order: row.sort_order || row.sortOrder || 0
+        }));
       }
-      (attached[existingIndex].keys || keys).forEach((key) => keyToIndex.set(key, existingIndex));
-      return;
+    });
+    console.log("[media-attach] post_media is canonical source for", postId, "| rows:", postMediaRows.length, "resolved:", result.length);
+    console.log("[media-attach] final order", result.map(function(a) { return getMediaAssetId(a); }));
+    return result;
+  }
+  var mediaIdValues = splitMediaIdList(post.media_ids || post.mediaIds);
+  var fromMediaIds = mediaIdValues.map(function(id) { return findMediaAssetByAnyKey(id, mediaItems); }).filter(Boolean);
+  if (fromMediaIds.length) {
+    console.log("[media-attach] fallback1 media_ids for", postId, "count:", fromMediaIds.length);
+    return fromMediaIds.map(function(a) { return normalizeAttachedMedia(a); });
+  }
+  var carouselIdValues = splitMediaIdList(post.carouselAssetIds || post.carousel_asset_ids);
+  var fromCarousel = carouselIdValues.map(function(id) { return findMediaAssetByAnyKey(id, mediaItems); }).filter(Boolean);
+  if (fromCarousel.length) {
+    console.log("[media-attach] fallback2 carousel for", postId, "count:", fromCarousel.length);
+    return fromCarousel.map(function(a) { return normalizeAttachedMedia(a); });
+  }
+  var linked = (mediaItems || []).filter(function(asset) {
+    var lid = String(asset.linkedPostId || asset.linked_post_id || asset.postId || asset.post_id || "").trim();
+    return lid && postIds.has(lid);
+  }).sort(function(a, b) { return String(a.created_at || a.createdAt || "").localeCompare(String(b.created_at || b.createdAt || "")); });
+  if (linked.length) {
+    console.log("[media-attach] fallback3 linked for", postId, "count:", linked.length);
+    return linked.map(function(a) { return normalizeAttachedMedia(a); });
+  }
+  var single = post.media_id || post.mediaId || post.asset_id || post.assetId;
+  if (single) {
+    var found = findMediaAssetByAnyKey(single, mediaItems);
+    if (found) {
+      console.log("[media-attach] fallback4 single for", postId);
+      return [normalizeAttachedMedia(found)];
     }
-    const nextIndex = attached.length;
-    const entry = { ...candidate, keys };
-    attached.push(entry);
-    keys.forEach((key) => keyToIndex.set(key, nextIndex));
-  });
-
-  attached.sort((a, b) => {
-    if (a.sourceRank !== b.sourceRank) return a.sourceRank - b.sourceRank;
-    if (a.sourceIndex !== b.sourceIndex) return a.sourceIndex - b.sourceIndex;
-    return String(a.createdAt || "").localeCompare(String(b.createdAt || ""));
-  });
-  const finalAttached = attached.map((entry) => entry.item);
-  console.log("[media-attach] post id", postId);
-  console.log("[media-attach] post_media count", postMediaRows.length);
-  console.log("[media-attach] media_ids count", mediaIdValues.length);
-  console.log("[media-attach] linked media count", postLinkedAssets.length);
-  console.log("[media-attach] final attached count", finalAttached.length);
-  console.log("[media-attach] final order", finalAttached.map((asset) => getMediaDedupeKey(asset) || String(asset || "")));
-  return finalAttached;
+  }
+  return [];
 }
 
 function inferMediaKindFromAsset(asset) {
@@ -12278,13 +12286,59 @@ function renderModalCarouselPreview() {
 }
 
 function getCurrentCarouselOrderPayload() {
-  const assets = (currentModalCarouselAssets || []).map((asset) => normalizeRemoteMedia(asset));
-  const ids = assets.map((asset) => asset.assetId || asset.asset_id || asset.mediaId || asset.media_id || asset.id).filter(Boolean);
-  return { assets, ids };
+  const assets = (currentModalCarouselAssets || []).map(function(asset) { return normalizeRemoteMedia(asset); });
+  const ids = assets.map(function(asset) { return getMediaAssetId(asset); }).filter(Boolean);
+  return { assets: assets, ids: ids };
 }
 
-function getCanonicalMediaAssetId(asset = {}) {
-  return String(asset.mediaAssetId || asset.media_asset_id || asset.id || asset.assetId || asset.asset_id || asset.mediaId || asset.media_id || asset.storagePath || asset.storage_path || "").trim();
+function getMediaAssetId(media) {
+  if (!media || typeof media !== "object") return String(media || "").trim();
+  var id = String(media.media_asset_id || media.mediaAssetId || "").trim();
+  if (id) { console.log("[media-id] normalize input — media_asset_id", id); return id; }
+  var uuid = String(media.id || "").trim();
+  if (uuid && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid)) { console.log("[media-id] resolved media_asset_id from id UUID", uuid); return uuid; }
+  var assetId = String(media.asset_id || media.assetId || "").trim();
+  if (assetId) {
+    var match = (appState.media || []).find(function(a) { return String(a.id || "").trim() === assetId; });
+    if (match) { console.log("[media-id] resolved media_asset_id via asset_id → id lookup", match.id); return String(match.id).trim(); }
+  }
+  var storagePath = String(media.storage_path || media.storagePath || "").trim();
+  if (storagePath) {
+    var spMatch = (appState.media || []).find(function(a) { return String(a.storage_path || a.storagePath || "").trim() === storagePath; });
+    if (spMatch) { console.log("[media-id] resolved media_asset_id via storage_path lookup", spMatch.id); return String(spMatch.id).trim(); }
+  }
+  var mediaUrl = String(media.media_url || media.mediaUrl || media.fileUrl || media.url || media.sourceUrl || "").trim();
+  if (mediaUrl) {
+    var urlMatch = (appState.media || []).find(function(a) { return String(a.media_url || a.mediaUrl || a.fileUrl || a.url || a.sourceUrl || "").trim() === mediaUrl; });
+    if (urlMatch) { console.log("[media-id] resolved media_asset_id via url lookup", urlMatch.id); return String(urlMatch.id).trim(); }
+  }
+  console.log("[media-id] unresolved media", media);
+  return "";
+}
+
+function getCanonicalMediaAssetId(asset) {
+  return getMediaAssetId(asset);
+}
+
+function normalizeAttachedMedia(media) {
+  if (!media || typeof media !== "object") return media;
+  var id = getMediaAssetId(media);
+  console.log("[media-id] normalize input", media);
+  if (id) console.log("[media-id] resolved media_asset_id", id);
+  else console.log("[media-id] unresolved media", media);
+  return {
+    ...media,
+    media_asset_id: id || media.media_asset_id || media.mediaAssetId || "",
+    mediaAssetId: id || media.media_asset_id || media.mediaAssetId || "",
+    storage_path: media.storage_path || media.storagePath || "",
+    storagePath: media.storage_path || media.storagePath || "",
+    media_url: media.media_url || media.mediaUrl || media.fileUrl || media.url || "",
+    mediaUrl: media.media_url || media.mediaUrl || media.fileUrl || media.url || "",
+    filename: media.filename || media.fileName || media.name || "",
+    title: media.title || media.asset_title || media.assetName || "",
+    sort_order: Number(media.sort_order ?? media.sortOrder ?? 0) || 0,
+    sortOrder: Number(media.sort_order ?? media.sortOrder ?? 0) || 0
+  };
 }
 
 function applyCurrentCarouselOrderToModalPost() {
@@ -12327,20 +12381,22 @@ async function saveCurrentCarouselOrderToSupabase() {
   const postId = String(currentEditingPostId || getCanonicalPostId(window.__currentModalPostData || {}) || "").trim();
   if (!postId) return;
   const order = getCurrentCarouselOrderPayload();
+  const canonicalIds = (currentModalCarouselAssets || []).map(function(a) { return getMediaAssetId(a); }).filter(Boolean);
   const meta = getWorkspaceRequestMetadata();
-  console.log("[carousel] saving sort_order", { postId, ids: order.ids });
+  console.log("[carousel] saving sort_order", { postId, ids: canonicalIds, raw: order.ids });
   const result = await callSupabaseEdgeFunction("media-index", {
     action: "reorder_post_media",
     workspace_id: meta.workspace_id,
     workspace_slug: meta.workspace_slug || getCurrentWorkspaceSlug() || "",
     post_id: postId,
-    ordered_media_asset_ids: order.ids
+    ordered_media_asset_ids: canonicalIds,
+    orderedMediaAssetIds: canonicalIds
   });
   console.log("[carousel] save response", result);
   applyOrderedAttachedMediaResult(postId, result);
   const refreshed = getAttachedMediaForPost(findPostByAnyId(postId) || window.__currentModalPostData || { post_id: postId });
-  console.log("[carousel] refreshed order", refreshed.map((asset) => getMediaDedupeKey(asset) || String(asset || "")));
-  console.log("[carousel] order saved", { postId, count: order.assets.length });
+  console.log("[carousel] refreshed order", refreshed.map(function(a) { return getMediaAssetId(a); }));
+  console.log("[carousel] order saved", { postId, count: canonicalIds.length });
 }
 
 function reorderCarouselAssets(fromIndex, toIndex, persist = true) {
@@ -12467,6 +12523,85 @@ async function detachAllMediaFromCurrentPost() {
       status: err?.status
     });
     showToast("Detach failed", err?.message || "Media could not be detached.", "ph-warning", "text-yellow-400");
+  }
+}
+
+async function refreshAttachedMediaForModal() {
+  const postId = String(currentEditingPostId || getCanonicalPostId(window.__currentModalPostData || {}) || "").trim();
+  if (!postId) { showToast("No post selected", "error"); return; }
+  try {
+    var meta = getWorkspaceRequestMetadata();
+    var result = await callSupabaseEdgeFunction("media-index", {
+      action: "list_assets",
+      workspace_id: meta.workspace_id,
+      workspace_slug: meta.workspace_slug || getCurrentWorkspaceSlug() || ""
+    });
+    if (Array.isArray(result.post_media)) {
+      appState.postMedia = result.post_media;
+      appState.post_media = result.post_media;
+    }
+    var refreshed = getAttachedMediaForPost(
+      findPostByAnyId(postId) || window.__currentModalPostData || { post_id: postId },
+      result.assets || appState.media || []
+    ).filter(Boolean).map(function(a) { return normalizeAttachedMedia(a); });
+    currentModalCarouselAssets = refreshed;
+    currentModalAsset = refreshed[0] || null;
+    if (window.__currentModalPostData) {
+      Object.assign(window.__currentModalPostData, applyDerivedPostMediaFormat({
+        ...window.__currentModalPostData,
+        carouselAssetIds: refreshed.map(function(a) { return getMediaAssetId(a); }),
+        carouselAssets: refreshed,
+        media_ids: refreshed.map(function(a) { return getMediaAssetId(a); }),
+        mediaIds: refreshed.map(function(a) { return getMediaAssetId(a); })
+      }));
+    }
+    renderModalCarouselPreview();
+    if (modalMediaStatus) modalMediaStatus.textContent = refreshed.length ? (refreshed.length >= 2 ? "Carousel \u00b7 " + refreshed.length + " assets" : "Media linked") : "No media linked";
+    showToast("Media refreshed", refreshed.length + " attached asset(s) loaded.", "ph-check", "text-[#00ffaa]");
+  } catch (err) {
+    console.log("[media] refresh error", err);
+    showToast("Refresh failed", err.message || "Could not reload attached media.", "ph-warning", "text-yellow-400");
+  }
+}
+
+async function repairMediaOrderForModal() {
+  const postId = String(currentEditingPostId || getCanonicalPostId(window.__currentModalPostData || {}) || "").trim();
+  if (!postId) { showToast("No post selected", "error"); return; }
+  const assets = (currentModalCarouselAssets || []).filter(Boolean);
+  if (!assets.length) { showToast("No media to reorder", "error"); return; }
+  var canonicalIds = assets.map(function(a) { return getMediaAssetId(a); }).filter(Boolean);
+  if (!canonicalIds.length) { showToast("No valid media IDs", "error"); return; }
+  try {
+    var meta = getWorkspaceRequestMetadata();
+    var result = await callSupabaseEdgeFunction("media-index", {
+      action: "reorder_post_media",
+      workspace_id: meta.workspace_id,
+      workspace_slug: meta.workspace_slug || getCurrentWorkspaceSlug() || "",
+      post_id: postId,
+      ordered_media_asset_ids: canonicalIds,
+      orderedMediaAssetIds: canonicalIds
+    });
+    console.log("[media] repair order response", result);
+    applyOrderedAttachedMediaResult(postId, result);
+    var refreshed = getAttachedMediaForPost(
+      findPostByAnyId(postId) || window.__currentModalPostData || { post_id: postId }
+    ).filter(Boolean).map(function(a) { return normalizeAttachedMedia(a); });
+    currentModalCarouselAssets = refreshed;
+    currentModalAsset = refreshed[0] || null;
+    if (window.__currentModalPostData) {
+      Object.assign(window.__currentModalPostData, applyDerivedPostMediaFormat({
+        ...window.__currentModalPostData,
+        carouselAssetIds: refreshed.map(function(a) { return getMediaAssetId(a); }),
+        carouselAssets: refreshed,
+        media_ids: refreshed.map(function(a) { return getMediaAssetId(a); }),
+        mediaIds: refreshed.map(function(a) { return getMediaAssetId(a); })
+      }));
+    }
+    renderModalCarouselPreview();
+    showToast("Media order repaired", "Sort order updated for " + refreshed.length + " asset(s).", "ph-check", "text-[#00ffaa]");
+  } catch (err) {
+    console.log("[media] repair order error", err);
+    showToast("Repair failed", err.message || "Could not repair media order.", "ph-warning", "text-yellow-400");
   }
 }
 
@@ -14162,29 +14297,45 @@ async function syncPostToMonday() {
   try {
     var boardId = getMondayBoardId(WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active, WORKSPACE_CONNECTIONS);
     if (!boardId) { showToast("No Monday board configured", "error"); return; }
-    var existing = window.__currentModalPostData || null;
-    if (!existing) { showToast("Save the post first before syncing to Monday", "error"); return; }
-    var postDate = existing?.date || existing?.scheduledAt || existing?.scheduled_at || existing?.queueDateLabel || "";
-    var postStatus = existing?.status || existing?.publishStatus || "draft";
+    var post = window.__currentModalPostData || null;
+    if (!post) { showToast("Save the post first before syncing to Monday", "error"); return; }
     loadingToastId = showLoadingToast("Syncing Monday item", "Syncing Monday item...");
     var meta = getWorkspaceRequestMetadata();
     var result = await callSupabaseEdgeFunction("monday-sync", {
       action: "sync_post",
       workspace_id: meta.workspace_id || meta.workspace_slug,
       board_id: boardId,
-      post_title: existing?.title || "",
-      post_description: existing?.description || "",
-      post_date: postDate,
-      post_platform: ((existing?.platforms || existing?.platform || [])[0]) || "",
-      post_status: postStatus,
-      post_url: existing?.publishedUrl || existing?.published_url || "",
-      post_campaign: existing?.campaignName || existing?.campaign_name || "",
-      monday_item_id: existing?.mondayItemId || existing?.monday_item_id || ""
+      monday_item_id: post.mondayItemId || post.monday_item_id || "",
+      id: post.id || post.post_id || post.postId || "",
+      post_id: post.post_id || post.postId || post.id || "",
+      post_title: post.title || post.post_title || "",
+      title: post.title || post.post_title || "",
+      description: post.description || post.caption || post.body || "",
+      status: post.status || post.publish_status || post.flowState || "draft",
+      publish_status: post.publish_status || post.status || "draft",
+      platform: post.platform || (Array.isArray(post.platforms) ? post.platforms[0] : "") || "",
+      platforms: post.platforms || (post.platform ? [post.platform] : []),
+      platform_targets: post.platform_targets || post.platforms || post.platform || "",
+      pillar: post.pillar || "",
+      campaign_name: post.campaign_name || post.campaignName || "",
+      campaignName: post.campaignName || post.campaign_name || "",
+      scheduled_at: post.scheduled_at || post.scheduledAt || post.date || post.publish_date || "",
+      date: post.date || post.scheduled_at || post.publish_date || "",
+      impressions: post.impressions || post.impression_count || post.views || 0,
+      published_url: post.published_url || post.publishedUrl || "",
+      media_url: post.media_url || post.mediaUrl || "",
     });
+    var diagnosticsEl = document.getElementById("modal-monday-diagnostics");
+    if (diagnosticsEl) diagnosticsEl.textContent = JSON.stringify(result, null, 2);
     if (result.ok && result.monday_item_id) {
       var warningText = Array.isArray(result.missing_columns) && result.missing_columns.length ? " Missing columns: " + result.missing_columns.join(", ") : "";
       updateLoadingToastSuccess(loadingToastId, "Post synced to Monday", "Item ID: " + result.monday_item_id + warningText);
       setModalMondayFields(result.monday_item_id, result.synced_at);
+      updateMondayPreviewCard(post);
+      var pullBtn = document.getElementById("modal-pull-monday-fields-btn");
+      if (pullBtn) pullBtn.classList.remove("hidden");
+      var pullUpdatesBtn = document.getElementById("modal-pull-monday-updates-btn");
+      if (pullUpdatesBtn) pullUpdatesBtn.classList.remove("hidden");
       if (window.__currentModalPostData) {
         window.__currentModalPostData.mondaySyncStatus = warningText ? "synced_with_warnings" : "synced";
         window.__currentModalPostData.monday_sync_status = window.__currentModalPostData.mondaySyncStatus;
@@ -14206,6 +14357,8 @@ async function syncPostToMonday() {
     var missing = Array.isArray(backend.missing_columns) ? backend.missing_columns : [];
     var mondayError = backend.monday_error || backend.error || e.message || String(e);
     updateLoadingToastError(loadingToastId, "Monday sync error", mondayError + (missing.length ? " Missing columns: " + missing.join(", ") : ""));
+    var diagnosticsEl2 = document.getElementById("modal-monday-diagnostics");
+    if (diagnosticsEl2) diagnosticsEl2.textContent = JSON.stringify(backend, null, 2);
   }
 }
 
@@ -14224,6 +14377,104 @@ function setModalMondayFields(itemId, syncedAt) {
     window.__currentModalPostData.monday_item_id = itemId;
     window.__currentModalPostData.mondayLastSyncedAt = syncedAt || new Date().toISOString();
     window.__currentModalPostData.monday_last_synced_at = syncedAt || new Date().toISOString();
+  }
+}
+
+function updateMondayPreviewCard(post) {
+  var card = document.getElementById("modal-monday-preview-card");
+  if (!card) return;
+  card.classList.remove("hidden");
+  var set = function (id, val) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = String(val || "");
+  };
+  set("monday-preview-campaign", post.campaign_name || post.campaignName || "");
+  set("monday-preview-platform", post.platform || (Array.isArray(post.platforms) ? post.platforms[0] : "") || "");
+  set("monday-preview-description", (post.description || post.caption || post.body || "").slice(0, 60));
+  set("monday-preview-pillar", post.pillar || "");
+  set("monday-preview-status", post.status || post.publish_status || post.flowState || "draft");
+  set("monday-preview-date", post.scheduled_at || post.scheduledAt || post.date || post.publish_date || "");
+  set("monday-preview-impressions", post.impressions || post.impression_count || post.views || 0);
+  set("monday-preview-post-id", post.post_id || post.postId || post.id || "");
+}
+
+async function pullMondayFields() {
+  var loadingToastId = "";
+  try {
+    var boardId = getMondayBoardId(WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active, WORKSPACE_CONNECTIONS);
+    if (!boardId) { showToast("No Monday board configured", "error"); return; }
+    var post = window.__currentModalPostData || null;
+    if (!post) { showToast("No post data available", "error"); return; }
+    var itemId = post.mondayItemId || post.monday_item_id || document.getElementById("modal-monday-item-id")?.value || "";
+    if (!itemId) { showToast("No Monday item ID. Sync the post first.", "error"); return; }
+    loadingToastId = showLoadingToast("Pulling Monday fields", "Pulling Monday-only fields...");
+    var meta = getWorkspaceRequestMetadata();
+    var result = await callSupabaseEdgeFunction("monday-sync", {
+      action: "pull_monday_fields",
+      workspace_id: meta.workspace_id || meta.workspace_slug,
+      board_id: boardId,
+      monday_item_id: itemId,
+      post_id: post.post_id || post.postId || post.id || "",
+    });
+    if (result.ok) {
+      updateLoadingToastSuccess(loadingToastId, "Fields pulled from Monday", Object.keys(result.fields || {}).length + " field(s) retrieved");
+      if (result.fields && window.__currentModalPostData) {
+        for (var key in result.fields) {
+          window.__currentModalPostData[key] = result.fields[key];
+        }
+      }
+      var diagnosticsEl = document.getElementById("modal-monday-diagnostics");
+      if (diagnosticsEl) diagnosticsEl.textContent = JSON.stringify(result, null, 2);
+    } else {
+      updateLoadingToastError(loadingToastId, "Pull failed", result.error || result.monday_error || "Unknown error");
+      var diagnosticsEl2 = document.getElementById("modal-monday-diagnostics");
+      if (diagnosticsEl2) diagnosticsEl2.textContent = JSON.stringify(result, null, 2);
+    }
+  } catch (e) {
+    updateLoadingToastError(loadingToastId, "Pull error", e.message || String(e));
+  }
+}
+
+async function pullMondayUpdates() {
+  var loadingToastId = "";
+  try {
+    var boardId = getMondayBoardId(WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active, WORKSPACE_CONNECTIONS);
+    if (!boardId) { showToast("No Monday board configured", "error"); return; }
+    var post = window.__currentModalPostData || null;
+    if (!post) { showToast("No post data available", "error"); return; }
+    var itemId = post.mondayItemId || post.monday_item_id || document.getElementById("modal-monday-item-id")?.value || "";
+    if (!itemId) { showToast("No Monday item ID. Sync the post first.", "error"); return; }
+    loadingToastId = showLoadingToast("Pulling Monday updates", "Pulling bidirectional and Monday-only fields...");
+    var meta = getWorkspaceRequestMetadata();
+    var result = await callSupabaseEdgeFunction("monday-sync", {
+      action: "pull_monday_updates",
+      workspace_id: meta.workspace_id || meta.workspace_slug,
+      board_id: boardId,
+      monday_item_id: itemId,
+      post_id: post.post_id || post.postId || post.id || "",
+      last_synced_at: post.mondayLastSyncedAt || post.monday_last_synced_at || ""
+    });
+    if (result.ok) {
+      updateLoadingToastSuccess(loadingToastId, "Updates pulled from Monday", Object.keys(result.updates || {}).length + " field(s) retrieved");
+      if (result.updates && window.__currentModalPostData) {
+        for (var key in result.updates) {
+          if (key === "_conflict" || key === "_conflict_message") continue;
+          window.__currentModalPostData[key] = result.updates[key];
+        }
+      }
+      if (result.updates && result.updates._conflict) {
+        showToast("Conflict detected", result.updates._conflict_message || "Post was modified after last sync.", "ph-warning", "text-yellow-400");
+      }
+      var diagnosticsEl = document.getElementById("modal-monday-diagnostics");
+      if (diagnosticsEl) diagnosticsEl.textContent = JSON.stringify(result, null, 2);
+      renderModalCarouselPreview();
+    } else {
+      updateLoadingToastError(loadingToastId, "Pull failed", result.error || result.monday_error || "Unknown error");
+      var diagnosticsEl2 = document.getElementById("modal-monday-diagnostics");
+      if (diagnosticsEl2) diagnosticsEl2.textContent = JSON.stringify(result, null, 2);
+    }
+  } catch (e) {
+    updateLoadingToastError(loadingToastId, "Pull error", e.message || String(e));
   }
 }
 
@@ -17321,29 +17572,34 @@ async function attachSelectedMediaToPost(postId) {
   showToast("Media attached", `${items.length} asset${items.length === 1 ? "" : "s"} linked to post.`, "ph-link", "text-[#00ffaa]");
 }
 
-async function detachMediaAssetsFromPost(items = [], postId = "") {
-  const meta = getWorkspaceRequestMetadata();
-  const assets = (items || []).filter(Boolean);
-  const mediaAssetIds = assets.map((asset) => getCanonicalMediaAssetId(asset)).filter(Boolean);
-  const payload = {
+async function detachMediaAssetsFromPost(items, postId) {
+  if (!Array.isArray(items)) items = items ? [items] : [];
+  var meta = getWorkspaceRequestMetadata();
+  var assets = items.filter(Boolean);
+  var mediaAssetIds = assets.map(function(a) { return getMediaAssetId(a); }).filter(Boolean);
+  var mediaAssetObjects = assets.map(function(a) {
+    return { media_asset_id: getMediaAssetId(a), storage_path: a.storage_path || a.storagePath || "" };
+  }).filter(function(a) { return a.media_asset_id || a.storage_path; });
+  var payload = {
     action: "detach_from_post",
     workspace_id: meta.workspace_id,
     workspace_slug: meta.workspace_slug || getCurrentWorkspaceSlug() || "",
     post_id: postId,
     media_asset_ids: mediaAssetIds,
-    media_assets: assets.map((asset) => getMediaAssetIdentifier(asset)),
-    media: assets.map((asset) => getMediaAssetIdentifier(asset))
+    media_assets: mediaAssetObjects,
+    media: mediaAssetObjects,
+    ids: mediaAssetIds
   };
   console.log("[media-match] detach request", payload);
   try {
-    const result = await callSupabaseEdgeFunction("media-index", payload);
+    var result = await callSupabaseEdgeFunction("media-index", payload);
     console.log("[media-match] detach response", result);
     applyOrderedAttachedMediaResult(postId || result.post_id || result.postId || "", result);
-    const detachedIds = (Array.isArray(result.detached_media_asset_ids) ? result.detached_media_asset_ids : mediaAssetIds).map(String);
-    appState.media = (appState.media || []).map((asset) => {
-      const key = getCanonicalMediaAssetId(asset);
+    var detachedIds = (Array.isArray(result.detached_media_asset_ids) ? result.detached_media_asset_ids : mediaAssetIds).map(String);
+    appState.media = (appState.media || []).map(function(asset) {
+      var key = getMediaAssetId(asset);
       if (!detachedIds.includes(key)) return asset;
-      return normalizeRemoteMedia({
+      return normalizeAttachedMedia({
         ...asset,
         linked_post_id: "",
         linkedPostId: "",
@@ -17355,10 +17611,10 @@ async function detachMediaAssetsFromPost(items = [], postId = "") {
     return result;
   } catch (err) {
     console.log("[media-match] detach error full object", {
-      message: err?.message,
-      backend: err?.backend,
-      status: err?.status,
-      requestPayload: err?.requestPayload || payload
+      message: err && err.message,
+      backend: err && err.backend,
+      status: err && err.status,
+      requestPayload: err && err.requestPayload || payload
     });
     throw err;
   }
@@ -18393,6 +18649,13 @@ function openPostModal(
       mondayStatusEl.textContent = itemId ? "Synced to Monday (ID: " + itemId + ")" : "Not synced to Monday";
       if (itemId) mondayStatusEl.className = "text-[11px] text-emerald-400 leading-relaxed";
       else mondayStatusEl.className = "text-[11px] text-gray-500 leading-relaxed";
+    }
+    if (itemId) {
+      updateMondayPreviewCard(matched || {});
+      var pullBtn = document.getElementById("modal-pull-monday-fields-btn");
+      if (pullBtn) pullBtn.classList.remove("hidden");
+      var pullUpdatesBtn = document.getElementById("modal-pull-monday-updates-btn");
+      if (pullUpdatesBtn) pullUpdatesBtn.classList.remove("hidden");
     }
   } else if (mondaySection) {
     mondaySection.classList.add("hidden");
