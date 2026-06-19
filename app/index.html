@@ -3145,7 +3145,7 @@
         Carousels
       </button>
     </div>
-    <div id="media-select-controls" class="ml-auto flex flex-wrap items-center justify-end gap-2"></div>
+    <div id="media-select-controls" class="ml-auto flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto"></div>
   </div>
 
   <div id="media-grid-scroll" class="media-grid-scroll">
@@ -4009,39 +4009,6 @@
                     <div id="linkedin-author-selector" class="hidden space-y-2"></div>
                   </div>
                   <div id="modal-linkedin-publish-output" class="p-3 rounded-xl bg-[#181125] border border-white/5 text-[11px] text-gray-300 leading-relaxed">LinkedIn validation and payload preparation results will appear here.</div>
-                  <div id="modal-monday-section" class="hidden p-3 rounded-xl bg-[#181125] border border-white/5 space-y-2">
-                    <div class="flex items-center justify-between gap-3 flex-wrap">
-                      <div>
-                        <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Monday.com Sync</p>
-                        <p id="modal-monday-sync-status" class="text-[11px] text-gray-500 leading-relaxed">Not synced to Monday</p>
-                      </div>
-                      <div class="flex items-center gap-2 flex-wrap">
-                        <button id="modal-pull-monday-fields-btn" type="button" onclick="pullMondayFields()" class="px-2.5 py-1.5 rounded-lg bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[9px] uppercase tracking-wider font-bold text-gray-400 hover:text-white transition-colors hidden">Pull Fields</button>
-                        <button id="modal-pull-monday-updates-btn" type="button" onclick="pullMondayUpdates()" class="px-2.5 py-1.5 rounded-lg bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[9px] uppercase tracking-wider font-bold text-gray-400 hover:text-white transition-colors hidden">Pull Updates</button>
-                        <button id="modal-sync-monday-btn" type="button" onclick="syncPostToMonday()" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Sync Post to Monday</button>
-                        <button id="modal-backfill-monday-btn" type="button" onclick="backfillMondayBoard()" class="hidden px-3 py-2 rounded-xl bg-[#0f0a18] hover:bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 transition-colors">Backfill Monday Board</button>
-                      </div>
-                    </div>
-                    <div id="modal-monday-preview-card" class="hidden p-2 rounded-lg bg-[#120c1d] border border-white/5 text-[10px] leading-relaxed space-y-1">
-                      <div class="text-[9px] uppercase tracking-widest text-gray-600 font-bold mb-1">StellarSync Preview</div>
-                      <div id="modal-monday-fields-list" class="grid grid-cols-2 gap-x-3 gap-y-0.5 text-gray-400">
-                        <span>Campaign:</span><span id="monday-preview-campaign" class="text-gray-200"></span>
-                        <span>Platform:</span><span id="monday-preview-platform" class="text-gray-200"></span>
-                        <span>Description:</span><span id="monday-preview-description" class="text-gray-200 truncate"></span>
-                        <span>Pillar:</span><span id="monday-preview-pillar" class="text-gray-200"></span>
-                        <span>Status:</span><span id="monday-preview-status" class="text-gray-200"></span>
-                        <span>Date:</span><span id="monday-preview-date" class="text-gray-200"></span>
-                        <span>Impressions:</span><span id="monday-preview-impressions" class="text-gray-200"></span>
-                        <span>Post ID:</span><span id="monday-preview-post-id" class="text-gray-200"></span>
-                      </div>
-                    </div>
-                    <details class="text-[9px] text-gray-600">
-                      <summary class="cursor-pointer font-bold uppercase tracking-wider">Diagnostics</summary>
-                      <div id="modal-monday-diagnostics" class="mt-1 whitespace-pre-wrap break-words font-mono text-[10px] leading-relaxed text-gray-500"></div>
-                    </details>
-                    <input id="modal-monday-item-id" type="hidden" value="">
-                    <input id="modal-monday-synced-at" type="hidden" value="">
-                  </div>
                 </div>
             </div>
 
@@ -4733,10 +4700,19 @@
             <div class="platform-card">
               <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
                 <div>
-                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Connected Accounts</div>
-                  <div class="text-sm text-white mt-1">Use the same account controls from Settings or the profile menu.</div>
+                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Workspace Integrations</div>
+                  <div class="text-sm text-white mt-1">Google Sheets, Monday.com, and Drive are workspace mirrors, not connected accounts.</div>
                 </div>
-                <button type="button" id="settings-open-accounts-btn" class="px-4 py-2 rounded-xl bg-[#231738] border border-white/5 text-xs font-bold text-white hover:bg-[#2d1b4e] transition-colors">Open Connected Accounts</button>
+                <button type="button" id="settings-open-accounts-btn" class="px-4 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300 hover:text-white transition-colors">Connected Accounts</button>
+              </div>
+              <div id="settings-workspace-integrations-inline" class="space-y-3"></div>
+            </div>
+            <div class="platform-card">
+              <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
+                <div>
+                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Connected Accounts</div>
+                  <div class="text-sm text-white mt-1">Social platforms and AI providers only.</div>
+                </div>
               </div>
               <div id="settings-connected-accounts-inline" class="space-y-3"></div>
             </div>
@@ -4780,21 +4756,6 @@
               <div class="flex gap-3 items-center">
                 <button type="button" class="px-3 py-1.5 rounded-lg bg-[#1a1128] border border-white/5 text-[10px] uppercase tracking-wider text-gray-400 hover:text-white transition-colors font-bold" onclick="resetAssistantPosition()">Reset Position</button>
                 <span id="settings-assistant-status" class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Visible</span>
-              </div>
-            </div>
-            <div id="settings-sheet-mirror-card" class="platform-card hidden">
-              <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
-                <div>
-                  <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Sheet Mirror</div>
-                  <div id="settings-sheet-mirror-status" class="text-sm text-gray-300 mt-1">Sync status loading...</div>
-                </div>
-                <div id="settings-sheet-mirror-badge" class="px-3 py-1.5 rounded-lg bg-[#0a2016] border border-[#00ffaa]/20 text-[10px] uppercase tracking-wider font-bold text-[#00ffaa]">Connected</div>
-              </div>
-              <div id="settings-sheet-mirror-times" class="flex items-center gap-4 text-[10px] text-gray-500 mb-3"></div>
-              <div class="flex flex-wrap gap-2">
-                <button type="button" onclick="pushSupabaseToSheets()" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors flex items-center gap-1.5"><i class="ph-bold ph-upload-simple"></i> Push to Sheet</button>
-                <button type="button" onclick="pullSheetsToSupabase()" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors flex items-center gap-1.5"><i class="ph-bold ph-download-simple"></i> Pull from Sheet</button>
-                <button type="button" onclick="bidirectionalSheetSync()" class="px-3 py-2 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white hover:opacity-90 transition-colors flex items-center gap-1.5"><i class="ph-bold ph-arrows-left-right"></i> Bidirectional</button>
               </div>
             </div>
           </section>
@@ -6595,11 +6556,11 @@ function getMediaBadgeLabel(asset, linkedPost = getLinkedPostForMedia(asset)) {
   if (linkedPost && getAttachedMediaForPost(linkedPost).length > 1) {
     return `Carousel item · ${getPostDisplayTitle(linkedPost, "Post")}`;
   }
-  const type = String(asset?.type || asset?.assetType || asset?.media_type || "").toLowerCase();
-  if (type === "video") return "Reel";
-  if (type === "carousel") return "Carousel";
-  if (type === "article") return "Article";
-  return asset?.assetBadge || "Image";
+  const type = inferMediaKindFromAsset(asset);
+  if (type === "video") return "Video";
+  if (type === "document") return "Document";
+  if (type === "image") return "Image";
+  return asset?.assetBadge || "File";
 }
 
 function isUntitledArtifact(value, type) {
@@ -7039,6 +7000,26 @@ function getAttachedMediaForPost(post, mediaItems) {
   var postId = Array.from(postIds)[0] || getCanonicalPostId(post) || "";
   var globalRows = [];
   try { globalRows = appState && (appState.postMedia || appState.post_media || []); } catch (_) { globalRows = []; }
+  var seenKeys = new Set();
+  var result = [];
+  function addCandidate(candidate, fallbackMeta = {}) {
+    if (!candidate) return;
+    var normalized = candidate && typeof candidate === "object" ? normalizeAttachedMedia({
+      ...fallbackMeta,
+      ...candidate,
+      linked_post_id: candidate.linked_post_id || candidate.linkedPostId || fallbackMeta.linked_post_id || postId,
+      linkedPostId: candidate.linkedPostId || candidate.linked_post_id || fallbackMeta.linkedPost_id || postId
+    }) : normalizeAttachedMedia({
+      ...fallbackMeta,
+      id: candidate,
+      media_asset_id: candidate,
+      linked_post_id: fallbackMeta.linked_post_id || postId
+    });
+    var key = getMediaDedupeKey(normalized);
+    if (!key || seenKeys.has(key)) return;
+    seenKeys.add(key);
+    result.push(normalized);
+  }
   var postMediaRows = globalRows.filter(function(row) { return postIds.has(String(row.post_id || row.postId || "").trim()); })
     .concat(Array.isArray(post.post_media) ? post.post_media : [])
     .concat(Array.isArray(post.postMedia) ? post.postMedia : [])
@@ -7049,59 +7030,61 @@ function getAttachedMediaForPost(post, mediaItems) {
       if (aSort !== bSort) return aSort - bSort;
       return String(a.created_at || a.createdAt || "").localeCompare(String(b.created_at || b.createdAt || ""));
     });
-  if (postMediaRows.length) {
-    var result = [];
-    var seenIds = new Set();
-    postMediaRows.forEach(function(row) {
-      var assetId = getMediaAssetId(row);
-      if (!assetId) return;
-      if (seenIds.has(assetId)) return;
-      seenIds.add(assetId);
-      var asset = findMediaAssetByAnyKey(assetId, mediaItems);
-      if (asset) {
-        result.push(normalizeAttachedMedia(asset));
-      } else {
-        result.push(normalizeAttachedMedia({
-          id: assetId,
-          media_asset_id: assetId,
-          linked_post_id: postId,
-          sort_order: row.sort_order || row.sortOrder || 0
-        }));
-      }
+  postMediaRows.forEach(function(row) {
+    var assetId = getMediaAssetId(row);
+    if (!assetId) return;
+    var asset = findMediaAssetByAnyKey(assetId, mediaItems) || row;
+    addCandidate(asset, {
+      media_asset_id: assetId,
+      id: assetId,
+      sort_order: row.sort_order || row.sortOrder || 0,
+      linked_post_id: postId
     });
-    console.log("[media-attach] post_media is canonical source for", postId, "| rows:", postMediaRows.length, "resolved:", result.length);
-    console.log("[media-attach] final order", result.map(function(a) { return getMediaAssetId(a); }));
-    return result;
-  }
+  });
   var mediaIdValues = splitMediaIdList(post.media_ids || post.mediaIds);
-  var fromMediaIds = mediaIdValues.map(function(id) { return findMediaAssetByAnyKey(id, mediaItems); }).filter(Boolean);
-  if (fromMediaIds.length) {
-    console.log("[media-attach] fallback1 media_ids for", postId, "count:", fromMediaIds.length);
-    return fromMediaIds.map(function(a) { return normalizeAttachedMedia(a); });
-  }
+  mediaIdValues.forEach(function(id, index) {
+    var asset = findMediaAssetByAnyKey(id, mediaItems);
+    addCandidate(asset || { id: id, media_asset_id: id }, {
+      sort_order: index,
+      linked_post_id: postId
+    });
+  });
   var carouselIdValues = splitMediaIdList(post.carouselAssetIds || post.carousel_asset_ids);
-  var fromCarousel = carouselIdValues.map(function(id) { return findMediaAssetByAnyKey(id, mediaItems); }).filter(Boolean);
-  if (fromCarousel.length) {
-    console.log("[media-attach] fallback2 carousel for", postId, "count:", fromCarousel.length);
-    return fromCarousel.map(function(a) { return normalizeAttachedMedia(a); });
-  }
+  carouselIdValues.forEach(function(id, index) {
+    var asset = findMediaAssetByAnyKey(id, mediaItems);
+    addCandidate(asset || { id: id, media_asset_id: id }, {
+      sort_order: index,
+      linked_post_id: postId
+    });
+  });
+  var carouselAssets = Array.isArray(post.carouselAssets) ? post.carouselAssets : Array.isArray(post.carousel_assets) ? post.carousel_assets : [];
+  carouselAssets.forEach(function(asset, index) {
+    addCandidate(asset, { sort_order: index, linked_post_id: postId });
+  });
   var linked = (mediaItems || []).filter(function(asset) {
     var lid = String(asset.linkedPostId || asset.linked_post_id || asset.postId || asset.post_id || "").trim();
     return lid && postIds.has(lid);
-  }).sort(function(a, b) { return String(a.created_at || a.createdAt || "").localeCompare(String(b.created_at || b.createdAt || "")); });
-  if (linked.length) {
-    console.log("[media-attach] fallback3 linked for", postId, "count:", linked.length);
-    return linked.map(function(a) { return normalizeAttachedMedia(a); });
-  }
+  }).sort(function(a, b) {
+    var aSort = Number(a.sort_order || a.sortOrder || 0) || 0;
+    var bSort = Number(b.sort_order || b.sortOrder || 0) || 0;
+    if (aSort !== bSort) return aSort - bSort;
+    return String(a.created_at || a.createdAt || "").localeCompare(String(b.created_at || b.createdAt || ""));
+  });
+  linked.forEach(function(asset, index) {
+    addCandidate(asset, { sort_order: index, linked_post_id: postId });
+  });
   var single = post.media_id || post.mediaId || post.asset_id || post.assetId;
   if (single) {
     var found = findMediaAssetByAnyKey(single, mediaItems);
-    if (found) {
-      console.log("[media-attach] fallback4 single for", postId);
-      return [normalizeAttachedMedia(found)];
-    }
+    addCandidate(found || { id: single, media_asset_id: single }, { linked_post_id: postId });
   }
-  return [];
+  console.log("[media-attach] post id", postId);
+  console.log("[media-attach] post_media count", postMediaRows.length);
+  console.log("[media-attach] media_ids count", mediaIdValues.length);
+  console.log("[media-attach] linked media count", linked.length);
+  console.log("[media-attach] final attached count", result.length);
+  console.log("[media-attach] final order", result.map(function(a) { return getMediaAssetId(a); }));
+  return result;
 }
 
 function inferMediaKindFromAsset(asset) {
@@ -7295,6 +7278,49 @@ function renderStackedAssetPreview(assets = []) {
     ${coverUrl ? `<img src="${escapeHtml(coverUrl)}" alt="${escapeHtml(getMediaDisplayTitle(cover, null, "Carousel cover"))}" class="absolute inset-0 w-full h-full object-cover rounded-xl z-[2]" onerror="handleBrokenMediaPreview(this)">` : ""}
     ${[0, 1, 2].map(() => "<span></span>").join("")}
   </div>`;
+}
+
+function getMediaFileTypeLabel(asset = {}) {
+  const kind = inferMediaKindFromAsset(asset);
+  if (kind === "document") return "Document";
+  if (kind === "video") return "Video";
+  if (kind === "image") return "Image";
+  return "File";
+}
+
+function renderMediaGalleryStrip(assets = [], options = {}) {
+  const items = (Array.isArray(assets) ? assets : []).slice(0, options.limit || 20).filter(Boolean);
+  if (!items.length) return "";
+  return `
+    <div class="mt-3 flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
+      ${items.map((asset, index) => {
+        const previewUrl = getMediaPreviewUrl(asset);
+        const kind = inferMediaKindFromAsset(asset);
+        const title = getMediaDisplayTitle(asset, getLinkedPostForMedia(asset), `Asset ${index + 1}`);
+        return `
+          <div class="shrink-0 w-28 rounded-xl bg-[#120c1d] border border-white/5 overflow-hidden">
+            <div class="relative aspect-square bg-[#0f0a18]">
+              <span class="absolute top-2 left-2 z-10 w-6 h-6 rounded-full bg-[#181125]/95 border border-white/10 text-[10px] font-bold text-white flex items-center justify-center">${index + 1}</span>
+              ${previewUrl ? (
+                kind === "video"
+                  ? `<video src="${escapeHtml(previewUrl)}" class="w-full h-full object-cover" muted playsinline preload="metadata"></video>`
+                  : kind === "document"
+                  ? `<div class="w-full h-full flex flex-col items-center justify-center gap-1 text-gray-400 p-2"><i class="ph-bold ph-file-text text-2xl"></i><span class="text-[9px] uppercase tracking-wider font-bold text-center">${escapeHtml(getMediaFileTypeLabel(asset))}</span></div>`
+                  : `<img src="${escapeHtml(previewUrl)}" alt="${escapeHtml(title)}" class="w-full h-full object-cover" onerror="handleBrokenMediaPreview(this)">`
+              ) : `<div class="w-full h-full flex items-center justify-center text-gray-500"><i class="ph-bold ph-image text-2xl"></i></div>`}
+            </div>
+            <div class="p-2 space-y-1">
+              <div class="text-[10px] font-bold text-white wrap-safe">${escapeHtml(title)}</div>
+              <div class="flex flex-wrap gap-1">
+                <span class="px-1.5 py-0.5 rounded bg-[#181125] border border-white/5 text-[8px] uppercase tracking-wider font-bold text-gray-300">${escapeHtml(getMediaFileTypeLabel(asset))}</span>
+                <span class="px-1.5 py-0.5 rounded bg-[#181125] border border-white/5 text-[8px] uppercase tracking-wider font-bold text-gray-300">Order ${index + 1}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
 }
 
 function renderPublishingReadiness(post = {}) {
@@ -8800,6 +8826,7 @@ function setLinkedInImportMode(mode = "text") {
 }
 
 function openNoteModal() {
+  console.log("[modal] open note");
   if (!noteModal || !noteModalCard) return;
   noteModal.classList.remove("opacity-0", "pointer-events-none");
   noteModalCard.classList.remove("scale-95");
@@ -8807,6 +8834,7 @@ function openNoteModal() {
 }
 
 function closeNoteModal() {
+  console.log("[modal] close note");
   if (!noteModal || !noteModalCard) return;
   noteModal.classList.add("opacity-0", "pointer-events-none");
   noteModalCard.classList.remove("scale-100");
@@ -8873,6 +8901,7 @@ async function saveNoteFromModal() {
 }
 
 function openInspoModal() {
+  console.log("[modal] open inspo");
   if (!inspoModal || !inspoModalCard) return;
   inspoModal.classList.remove("opacity-0", "pointer-events-none");
   inspoModalCard.classList.remove("scale-95");
@@ -8880,6 +8909,7 @@ function openInspoModal() {
 }
 
 function closeInspoModal() {
+  console.log("[modal] close inspo");
   if (!inspoModal || !inspoModalCard) return;
   inspoModal.classList.add("opacity-0", "pointer-events-none");
   inspoModalCard.classList.remove("scale-100");
@@ -9135,7 +9165,7 @@ function setupWorkspaceReturnButtons() {
 }
 
 function setupWorkspaceUI() {
-  document.getElementById("settings-open-btn")?.addEventListener("click", () => openWorkspaceHub("settings"));
+  document.getElementById("settings-open-btn")?.addEventListener("click", () => { console.log("[button] fired settings-open-btn"); openWorkspaceHub("settings"); });
   document.addEventListener("click", (event) => {
     const opener = event.target.closest("[data-workspace-open-tab]");
     if (!opener) return;
@@ -9153,22 +9183,26 @@ function setupWorkspaceUI() {
     if (!button) return;
     const action = button.dataset.workspaceAction;
     if (action === "workspace") {
+      console.log("[button] fired profile-menu-workspace");
       toggleProfileMenu(false);
       openProfileWorkspaceModal();
       return;
     }
-    if (action === "settings") return openWorkspaceHub("settings");
-    if (action === "accounts") return openWorkspaceHub("accounts");
-    if (action === "diagnostics") return openWorkspaceHub("diagnostics");
+    if (action === "settings") { console.log("[button] fired profile-menu-settings"); return openWorkspaceHub("settings"); }
+    if (action === "accounts") { console.log("[button] fired profile-menu-accounts"); return openWorkspaceHub("accounts"); }
+    if (action === "diagnostics") { console.log("[button] fired profile-menu-diagnostics"); return openWorkspaceHub("diagnostics"); }
     if (action === "install") {
+      console.log("[button] fired profile-menu-install");
       toggleProfileMenu(false);
       openInstallHelperModal();
     }
     if (action === "support") {
+      console.log("[button] fired profile-menu-support");
       toggleProfileMenu(false);
       openSupportModalFromDiagnostics();
     }
     if (action === "contact") {
+      console.log("[button] fired profile-menu-contact");
       toggleProfileMenu(false);
       openSupportModal("Billing/account");
     }
@@ -9248,26 +9282,32 @@ function setupWorkspaceUI() {
     });
   });
   workspaceOpenBrandOsBtn?.addEventListener("click", () => {
+    console.log("[button] fired workspace-open-brand-os-btn");
     closeWorkspaceHub();
     openBrandFrameworkModal();
   });
   settingsOpenAccountsBtn?.addEventListener("click", () => {
+    console.log("[button] fired settings-open-accounts-btn");
     openWorkspaceHub("accounts");
   });
   workspaceOpenAccountsFromDiagnosticsBtn?.addEventListener("click", () => {
+    console.log("[button] fired workspace-open-accounts-from-diagnostics-btn");
     openWorkspaceHub("accounts");
   });
   workspaceRefreshDiagnosticsBtn?.addEventListener("click", () => {
+    console.log("[button] fired workspace-refresh-diagnostics-btn");
     refreshBackendDiagnostics().then(() => renderWorkspaceHub()).catch(() => undefined);
   });
-  checkConstellationLanesBtn?.addEventListener("click", runConstellationLaneDiagnostics);
+  checkConstellationLanesBtn?.addEventListener("click", () => { console.log("[button] fired check-constellation-lanes-btn"); runConstellationLaneDiagnostics(); });
   openCreatorMemoryDashboardBtn?.addEventListener("click", function() {
+    console.log("[button] fired open-creator-memory-dashboard-btn");
     if (creatorMemoryDashboardContainer) {
       renderCreatorMemoryDashboard(creatorMemoryDashboardContainer);
       creatorMemoryDashboardContainer.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   });
   openBrandingDiagnosticsBtn?.addEventListener("click", function() {
+    console.log("[button] fired open-branding-diagnostics-btn");
     if (brandingDiagnosticsPanel) {
       renderBrandingDiagnostics(brandingDiagnosticsPanel);
       brandingDiagnosticsPanel.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -10372,6 +10412,7 @@ function renderCampaignPillarInputOptions(selectedPillar = "") {
 }
 
 function openCampaignModal(options = "authority") {
+  console.log("[modal] open campaign");
   if (!campaignModal || !campaignModalCard) return;
 
   const config = typeof options === "string"
@@ -10412,6 +10453,7 @@ function openCampaignModal(options = "authority") {
 }
 
 function closeCampaignModal() {
+  console.log("[modal] close campaign");
   if (!campaignModal || !campaignModalCard) return;
 
   campaignModalTargetSelect = null;
@@ -12280,7 +12322,7 @@ function setupMediaFilters() {
 function renderModalCarouselPreview() {
   if (!modalCarouselPreview || !modalCarouselCount) return;
   console.log("[detach-ui] render path hit");
-  const items = currentModalCarouselAssets || [];
+  const items = (currentModalCarouselAssets || []).slice(0, 20);
   const modeEnabled = Boolean(window.mediaDetachSelectionMode || modalCarouselDetachSelectMode);
   window.mediaDetachSelectionMode = modeEnabled;
   modalCarouselDetachSelectMode = modeEnabled;
@@ -12773,6 +12815,8 @@ function openUploadStagingModal(target = "vault") {
     showToast("Upload unavailable", "Your role can view media but cannot upload.", "ph-warning", "text-yellow-400");
     return;
   }
+  console.log("[modal] open upload-staging", target);
+  console.log("[upload] modal open");
   uploadStagingTarget = target;
   if (uploadStagingSubtitle) uploadStagingSubtitle.textContent = describeUploadTarget();
   if (uploadStagingResult) uploadStagingResult.textContent = "";
@@ -12791,6 +12835,7 @@ function openUploadStagingModal(target = "vault") {
 
 function closeUploadStagingModal() {
   console.log("[media-upload] close requested");
+  console.log("[modal] close upload-staging");
   var modal = document.getElementById("upload-staging-modal");
   if (!modal) return;
   if (confirmUploadStagingBtn && confirmUploadStagingBtn.disabled && pendingUploadFiles.length > 0) {
@@ -12921,6 +12966,7 @@ async function commitPendingUploads() {
   const loadingToastId = showLoadingToast("Uploading media", `Uploading ${validItems.length} media file${validItems.length === 1 ? "" : "s"}...`);
   let lastUploadedAsset = null;
   try {
+    console.log("[upload] upload start", { count: validItems.length, target: uploadStagingTarget });
     if (uploadStagingResult) {
       uploadStagingResult.textContent = "Uploading...";
       uploadStagingResult.className = "text-[11px] text-[#c77dff] mt-1";
@@ -12969,6 +13015,7 @@ async function commitPendingUploads() {
       }
       const normalized = upsertMediaAssetIntoAppState(result.asset);
       lastUploadedAsset = normalized;
+      console.log("[upload] upload complete", { index: index + 1, total: validItems.length, assetId: getMediaItemKey(normalized) });
       if (uploadStagingTarget === "post") {
         if (!currentModalAsset) currentModalAsset = normalized;
         const key = getMediaItemKey(normalized);
@@ -12997,6 +13044,7 @@ async function commitPendingUploads() {
       openMediaAssetModal(refreshed || lastUploadedAsset);
       console.log("[media-upload] viewer opened", { id: key || getMediaItemKey(refreshed || {}) });
     }
+    console.log("[upload] attach complete", { target: uploadStagingTarget, count: validItems.length });
     updateToast(loadingToastId, "success", "Uploaded", uploadStagingTarget === "post" ? "Media linked to the current post." : "Media uploaded to the vault.");
   } catch (err) {
     if (uploadStagingResult) {
@@ -13013,6 +13061,7 @@ async function commitPendingUploads() {
 function queueUploadFiles(fileList, target = "vault") {
   const files = Array.from(fileList || []);
   if (!files.length) return;
+  console.log("[upload] file selected", { count: files.length, target });
   const next = files.map((file) => {
     const preview = fileToPreview(file);
     if (!preview) return null;
@@ -13024,6 +13073,7 @@ function queueUploadFiles(fileList, target = "vault") {
 }
 
 function triggerMediaFilePicker() {
+  console.log("[button] fired media-upload-pick");
   console.log("[media-upload] choose file clicked");
   const input = document.getElementById("media-upload-input");
   console.log("[media-upload] file input found", Boolean(input));
@@ -13041,7 +13091,7 @@ function handleMediaUploadFileSelected(event) {
 
 function setupMediaUpload() {
   if (mediaUploadBtn && !mediaUploadBtn.dataset.bound) {
-    mediaUploadBtn.addEventListener("click", () => openUploadStagingModal("vault"));
+    mediaUploadBtn.addEventListener("click", () => { console.log("[button] fired media-upload-btn"); openUploadStagingModal("vault"); });
     mediaUploadBtn.dataset.bound = "true";
   }
 }
@@ -13704,6 +13754,7 @@ function toggleProfileMenu(force) {
 }
 
 async function openWorkspaceHub(tab = "settings") {
+  console.log("[modal] open workspace-hub", tab);
   window.__workspaceHubHealth = window.__workspaceHubHealth || { modalFound: false, cardFound: false, lastTab: "", openCount: 0, lastError: null };
   window.__workspaceHubStats = window.__workspaceHubStats || window.__workspaceHubHealth;
   const requestedTab = String(tab || "settings").trim().toLowerCase() || "settings";
@@ -13743,12 +13794,14 @@ async function openWorkspaceHub(tab = "settings") {
 }
 
 function closeWorkspaceHub() {
+  console.log("[modal] close workspace-hub");
   workspaceHubModal?.classList.add("opacity-0", "pointer-events-none");
   workspaceHubModalCard?.classList.remove("scale-100");
   workspaceHubModalCard?.classList.add("scale-95");
 }
 
 function openSupportModal(issueType) {
+  console.log("[modal] open support", issueType || "");
   var modal = document.getElementById("support-modal");
   var modalCard = document.getElementById("support-modal-card");
   var issueSelect = document.getElementById("support-issue-select");
@@ -13783,6 +13836,7 @@ function openSupportModal(issueType) {
 }
 
 function closeSupportModal() {
+  console.log("[modal] close support");
   var modal = document.getElementById("support-modal");
   var modalCard = document.getElementById("support-modal-card");
   if (modal) modal.classList.add("opacity-0", "pointer-events-none");
@@ -14162,16 +14216,16 @@ function getConnectedAccountsMarkup(options = {}) {
         </div>` : ""}
       </div>
     `;
-  }).join("") + "\n" + renderWorkspaceConnectionCards();
+  }).join("");
 }
 
 function renderWorkspaceConnectionCards() {
-  const providers = WORKSPACE_CONNECTION_PROVIDERS;
+  const providers = WORKSPACE_CONNECTION_PROVIDERS.filter((provider) => provider !== "google_sheets");
   var mondayBoardId = getMondayBoardId(WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active, WORKSPACE_CONNECTIONS);
   var planFeatures = ACTIVE_PLAN_FEATURES || getWorkspacePlanFeatures(WORKSPACE_RUNTIME_CONFIG?.active || {});
   var backendMode = getActiveWorkspaceBackendMode();
   console.log("[monday] board id from workspace", mondayBoardId);
-  return providers.map((provider) => {
+  return [renderSheetMirrorCard()].concat(providers.map((provider) => {
     const conn = getWorkspaceConnection(provider);
     const providerLabel = toTitleCase(provider.replace(/_/g, " "));
     var statusLabel, statusTone, chipLabel, detailParts, actions;
@@ -14308,6 +14362,8 @@ function renderWorkspaceConnectionCards() {
           }
           actions += '<button type="button" onclick="testMondayConnection()" class="px-3 py-2 rounded-xl bg-[#00a86b] hover:bg-[#00cc77] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Test Monday Connection</button>';
           actions += '<button type="button" onclick="inspectMondayColumns()" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Inspect Monday Columns</button>';
+          actions += '<button type="button" onclick="backfillMondayBoard()" class="px-3 py-2 rounded-xl bg-[#0f0a18] hover:bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 transition-colors">Backfill Monday Board</button>';
+          actions += '<button type="button" onclick="disconnectMondayBoard()" class="px-3 py-2 rounded-xl bg-[#30121b] hover:bg-[#3b1720] border border-red-400/20 text-[10px] uppercase tracking-wider font-bold text-red-200 transition-colors">Disconnect</button>';
         }
         actions += '<button type="button" onclick="openSupportModal(\'Integration setup\')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Request Monday Setup</button>';
       } else {
@@ -14351,6 +14407,8 @@ function renderWorkspaceConnectionCards() {
         if (mondayBoardId) {
           actions += '<button type="button" onclick="testMondayConnection()" class="px-3 py-2 rounded-xl bg-[#00a86b] hover:bg-[#00cc77] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Test Monday Connection</button>';
           actions += '<button type="button" onclick="inspectMondayColumns()" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Inspect Monday Columns</button>';
+          actions += '<button type="button" onclick="backfillMondayBoard()" class="px-3 py-2 rounded-xl bg-[#0f0a18] hover:bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 transition-colors">Backfill Monday Board</button>';
+          actions += '<button type="button" onclick="disconnectMondayBoard()" class="px-3 py-2 rounded-xl bg-[#30121b] hover:bg-[#3b1720] border border-red-400/20 text-[10px] uppercase tracking-wider font-bold text-red-200 transition-colors">Disconnect</button>';
         }
         actions += '<button type="button" onclick="openSupportModal(\'Integration setup\')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Request Monday Setup</button>';
       } else {
@@ -14371,7 +14429,7 @@ function renderWorkspaceConnectionCards() {
         '<div class="mt-4 flex flex-wrap gap-2">' + (actions || "") + '</div>' +
       '</div>'
     );
-  }).join("");
+  })).join("");
 }
 
 async function testMondayConnection() {
@@ -14464,6 +14522,7 @@ async function syncPostToMonday() {
     if (!post) { showToast("Save the post first before syncing to Monday", "error"); return; }
     loadingToastId = showLoadingToast("Syncing Monday item", "Syncing Monday item...");
     var meta = getWorkspaceRequestMetadata();
+    console.log("[monday] request payload", { action: "sync_post", board_id: boardId, post_id: post.post_id || post.postId || post.id || "" });
     var result = await callSupabaseEdgeFunction("monday-sync", {
       action: "sync_post",
       workspace_id: meta.workspace_id || meta.workspace_slug,
@@ -14536,6 +14595,7 @@ async function backfillMondayBoard() {
     const meta = getWorkspaceRequestMetadata();
     const backendMode = getActiveWorkspaceBackendMode();
     const payloadPosts = backendMode.mode === "google_sheets_hybrid" ? (appState.posts || []) : (appState.posts || []);
+    console.log("[monday-backfill] started", { boardId, postCount: payloadPosts.length });
     const result = await callSupabaseEdgeFunction("monday-sync", {
       action: "backfill_posts",
       workspace_id: meta.workspace_id || meta.workspace_slug,
@@ -14681,15 +14741,9 @@ async function pullMondayUpdates() {
 }
 
 function refreshConnectionCards() {
-  var container = document.getElementById("workspace-connections-cards");
+  var container = document.getElementById("settings-workspace-integrations-inline") || document.getElementById("workspace-connections-cards");
   if (container && typeof renderWorkspaceConnectionCards === "function") {
     container.innerHTML = renderWorkspaceConnectionCards();
-    var mirrorHtml = renderSheetMirrorCard();
-    if (mirrorHtml) {
-      var div = document.createElement("div");
-      div.innerHTML = mirrorHtml;
-      while (div.firstChild) container.appendChild(div.firstChild);
-    }
   }
   var accountsPanel = document.querySelector('[data-settings-panel="accounts"]');
   if (accountsPanel && typeof getConnectedAccountsMarkup === "function") {
@@ -14860,6 +14914,8 @@ function renderWorkspaceHub() {
   if (pillarSummary) pillarSummary.textContent = (settings.pillars || []).map(formatContentPillarLabel).join(", ") || "None";
   if (postTypeSummary) postTypeSummary.textContent = (settings.postTypes || []).map(toTitleCase).join(", ") || "None";
   if (queueSummary) queueSummary.textContent = settings.queueLimit || "No queue limit";
+  var workspaceIntegrationsInline = document.getElementById("settings-workspace-integrations-inline");
+  if (workspaceIntegrationsInline) workspaceIntegrationsInline.innerHTML = renderWorkspaceConnectionCards();
   renderConnectedAccounts();
   try {
     var aiInlineContainer = document.getElementById("settings-ai-providers-inline");
@@ -17104,6 +17160,7 @@ function setupUploadStagingModal() {
     queueUploadFiles(event.dataTransfer?.files, uploadStagingTarget || "vault");
   });
   confirmUploadStagingBtn?.addEventListener("click", async () => {
+    console.log("[button] fired upload-confirm");
     try {
       await commitPendingUploads();
     } catch (err) {
@@ -17124,6 +17181,7 @@ function setupModalMediaUpload() {
   if (!modalMediaUploadTrigger || !modalMediaUploadInput) return;
 
   modalMediaUploadTrigger.addEventListener("click", () => {
+    console.log("[button] fired modal-media-upload-trigger");
     openUploadStagingModal("post");
   });
 
@@ -17355,6 +17413,7 @@ function toggleMediaSelectMode(forceValue) {
   if (!mediaSelectMode) selectedMediaAssetIds.clear();
   saveMediaSelectMode();
   console.log("[media-select] toggle", { enabled: mediaSelectMode });
+  console.log("[media-select] selected count", selectedMediaAssetIds.size);
   renderMedia();
 }
 
@@ -17451,7 +17510,7 @@ function renderMedia() {
     const itemKey = getMediaItemKey(item);
     const isSelected = selectedMediaAssetIds.has(itemKey);
     const isGroup = item.kind === "group";
-    const type = String(item.type || "").toLowerCase();
+    const type = inferMediaKindFromAsset(item);
     const previewUrl = isGroup
       ? item.assets?.[0]?.fileUrl || item.assets?.[0]?.sourceUrl || ""
       : item.fileUrl || item.sourceUrl || "";
@@ -17459,14 +17518,15 @@ function renderMedia() {
     const hasVideoPreview = !!previewUrl && type === "video";
     const icon =
       type === "video" ? "ph-video-camera" :
+      type === "document" ? "ph-file-text" :
       type === "carousel" ? "ph-images" :
       type === "article" ? "ph-article" :
       "ph-image";
 
     const linkedPost = item.linkedPost || (appState.posts || []).find(post => post.id === item.postId);
     const linkedStatus = getMediaLinkedStatus(item);
-    const linkedPostAssets = linkedPost ? getPostAssets(linkedPost) : [];
-    const isCarouselPreview = isGroup || (linkedPost && getAttachedMediaForPost(linkedPost).length > 1) || type === "carousel";
+    const linkedPostAssets = linkedPost ? getAttachedMediaForPost(linkedPost).slice(0, 20).map((asset) => normalizeRemoteMedia(asset)) : [];
+    const isCarouselPreview = isGroup || (linkedPost && linkedPostAssets.length > 1) || type === "carousel";
     const campaignLabel = linkedPost?.campaignName
       ? formatCampaignDisplayName(linkedPost.campaignName)
       : item.campaign
@@ -17486,10 +17546,15 @@ function renderMedia() {
     const displayTitle = getMediaDisplayTitle(item, linkedPost);
     const assetUrl = isGroup ? (item.sourceUrl || linkedPost?.sourceUrl || "") : (item.fileUrl || item.sourceUrl || "");
     const overlayLabel = item.fileUrl ? "Open Asset" : item.sourceUrl ? "Open Link" : "View";
-    const coverAsset = isCarouselPreview ? getCarouselCoverAsset(isGroup ? (item.assets || []) : linkedPost || item) : null;
+    const coverAsset = isCarouselPreview ? getCarouselCoverAsset(isGroup ? (item.assets || []) : linkedPostAssets.length ? linkedPostAssets : linkedPost || item) : null;
     const coverUrl = coverAsset ? getMediaPreviewUrl(coverAsset) : "";
     const previewBlock = isCarouselPreview
-      ? renderStackedAssetPreview(isGroup ? (item.assets || []) : linkedPost || item)
+      ? `
+        <div class="w-full">
+          <div class="w-full aspect-square rounded-none bg-[#120c1d] border border-white/5 overflow-hidden">${coverUrl ? `<img src="${escapeHtml(coverUrl)}" alt="${escapeHtml(getMediaDisplayTitle(coverAsset, linkedPost, displayTitle))}" class="w-full h-full object-cover" loading="lazy" onerror="handleBrokenMediaPreview(this)">` : `<div class="w-full h-full flex items-center justify-center text-gray-500"><i class="ph-bold ph-images text-4xl"></i></div>`}</div>
+          ${renderMediaGalleryStrip(isGroup ? (item.assets || []).slice(0, 20) : linkedPostAssets, { limit: 20 })}
+        </div>
+      `
       : hasImagePreview
       ? `<img src="${escapeHtml(previewUrl)}" alt="${escapeHtml(displayTitle)}" class="w-full h-full object-cover rounded-none" loading="lazy" onerror="handleBrokenMediaPreview(this)">`
       : hasVideoPreview
@@ -17941,7 +18006,6 @@ function renderTaggedContent(item, linkedPost) {
       </div>
       <div class="flex flex-wrap gap-2">
         ${canAttachMediaToPosts() ? `<button type="button" onclick="toggleMediaPostsPanel(true)" class="px-3 py-2 rounded-lg bg-[#231738] border border-white/10 text-[10px] uppercase tracking-widest font-bold text-white">Attach to post</button>` : ""}
-        ${canAttachMediaToPosts() ? `<button type="button" onclick="detachCurrentMediaAssetFromPost()" class="px-3 py-2 rounded-lg bg-[#181125] border border-white/10 text-[10px] uppercase tracking-widest font-bold text-gray-300">Detach</button>` : ""}
         ${targetUrl ? `<button type="button" onclick="copyCurrentMediaAssetUrl()" class="px-3 py-2 rounded-lg bg-[#181125] border border-white/10 text-[10px] uppercase tracking-widest font-bold text-gray-300">Copy URL</button>` : ""}
         ${targetUrl ? `<a href="${escapeHtml(targetUrl)}" target="_blank" rel="noopener noreferrer" class="px-3 py-2 rounded-lg bg-[#181125] border border-white/10 text-[10px] uppercase tracking-widest font-bold text-gray-300">Open original</a>` : ""}
       </div>
@@ -17951,6 +18015,7 @@ function renderTaggedContent(item, linkedPost) {
 
 function openMediaAssetModal(item, options = {}) {
   if (!item || !mediaAssetModal || !mediaAssetModalCard) return;
+  console.log("[modal] open media-viewer");
   console.log("[assistant-ui] modal minimize");
   minimizeAssistantPanel();
   if (Array.isArray(options.items) && options.items.length) {
@@ -18104,6 +18169,7 @@ function renderMediaPostPanel() {
 
 function closeMediaAssetModal() {
   if (!mediaAssetModal || !mediaAssetModalCard) return;
+  console.log("[modal] close media-viewer");
   mediaAssetModal.classList.add("opacity-0", "pointer-events-none");
   mediaAssetModalCard.classList.remove("scale-100");
   mediaAssetModalCard.classList.add("scale-95");
@@ -18732,6 +18798,7 @@ function openPostModal(
   postId = null,
   postObject = null
 ) {
+  console.log("[modal] open post-modal");
   console.log("[assistant-ui] modal minimize");
   minimizeAssistantPanel();
   const modalEl = getPostModalElement();
@@ -18840,34 +18907,6 @@ function openPostModal(
   if (scheduleSocialEnabledInput) scheduleSocialEnabledInput.checked = false;
   if (socialScheduleStatusEl) socialScheduleStatusEl.textContent = "Creates one scheduled_social_posts row per selected platform when saved.";
 
-  var mondaySection = document.getElementById("modal-monday-section");
-  var mondayStatusEl = document.getElementById("modal-monday-sync-status");
-  var mondayItemIdInput = document.getElementById("modal-monday-item-id");
-  var mondaySyncedAtInput = document.getElementById("modal-monday-synced-at");
-  var mondayBoardId = getMondayBoardId(WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active, WORKSPACE_CONNECTIONS);
-  if (mondayBoardId && mondaySection) {
-    mondaySection.classList.remove("hidden");
-    var backfillBtn = document.getElementById("modal-backfill-monday-btn");
-    if (backfillBtn) backfillBtn.classList.toggle("hidden", !canManageWorkspace());
-    var itemId = matched?.mondayItemId || matched?.monday_item_id || "";
-    var syncedAt = matched?.mondayLastSyncedAt || matched?.monday_last_synced_at || "";
-    if (itemId && mondayItemIdInput) mondayItemIdInput.value = itemId;
-    if (syncedAt && mondaySyncedAtInput) mondaySyncedAtInput.value = syncedAt;
-    if (mondayStatusEl) {
-      mondayStatusEl.textContent = itemId ? "Synced to Monday (ID: " + itemId + ")" : "Not synced to Monday";
-      if (itemId) mondayStatusEl.className = "text-[11px] text-emerald-400 leading-relaxed";
-      else mondayStatusEl.className = "text-[11px] text-gray-500 leading-relaxed";
-    }
-    if (itemId) {
-      updateMondayPreviewCard(matched || {});
-      var pullBtn = document.getElementById("modal-pull-monday-fields-btn");
-      if (pullBtn) pullBtn.classList.remove("hidden");
-      var pullUpdatesBtn = document.getElementById("modal-pull-monday-updates-btn");
-      if (pullUpdatesBtn) pullUpdatesBtn.classList.remove("hidden");
-    }
-  } else if (mondaySection) {
-    mondaySection.classList.add("hidden");
-  }
   window.__currentModalPostData = matched || null;
 
   modalEl?.classList.add("active");
@@ -18975,6 +19014,7 @@ function formatTimeInputValue(date) {
 }
 
 function closeModal() {
+  console.log("[modal] close post-modal");
   modal?.classList.remove("active");
   document.body.style.overflow = "";
   currentEditingPostId = null;
@@ -21546,6 +21586,7 @@ function registerServiceWorkerSafe() {
 }
 
 function openInstallHelperModal() {
+  console.log("[modal] open install-helper");
   if (!installHelperModal || !installHelperModalCard) return;
   installContext.isStandalone = detectStandaloneMode();
   if (installHelperInstalledState) {
@@ -21567,6 +21608,7 @@ function openInstallHelperModal() {
 }
 
 function closeInstallHelperModal() {
+  console.log("[modal] close install-helper");
   if (!installHelperModal || !installHelperModalCard) return;
   installHelperModal.classList.add("opacity-0", "pointer-events-none");
   installHelperModalCard.classList.remove("scale-100");
@@ -22148,17 +22190,32 @@ async function pushSupabaseToSheets() {
   var results = {};
   var totalCount = 0;
   var errorCount = 0;
+  var mediaAssetsPushed = 0;
+  var mediaAttachmentsPushed = 0;
   for (var t = 0; t < tables.length; t++) {
     var table = tables[t];
     var tab = tabMap[table];
     var idField = idFieldMap[table];
     try {
+      if (table === "media_assets") {
+        var mediaRows = await loadMediaAssetMirrorRows(workspaceId);
+        console.log("[sheets-sync] media assets count", mediaRows.length);
+        var mediaBody = { action: "write_tab", sheet_id: config.sheetId, tab: tab, rows: mediaRows, id_field: idField };
+        var mediaResp = await fetch(config.appsScriptUrl, { method: "POST", mode: "cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(mediaBody) });
+        var mediaData = await mediaResp.json();
+        console.log("[sheets-sync] media write response", mediaData);
+        if (mediaData.ok) { results[table] = { ok: true, count: mediaRows.length }; totalCount += mediaRows.length; mediaAssetsPushed += mediaRows.length; }
+        else { results[table] = { ok: false, error: mediaData.error || "Write failed" }; errorCount++; }
+        continue;
+      }
       if (table === "media_attachments") {
         var attachmentRows = await loadMediaAttachmentMirrorRows(workspaceId);
+        console.log("[sheets-sync] media attachments count", attachmentRows.length);
         var body = { action: "write_tab", sheet_id: config.sheetId, tab: tab, rows: attachmentRows, id_field: idField };
         var attachmentResp = await fetch(config.appsScriptUrl, { method: "POST", mode: "cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(body) });
         var attachmentData = await attachmentResp.json();
-        if (attachmentData.ok) { results[table] = { ok: true, count: attachmentRows.length }; totalCount += attachmentRows.length; }
+        console.log("[sheets-sync] attachments write response", attachmentData);
+        if (attachmentData.ok) { results[table] = { ok: true, count: attachmentRows.length }; totalCount += attachmentRows.length; mediaAttachmentsPushed += attachmentRows.length; }
         else { results[table] = { ok: false, error: attachmentData.error || "Write failed" }; errorCount++; }
         continue;
       }
@@ -22193,7 +22250,7 @@ async function pushSupabaseToSheets() {
     showToast("Sheet sync partial", totalCount + " pushed, " + errorCount + " errors.", "ph-warning", "text-yellow-400");
   }
   console.log("[sheet-mirror] push complete", results);
-  return results;
+  return { ...results, media_assets_pushed: mediaAssetsPushed, media_attachments_pushed: mediaAttachmentsPushed, total_pushed: totalCount, errors: errorCount };
 }
 
 async function pullSheetsToSupabase() {
@@ -22294,6 +22351,65 @@ function refreshMirrorConnectionCards() {
   if (sheetsCard) sheetsCard.innerHTML = renderSheetMirrorCard();
 }
 
+async function disconnectSheetMirror() {
+  var meta = getWorkspaceRequestMetadata();
+  var workspaceId = meta.workspace_id || "";
+  if (!workspaceId || !STELLARSYNC_SUPABASE_CLIENT) {
+    showToast("Disconnect unavailable", "Workspace settings could not be updated.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  console.log("[button] fired disconnect-sheet-mirror");
+  try {
+    const payload = {
+      sheet_sync_enabled: false,
+      sheet_id: "",
+      google_sheet_id: "",
+      apps_script_url: "",
+      sheet_sync_direction: "bidirectional",
+      sheet_last_pushed_at: null,
+      sheet_last_pulled_at: null,
+      updated_at: new Date().toISOString()
+    };
+    await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").update(payload).eq("workspace_id", workspaceId);
+    WORKSPACE_RUNTIME_CONFIG.active = mergeWorkspaceSettings(WORKSPACE_RUNTIME_CONFIG.active || {}, payload);
+    storeActiveWorkspaceConfig(WORKSPACE_RUNTIME_CONFIG.active);
+    refreshConnectionCards();
+    refreshSettingsSheetMirrorCard();
+    showToast("Sheet mirror disconnected", "Google Sheets sync settings were cleared for this workspace.", "ph-check", "text-[#00ffaa]");
+  } catch (err) {
+    console.error("[sheet-mirror] disconnect error", err);
+    showToast("Disconnect failed", err?.message || "Could not clear sheet mirror settings.", "ph-warning", "text-yellow-400");
+  }
+}
+
+async function disconnectMondayBoard() {
+  var meta = getWorkspaceRequestMetadata();
+  var workspaceId = meta.workspace_id || "";
+  if (!workspaceId || !STELLARSYNC_SUPABASE_CLIENT) {
+    showToast("Disconnect unavailable", "Workspace settings could not be updated.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  console.log("[button] fired disconnect-monday-board");
+  try {
+    const payload = {
+      monday_board_id: "",
+      monday_sync_enabled: false,
+      monday_sync_direction: "bidirectional",
+      monday_last_pushed_at: null,
+      monday_last_pulled_at: null,
+      updated_at: new Date().toISOString()
+    };
+    await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").update(payload).eq("workspace_id", workspaceId);
+    WORKSPACE_RUNTIME_CONFIG.active = mergeWorkspaceSettings(WORKSPACE_RUNTIME_CONFIG.active || {}, payload);
+    storeActiveWorkspaceConfig(WORKSPACE_RUNTIME_CONFIG.active);
+    refreshConnectionCards();
+    showToast("Monday board disconnected", "Monday sync settings were cleared for this workspace.", "ph-check", "text-[#00ffaa]");
+  } catch (err) {
+    console.error("[monday] disconnect error", err);
+    showToast("Disconnect failed", err?.message || "Could not clear Monday settings.", "ph-warning", "text-yellow-400");
+  }
+}
+
 async function loadMediaAttachmentMirrorRows(workspaceId) {
   if (!STELLARSYNC_SUPABASE_CLIENT || !workspaceId) return [];
   try {
@@ -22330,6 +22446,46 @@ async function loadMediaAttachmentMirrorRows(workspaceId) {
       };
     });
     console.log("[media-sync] sheet media attachments push/pull", { phase: "load", count: rows.length });
+    return rows;
+  } catch (err) {
+    console.warn("[media-sync] sheet media attachments push/pull", err?.message || err);
+    return [];
+  }
+}
+
+async function loadMediaAssetMirrorRows(workspaceId) {
+  if (!STELLARSYNC_SUPABASE_CLIENT || !workspaceId) return [];
+  try {
+    const [mediaResult, postsResult] = await Promise.all([
+      STELLARSYNC_SUPABASE_CLIENT.from("media_assets").select("id,asset_id,workspace_id,filename,media_url,storage_path,media_type,mime_type,alt_text,tags,linked_post_id,post_id,created_at,updated_at").eq("workspace_id", workspaceId),
+      STELLARSYNC_SUPABASE_CLIENT.from("posts").select("post_id,title,workspace_id").eq("workspace_id", workspaceId)
+    ]);
+    if (mediaResult.error) throw mediaResult.error;
+    if (postsResult.error) throw postsResult.error;
+    const postsById = new Map((postsResult.data || []).map((post) => [String(post.post_id || "").trim(), post]));
+    const rows = (mediaResult.data || []).map((row) => {
+      const post = postsById.get(String(row.linked_post_id || row.post_id || "").trim()) || {};
+      return {
+        workspace_id: workspaceId,
+        media_asset_id: String(row.id || row.asset_id || "").trim(),
+        title: String(row.title || "").trim(),
+        filename: String(row.filename || "").trim(),
+        media_url: String(row.media_url || "").trim(),
+        storage_path: String(row.storage_path || "").trim(),
+        media_type: String(row.media_type || "").trim(),
+        mime_type: String(row.mime_type || "").trim(),
+        alt_text: String(row.alt_text || "").trim(),
+        tags: Array.isArray(row.tags) ? row.tags.join(", ") : String(row.tags || "").trim(),
+        linked_post_id: String(row.linked_post_id || row.post_id || "").trim(),
+        linked_post_title: String(post.title || "").trim(),
+        created_at: String(row.created_at || "").trim(),
+        updated_at: String(row.updated_at || "").trim(),
+        sync_status: "synced",
+        synced_at: new Date().toISOString(),
+        sync_error: ""
+      };
+    });
+    console.log("[media-sync] sheet media attachments push/pull", { phase: "media", count: rows.length });
     return rows;
   } catch (err) {
     console.warn("[media-sync] sheet media attachments push/pull", err?.message || err);
@@ -22393,7 +22549,21 @@ async function applyMediaAttachmentSheetRows(rows = [], workspaceId = "") {
 
 function renderSheetMirrorCard() {
   var config = getSheetMirrorConfig();
-  if (!config.sheetId) return "";
+  var active = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active || {};
+  var backendMode = getActiveWorkspaceBackendMode();
+  var isLegacySource = backendMode.mode === "google_sheets_hybrid";
+  if (!config.sheetId) {
+    return '<div class="platform-card" data-mirror-card="sheet-mirror">' +
+      '<div class="flex items-center justify-between gap-3 mb-3">' +
+      '<div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Google Sheets Mirror</div><div class="text-sm text-white mt-1">Not configured</div></div>' +
+      '<span class="diagnostic-chip">Setup Required</span>' +
+      '</div>' +
+      '<div class="text-sm text-gray-400 wrap-safe">Set up a Sheet mirror to sync posts, media assets, and MEDIA_ATTACHMENTS.</div>' +
+      '<div class="mt-4 flex flex-wrap gap-2">' +
+      '<button type="button" onclick="refreshSettingsSheetMirrorCard()" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 hover:text-white transition-colors">Refresh mirror status</button>' +
+      '<button type="button" onclick="openSupportModal(\'Integration setup\')" class="px-3 py-2 rounded-xl bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white hover:bg-[#2d1b4e] transition-colors">Set up Sheet mirror</button>' +
+      '</div></div>';
+  }
   var statusColor = "text-gray-500";
   var statusText = "Not configured";
   var statusIcon = "ph-plugs";
@@ -22410,23 +22580,38 @@ function renderSheetMirrorCard() {
   var lastPull = config.lastPulledAt ? new Date(config.lastPulledAt).toLocaleString() : "Never";
   var direction = config.syncDirection === "supabase_to_sheet" ? "Supabase → Sheet" :
                   config.syncDirection === "sheet_to_supabase" ? "Sheet → Supabase" : "Bidirectional";
+  var actionHtml = "";
+  if (isLegacySource) {
+    actionHtml = '<button type="button" onclick="pullSheetsToSupabase()" class="px-3 py-2 rounded-xl bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white hover:bg-[#2d1b4e] transition-colors flex items-center gap-1.5"><i class="ph-bold ph-download-simple"></i> Refresh from Sheet</button>';
+  } else if (config.syncDirection === "supabase_to_sheet") {
+    actionHtml = '<button type="button" onclick="pushSupabaseToSheets()" class="px-3 py-2 rounded-xl bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white hover:bg-[#2d1b4e] transition-colors flex items-center gap-1.5"><i class="ph-bold ph-upload-simple"></i> Push to Sheet</button>';
+  } else if (config.syncDirection === "sheet_to_supabase") {
+    actionHtml = '<button type="button" onclick="pullSheetsToSupabase()" class="px-3 py-2 rounded-xl bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white hover:bg-[#2d1b4e] transition-colors flex items-center gap-1.5"><i class="ph-bold ph-download-simple"></i> Pull from Sheet</button>';
+  } else {
+    actionHtml = '<button type="button" onclick="bidirectionalSheetSync()" class="px-3 py-2 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white hover:opacity-90 transition-colors flex items-center gap-1.5"><i class="ph-bold ph-arrows-left-right"></i> Sync now</button>' +
+      '<button type="button" onclick="pushSupabaseToSheets()" class="px-3 py-2 rounded-xl bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white hover:bg-[#2d1b4e] transition-colors flex items-center gap-1.5"><i class="ph-bold ph-upload-simple"></i> Push only</button>' +
+      '<button type="button" onclick="pullSheetsToSupabase()" class="px-3 py-2 rounded-xl bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white hover:bg-[#2d1b4e] transition-colors flex items-center gap-1.5"><i class="ph-bold ph-download-simple"></i> Pull only</button>';
+  }
   return '<div class="p-5 rounded-2xl bg-[#181125] border border-white/5" data-mirror-card="sheet-mirror">' +
     '<div class="flex items-center justify-between gap-3 mb-4">' +
     '<div class="flex items-center gap-3">' +
     '<div class="w-10 h-10 rounded-xl bg-[#0a2016] flex items-center justify-center"><i class="ph-bold ' + statusIcon + ' ' + statusColor + ' text-lg"></i></div>' +
-    '<div><div class="text-sm font-bold text-white">Sheets Mirror</div>' +
+    '<div><div class="text-sm font-bold text-white">' + (isLegacySource ? "Google Sheets Source" : "Google Sheets Mirror") + '</div>' +
     '<div class="text-[10px] uppercase tracking-widest font-semibold ' + statusColor + '">' + statusText + '</div></div></div>' +
     '<div class="flex items-center gap-1 text-[10px] text-gray-500 font-medium"><i class="ph-bold ph-arrows-left-right"></i> ' + direction + '</div></div>' +
     '<div class="flex items-center justify-between gap-2 mb-4"><div class="text-[10px] text-gray-500">Last push: ' + lastPush + '</div><div class="text-[10px] text-gray-500">Last pull: ' + lastPull + '</div></div>' +
     '<div class="flex flex-wrap gap-2">' +
-    '<button type="button" onclick="pushSupabaseToSheets()" class="flex-1 px-3 py-2 rounded-xl bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white hover:bg-[#2d1b4e] transition-colors flex items-center justify-center gap-1.5"><i class="ph-bold ph-upload-simple"></i> Push to Sheet</button>' +
-    '<button type="button" onclick="pullSheetsToSupabase()" class="flex-1 px-3 py-2 rounded-xl bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white hover:bg-[#2d1b4e] transition-colors flex items-center justify-center gap-1.5"><i class="ph-bold ph-download-simple"></i> Pull from Sheet</button>' +
-    '<button type="button" onclick="bidirectionalSheetSync()" class="flex-1 px-3 py-2 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white hover:opacity-90 transition-colors flex items-center justify-center gap-1.5"><i class="ph-bold ph-arrows-left-right"></i> Bidirectional</button>' +
+    actionHtml +
+    '<button type="button" onclick="refreshSettingsSheetMirrorCard()" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 hover:text-white transition-colors flex items-center gap-1.5"><i class="ph-bold ph-arrow-clockwise"></i> Refresh mirror status</button>' +
+    '<button type="button" onclick="openSupportModal(\'Integration setup\')" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 hover:text-white transition-colors flex items-center gap-1.5"><i class="ph-bold ph-plugs-connected"></i> Reconnect</button>' +
+    '<button type="button" onclick="disconnectSheetMirror()" class="px-3 py-2 rounded-xl bg-[#30121b] border border-red-400/20 text-[10px] uppercase tracking-wider font-bold text-red-200 hover:bg-[#3b1720] transition-colors flex items-center gap-1.5"><i class="ph-bold ph-plug"></i> Disconnect</button>' +
     '</div></div>';
 }
 
 function refreshSettingsSheetMirrorCard() {
   var card = document.getElementById("settings-sheet-mirror-card");
+  var inline = document.getElementById("settings-workspace-integrations-inline");
+  if (inline) inline.innerHTML = renderWorkspaceConnectionCards();
   if (!card) return;
   var config = getSheetMirrorConfig();
   if (!config.sheetId) { card.classList.add("hidden"); return; }
@@ -24883,6 +25068,7 @@ function setBrandFrameworkSection(section) {
 }
 
 function openAIWorkspaceModal() {
+  console.log("[modal] open ai-workspace");
   aiWorkspaceModal?.classList.remove("opacity-0", "pointer-events-none");
   aiWorkspaceModalCard?.classList.remove("scale-95");
   aiWorkspaceModalCard?.classList.add("scale-100");
@@ -24913,6 +25099,7 @@ function openAIWorkspaceModal() {
 }
 
 function closeAIWorkspaceModal() {
+  console.log("[modal] close ai-workspace");
   aiWorkspaceModal?.classList.add("opacity-0", "pointer-events-none");
   aiWorkspaceModalCard?.classList.remove("scale-100");
   aiWorkspaceModalCard?.classList.add("scale-95");
@@ -24920,6 +25107,7 @@ function closeAIWorkspaceModal() {
 }
 
 function openBrandFrameworkModal() {
+  console.log("[modal] open brand-framework");
   brandFrameworkModal?.classList.remove("opacity-0", "pointer-events-none");
   brandFrameworkModalCard?.classList.remove("scale-95");
   brandFrameworkModalCard?.classList.add("scale-100");
@@ -24927,6 +25115,7 @@ function openBrandFrameworkModal() {
 }
 
 function closeBrandFrameworkModal() {
+  console.log("[modal] close brand-framework");
   brandFrameworkModal?.classList.add("opacity-0", "pointer-events-none");
   brandFrameworkModalCard?.classList.remove("scale-100");
   brandFrameworkModalCard?.classList.add("scale-95");
@@ -27668,6 +27857,7 @@ function initApp() {
 }
 
 function openProfileWorkspaceModal() {
+  console.log("[modal] open profile-workspace");
   var modal = document.getElementById("profile-workspace-modal");
   var card = document.getElementById("profile-workspace-card");
   if (!modal) return;
@@ -27678,6 +27868,7 @@ function openProfileWorkspaceModal() {
 }
 
 function closeProfileWorkspaceModal() {
+  console.log("[modal] close profile-workspace");
   var modal = document.getElementById("profile-workspace-modal");
   var card = document.getElementById("profile-workspace-card");
   if (modal) modal.classList.add("opacity-0", "pointer-events-none");
@@ -27776,7 +27967,11 @@ function populatePWModal() {
 }
 
 async function savePWProfile() {
-  console.log("[profile-modal] save clicked");
+  console.log("[profile-save] payload", {
+    initials: (document.getElementById("pw-profile-initials") || {}).value || "",
+    displayName: (document.getElementById("pw-profile-display-name") || {}).value || "",
+    icon: (document.querySelector("#pw-profile-icon-grid .pw-icon-btn.active") || {}).dataset?.icon || "sparkle"
+  });
   var statusEl = document.getElementById("pw-profile-status");
   var saveBtn = document.getElementById("pw-profile-save-btn");
   if (statusEl) { statusEl.classList.add("hidden"); statusEl.textContent = ""; }
@@ -27793,13 +27988,13 @@ async function savePWProfile() {
     if (user && displayName) {
       await STELLARSYNC_SUPABASE_CLIENT.auth.updateUser({ data: { display_name: displayName, avatar_initials: initials, avatar_mode: avatarMode, icon: icon } });
     }
-    console.log("[profile-modal] save success");
+    console.log("[profile-save] response", { ok: true });
     if (statusEl) { statusEl.textContent = "Profile saved."; statusEl.className = "text-xs text-emerald-400"; statusEl.classList.remove("hidden"); }
     renderWorkspaceBranding();
     updateToast(loadingToastId, "success", "Profile saved", "Profile settings saved.");
     setTimeout(function() { if (statusEl) statusEl.classList.add("hidden"); }, 3000);
   } catch (err) {
-    console.log("[profile-modal] save error", err);
+    console.log("[profile-save] response", err);
     if (statusEl) { statusEl.textContent = "Save failed: " + (err.message || String(err)); statusEl.className = "text-xs text-red-400"; statusEl.classList.remove("hidden"); }
     updateToast(loadingToastId, "error", "Profile save failed", err);
   } finally {
@@ -27808,7 +28003,6 @@ async function savePWProfile() {
 }
 
 async function savePWWorkspace() {
-  console.log("[profile-modal] saving workspace");
   var statusEl = document.getElementById("pw-workspace-status");
   var saveBtn = document.getElementById("pw-workspace-save-btn");
   if (statusEl) { statusEl.classList.add("hidden"); statusEl.textContent = ""; }
@@ -27825,8 +28019,11 @@ async function savePWWorkspace() {
     var activeWorkspace = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active || {};
     var slug = (activeWorkspace && (activeWorkspace.workspace_slug || activeWorkspace.slug)) || "";
     var workspaceId = activeWorkspace.workspace_id || activeWorkspace.id || "";
+    var payload = { workspace_slug: slug, display_name: name, short_name: shortName, avatar_initials: initials, avatar_mode: avatarMode, icon: icon, updated_at: new Date().toISOString() };
+    console.log("[workspace-save] payload", payload);
+    console.log("[branding-save] payload", payload);
+    console.log("[constellation-save] payload", payload);
     if (slug) {
-      console.log("[profile-modal] saving branding");
       if (workspaceId && name) {
         var workspaceUpdate = await STELLARSYNC_SUPABASE_CLIENT
           .from("workspaces")
@@ -27836,8 +28033,6 @@ async function savePWWorkspace() {
       }
       var existing = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").select("id").eq("workspace_slug", slug).maybeSingle();
       if (existing.error) throw existing.error;
-      var payload = { workspace_slug: slug, display_name: name, short_name: shortName, avatar_initials: initials, avatar_mode: avatarMode, icon: icon, updated_at: new Date().toISOString() };
-      console.log("[profile-modal] supabase update payload", payload);
       if (existing && existing.data && existing.data.id) {
         var settingsUpdate = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").update(payload).eq("id", existing.data.id);
         if (settingsUpdate.error) throw settingsUpdate.error;
@@ -27845,7 +28040,9 @@ async function savePWWorkspace() {
         var settingsInsert = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").insert(payload);
         if (settingsInsert.error) throw settingsInsert.error;
       }
-      console.log("[profile-modal] save success");
+      console.log("[branding-save] response", { ok: true, workspace_slug: slug });
+      console.log("[workspace-save] response", { ok: true, workspace_slug: slug });
+      console.log("[constellation-save] response", { ok: true, workspace_slug: slug });
       WORKSPACE_RUNTIME_CONFIG.active = mergeWorkspaceSettings(WORKSPACE_RUNTIME_CONFIG.active, { display_name: name, short_name: shortName, avatar_initials: initials, avatar_mode: avatarMode, icon: icon });
       WORKSPACE_RUNTIME_CONFIG.active.name = name || WORKSPACE_RUNTIME_CONFIG.active.name;
       storeActiveWorkspaceConfig(WORKSPACE_RUNTIME_CONFIG.active);
@@ -27856,7 +28053,9 @@ async function savePWWorkspace() {
     updateToast(loadingToastId, "success", "Workspace saved", "Workspace settings saved.");
     setTimeout(function() { if (statusEl) statusEl.classList.add("hidden"); }, 3000);
   } catch (err) {
-    console.log("[profile-modal] save error", err);
+    console.log("[workspace-save] response", err);
+    console.log("[branding-save] response", err);
+    console.log("[constellation-save] response", err);
     var msg = "Workspace save failed: " + (err.message || String(err));
     if (err.message && err.message.includes("row-level security")) {
       msg = "Workspace name save blocked by permissions (RLS). Contact admin.";

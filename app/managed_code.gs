@@ -11,6 +11,7 @@
 
 const MANAGED_SHEET_TABS = [
   "POSTS", "NOTES", "INSPO", "AI_DRAFTS", "CAMPAIGNS", "MEDIA",
+  "MEDIA_ATTACHMENTS",
   "SETTINGS", "BRAND_FRAMEWORK", "SCHEMA_NOTES", "AI_CHAIN_SETTINGS",
   "FLOW_EVENT_LOG"
 ];
@@ -21,7 +22,8 @@ const TAB_SCHEMAS = {
   INSPO: ["inspo_id","workspace_id","title","summary","body","source_url","source_type","source_label","source_title","campaign_id","campaign_name","pillar","linked_post_id","linked_ai_draft_id","flow_state","converted_post_id","type","archived_at","created_at","updated_at","sync_status","synced_at","sync_error"],
   AI_DRAFTS: ["ai_draft_id","workspace_id","title","draft_text","generated_output","source_type","source_id","prompt","generation_mode","draft_status","campaign_id","campaign_name","pillar","platform_targets","media_ids","created_post_id","parent_artifact_id","root_artifact_id","derived_from_ids","archived_at","created_at","updated_at","sync_status","synced_at","sync_error"],
   CAMPAIGNS: ["campaign_id","workspace_id","campaign_name","campaign_label","description","status","start_date","end_date","platform","pillar","post_types","post_count","goal","archived_at","created_at","updated_at","sync_status","synced_at","sync_error"],
-  MEDIA: ["media_asset_id","workspace_id","filename","media_url","storage_path","linked_post_id","linked_post_title","media_type","alt_text","tags","archived_at","created_at","updated_at","sync_status","synced_at","sync_error"],
+  MEDIA: ["workspace_id","media_asset_id","title","filename","media_url","storage_path","media_type","mime_type","alt_text","tags","linked_post_id","linked_post_title","created_at","updated_at","sync_status","synced_at","sync_error"],
+  MEDIA_ATTACHMENTS: ["workspace_id","post_id","post_title","media_asset_id","storage_path","filename","media_url","media_type","sort_order","relationship_type","sync_status","synced_at","sync_error","updated_at"],
   SETTINGS: ["workspace_id","workspace_slug","backend_type","key","value","settings_json","avatar_mode","icon","avatar_initials","short_name","brand_voice","default_platforms","default_pillars","default_statuses","default_post_types","current_month","current_year","queue_limit","media_bucket","synced_at","sync_status","sync_error"],
   BRAND_FRAMEWORK: ["framework_key","workspace_id","section","rule_type","title","content","importance","strictness","applies_to_platform","applies_to_post_type","anti_pattern","preferred_pattern","semantic_category","enabled","examples","sort_order","created_at","updated_at","sync_status","synced_at","sync_error"],
   SCHEMA_NOTES: ["schema_key","workspace_id","table_name","field_name","display_name","description","required","editable_in_sheet","formula_managed","validation_rule","example_value","sort_order","sync_status","synced_at","sync_error"],
@@ -115,6 +117,10 @@ function objectsToSheet_(sheet, objects, idField) {
 
   var canonHeaders = schema.length ? schema.map(function(h) { return h.toLowerCase(); }) : existingHeaders;
   var canonIdIndex = canonHeaders.indexOf(idField);
+  if (schema.length) {
+    sheet.getRange(1, 1, 1, schema.length).setValues([schema]);
+    sheet.getRange(1, 1, 1, schema.length).setFontWeight("bold");
+  }
 
   var byId = {};
   if (idIndex >= 0) {
@@ -243,6 +249,7 @@ function getCanonicalIdFieldForTab_(tabName) {
     AI_DRAFTS: "ai_draft_id",
     CAMPAIGNS: "campaign_id",
     MEDIA: "media_asset_id",
+    MEDIA_ATTACHMENTS: "media_attachment_id",
     SETTINGS: "workspace_id",
     BRAND_FRAMEWORK: "framework_key",
     SCHEMA_NOTES: "schema_key",
