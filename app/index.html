@@ -14086,6 +14086,136 @@ function getConnectedAccountMissingSetupKeys(platform) {
   return filterLegacyRedirectKeys(Array.isArray(account.missingSetupKeys) ? account.missingSetupKeys : []);
 }
 
+function getSocialPlatformSetupInfo(platform) {
+  const p = String(platform || "").trim().toLowerCase();
+  const shared = ["PUBLIC_WEBAPP_BASE_URL"];
+  const info = {
+    label: toTitleCase(p || "social"),
+    secrets: shared.slice(),
+    scopes: [],
+    bullets: [
+      "Store OAuth secrets only in Supabase Secrets.",
+      "Configure the Supabase/StellarSync OAuth callback URL as the redirect URI.",
+      "Start OAuth from StellarSync so code exchange stays server-side in the Supabase Edge Function."
+    ]
+  };
+  if (p === "linkedin") {
+    info.label = "LinkedIn";
+    info.secrets = shared.concat(["LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"]);
+    info.scopes = ["openid", "profile", "email", "w_member_social"];
+    info.bullets = [
+      "Register a LinkedIn app/client.",
+      "Configure the Supabase OAuth callback URL as the redirect URI.",
+      "Required scopes may include: openid, profile, email, w_member_social.",
+      "Historical post sync may require r_member_social or restricted LinkedIn approval."
+    ];
+  } else if (p === "facebook") {
+    info.label = "Facebook Pages";
+    info.secrets = shared.concat(["META_CLIENT_ID", "META_CLIENT_SECRET"]);
+    info.scopes = ["pages_show_list", "pages_read_engagement", "pages_manage_posts"];
+    info.bullets = [
+      "Register a Meta app.",
+      "Configure the Supabase OAuth callback URL.",
+      "Requires Page permissions and a connected Page access token.",
+      "Publishing requires the selected Facebook Page account."
+    ];
+  } else if (p === "instagram") {
+    info.label = "Instagram Business";
+    info.secrets = shared.concat(["META_CLIENT_ID", "META_CLIENT_SECRET"]);
+    info.scopes = ["instagram_basic", "instagram_content_publish", "pages_show_list", "pages_read_engagement"];
+    info.bullets = [
+      "Requires an Instagram Business or Creator account connected to a Facebook Page.",
+      "Configure Meta app credentials and the Supabase OAuth callback URL.",
+      "Media publishing requires compatible image/video assets."
+    ];
+  } else if (p === "threads") {
+    info.label = "Threads";
+    info.secrets = shared.concat(["META_CLIENT_ID", "META_CLIENT_SECRET"]);
+    info.scopes = ["threads_basic", "threads_content_publish"];
+    info.bullets = [
+      "Requires Threads API access through Meta app setup.",
+      "Configure the Supabase OAuth callback URL.",
+      "Publishing support depends on approved scopes and account eligibility."
+    ];
+  } else if (p === "bluesky") {
+    info.label = "Bluesky";
+    info.secrets = shared.concat(["BLUESKY_CLIENT_ID", "BLUESKY_CLIENT_SECRET"]);
+    info.scopes = ["atproto"];
+    info.bullets = [
+      "If using OAuth, configure Bluesky client secrets in Supabase.",
+      "If using app password flow, store app passwords server-side only.",
+      "Do not store app passwords or tokens in frontend/localStorage."
+    ];
+  } else if (p === "tiktok") {
+    info.label = "TikTok";
+    info.secrets = shared.concat(["TIKTOK_CLIENT_KEY", "TIKTOK_CLIENT_SECRET"]);
+    info.scopes = ["user.info.basic", "video.publish", "video.upload"];
+    info.bullets = [
+      "Register a TikTok developer app.",
+      "Configure the Supabase OAuth callback URL.",
+      "Direct posting requires compatible video media.",
+      "PULL_FROM_URL requires an externally accessible media URL.",
+      "Non-video posts should show invalid_media for TikTok."
+    ];
+  }
+  return info;
+}
+
+function mergeSocialSetupKeys(platform, requiredKeys, missingKeys) {
+  const info = getSocialPlatformSetupInfo(platform);
+  const combined = [];
+  [...(requiredKeys || []), ...(missingKeys || []), ...info.secrets].forEach(function(key) {
+    const clean = String(key || "").trim();
+    if (clean && combined.indexOf(clean) === -1) combined.push(clean);
+  });
+  return combined;
+}
+
+function getSocialSetupMissingMessage(platform, missingKeys) {
+  const info = getSocialPlatformSetupInfo(platform);
+  return `${info.label} OAuth is not configured yet. Add the required Supabase Secrets, then test status again.`;
+}
+
+function handleDisabledSocialConnect(platform) {
+  const missingSetupKeys = getConnectedAccountMissingSetupKeys(platform);
+  console.warn("[social-setup] connect disabled", { platform, missingSecrets: missingSetupKeys });
+  console.log("[social-setup] platform", platform);
+  console.log("[social-setup] missing secrets", missingSetupKeys);
+  showToast("Setup required", getSocialSetupMissingMessage(platform, missingSetupKeys), "ph-warning", "text-yellow-400");
+  openConnectionSetupModal(platform, getConnectedAccount(platform) || {});
+}
+
+function copySocialSetupChecklist(platform) {
+  const account = getConnectedAccount(platform) || {};
+  const requiredKeys = filterLegacyRedirectKeys(Array.isArray(account.requiredSetupKeys) ? account.requiredSetupKeys : []);
+  const missingKeys = filterLegacyRedirectKeys(Array.isArray(account.missingSetupKeys) ? account.missingSetupKeys : []);
+  const info = getSocialPlatformSetupInfo(platform);
+  const keys = mergeSocialSetupKeys(platform, requiredKeys, missingKeys);
+  const lines = [
+    `${info.label} OAuth setup`,
+    "",
+    "Supabase Secrets:",
+    ...keys.map(function(key) { return `- ${key}${missingKeys.includes(key) ? " (missing)" : ""}`; }),
+    "",
+    "Provider setup:",
+    ...info.bullets.map(function(item) { return `- ${item}`; }),
+    info.scopes.length ? "" : null,
+    info.scopes.length ? "Scopes:" : null,
+    ...info.scopes.map(function(scope) { return `- ${scope}`; })
+  ].filter(function(line) { return line !== null; });
+  const text = lines.join("\n");
+  console.log("[social-setup] setup checklist copied", { platform, keys });
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() {
+      showToast("Checklist copied", `${info.label} Supabase Secrets checklist copied.`, "ph-check", "text-emerald-400");
+    }).catch(function() {
+      showToast("Copy failed", "Could not copy setup checklist.", "ph-warning", "text-yellow-400");
+    });
+  } else {
+    showToast("Checklist", text, "ph-list-checks", "text-[#c77dff]");
+  }
+}
+
 function filterLegacyRedirectKeys(keys) {
   return (keys || []).filter(key => !["LINKEDIN_REDIRECT_URI", "INSTAGRAM_REDIRECT_URI", "THREADS_REDIRECT_URI", "TIKTOK_REDIRECT_URI", "YOUTUBE_REDIRECT_URI", "FACEBOOK_REDIRECT_URI"].includes(key));
 }
@@ -14242,13 +14372,14 @@ function formatHistoricalEndpointSummary(entry) {
 async function connectSocialAccount(platform) {
   const missingSetupKeys = getConnectedAccountMissingSetupKeys(platform);
   if (missingSetupKeys.length) {
-    showToast("Setup required", `Managed through Supabase backend setup: ${missingSetupKeys.join(", ")}`, "ph-warning", "text-yellow-400");
-    openConnectionSetupModal(platform, getConnectedAccount(platform) || {});
+    console.warn("[connect] blocked missing setup keys", { platform, missingSetupKeys });
+    handleDisabledSocialConnect(platform);
     return;
   }
 
   setConnectedAccountActionLoading(platform, "connect", true);
   try {
+    console.log("[social-setup] oauth start", { platform });
     const result = await apiStartPlatformAuth(platform);
     const auth = result?.authUrl ? result : (result?.auth || result);
 	    if (auth) {
@@ -14720,17 +14851,24 @@ function openSupportModalFromDiagnostics() {
 function openConnectionSetupModal(platform, auth = null) {
   activeConnectionSetupPlatform = platform;
   const account = getConnectedAccount(platform) || {};
-  const scopes = auth?.requiredScopes || auth?.scopes || account.requiredScopes || [];
-  const checklist = auth?.setupChecklist || account.setupChecklist || [];
+  const info = getSocialPlatformSetupInfo(platform);
+  const scopes = auth?.requiredScopes || auth?.scopes || account.requiredScopes || info.scopes || [];
+  const checklist = (auth?.setupChecklist || account.setupChecklist || []).filter(function(item) {
+    return !/apps script|script property/i.test(String(item || ""));
+  });
   const missingSetupKeys = filterLegacyRedirectKeys(auth?.missingSetupKeys || account.missingSetupKeys || []);
-  if (connectionSetupTitle) connectionSetupTitle.textContent = `${toTitleCase(platform)} Connection Setup`;
+  const requiredSetupKeys = filterLegacyRedirectKeys(auth?.requiredSetupKeys || account.requiredSetupKeys || []);
+  const setupKeys = mergeSocialSetupKeys(platform, requiredSetupKeys, missingSetupKeys);
+  if (connectionSetupTitle) connectionSetupTitle.textContent = `${info.label} Connection Setup`;
   if (connectionSetupSubtitle) connectionSetupSubtitle.textContent = account.connectionStatusLabel || auth?.status || "Not live yet";
   if (connectionSetupChecklist) {
     const setupKeyRows = missingSetupKeys.length
-      ? missingSetupKeys.map((item) => `<div class="text-sm text-yellow-300 wrap-safe flex gap-2"><i class="ph-bold ph-warning-circle mt-0.5"></i><span>Missing Script Property: ${escapeHtml(item)}</span></div>`)
+      ? missingSetupKeys.map((item) => `<div class="text-sm text-yellow-300 wrap-safe flex gap-2"><i class="ph-bold ph-warning-circle mt-0.5"></i><span>Missing Supabase Secret: ${escapeHtml(item)}</span></div>`)
       : [];
-    const checklistRows = checklist.map((item) => `<div class="text-sm text-gray-300 wrap-safe flex gap-2"><i class="ph-bold ph-check-circle text-[#c77dff] mt-0.5"></i><span>${escapeHtml(item)}</span></div>`);
-    connectionSetupChecklist.innerHTML = [...setupKeyRows, ...checklistRows].join("") || `<div class="text-sm text-gray-400">OAuth setup details unavailable.</div>`;
+    const setupRows = setupKeys.filter(function(key) { return !missingSetupKeys.includes(key); }).map((item) => `<div class="text-sm text-gray-300 wrap-safe flex gap-2"><i class="ph-bold ph-lock-key text-[#c77dff] mt-0.5"></i><span>Supabase Secret: ${escapeHtml(item)}</span></div>`);
+    const checklistRows = [...info.bullets, ...checklist].map((item) => `<div class="text-sm text-gray-300 wrap-safe flex gap-2"><i class="ph-bold ph-check-circle text-[#c77dff] mt-0.5"></i><span>${escapeHtml(item)}</span></div>`);
+    const copyRow = `<button type="button" onclick="copySocialSetupChecklist('${escapeHtml(platform)}')" class="mt-2 px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors"><i class="ph-bold ph-copy mr-1"></i> Copy Supabase Secrets Checklist</button>`;
+    connectionSetupChecklist.innerHTML = [...setupKeyRows, ...setupRows, ...checklistRows, copyRow].join("");
   }
   if (connectionSetupScopes) {
     connectionSetupScopes.innerHTML = scopes.length
@@ -14738,7 +14876,10 @@ function openConnectionSetupModal(platform, auth = null) {
       : `<span class="text-sm text-gray-400">No scopes declared yet.</span>`;
   }
   if (connectionSetupNotes) {
-    connectionSetupNotes.textContent = auth?.appReviewNotes || account.appReviewNotes || "OAuth starts from the backend. Tokens and secrets remain server-side.";
+    const notes = String(auth?.appReviewNotes || account.appReviewNotes || "")
+      .replace(new RegExp(["Apps", "Script"].join("\\s+"), "gi"), "Supabase Edge Functions")
+      .replace(new RegExp(["Script", "Properties?"].join("\\s+"), "gi"), "Supabase Secrets");
+    connectionSetupNotes.textContent = notes || "OAuth starts from StellarSync. Code exchange runs server-side in the Supabase Edge Function, and tokens/secrets stay server-side.";
   }
   var authDiagnosticsSection = document.getElementById("connection-setup-auth-diagnostics-section");
   var authDiagnosticsPre = document.getElementById("connection-setup-auth-diagnostics");
@@ -14814,7 +14955,11 @@ function getConnectedAccountsMarkup(options = {}) {
       : "Not declared";
     const requiredKeys = filterLegacyRedirectKeys(Array.isArray(account.requiredSetupKeys) ? account.requiredSetupKeys : []);
     const missingKeys = filterLegacyRedirectKeys(Array.isArray(account.missingSetupKeys) ? account.missingSetupKeys : []);
+    const setupInfo = getSocialPlatformSetupInfo(platform);
+    const setupKeys = mergeSocialSetupKeys(platform, requiredKeys, missingKeys);
+    const setupBlocked = missingKeys.length > 0;
     const tokenStatus = account.tokenStatus || (account.accessStatus === "expired" ? "Expired" : account.accessStatus === "connected" ? "Active" : "Missing");
+    const publishSupport = setupBlocked ? "Requires setup" : account.publishSupportLabel || (account.publishSupported ? "Live" : "Requires connection");
     const connectLoading = isConnectedAccountActionLoading(platform, "connect");
     const disconnectLoading = isConnectedAccountActionLoading(platform, "disconnect");
     const testLoading = isConnectedAccountActionLoading(platform, "test");
@@ -14840,20 +14985,27 @@ function getConnectedAccountsMarkup(options = {}) {
           <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Account</div><div class="text-sm text-white wrap-safe">${escapeHtml(accountLabel)}</div></div>
           <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Permissions / Scopes</div><div class="text-sm text-white wrap-safe">${escapeHtml(permissions)}</div></div>
           <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Token Status</div><div class="text-sm text-white wrap-safe">${escapeHtml(tokenStatus)}</div></div>
-          <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Publish Support</div><div class="text-sm text-white wrap-safe">${escapeHtml(account.publishSupportLabel || (account.publishSupported ? "Live" : "Requires connection"))}</div></div>
+          <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Publish Support</div><div class="text-sm text-white wrap-safe">${escapeHtml(publishSupport)}</div></div>
           <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Token Expires / Last Sync</div><div class="text-sm text-white wrap-safe">${escapeHtml(lastSync)}</div></div>
           <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Last Error</div><div class="text-sm text-white wrap-safe">${escapeHtml(lastError)}</div></div>
         </div>
         <div class="mt-4">
-          <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Required Setup Keys</div>
+          <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Required Supabase Secrets</div>
+          ${setupBlocked ? `<div class="mb-3 rounded-xl border border-yellow-400/20 bg-yellow-900/20 p-3 text-xs text-yellow-200 wrap-safe">
+            ${escapeHtml(getSocialSetupMissingMessage(platform, missingKeys))}
+          </div>` : ""}
           <div class="space-y-2">
-            ${requiredKeys.map((key) => `
+            ${setupKeys.map((key) => `
               <div class="flex items-center justify-between gap-3 text-xs">
-                <span class="text-gray-300 wrap-safe">${escapeHtml(key)}</span>
+                <span class="text-gray-300 wrap-safe">${escapeHtml(missingKeys.includes(key) ? "Missing Supabase Secret: " + key : "Supabase Secret: " + key)}</span>
                 <span class="${missingKeys.includes(key) ? "text-yellow-300" : "text-emerald-300"} font-semibold">${missingKeys.includes(key) ? "Missing" : "Ready"}</span>
               </div>
-            `).join("") || `<div class="text-sm text-gray-400">No setup keys declared.</div>`}
+            `).join("") || `<div class="text-sm text-gray-400">No Supabase Secrets declared by backend diagnostics.</div>`}
           </div>
+          <div class="mt-3 rounded-xl border border-white/5 bg-[#0f0a18] p-3 text-xs text-gray-300 space-y-1">
+            ${setupInfo.bullets.map((item) => `<div class="wrap-safe">${escapeHtml(item)}</div>`).join("")}
+          </div>
+          <button type="button" onclick="copySocialSetupChecklist('${escapeHtml(platform)}')" class="mt-3 px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors"><i class="ph-bold ph-copy mr-1"></i> Copy Supabase Secrets Checklist</button>
         </div>
         ${platform === "linkedin" ? `
         <div class="mt-4">
@@ -14875,15 +15027,17 @@ function getConnectedAccountsMarkup(options = {}) {
         </div>
         ` : ""}
         <div class="mt-4 flex flex-wrap gap-2">
-          ${platform === "linkedin" ? `<button type="button" onclick="openLinkedInCaptureImporter()" data-platform="linkedin" data-action="import-all-posts" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Import All Posts</button>` : ""}
-          <button type="button" onclick="connectSocialAccount('${escapeHtml(platform)}')" data-platform="${escapeHtml(platform)}" data-action="connect" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors ${anyLoading ? "opacity-60" : ""}" ${connectLoading ? "disabled" : ""}>${connectLoading ? "Loading..." : "Connect"}</button>
-          <button type="button" onclick="reconnectSocialAccount('${escapeHtml(platform)}')" data-platform="${escapeHtml(platform)}" data-action="reconnect" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors ${anyLoading ? "opacity-60" : ""}" ${connectLoading ? "disabled" : ""}>Reconnect</button>
+          ${platform === "linkedin" ? (account.connected && !setupBlocked ? `<button type="button" onclick="openLinkedInCaptureImporter()" data-platform="linkedin" data-action="import-all-posts" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Import All Posts</button>` : `<button type="button" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-500 cursor-not-allowed opacity-60" aria-disabled="true">Requires connection</button>`) : ""}
+          <button type="button" onclick="${setupBlocked ? `handleDisabledSocialConnect('${escapeHtml(platform)}')` : `connectSocialAccount('${escapeHtml(platform)}')`}" data-platform="${escapeHtml(platform)}" data-action="connect" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors ${anyLoading || setupBlocked ? "opacity-60 cursor-not-allowed" : ""}" ${connectLoading ? "disabled" : ""} ${setupBlocked ? "aria-disabled=\"true\"" : ""}>${setupBlocked ? "Setup Required" : connectLoading ? "Loading..." : "Connect"}</button>
+          <button type="button" onclick="${setupBlocked ? `handleDisabledSocialConnect('${escapeHtml(platform)}')` : `reconnectSocialAccount('${escapeHtml(platform)}')`}" data-platform="${escapeHtml(platform)}" data-action="reconnect" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors ${anyLoading || setupBlocked ? "opacity-60 cursor-not-allowed" : ""}" ${connectLoading ? "disabled" : ""} ${setupBlocked ? "aria-disabled=\"true\"" : ""}>${setupBlocked ? "Setup Required" : "Reconnect"}</button>
           <button type="button" onclick="disconnectConnectedAccount('${escapeHtml(platform)}')" data-platform="${escapeHtml(platform)}" data-action="disconnect" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 transition-colors ${anyLoading ? "opacity-60" : ""}" ${disconnectLoading ? "disabled" : ""}>${disconnectLoading ? "Working..." : "Disconnect"}</button>
           <button type="button" onclick="testConnectedAccountStatus('${escapeHtml(platform)}')" data-platform="${escapeHtml(platform)}" data-action="test-status" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors ${anyLoading ? "opacity-60" : ""}" ${testLoading ? "disabled" : ""}>${testLoading ? "Testing..." : "Test Status"}</button>
         </div>
         ${platform === "linkedin" ? `<div class="mt-4 p-3 rounded-xl bg-[#0f0a18] border border-white/5">
           <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Advanced / Debug</div>
-          <button type="button" onclick="testLinkedInHistoricalAccessAction()" data-platform="linkedin" data-action="test-history" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors ${anyLoading ? "opacity-60" : ""}" ${historyLoading ? "disabled" : ""}>${historyLoading ? "Testing..." : "Test Historical Access"}</button>
+          ${account.connected && !setupBlocked
+            ? `<button type="button" onclick="testLinkedInHistoricalAccessAction()" data-platform="linkedin" data-action="test-history" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors ${anyLoading ? "opacity-60" : ""}" ${historyLoading ? "disabled" : ""}>${historyLoading ? "Testing..." : "Test Historical Access"}</button>`
+            : `<button type="button" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-500 cursor-not-allowed opacity-60" aria-disabled="true">Requires connection</button>`}
         </div>` : ""}
         ${platform === "instagram" ? `<div class="mt-4 p-3 rounded-xl bg-[#0f0a18] border border-white/5">
           <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Advanced Setup</div>
@@ -14913,7 +15067,7 @@ function getConnectedAccountsMarkup(options = {}) {
             <div><strong>Redirect URI (add to Meta → Facebook Login → Settings → Valid OAuth Redirect URIs):</strong></div>
             <div id="threads-redirect-uri-display" class="text-[11px] text-white font-mono wrap-safe bg-[#120c1d] p-2 rounded-lg border border-white/5">${escapeHtml(getThreadsRedirectUri())}</div>
             <button type="button" onclick="copyThreadsRedirectUri()" class="px-3 py-1 rounded-lg bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors mt-1">Copy Redirect URI</button>
-            <div class="text-[10px] text-yellow-300/70 mt-2">Required: Client OAuth Login = ON, Web OAuth Login = ON, App Domains = script.google.com (and optionally script.googleusercontent.com)</div>
+            <div class="text-[10px] text-yellow-300/70 mt-2">Required: Client OAuth Login = ON, Web OAuth Login = ON, and the Supabase/StellarSync callback URL is whitelisted in the Meta app.</div>
             <div class="text-[10px] text-yellow-300/70">If Meta returns error_code 1349168, the redirect URI is not yet whitelisted in the Meta App dashboard.</div>
           </div>
         </div>` : ""}
@@ -14926,7 +15080,7 @@ function getConnectedAccountsMarkup(options = {}) {
           <div class="text-[10px] text-gray-500 space-y-0.5 mt-1">
             <div>• Ensure <strong class="text-white">Client OAuth Login</strong> is enabled in Meta App settings.</div>
             <div>• Ensure <strong class="text-white">Web OAuth Login</strong> is enabled for Threads.</div>
-            <div>• App Domains must include: <code class="text-sky-300">script.google.com</code>, <code class="text-sky-300">script.googleusercontent.com</code></div>
+            <div>• App Domains and valid redirect URIs must match the Supabase/StellarSync OAuth callback URL.</div>
           </div>
         </div>` : ""}
         ${platform === "bluesky" ? `
@@ -14961,7 +15115,7 @@ function getConnectedAccountsMarkup(options = {}) {
           <div class="text-[11px] text-gray-400 mb-1">Scopes: <span class="text-gray-300">user.info.basic, video.publish, video.upload</span></div>
           <div class="text-[11px] text-yellow-300 mb-2">Publishing requires TikTok Content Posting API approval.</div>
           <div class="flex flex-wrap gap-2 mt-2">
-            <button type="button" class="px-3 py-1.5 text-[11px] rounded-lg bg-sky-900/40 text-sky-300 hover:bg-sky-900/60 transition-colors" onclick="connectSocialAccount('tiktok')">${isConnectedAccountActionLoading("tiktok", "connect") ? 'Connecting...' : 'Authorize TikTok'}</button>
+            <button type="button" class="px-3 py-1.5 text-[11px] rounded-lg bg-sky-900/40 text-sky-300 hover:bg-sky-900/60 transition-colors ${setupBlocked ? "opacity-60 cursor-not-allowed" : ""}" onclick="${setupBlocked ? "handleDisabledSocialConnect('tiktok')" : "connectSocialAccount('tiktok')"}" ${setupBlocked ? "aria-disabled=\"true\"" : ""}>${setupBlocked ? 'Setup Required' : isConnectedAccountActionLoading("tiktok", "connect") ? 'Connecting...' : 'Authorize TikTok'}</button>
             <button type="button" class="px-3 py-1.5 text-[11px] rounded-lg bg-emerald-900/40 text-emerald-300 hover:bg-emerald-900/60 transition-colors" onclick="testTikTokConnection()">${isConnectedAccountActionLoading("tiktok", "test") ? 'Testing...' : 'Test Token'}</button>
             <button type="button" class="px-3 py-1.5 text-[11px] rounded-lg bg-red-900/40 text-red-300 hover:bg-red-900/60 transition-colors" onclick="disconnectTikTokAccount()">${isConnectedAccountActionLoading("tiktok", "disconnect") ? 'Disconnecting...' : 'Disconnect'}</button>
           </div>
@@ -15388,6 +15542,47 @@ async function syncPostToMonday() {
   }
 }
 
+function getMondayBackfillFrontendPosts() {
+  const sourcePosts = Array.isArray(appState.posts) ? appState.posts : [];
+  const campaigns = getAvailableCampaignRecords();
+  return sourcePosts
+    .filter(function(post) { return post && typeof post === "object"; })
+    .map(function(post, index) {
+      const normalized = normalizeRemotePost(post, campaigns, appState.media || [], index);
+      const postId = getCanonicalPostId(normalized) || getPostLookupId(normalized, index) || String(normalized.id || post.id || "").trim();
+      const platforms = getPostTargetPlatforms(normalized);
+      const campaignName = normalized.campaignName || normalized.campaign_name || post.campaignName || post.campaign_name || post.campaign || "";
+      const scheduledAt = normalized.scheduledAt || normalized.scheduled_at || normalized.date || post.scheduledAt || post.scheduled_at || post.date || "";
+      return {
+        ...normalized,
+        id: postId,
+        post_id: postId,
+        postId,
+        title: normalized.title || normalized.post_title || getPostDisplayTitle(normalized, "Untitled post"),
+        post_title: normalized.post_title || normalized.title || getPostDisplayTitle(normalized, "Untitled post"),
+        description: normalized.description || normalized.caption || normalized.body || "",
+        status: normalized.status || normalized.publishStatus || normalized.publish_status || normalized.flowState || "draft",
+        publish_status: normalized.publishStatus || normalized.publish_status || normalized.status || "draft",
+        platform: normalized.platform || platforms[0] || "",
+        platforms,
+        platform_targets: Array.isArray(platforms) ? platforms.join(",") : String(platforms || ""),
+        pillar: normalized.pillar || normalized.contentPillar || "",
+        campaign_name: campaignName,
+        campaignName: campaignName,
+        scheduled_at: scheduledAt,
+        scheduledAt,
+        date: normalized.date || scheduledAt,
+        impressions: normalized.impressions || normalized.impression_count || normalized.views || 0,
+        published_url: normalized.publishedUrl || normalized.published_url || "",
+        publishedUrl: normalized.publishedUrl || normalized.published_url || "",
+        media_url: normalized.mediaUrl || normalized.media_url || "",
+        mediaUrl: normalized.mediaUrl || normalized.media_url || "",
+        monday_item_id: normalized.mondayItemId || normalized.monday_item_id || "",
+        mondayItemId: normalized.mondayItemId || normalized.monday_item_id || ""
+      };
+    });
+}
+
 async function backfillMondayBoard() {
   const boardId = getMondayBoardId(WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active, WORKSPACE_CONNECTIONS);
   if (!boardId) { showToast("No Monday board configured", "error"); return; }
@@ -15398,13 +15593,18 @@ async function backfillMondayBoard() {
   try {
     const meta = getWorkspaceRequestMetadata();
     const backendMode = getActiveWorkspaceBackendMode();
-    const payloadPosts = backendMode.mode === "google_sheets_hybrid" ? (appState.posts || []) : (appState.posts || []);
+    const activeWorkspace = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active || {};
+    const payloadPosts = getMondayBackfillFrontendPosts();
+    console.log("[monday-backfill] frontend posts count", payloadPosts.length);
+    console.log("[monday-backfill] backend_type", backendMode.mode || activeWorkspace.backend_type || "");
+    console.log("[monday-backfill] sample post ids", payloadPosts.slice(0, 5).map(function(post) { return post.post_id || post.postId || post.id || ""; }));
     console.log("[monday-backfill] started", { boardId, postCount: payloadPosts.length });
     const result = await callSupabaseEdgeFunction("monday-sync", {
       action: "backfill_posts",
       workspace_id: meta.workspace_id || meta.workspace_slug,
       workspace_slug: meta.workspace_slug || getCurrentWorkspaceSlug() || "",
       board_id: boardId,
+      backend_type: backendMode.mode || activeWorkspace.backend_type || "",
       posts: payloadPosts
     });
     if (result?.ok) {
@@ -18786,16 +18986,130 @@ async function detachCurrentMediaAssetFromPost() {
   }
 }
 
+function findMediaAssetInState(assetOrId) {
+  const targetId = getMediaAssetId(assetOrId);
+  const targetKey = getMediaItemKey(assetOrId);
+  return (appState.media || []).find(function(asset) {
+    return (targetId && getMediaAssetId(asset) === targetId) || (targetKey && getMediaItemKey(asset) === targetKey);
+  }) || null;
+}
+
+function getMediaViewerPostContext(asset) {
+  const mediaAssetId = getMediaAssetId(asset);
+  if (!mediaAssetId) return null;
+  const row = (appState.postMedia || appState.post_media || []).find(function(entry) {
+    return String(entry.media_asset_id || entry.mediaAssetId || "").trim() === mediaAssetId;
+  });
+  const postId = String(row && (row.post_id || row.postId) || "").trim();
+  return postId ? findPostByAnyId(postId) : null;
+}
+
+function getActualAttachedMediaForViewer(post) {
+  if (!post) return [];
+  const postIds = new Set(getPostIdentityValues(post));
+  const attachedIds = new Set((appState.postMedia || appState.post_media || []).filter(function(row) {
+    return postIds.has(String(row.post_id || row.postId || "").trim());
+  }).map(function(row) {
+    return String(row.media_asset_id || row.mediaAssetId || "").trim();
+  }).filter(Boolean));
+  if (!attachedIds.size) return [];
+  return getAttachedMediaForPost(post, appState.media || []).filter(function(item) {
+    const id = getMediaAssetId(item);
+    return attachedIds.has(id) && !!findMediaAssetInState(item);
+  });
+}
+
+function getMediaViewerMode(asset) {
+  const post = getMediaViewerPostContext(asset);
+  const postId = post ? getCanonicalPostId(post) || getPostLookupId(post) || String(post.post_id || post.postId || post.id || "").trim() : "";
+  const attached = getActualAttachedMediaForViewer(post);
+  console.log("[media-viewer] post_id", postId || "");
+  console.log("[media-viewer] attached count", attached.length);
+  if (post && attached.length >= 2) {
+    console.log("[media-viewer] mode carousel");
+    return "carousel";
+  }
+  console.log("[media-viewer] mode single");
+  return "single";
+}
+
+function removeStaleMediaReferences(staleIds) {
+  const staleSet = new Set((Array.isArray(staleIds) ? staleIds : [staleIds]).map(function(id) {
+    return String(id || "").trim();
+  }).filter(Boolean));
+  if (!staleSet.size) return;
+
+  const beforePostMedia = (appState.postMedia || appState.post_media || []).length;
+  const validPostMedia = (appState.postMedia || appState.post_media || []).filter(function(row) {
+    return !staleSet.has(String(row.media_asset_id || row.mediaAssetId || "").trim());
+  });
+  appState.postMedia = validPostMedia;
+  appState.post_media = validPostMedia;
+
+  let staleRefs = 0;
+  appState.posts = (appState.posts || []).map(function(post) {
+    const nextPost = { ...post };
+    const cleanIds = function(values) {
+      const list = Array.isArray(values) ? values : String(values || "").split(/[|,\n]/);
+      const clean = list.map(function(value) { return String(value || "").trim(); }).filter(function(id) { return id && !staleSet.has(id); });
+      staleRefs += Math.max(0, list.filter(function(value) { return String(value || "").trim(); }).length - clean.length);
+      return clean;
+    };
+    nextPost.carouselAssetIds = cleanIds(nextPost.carouselAssetIds || nextPost.carousel_asset_ids || []);
+    nextPost.carousel_asset_ids = nextPost.carouselAssetIds;
+    nextPost.media_ids = cleanIds(nextPost.media_ids || nextPost.mediaIds || []);
+    nextPost.mediaIds = nextPost.media_ids;
+    if (Array.isArray(nextPost.carouselAssets)) {
+      const before = nextPost.carouselAssets.length;
+      nextPost.carouselAssets = nextPost.carouselAssets.filter(function(asset) { return !staleSet.has(getMediaAssetId(asset)); });
+      staleRefs += Math.max(0, before - nextPost.carouselAssets.length);
+    }
+    if (Array.isArray(nextPost.carousel_assets)) {
+      const before = nextPost.carousel_assets.length;
+      nextPost.carousel_assets = nextPost.carousel_assets.filter(function(asset) { return !staleSet.has(getMediaAssetId(asset)); });
+      staleRefs += Math.max(0, before - nextPost.carousel_assets.length);
+    }
+    const directIds = [nextPost.assetId, nextPost.asset_id, nextPost.mediaAssetId, nextPost.media_asset_id].map(function(value) { return String(value || "").trim(); });
+    if (directIds.some(function(id) { return staleSet.has(id); })) {
+      delete nextPost.assetId;
+      delete nextPost.asset_id;
+      delete nextPost.mediaAssetId;
+      delete nextPost.media_asset_id;
+      delete nextPost.mediaUrl;
+      delete nextPost.media_url;
+      delete nextPost.fileUrl;
+      staleRefs += 1;
+    }
+    return applyDerivedPostMediaFormat(nextPost, appState.media || []);
+  });
+
+  appState.media = (appState.media || []).map(function(asset) {
+    const linkedId = String(asset.linked_post_id || asset.linkedPostId || asset.post_id || asset.postId || "").trim();
+    if (!linkedId) return asset;
+    const mediaAssetId = getMediaAssetId(asset);
+    const hasAttachment = validPostMedia.some(function(row) {
+      return String(row.media_asset_id || row.mediaAssetId || "").trim() === mediaAssetId;
+    });
+    if (hasAttachment) return asset;
+    staleRefs += 1;
+    return normalizeRemoteMedia({ ...asset, linked_post_id: "", linkedPostId: "", post_id: "", postId: "" });
+  });
+
+  console.log("[media-refresh] stale asset removed", {
+    stale_ids: Array.from(staleSet),
+    stale_post_media_removed: beforePostMedia - validPostMedia.length,
+    stale_refs_removed: staleRefs
+  });
+}
+
 function renderMediaPreviewContent(item, linkedAssets, previewUrl, type) {
-  const assets = (currentMediaViewerItems || []).slice(0, 20);
-  const total = assets.length || 1;
-  if (total <= 1) {
-    console.log("[media-viewer] mode single", { total });
-    var src = previewUrl || (item ? item.fileUrl || item.sourceUrl : "") || "";
+  const mode = getMediaViewerMode(item);
+  if (mode === "single") {
+    var src = previewUrl || (item ? item.fileUrl || item.sourceUrl || item.media_url || item.mediaUrl || item.url : "") || "";
     if (!src) {
       return '<div class="flex items-center justify-center h-64 text-gray-500"><i class="ph-bold ph-image text-4xl"></i></div>';
     }
-    var kind = (type || (item ? String(item.type || item.assetType || "").toLowerCase() : ""));
+    var kind = (type || inferMediaKindFromAsset(item) || (item ? String(item.type || item.assetType || "").toLowerCase() : ""));
     if (kind === "video") {
       return '<video controls src="' + escapeHtml(src) + '" class="max-h-[55vh] w-full object-contain rounded-lg" preload="metadata"></video>';
     }
@@ -18805,7 +19119,13 @@ function renderMediaPreviewContent(item, linkedAssets, previewUrl, type) {
     }
     return '<img src="' + escapeHtml(src) + '" alt="' + escapeHtml(item && (item.title || item.assetName) ? item.title || item.assetName : "Media") + '" class="max-h-[55vh] w-full object-contain rounded-lg" onerror="this.outerHTML=\'<div class=\\\'flex items-center justify-center h-64 text-gray-500\\\'><i class=\\\'ph-bold ph-image-broken text-4xl\\\'></i></div>\'">';
   }
-  console.log("[media-viewer] mode carousel", { total });
+
+  const carouselPost = getMediaViewerPostContext(item);
+  const assets = carouselPost ? getActualAttachedMediaForViewer(carouselPost).slice(0, 20) : [item].filter(Boolean);
+  currentMediaViewerItems = assets;
+  const currentId = getMediaAssetId(item);
+  currentMediaViewerIndex = Math.max(0, assets.findIndex(function(asset) { return getMediaAssetId(asset) === currentId; }));
+  const total = assets.length || 1;
   console.log("[media-viewer] current index", { index: currentMediaViewerIndex, total });
   const modeEnabled = Boolean(mediaViewerDetachMode);
   const selectedCount = selectedMediaViewerDetachAssetIds.size;
@@ -19095,6 +19415,18 @@ function renderTaggedContent(item, linkedPost) {
 
 function openMediaAssetModal(item, options = {}) {
   if (!item || !mediaAssetModal || !mediaAssetModalCard) return;
+  const stateItem = findMediaAssetInState(item);
+  const requestedId = getMediaAssetId(item) || getMediaItemKey(item);
+  if (!stateItem) {
+    console.log("[media-viewer] asset missing from state", { id: requestedId });
+    console.log("[media-viewer] prevented stale render", { id: requestedId });
+    removeStaleMediaReferences(requestedId);
+    closeMediaAssetModal();
+    persistLocalState();
+    safeRender(renderMedia, "renderMedia");
+    return;
+  }
+  item = { ...stateItem, linkedPost: item.linkedPost || stateItem.linkedPost || null };
   console.log("[modal] open media-viewer");
   console.log("[assistant-ui] modal minimize");
   minimizeAssistantPanel();
@@ -19122,10 +19454,25 @@ function openMediaAssetModal(item, options = {}) {
   console.log("[media-manage] modal open", { id: getMediaItemKey(item), index: currentMediaViewerIndex, total: currentMediaViewerItems.length });
 
   const linkedPostKey = String(item.postId || item.linkedPostId || item.linked_post_id || "").trim();
-  const linkedPost = item.linkedPost || (appState.posts || []).find(post => [post.id, post.postId, post.post_id, post.frontendId].map(value => String(value || "").trim()).includes(linkedPostKey));
+  const linkedPost = getMediaViewerPostContext(item) || item.linkedPost || (appState.posts || []).find(post => [post.id, post.postId, post.post_id, post.frontendId].map(value => String(value || "").trim()).includes(linkedPostKey));
   const type = String(item.type || item.assetType || "").toLowerCase();
-  const linkedAssets = item.assets?.length ? item.assets : linkedPost ? getPostAssets(linkedPost) : [];
-  const previewUrl = linkedAssets[0]?.fileUrl || linkedAssets[0]?.sourceUrl || item.fileUrl || item.sourceUrl || "";
+  const viewerMode = getMediaViewerMode(item);
+  if (viewerMode === "single") {
+    currentMediaViewerItems = [item];
+    currentMediaViewerIndex = 0;
+    mediaViewerReorderMode = false;
+    mediaViewerDetachMode = false;
+    selectedMediaViewerDetachAssetIds.clear();
+  } else if (linkedPost) {
+    currentMediaViewerItems = getActualAttachedMediaForViewer(linkedPost).slice(0, 20);
+    const currentId = getMediaAssetId(item);
+    currentMediaViewerIndex = Math.max(0, currentMediaViewerItems.findIndex(function(asset) { return getMediaAssetId(asset) === currentId; }));
+    if (wasHidden) mediaViewerOriginalOrder = currentMediaViewerItems.slice();
+  }
+  const linkedAssets = viewerMode === "carousel" && linkedPost ? getActualAttachedMediaForViewer(linkedPost) : [];
+  const previewUrl = viewerMode === "carousel"
+    ? (linkedAssets[currentMediaViewerIndex]?.fileUrl || linkedAssets[currentMediaViewerIndex]?.sourceUrl || item.fileUrl || item.sourceUrl || "")
+    : (item.fileUrl || item.sourceUrl || item.media_url || item.mediaUrl || item.url || "");
 
   if (mediaAssetModalTitle) {
     mediaAssetModalTitle.textContent = getMediaDisplayTitle(item, linkedPost, "Media Asset");
@@ -19138,7 +19485,7 @@ function openMediaAssetModal(item, options = {}) {
       : item.campaign
       ? formatCampaignDisplayName(item.campaign)
       : "";
-    var viewerAssets = getAttachedMediaForPost(linkedPost);
+    var viewerAssets = viewerMode === "carousel" ? getActualAttachedMediaForViewer(linkedPost) : [];
     var viewerIdx = viewerAssets.findIndex(function(a) { return getMediaAssetId(a) === getMediaAssetId(item); });
     if (viewerAssets.length > 1 && viewerIdx >= 0) {
       var carouselPos = "Carousel item \u00b7 " + formatCarouselPosition(viewerIdx, viewerAssets.length);
@@ -19291,18 +19638,51 @@ function closeMediaAssetModal() {
 
 function openMediaAsset(assetId) {
   const item = getFilteredMediaVaultItems().find(asset => getMediaItemKey(asset) === String(assetId || ""));
-  if (!item) return;
+  if (!item) {
+    console.log("[media-viewer] asset missing from state", { id: String(assetId || "") });
+    console.log("[media-viewer] prevented stale render", { id: String(assetId || "") });
+    removeStaleMediaReferences(String(assetId || ""));
+    closeMediaAssetModal();
+    persistLocalState();
+    safeRender(renderMedia, "renderMedia");
+    return;
+  }
   if (item.kind === "group" && Array.isArray(item.assets) && item.assets.length) {
-    const groupAssets = item.assets.slice(0, 20).map(function(asset) {
+    const groupAssets = item.assets.slice(0, 20).filter(function(asset) {
+      const exists = !!findMediaAssetInState(asset);
+      if (!exists) {
+        const staleId = getMediaAssetId(asset) || getMediaItemKey(asset);
+        console.log("[media-viewer] asset missing from state", { id: staleId });
+        removeStaleMediaReferences(staleId);
+      }
+      return exists;
+    }).map(function(asset) {
       return { ...asset, linkedPost: item.linkedPost || asset.linkedPost || null, linkedPostId: item.postId || asset.linkedPostId || asset.linked_post_id || "", postId: item.postId || asset.postId || asset.post_id || "" };
     });
+    if (!groupAssets.length) {
+      console.log("[media-viewer] prevented stale render", { id: String(assetId || "") });
+      closeMediaAssetModal();
+      persistLocalState();
+      safeRender(renderMedia, "renderMedia");
+      return;
+    }
     openMediaAssetModal(groupAssets[0], { items: groupAssets, openPosts: selectedMediaAssetIds.size > 0 });
+    return;
+  }
+  if (!findMediaAssetInState(item)) {
+    const staleId = getMediaAssetId(item) || getMediaItemKey(item) || String(assetId || "");
+    console.log("[media-viewer] asset missing from state", { id: staleId });
+    console.log("[media-viewer] prevented stale render", { id: staleId });
+    removeStaleMediaReferences(staleId);
+    closeMediaAssetModal();
+    persistLocalState();
+    safeRender(renderMedia, "renderMedia");
     return;
   }
   const selectedItems = selectedMediaAssetIds.size
     ? getFilteredMediaVaultItems().filter(asset => selectedMediaAssetIds.has(getMediaItemKey(asset)))
     : [];
-  openMediaAssetModal(item, { items: selectedItems.length ? selectedItems : getFilteredMediaVaultItems() });
+  openMediaAssetModal(item, { items: selectedItems.length ? selectedItems.filter(findMediaAssetInState) : [item] });
 }
 
 function createPostFromMediaItem(item, linkedPost = null) {
@@ -19349,6 +19729,20 @@ async function refreshMediaFromRemote() {
   appState.post_media = validPostMedia;
   var stalePostMediaRemoved = prevPostMediaCount - validPostMedia.length;
   console.log("[media-refresh] stale postMedia removed", stalePostMediaRemoved);
+
+  var staleLinkedRefsRemoved = 0;
+  freshMedia = freshMedia.map(function(asset) {
+    var mediaAssetId = getMediaAssetId(asset);
+    var linkedPostId = String(asset.linked_post_id || asset.linkedPostId || asset.post_id || asset.postId || "").trim();
+    if (!linkedPostId) return asset;
+    var linkedPostExists = !!findPostByAnyId(linkedPostId);
+    var hasAttachment = validPostMedia.some(function(row) {
+      return String(row.media_asset_id || row.mediaAssetId || "").trim() === mediaAssetId;
+    });
+    if (linkedPostExists && hasAttachment) return asset;
+    staleLinkedRefsRemoved += 1;
+    return normalizeRemoteMedia({ ...asset, linked_post_id: "", linkedPostId: "", post_id: "", postId: "" });
+  });
 
   appState.media = freshMedia;
 
@@ -19400,8 +19794,10 @@ async function refreshMediaFromRemote() {
 
   var afterCount = appState.media.length;
   var removedMediaIds = Array.from(previousIds).filter(function(id) { return !freshIds.has(id); });
+  removedMediaIds.forEach(function(id) { console.log("[media-refresh] stale asset removed", { id }); });
   console.log("[media-refresh] stale media ids removed", removedMediaIds);
   console.log("[media-refresh] stale post carousel refs removed", staleCarouselRefsRemoved);
+  console.log("[media-refresh] stale linked_post_id refs removed", staleLinkedRefsRemoved);
   console.log("[media-refresh] after count", afterCount);
   clearWorkspaceMediaCaches();
 
@@ -25159,6 +25555,7 @@ async function apiStartPlatformAuth(platform) {
   try {
     let result;
     if (platform === "linkedin") result = await apiGet("startLinkedInAuth");
+    else if (platform === "facebook") result = await apiGet("startFacebookAuth");
     else if (platform === "instagram") result = await apiGet("startInstagramAuth");
     else if (platform === "threads") result = await apiGet("startThreadsAuth");
     else if (platform === "bluesky") result = await apiGet("startBlueskyAuth");
@@ -25878,7 +26275,7 @@ function renderDiagnosticsPanel() {
         ${renderCopyableDeploymentValue("Meta Threads redirect URI", deploymentDiagnostics.providerDashboardUrls?.metaThreadsRedirectUri || deploymentDiagnostics.threadsRedirectUri)}
         <div class="p-3 rounded-xl bg-[#120c1d] border border-white/5">
           <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">App Domains Needed</div>
-          <div class="text-sm text-white wrap-safe">${escapeHtml((deploymentDiagnostics.appDomainsNeeded || ["script.google.com", "script.googleusercontent.com"]).join(", "))}</div>
+          <div class="text-sm text-white wrap-safe">${escapeHtml((deploymentDiagnostics.appDomainsNeeded || [window.location.hostname || "stellarsync.app"]).join(", "))}</div>
         </div>
         <div class="p-3 rounded-xl bg-[#120c1d] border border-white/5">
           <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Frontend / Backend Match</div>
