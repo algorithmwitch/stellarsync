@@ -2416,7 +2416,7 @@
                   <span class="flex items-center gap-3"><i class="ph-bold ph-download-simple text-white"></i> Install App</span>
                   <i class="ph-bold ph-caret-right text-gray-500"></i>
                 </button>
-                <button type="button" id="dropdown-install-plugin-btn" class="workspace-menu-btn" onclick="console.log('[plugin-install] dropdown clicked'); openPluginInstallModal(); console.log('[plugin-install] in-app modal opened');">
+                <button type="button" id="dropdown-install-plugin-btn" class="workspace-menu-btn">
                   <span class="flex items-center gap-3"><i class="ph-bold ph-puzzle-piece text-[#c77dff]"></i> Install Plugin</span>
                   <i class="ph-bold ph-caret-right text-gray-500"></i>
                 </button>
@@ -3959,7 +3959,7 @@
 </div>
 
 <!-- Monday Backfill Modal -->
-<div id="monday-backfill-modal" class="fixed inset-0 z-[102] flex items-center justify-center bg-black/70 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
+<div id="monday-backfill-modal" class="fixed inset-0 z-[160] flex items-center justify-center bg-black/70 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
   <div id="monday-backfill-card" class="modal-content w-full max-w-lg max-h-[90vh] bg-[#120c1d] border border-white/10 rounded-2xl shadow-2xl overflow-hidden scale-95 transition-transform duration-300 flex flex-col">
     <div class="p-6 border-b border-white/10 flex justify-between items-center bg-gradient-to-r from-[#1a1128] to-[#120c1d] shrink-0">
       <div class="flex items-center gap-3">
@@ -3971,6 +3971,7 @@
       <button id="close-monday-backfill-modal-btn" type="button" class="text-gray-500 hover:text-white p-2 rounded-xl hover:bg-white/5 transition-colors"><i class="ph-bold ph-x text-xl"></i></button>
     </div>
     <div id="monday-backfill-body" class="p-6 overflow-y-auto custom-scrollbar space-y-4">
+      <button id="back-monday-backfill-profile-btn" type="button" class="inline-flex items-center gap-2 text-[10px] uppercase tracking-wider font-bold text-gray-400 hover:text-white transition-colors"><i class="ph-bold ph-arrow-left"></i>Back to Profile &amp; Workspace</button>
       <p class="text-sm text-gray-300 leading-relaxed">This will create or update Monday items for every StellarSync post in this workspace. Existing Monday items with matching Post IDs will be updated, not duplicated.</p>
       <ul class="text-xs text-gray-400 space-y-2 list-disc list-inside">
         <li>New posts will be placed in the matching campaign group when possible.</li>
@@ -4577,7 +4578,7 @@
           </div>
           <div>
             <h3 class="text-white font-bold text-lg">Install StellarSync</h3>
-            <p class="text-xs text-gray-500 mt-1">Use the best install flow for this device.</p>
+            <p class="text-xs text-gray-500 mt-1">Install StellarSync as an app for faster access.</p>
           </div>
         </div>
         <button id="close-install-helper-modal-btn" type="button" class="w-10 h-10 rounded-xl bg-[#1a1128] hover:bg-[#231738] text-gray-400 hover:text-white border border-white/5 transition-colors flex items-center justify-center">
@@ -4604,11 +4605,14 @@
       </div>
 
       <div class="px-6 py-5 border-t border-white/5 flex justify-end gap-3">
-        <button id="close-install-helper-btn" type="button" class="px-4 py-2 bg-[#1a1128] hover:bg-[#231738] text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all border border-white/10">
-          Close
-        </button>
         <button id="install-helper-action-btn" type="button" class="px-4 py-2 bg-gradient-to-r from-[#9d4edd] to-[#c77dff] hover:opacity-90 text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all border border-white/10">
           Install App
+        </button>
+        <button id="install-helper-instructions-btn" type="button" class="px-4 py-2 bg-[#181125] hover:bg-[#231738] text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all border border-white/10">
+          View Instructions
+        </button>
+        <button id="close-install-helper-btn" type="button" class="px-4 py-2 bg-[#1a1128] hover:bg-[#231738] text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all border border-white/10">
+          Close
         </button>
       </div>
     </div>
@@ -8995,6 +8999,7 @@ const installHelperModalCard = document.getElementById("install-helper-modal-car
 const closeInstallHelperModalBtn = document.getElementById("close-install-helper-modal-btn");
 const closeInstallHelperBtn = document.getElementById("close-install-helper-btn");
 const installHelperActionBtn = document.getElementById("install-helper-action-btn");
+const installHelperInstructionsBtn = document.getElementById("install-helper-instructions-btn");
 const installHelperDesktopCopy = document.getElementById("install-helper-desktop-copy");
 const installHelperInstalledState = document.getElementById("install-helper-installed-state");
 const confirmActionModal = document.getElementById("confirm-action-modal");
@@ -9869,6 +9874,17 @@ function setupWorkspaceReturnButtons() {
 function setupWorkspaceUI() {
   document.getElementById("settings-open-btn")?.addEventListener("click", () => { console.log("[button] fired settings-open-btn"); openWorkspaceHub("settings"); });
   document.addEventListener("click", (event) => {
+    const installPluginBtn = event.target.closest("#dropdown-install-plugin-btn");
+    if (!installPluginBtn) return;
+    console.log("[plugin-install] dropdown clicked");
+    event.preventDefault();
+    event.stopPropagation();
+    console.log("[plugin-install] prevented default navigation");
+    toggleProfileMenu(false);
+    openPluginInstallModal();
+    console.log("[plugin-install] in-app modal opened");
+  });
+  document.addEventListener("click", (event) => {
     const opener = event.target.closest("[data-workspace-open-tab]");
     if (!opener) return;
     const nextTab = opener.dataset.workspaceOpenTab || "settings";
@@ -9895,8 +9911,12 @@ function setupWorkspaceUI() {
     if (action === "diagnostics") { console.log("[button] fired profile-menu-diagnostics"); return openWorkspaceHub("diagnostics"); }
     if (action === "install") {
       console.log("[button] fired profile-menu-install");
+      console.log("[install-app] dropdown clicked");
+      event.preventDefault();
+      event.stopPropagation();
       toggleProfileMenu(false);
       openInstallHelperModal();
+      return;
     }
     if (action === "support") {
       console.log("[button] fired profile-menu-support");
@@ -9971,6 +9991,7 @@ function setupWorkspaceUI() {
   });
   document.getElementById("close-monday-backfill-modal-btn")?.addEventListener("click", closeMondayBackfillModal);
   document.getElementById("cancel-monday-backfill-btn")?.addEventListener("click", closeMondayBackfillModal);
+  document.getElementById("back-monday-backfill-profile-btn")?.addEventListener("click", backToProfileWorkspaceFromMondayBackfill);
   document.getElementById("monday-backfill-modal")?.addEventListener("click", function(event) {
     if (event.target === document.getElementById("monday-backfill-modal")) closeMondayBackfillModal();
   });
@@ -15646,6 +15667,7 @@ function openMondayBackfillModal() {
   modal.classList.remove("opacity-0", "pointer-events-none");
   if (card) { card.classList.remove("scale-95"); card.classList.add("scale-100"); }
   console.log("[monday-backfill] in-app modal opened");
+  console.log("[monday-backfill] modal foreground");
 }
 
 function closeMondayBackfillModal() {
@@ -15653,6 +15675,13 @@ function closeMondayBackfillModal() {
   var card = document.getElementById("monday-backfill-card");
   if (modal) modal.classList.add("opacity-0", "pointer-events-none");
   if (card) { card.classList.remove("scale-100"); card.classList.add("scale-95"); }
+}
+
+function backToProfileWorkspaceFromMondayBackfill() {
+  console.log("[monday-backfill] back to profile workspace");
+  closeMondayBackfillModal();
+  openProfileWorkspaceModal();
+  switchPWTab("connections");
 }
 
 function renderMondayBackfillResult(result) {
@@ -23207,7 +23236,7 @@ function setupPWAInstall() {
   const handleInstallAction = async () => {
     if (installContext.isStandalone) return;
     if (!deferredInstallPrompt) {
-      console.log("[install] unavailable");
+      console.log("[install-app] prompt unavailable");
       if (installContext.isIos) {
         showToast("Install tip", "iOS Safari: Share → Add to Home Screen.", "ph-device-mobile", "text-[#38bdf8]");
       } else {
@@ -23216,7 +23245,7 @@ function setupPWAInstall() {
       openInstallHelperModal();
       return false;
     }
-    console.log("[install] prompt clicked");
+    console.log("[install-app] browser prompt started");
     deferredInstallPrompt.prompt();
     try {
       const choice = await deferredInstallPrompt.userChoice;
@@ -23244,6 +23273,14 @@ function setupPWAInstall() {
   installHelperActionBtn?.addEventListener("click", async () => {
     const installed = await handleInstallAction();
     if (installed) closeInstallHelperModal();
+  });
+  installHelperInstructionsBtn?.addEventListener("click", () => {
+    console.log("[install-app] prompt unavailable");
+    if (installHelperDesktopCopy) {
+      installHelperDesktopCopy.textContent = installContext.isIos
+        ? "Open StellarSync in Safari, tap Share, then choose Add to Home Screen."
+        : "If the browser install prompt is unavailable, use your browser menu to install this app or bookmark StellarSync.";
+    }
   });
   closeInstallHelperModalBtn?.addEventListener("click", closeInstallHelperModal);
   closeInstallHelperBtn?.addEventListener("click", closeInstallHelperModal);
@@ -23312,6 +23349,7 @@ function registerServiceWorkerSafe() {
 
 function openInstallHelperModal() {
   console.log("[modal] open install-helper");
+  console.log("[install-app] modal opened");
   if (!installHelperModal || !installHelperModalCard) return;
   installContext.isStandalone = detectStandaloneMode();
   if (installHelperInstalledState) {
@@ -24091,7 +24129,7 @@ async function disconnectSheetMirror() {
       sheet_last_pulled_at: null,
       updated_at: new Date().toISOString()
     };
-    await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").update(payload).eq("workspace_id", workspaceId);
+    await upsertWorkspaceSettings(workspaceId, { ...payload, workspace_id: workspaceId });
     WORKSPACE_RUNTIME_CONFIG.active = mergeWorkspaceSettings(WORKSPACE_RUNTIME_CONFIG.active || {}, payload);
     storeActiveWorkspaceConfig(WORKSPACE_RUNTIME_CONFIG.active);
     refreshConnectionCards();
@@ -24120,7 +24158,7 @@ async function disconnectMondayBoard() {
       monday_last_pulled_at: null,
       updated_at: new Date().toISOString()
     };
-    await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").update(payload).eq("workspace_id", workspaceId);
+    await upsertWorkspaceSettings(workspaceId, { ...payload, workspace_id: workspaceId });
     WORKSPACE_RUNTIME_CONFIG.active = mergeWorkspaceSettings(WORKSPACE_RUNTIME_CONFIG.active || {}, payload);
     storeActiveWorkspaceConfig(WORKSPACE_RUNTIME_CONFIG.active);
     refreshConnectionCards();
@@ -30064,6 +30102,8 @@ async function savePWProfile() {
 }
 
 var WORKSPACE_SETTINGS_COLUMNS_CACHE = null;
+var WORKSPACE_SETTINGS_OPTIONAL_FIELDS = ["brand_accent", "icon", "avatar_mode", "avatar_initials", "constellation_shape", "short_name", "media_prefix", "media_bucket", "brand_voice", "current_month", "current_year", "default_platforms", "default_pillars", "default_statuses", "default_post_types", "sheet_sync_enabled", "sheet_id", "google_sheet_id", "apps_script_url", "sheet_sync_direction", "sheet_last_pushed_at", "sheet_last_pulled_at", "monday_board_id", "monday_sync_enabled", "monday_sync_direction", "monday_last_pushed_at", "monday_last_pulled_at"];
+var WORKSPACE_SETTINGS_REQUIRE_CONFIRMED_FIELDS = ["current_month"];
 
 async function getWorkspaceSettingsColumns() {
   if (WORKSPACE_SETTINGS_COLUMNS_CACHE) return WORKSPACE_SETTINGS_COLUMNS_CACHE;
@@ -30079,25 +30119,46 @@ async function getWorkspaceSettingsColumns() {
 }
 
 function filterPayloadToExistingColumns(payload, columnNames) {
-  if (!columnNames || !Array.isArray(columnNames) || !columnNames.length) return payload;
+  if (!columnNames || !Array.isArray(columnNames) || !columnNames.length) {
+    var fallbackFiltered = { ...payload };
+    WORKSPACE_SETTINGS_REQUIRE_CONFIRMED_FIELDS.forEach(function(key) {
+      if (Object.prototype.hasOwnProperty.call(fallbackFiltered, key)) {
+        delete fallbackFiltered[key];
+        console.log("[workspace-save] removed missing column " + key);
+      }
+    });
+    return fallbackFiltered;
+  }
   var filtered = {};
-  var optionalBranding = ["brand_accent", "icon", "avatar_mode", "avatar_initials", "constellation_shape", "short_name", "media_prefix", "media_bucket", "brand_voice", "current_month", "current_year", "default_platforms", "default_pillars", "default_statuses", "default_post_types"];
   for (var key of Object.keys(payload)) {
     if (columnNames.indexOf(key) !== -1) {
       filtered[key] = payload[key];
-    } else if (optionalBranding.indexOf(key) !== -1) {
+    } else if (WORKSPACE_SETTINGS_OPTIONAL_FIELDS.indexOf(key) !== -1) {
       console.log("[workspace-save] removed missing column " + key);
     }
   }
   return filtered;
 }
 
+function getMissingWorkspaceSettingsColumn(error) {
+  var errMsg = String(error?.message || error || "");
+  var matches = [
+    errMsg.match(/Could not find the ['"]([^'"]+)['"] column of ['"]workspace_settings['"]/i),
+    errMsg.match(/column\s+['"]?([a-zA-Z0-9_]+)['"]?\s+does not exist/i),
+    errMsg.match(/['"]([a-zA-Z0-9_]+)['"]\s+column/i)
+  ];
+  for (var match of matches) {
+    if (match && match[1]) return match[1];
+  }
+  return "";
+}
+
 async function upsertWorkspaceSettings(workspaceId, payload) {
   if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase client not available");
   if (!workspaceId) throw new Error("Workspace ID required");
   var wsColumns = await getWorkspaceSettingsColumns();
-  if (wsColumns) payload = filterPayloadToExistingColumns(payload, wsColumns);
-  console.log("[workspace-save] raw payload", payload);
+  payload = filterPayloadToExistingColumns(payload, wsColumns);
+  console.log("[workspace-save] filtered payload", payload);
   var existing = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").select("id").eq("workspace_id", workspaceId).maybeSingle();
   if (existing.error) throw existing.error;
   var attempt = 0;
@@ -30113,15 +30174,12 @@ async function upsertWorkspaceSettings(workspaceId, payload) {
         result = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").insert(currentPayload);
       }
       if (result.error) {
-        var errMsg = String(result.error?.message || "");
-        if (errMsg.includes("column") && errMsg.includes("does not exist") && attempt < maxAttempts) {
-          var missingMatch = errMsg.match(/column\s+['"](\w+)['"]/i);
-          if (missingMatch) {
-            var missingCol = missingMatch[1];
-            console.log("[workspace-save] retry without missing column " + missingCol);
-            delete currentPayload[missingCol];
-            continue;
-          }
+        var missingCol = getMissingWorkspaceSettingsColumn(result.error);
+        if (missingCol && attempt < maxAttempts && Object.prototype.hasOwnProperty.call(currentPayload, missingCol)) {
+          console.log("[workspace-save] removed missing column " + missingCol);
+          delete currentPayload[missingCol];
+          console.log("[workspace-save] retry without missing column");
+          continue;
         }
         throw result.error;
       }
@@ -30199,7 +30257,11 @@ async function savePWWorkspace() {
       }
       var wsColumns = await getWorkspaceSettingsColumns();
       var reloadFields = ["workspace_id","workspace_slug","display_name","short_name","avatar_mode","icon","avatar_initials","constellation_shape","brand_accent","media_bucket","media_prefix","brand_voice","current_month","current_year"];
-      if (wsColumns) reloadFields = reloadFields.filter(function(f) { return wsColumns.indexOf(f) !== -1; });
+      if (wsColumns) {
+        reloadFields = reloadFields.filter(function(f) { return wsColumns.indexOf(f) !== -1; });
+      } else {
+        reloadFields = reloadFields.filter(function(f) { return WORKSPACE_SETTINGS_REQUIRE_CONFIRMED_FIELDS.indexOf(f) === -1; });
+      }
       var reloadedWorkspace = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").select(reloadFields.join(",")).eq("workspace_id", workspaceId).maybeSingle();
       console.log("[icon-save] reload check", reloadedWorkspace?.data || null);
       if (reloadedWorkspace?.error) throw reloadedWorkspace.error;
