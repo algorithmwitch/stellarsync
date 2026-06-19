@@ -2455,10 +2455,6 @@
                 <i class="ph-fill ph-images text-2xl" vid="41"></i>
                 <span class="absolute left-16 bg-[#181125] border border-white/5 text-white text-[10px] px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-xl" vid="42">Media</span>
             </button>
-            <button id="nav-social" data-view-target="social" onclick="switchView('social')" class="w-12 h-12 rounded-xl text-gray-500 hover:text-white hover:bg-[#1a1128] flex items-center justify-center relative group nav-btn transition-colors">
-                <i class="ph-fill ph-share-network text-2xl"></i>
-                <span class="absolute left-16 bg-[#181125] border border-white/5 text-white text-[10px] px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-xl">Social Queue</span>
-            </button>
             <button id="nav-performance" data-view-target="performance" onclick="switchView('performance')" class="w-12 h-12 rounded-xl text-gray-500 hover:text-white hover:bg-[#1a1128] flex items-center justify-center relative group nav-btn transition-colors">
                 <i class="ph-fill ph-chart-line-up text-2xl"></i>
                 <span class="absolute left-16 bg-[#181125] border border-white/5 text-white text-[10px] px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-xl">Performance</span>
@@ -2603,6 +2599,10 @@
     <div>
       <h2 class="text-4xl font-bold text-white tracking-tight">Content Ledger</h2>
       <p class="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mt-2">Detailed View with Captions</p>
+      <div class="mt-4 inline-flex rounded-xl bg-[#0a0612] border border-white/5 p-1">
+        <button id="ledger-tab-content" type="button" class="ledger-subview-tab px-4 py-2 rounded-lg text-[10px] uppercase tracking-wider font-bold bg-[#231738] text-white" onclick="setLedgerSubView('content')">Content Ledger</button>
+        <button id="ledger-tab-social-queue" type="button" class="ledger-subview-tab px-4 py-2 rounded-lg text-[10px] uppercase tracking-wider font-bold text-gray-400 hover:text-white" onclick="setLedgerSubView('social_queue')">Social Queue</button>
+      </div>
     </div>
 
     <div class="flex gap-2 items-center overflow-visible">
@@ -2776,8 +2776,51 @@
     </div>
   </div>
 
-  <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-8">
+  <div id="ledger-content-panel" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-8">
     <div id="ledger-list" class="space-y-4"></div>
+  </div>
+  <div id="ledger-social-queue-panel" class="hidden flex-1 min-h-0 overflow-y-auto custom-scrollbar p-8">
+    <div class="flex items-center justify-between mb-6 flex-wrap gap-4">
+      <div>
+        <h3 class="text-2xl font-bold text-white tracking-tight"><i class="ph-fill ph-share-network text-[#c77dff] mr-2"></i>Social Queue</h3>
+        <p class="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mt-2">scheduled_social_posts</p>
+      </div>
+      <div class="flex items-center gap-3 flex-wrap">
+        <select id="social-queue-filter-status" class="px-3 py-2 rounded-xl bg-[#0a0612] border border-white/10 text-xs text-white" onchange="loadSocialQueue()">
+          <option value="">All statuses</option>
+          <option value="draft_queue">Draft</option>
+          <option value="queued">Queued</option>
+          <option value="ready">Ready</option>
+          <option value="needs_connection">Needs Connection</option>
+          <option value="invalid_media">Invalid Media</option>
+          <option value="validation_failed">Validation Failed</option>
+          <option value="publishing">Publishing</option>
+          <option value="published">Published</option>
+          <option value="failed">Failed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+        <select id="social-queue-filter-platform" class="px-3 py-2 rounded-xl bg-[#0a0612] border border-white/10 text-xs text-white" onchange="loadSocialQueue()">
+          <option value="">All platforms</option>
+          <option value="linkedin">LinkedIn</option>
+          <option value="facebook">Facebook</option>
+          <option value="instagram">Instagram</option>
+          <option value="threads">Threads</option>
+          <option value="bluesky">Bluesky</option>
+          <option value="tiktok">TikTok</option>
+        </select>
+        <button type="button" onclick="loadSocialQueue()" class="px-4 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300 hover:text-white transition-colors flex items-center gap-2"><i class="ph-bold ph-arrow-clockwise"></i> Refresh</button>
+        <button type="button" onclick="publishDueSocialQueue()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs font-bold hover:opacity-90 transition-colors flex items-center gap-2"><i class="ph-bold ph-rocket-launch"></i> Publish Due Now</button>
+      </div>
+    </div>
+    <div id="social-compatibility-matrix" class="mb-6"></div>
+    <div id="social-queue-grid" class="space-y-2">
+      <div class="text-center py-16 text-gray-500"><i class="ph-bold ph-clock text-4xl block mb-3"></i><p>Loading queue...</p></div>
+    </div>
+    <div id="social-queue-pagination" class="flex items-center justify-center gap-3 mt-4 hidden">
+      <button type="button" onclick="loadSocialQueue(-1)" class="px-4 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300"><i class="ph-bold ph-caret-left"></i> Previous</button>
+      <span id="social-queue-page-info" class="text-xs text-gray-500">Page 1</span>
+      <button type="button" onclick="loadSocialQueue(1)" class="px-4 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300">Next <i class="ph-bold ph-caret-right"></i></button>
+    </div>
   </div>
 </section>
             
@@ -3181,50 +3224,6 @@
 
   <div id="media-grid-scroll" class="media-grid-scroll">
     <div id="media-grid" class="media-grid"></div>
-  </div>
-</section>
-
-<section id="view-social" class="view-section hidden w-full h-full p-8 min-h-0 flex-col overflow-y-auto custom-scrollbar bg-[#120c1d] border border-white/5 rounded-2xl">
-  <div class="flex items-center justify-between mb-6 flex-wrap gap-4">
-    <div>
-      <h2 class="text-4xl font-bold text-white tracking-tight"><i class="ph-fill ph-share-network text-[#c77dff] mr-3"></i>Social Queue</h2>
-      <p class="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mt-2 flex items-center gap-1.5">
-        Scheduled, queued, and published social posts
-      </p>
-    </div>
-    <div class="flex items-center gap-3 flex-wrap">
-      <select id="social-queue-filter-status" class="px-3 py-2 rounded-xl bg-[#0a0612] border border-white/10 text-xs text-white" onchange="loadSocialQueue()">
-        <option value="">All statuses</option>
-        <option value="draft_queue">Draft</option>
-        <option value="queued">Queued</option>
-        <option value="ready">Ready</option>
-        <option value="needs_connection">Needs Connection</option>
-        <option value="invalid_media">Invalid Media</option>
-        <option value="publishing">Publishing</option>
-        <option value="published">Published</option>
-        <option value="failed">Failed</option>
-        <option value="cancelled">Cancelled</option>
-      </select>
-      <select id="social-queue-filter-platform" class="px-3 py-2 rounded-xl bg-[#0a0612] border border-white/10 text-xs text-white" onchange="loadSocialQueue()">
-        <option value="">All platforms</option>
-        <option value="linkedin">LinkedIn</option>
-        <option value="facebook">Facebook</option>
-        <option value="instagram">Instagram</option>
-        <option value="threads">Threads</option>
-        <option value="bluesky">Bluesky</option>
-        <option value="tiktok">TikTok</option>
-      </select>
-      <button type="button" onclick="loadSocialQueue()" class="px-4 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300 hover:text-white transition-colors flex items-center gap-2"><i class="ph-bold ph-arrow-clockwise"></i> Refresh</button>
-      <button type="button" onclick="publishDueSocialQueue()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs font-bold hover:opacity-90 transition-colors flex items-center gap-2"><i class="ph-bold ph-rocket-launch"></i> Publish Due Now</button>
-    </div>
-  </div>
-  <div id="social-queue-grid" class="space-y-2">
-    <div class="text-center py-16 text-gray-500"><i class="ph-bold ph-clock text-4xl block mb-3"></i><p>Loading queue...</p></div>
-  </div>
-  <div id="social-queue-pagination" class="flex items-center justify-center gap-3 mt-4 hidden">
-    <button type="button" onclick="loadSocialQueue(0)" class="px-4 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300"><i class="ph-bold ph-caret-left"></i> Previous</button>
-    <span id="social-queue-page-info" class="text-xs text-gray-500">Page 1</span>
-    <button type="button" onclick="loadSocialQueue(1)" class="px-4 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300">Next <i class="ph-bold ph-caret-right"></i></button>
   </div>
 </section>
 
@@ -4885,10 +4884,6 @@
   <button type="button" data-view-target="media" onclick="switchView('media')" class="nav-btn">
     <i class="ph-fill ph-images"></i>
     <span>Media</span>
-  </button>
-  <button type="button" data-view-target="social" onclick="switchView('social')" class="nav-btn">
-    <i class="ph-fill ph-share-network"></i>
-    <span>Social</span>
   </button>
   <button type="button" data-view-target="inspo" onclick="switchView('inspo')" class="nav-btn">
     <i class="ph-fill ph-lightbulb"></i>
@@ -7969,9 +7964,13 @@ function renderSocialValidationBadges() {
   if (Array.isArray(window.__currentModalPostData?.mediaAssetIds)) mediaAssetIds = window.__currentModalPostData.mediaAssetIds;
   if (Array.isArray(window.__currentModalPostData?.media_asset_ids)) mediaAssetIds = window.__currentModalPostData.media_asset_ids;
   if (Array.isArray(window.__currentModalPostData?.carouselAssetIds)) mediaAssetIds = window.__currentModalPostData.carouselAssetIds;
+  if (!mediaAssetIds.length && Array.isArray(window.__currentModalPostData?.media_ids)) mediaAssetIds = window.__currentModalPostData.media_ids;
   var postType = window.__currentModalPostData?.postType || window.__currentModalPostData?.post_type || "text";
+  var attachedMedia = currentModalCarouselAssets && currentModalCarouselAssets.length
+    ? currentModalCarouselAssets
+    : getAttachedMediaForPost(window.__currentModalPostData || {});
   var badges = platforms.map(function(p) {
-    var validation = validatePlatformLocally(p, caption, postType, mediaUrls.length);
+    var validation = validatePlatformLocally(p, caption, postType, attachedMedia, mediaUrls, mediaAssetIds);
     var connected = !!(getConnectedAccount && getConnectedAccount(p)?.connected);
     var statusClass = "bg-[#181125] border border-white/5 text-gray-400";
     var icon = '<i class="ph-bold ph-clock"></i>';
@@ -7994,22 +7993,51 @@ function renderSocialValidationBadges() {
   statusEl.innerHTML = badges || '<span class="text-gray-500">No platforms selected.</span>';
 }
 
-function validatePlatformLocally(platform, caption, postType, mediaCount) {
+function classifyPostMediaForSocial(caption, postType, mediaItems, mediaUrls) {
+  var assets = Array.isArray(mediaItems) ? mediaItems.slice() : [];
+  (mediaUrls || []).forEach(function(url) { assets.push({ media_url: url }); });
+  var kinds = assets.map(inferMediaKindFromAsset).filter(Boolean);
+  var imageCount = kinds.filter(function(kind) { return kind === "image"; }).length;
+  var videoCount = kinds.filter(function(kind) { return kind === "video"; }).length;
+  var documentCount = kinds.filter(function(kind) { return kind === "document"; }).length;
+  var mediaCount = kinds.length;
+  var classification = "empty";
+  if (!mediaCount) classification = String(caption || "").trim() ? "text" : "empty";
+  else if (documentCount && (imageCount || videoCount)) classification = "mixed";
+  else if (imageCount && videoCount) classification = mediaCount > 1 ? "carousel" : "mixed";
+  else if (documentCount) classification = mediaCount > 1 ? "mixed" : "document";
+  else if (videoCount) classification = mediaCount > 1 ? "carousel" : "video";
+  else if (imageCount > 1) classification = "carousel";
+  else if (imageCount === 1) classification = "image";
+  if (postType === "document" && !mediaCount) classification = "document";
+  if (postType === "video" && !mediaCount) classification = "video";
+  return { classification, imageCount, videoCount, documentCount, mediaCount };
+}
+
+function validatePlatformLocally(platform, caption, postType, mediaItems, mediaUrls, mediaAssetIds) {
   var errors = [];
   var warnings = [];
   var p = String(platform).toLowerCase();
-  if (p === "bluesky" && !caption.trim()) errors.push("Bluesky requires text content");
-  if (p === "instagram" && mediaCount === 0) errors.push("Instagram requires media");
-  if (p === "instagram" && postType === "document") errors.push("Instagram does not support documents");
-  if (p === "tiktok" && postType !== "video") errors.push("TikTok requires video");
-  if (p === "linkedin" && mediaCount > 9) errors.push("LinkedIn supports at most 9 media items");
-  if (p === "facebook" && mediaCount > 10) errors.push("Facebook supports at most 10 media items");
-  if (p === "bluesky" && mediaCount > 4) errors.push("Bluesky supports at most 4 images");
-  if (p === "bluesky" && postType === "video") errors.push("Bluesky does not support video");
-  if (p === "instagram" && postType === "carousel" && (mediaCount < 2 || mediaCount > 10)) errors.push("Instagram carousel needs 2-10 items");
-  if (p === "tiktok" && postType !== "video" && !errors.length) errors.push("TikTok publishing requires a video asset");
-  if (!caption.trim() && mediaCount === 0) warnings.push("No text or media");
-  return { platform, errors, warnings };
+  var media = classifyPostMediaForSocial(caption, postType, mediaItems, mediaUrls);
+  var captionLength = String(caption || "").length;
+  var allUrls = (mediaUrls || []).concat((mediaItems || []).map(getMediaPreviewUrl).filter(Boolean));
+  var publicVideoUrl = allUrls.some(function(url) { return /^https:\/\//i.test(url) && /\.(mp4|mov|m4v|webm)(?:[?#].*)?$/i.test(url); });
+  if (media.documentCount && p !== "linkedin") errors.push(toTitleCase(p) + " does not support PDF/document posts");
+  if (p === "instagram" && media.mediaCount === 0) errors.push("Instagram requires media");
+  if (p === "instagram" && media.classification === "carousel" && (media.mediaCount < 2 || media.mediaCount > 10)) errors.push("Instagram carousel needs 2-10 assets");
+  if (p === "instagram" && media.classification === "mixed") errors.push("Instagram cannot publish mixed media");
+  if (p === "bluesky" && captionLength > 300) errors.push("Bluesky is " + (captionLength - 300) + " characters over limit");
+  if (p === "bluesky" && media.imageCount > 4) errors.push("Bluesky supports up to 4 images");
+  if (p === "bluesky" && media.videoCount > 0) errors.push("Bluesky video publishing is not verified");
+  if (p === "bluesky" && !caption.trim() && !media.imageCount) errors.push("Bluesky requires text content");
+  if (p === "tiktok" && media.videoCount === 0) errors.push("TikTok requires video");
+  if (p === "tiktok" && media.videoCount > 0 && !publicVideoUrl) errors.push("TikTok requires a public compatible video URL");
+  if (p === "tiktok" && (media.imageCount || media.documentCount)) errors.push("TikTok queue item must be video-only");
+  if (p === "linkedin" && captionLength > 2800) warnings.push("LinkedIn caption is long");
+  if (p === "threads" && media.videoCount > 0) warnings.push("Threads video needs adapter verification");
+  if (p === "threads" && captionLength > 500) warnings.push("Threads text is long");
+  if (!caption.trim() && media.mediaCount === 0 && (p === "facebook" || p === "threads")) warnings.push("No text or media");
+  return { platform, errors, warnings, media };
 }
 
 function renderCampaignOptions(campaigns = getAvailableCampaignRecords(), currentValue = "") {
@@ -8368,8 +8396,8 @@ let mobileFilterState = {
   notes: { platform: "all", pillar: "all", query: "" }
 };
 let activeConnectionSetupPlatform = "";
-const SUPPORTED_POST_PLATFORMS = ["linkedin", "instagram", "threads", "bluesky", "tiktok", "youtube", "facebook"];
-const CONNECTED_ACCOUNT_PLATFORMS = ["linkedin", "instagram", "threads", "bluesky", "tiktok", "youtube", "facebook"];
+const SUPPORTED_POST_PLATFORMS = ["linkedin", "facebook", "instagram", "threads", "bluesky", "tiktok"];
+const CONNECTED_ACCOUNT_PLATFORMS = ["linkedin", "facebook", "instagram", "threads", "bluesky", "tiktok"];
 const WORKSPACE_CONNECTION_PROVIDERS = ["google_sheets", "google_drive", "monday"]; // stripe removed — belongs in Billing tab, not Connections
 function normalizeWorkspacePlan(value) {
   const normalized = String(value || "").trim().toLowerCase();
@@ -14946,18 +14974,18 @@ function getConnectedAccountsMarkup(options = {}) {
       missingSetupKeys: []
     };
     const historicalAccess = platform === "linkedin" ? (connectedAccountsHistoricalAccess.linkedin || null) : null;
-    const statusLabel = account.connectionStatusLabel || toTitleCase(account.accessStatus || "not connected");
+    const requiredKeys = filterLegacyRedirectKeys(Array.isArray(account.requiredSetupKeys) ? account.requiredSetupKeys : []);
+    const missingKeys = filterLegacyRedirectKeys(Array.isArray(account.missingSetupKeys) ? account.missingSetupKeys : []);
+    const setupBlocked = missingKeys.length > 0;
+    const statusLabel = setupBlocked ? "Setup Required" : account.connected ? "Connected" : "Not Connected";
     const lastSync = account.lastSyncAt || account.tokenExpiresAt || "Never";
     const lastError = account.lastError || "None";
     const accountLabel = account.accountLabel || account.displayName || account.username || "No account label yet";
     const permissions = Array.isArray(account.requiredScopes) && account.requiredScopes.length
       ? account.requiredScopes.join(", ")
       : "Not declared";
-    const requiredKeys = filterLegacyRedirectKeys(Array.isArray(account.requiredSetupKeys) ? account.requiredSetupKeys : []);
-    const missingKeys = filterLegacyRedirectKeys(Array.isArray(account.missingSetupKeys) ? account.missingSetupKeys : []);
     const setupInfo = getSocialPlatformSetupInfo(platform);
     const setupKeys = mergeSocialSetupKeys(platform, requiredKeys, missingKeys);
-    const setupBlocked = missingKeys.length > 0;
     const tokenStatus = account.tokenStatus || (account.accessStatus === "expired" ? "Expired" : account.accessStatus === "connected" ? "Active" : "Missing");
     const publishSupport = setupBlocked ? "Requires setup" : account.publishSupportLabel || (account.publishSupported ? "Live" : "Requires connection");
     const connectLoading = isConnectedAccountActionLoading(platform, "connect");
@@ -15005,7 +15033,7 @@ function getConnectedAccountsMarkup(options = {}) {
           <div class="mt-3 rounded-xl border border-white/5 bg-[#0f0a18] p-3 text-xs text-gray-300 space-y-1">
             ${setupInfo.bullets.map((item) => `<div class="wrap-safe">${escapeHtml(item)}</div>`).join("")}
           </div>
-          <button type="button" onclick="copySocialSetupChecklist('${escapeHtml(platform)}')" class="mt-3 px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors"><i class="ph-bold ph-copy mr-1"></i> Copy Supabase Secrets Checklist</button>
+          <button type="button" onclick="copySocialSetupChecklist('${escapeHtml(platform)}')" class="mt-3 px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors"><i class="ph-bold ph-copy mr-1"></i> Copy Setup Checklist</button>
         </div>
         ${platform === "linkedin" ? `
         <div class="mt-4">
@@ -15028,8 +15056,8 @@ function getConnectedAccountsMarkup(options = {}) {
         ` : ""}
         <div class="mt-4 flex flex-wrap gap-2">
           ${platform === "linkedin" ? (account.connected && !setupBlocked ? `<button type="button" onclick="openLinkedInCaptureImporter()" data-platform="linkedin" data-action="import-all-posts" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Import All Posts</button>` : `<button type="button" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-500 cursor-not-allowed opacity-60" aria-disabled="true">Requires connection</button>`) : ""}
-          <button type="button" onclick="${setupBlocked ? `handleDisabledSocialConnect('${escapeHtml(platform)}')` : `connectSocialAccount('${escapeHtml(platform)}')`}" data-platform="${escapeHtml(platform)}" data-action="connect" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors ${anyLoading || setupBlocked ? "opacity-60 cursor-not-allowed" : ""}" ${connectLoading ? "disabled" : ""} ${setupBlocked ? "aria-disabled=\"true\"" : ""}>${setupBlocked ? "Setup Required" : connectLoading ? "Loading..." : "Connect"}</button>
-          <button type="button" onclick="${setupBlocked ? `handleDisabledSocialConnect('${escapeHtml(platform)}')` : `reconnectSocialAccount('${escapeHtml(platform)}')`}" data-platform="${escapeHtml(platform)}" data-action="reconnect" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors ${anyLoading || setupBlocked ? "opacity-60 cursor-not-allowed" : ""}" ${connectLoading ? "disabled" : ""} ${setupBlocked ? "aria-disabled=\"true\"" : ""}>${setupBlocked ? "Setup Required" : "Reconnect"}</button>
+          <button type="button" onclick="${setupBlocked ? `handleDisabledSocialConnect('${escapeHtml(platform)}')` : `connectSocialAccount('${escapeHtml(platform)}')`}" data-platform="${escapeHtml(platform)}" data-action="connect" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors ${anyLoading || setupBlocked ? "opacity-60 cursor-not-allowed" : ""}" ${connectLoading || setupBlocked ? "disabled" : ""} ${setupBlocked ? "aria-disabled=\"true\"" : ""}>${setupBlocked ? "Setup Required" : connectLoading ? "Loading..." : "Connect"}</button>
+          <button type="button" onclick="${setupBlocked ? `handleDisabledSocialConnect('${escapeHtml(platform)}')` : `reconnectSocialAccount('${escapeHtml(platform)}')`}" data-platform="${escapeHtml(platform)}" data-action="reconnect" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors ${anyLoading || setupBlocked ? "opacity-60 cursor-not-allowed" : ""}" ${connectLoading || setupBlocked ? "disabled" : ""} ${setupBlocked ? "aria-disabled=\"true\"" : ""}>${setupBlocked ? "Setup Required" : "Reconnect"}</button>
           <button type="button" onclick="disconnectConnectedAccount('${escapeHtml(platform)}')" data-platform="${escapeHtml(platform)}" data-action="disconnect" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 transition-colors ${anyLoading ? "opacity-60" : ""}" ${disconnectLoading ? "disabled" : ""}>${disconnectLoading ? "Working..." : "Disconnect"}</button>
           <button type="button" onclick="testConnectedAccountStatus('${escapeHtml(platform)}')" data-platform="${escapeHtml(platform)}" data-action="test-status" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors ${anyLoading ? "opacity-60" : ""}" ${testLoading ? "disabled" : ""}>${testLoading ? "Testing..." : "Test Status"}</button>
         </div>
@@ -21126,6 +21154,10 @@ function logActiveViewDisplay(viewName, viewEl) {
 
 function switchView(viewName) {
   console.log(`[boot] switchView ${viewName || "calendar"} start`);
+  if (String(viewName || "").trim() === "social") {
+    if (typeof setLedgerSubView === "function") setLedgerSubView("social_queue", { deferLoad: true });
+    viewName = "ledger";
+  }
   const registeredViews = getRegisteredViewNames();
   const requestedView = String(viewName || "calendar").trim();
   const routeFound = registeredViews.includes(requestedView);
@@ -21201,17 +21233,12 @@ function switchView(viewName) {
       if (targetName === "ledger") {
         safeRender(renderLedgerFilterMenus, "switchView/ledgerFilter");
         safeRender(updateLedgerFilterLabels, "switchView/ledgerLabels");
-        safeRender(renderLedger, "switchView/ledger");
+        safeRender(function() { setLedgerSubView(activeLedgerSubView || "content"); }, "switchView/ledgerSubView");
         return;
       }
 
       if (targetName === "media") {
         safeRender(renderMedia, "switchView/media");
-        return;
-      }
-
-      if (targetName === "social") {
-        loadSocialQueue();
         return;
       }
 
@@ -25377,6 +25404,20 @@ async function scheduleSocialPostsForTargets(post) {
   if (Array.isArray(post.media_asset_ids)) mediaAssetIds = post.media_asset_ids;
   if (Array.isArray(post.carouselAssetIds)) mediaAssetIds = post.carouselAssetIds;
   if (Array.isArray(post.media_ids)) mediaAssetIds = post.media_ids;
+  var attachedMedia = getAttachedMediaForPost(post || {});
+  if (!attachedMedia.length && mediaAssetIds.length) {
+    attachedMedia = mediaAssetIds.map(function(id) { return findMediaAssetByAnyKey(id, appState.media || []) || { id: id, media_asset_id: id }; });
+  }
+  var localValidationFailures = targets.map(function(platform) {
+    return validatePlatformLocally(platform, captionText, post.postType || post.post_type || "text", attachedMedia, mediaUrls, mediaAssetIds);
+  }).filter(function(result) { return result.errors && result.errors.length; });
+  if (localValidationFailures.length) {
+    var message = localValidationFailures.map(function(result) {
+      return toTitleCase(result.platform) + ": " + result.errors[0];
+    }).join(" | ");
+    updateToast(loadingToastId, "error", "Social validation failed", message);
+    throw new Error(message);
+  }
   try {
     const result = await callSupabaseEdgeFunction("social-schedule", {
       action: "create_or_update_queue",
@@ -25401,8 +25442,72 @@ async function scheduleSocialPostsForTargets(post) {
 
 // ── Social Queue ──────────────────────────────────────────────────────────
 
+var activeLedgerSubView = "content";
 var socialQueuePageOffset = 0;
 var socialQueuePageLimit = 50;
+
+function setLedgerSubView(subView, options = {}) {
+  activeLedgerSubView = subView === "social_queue" ? "social_queue" : "content";
+  var contentPanel = document.getElementById("ledger-content-panel");
+  var socialPanel = document.getElementById("ledger-social-queue-panel");
+  var contentTab = document.getElementById("ledger-tab-content");
+  var socialTab = document.getElementById("ledger-tab-social-queue");
+  if (contentPanel) contentPanel.classList.toggle("hidden", activeLedgerSubView !== "content");
+  if (socialPanel) socialPanel.classList.toggle("hidden", activeLedgerSubView !== "social_queue");
+  [contentTab, socialTab].forEach(function(tab) {
+    if (!tab) return;
+    tab.classList.remove("bg-[#231738]", "text-white");
+    tab.classList.add("text-gray-400");
+  });
+  var activeTab = activeLedgerSubView === "social_queue" ? socialTab : contentTab;
+  if (activeTab) {
+    activeTab.classList.add("bg-[#231738]", "text-white");
+    activeTab.classList.remove("text-gray-400");
+  }
+  if (activeLedgerSubView === "social_queue") {
+    renderSocialCompatibilityMatrix();
+    if (!options.deferLoad) loadSocialQueue();
+  } else {
+    renderLedger();
+  }
+}
+
+function renderSocialCompatibilityMatrix() {
+  var target = document.getElementById("social-compatibility-matrix");
+  if (!target) return;
+  var columns = ["linkedin", "facebook", "instagram", "threads", "bluesky", "tiktok"];
+  var rows = [
+    ["Text", ["Supported", "Supported", "Not Supported", "Supported", "Supported", "Not Supported"]],
+    ["Image", ["Supported", "Supported", "Supported", "Supported", "Supported", "Not Supported"]],
+    ["Carousel", ["Limited / Needs Testing", "Limited / Needs Testing", "Supported", "Limited / Needs Testing", "Limited / Needs Testing", "Not Supported"]],
+    ["Video", ["Supported", "Supported", "Supported", "Limited / Needs Testing", "Limited / Needs Testing", "Supported"]],
+    ["PDF/Document", ["Supported", "Not Supported", "Not Supported", "Not Supported", "Not Supported", "Not Supported"]],
+    ["Mixed Media", ["Limited / Needs Testing", "Limited / Needs Testing", "Not Supported", "Limited / Needs Testing", "Not Supported", "Not Supported"]]
+  ];
+  function tone(value) {
+    if (value === "Supported") return "text-emerald-300";
+    if (value === "Not Supported") return "text-red-300";
+    return "text-yellow-300";
+  }
+  target.innerHTML = `
+    <div class="rounded-xl bg-[#0f0a18] border border-white/5 overflow-x-auto">
+      <table class="w-full min-w-[760px] text-xs">
+        <thead>
+          <tr class="border-b border-white/5">
+            <th class="text-left p-3 text-gray-500 uppercase tracking-widest">Media</th>
+            ${columns.map((col) => `<th class="text-left p-3 text-gray-500 uppercase tracking-widest">${escapeHtml(toTitleCase(col))}</th>`).join("")}
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map((row) => `<tr class="border-b border-white/5 last:border-0">
+            <td class="p-3 font-bold text-white">${escapeHtml(row[0])}</td>
+            ${row[1].map((value) => `<td class="p-3 font-semibold ${tone(value)}">${escapeHtml(value)}</td>`).join("")}
+          </tr>`).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
 
 async function loadSocialQueue(direction) {
   if (typeof direction === "number") {
@@ -25441,6 +25546,9 @@ async function loadSocialQueue(direction) {
       if ((item.caption || "").length > 80) caption += "...";
       var errors = item.validation_errors && item.validation_errors.errors ? item.validation_errors.errors.join(", ") : "";
       var warnings = item.validation_errors && item.validation_errors.warnings ? item.validation_errors.warnings.join(", ") : "";
+      var validation = item.validation_errors && item.validation_errors.validation ? item.validation_errors.validation : null;
+      var validationBadge = validation ? getSocialValidationBadge(validation) : "";
+      var campaignLabel = item.post_id || item.source_id || "";
       return '<div class="p-4 rounded-xl bg-[#181125] border border-white/5 flex items-center justify-between gap-4 flex-wrap">' +
         '<div class="flex items-center gap-3 min-w-0 flex-1">' +
           '<div class="w-10 h-10 rounded-xl bg-[#231738] flex items-center justify-center text-[#c77dff] shrink-0">' + platformIcon + '</div>' +
@@ -25448,8 +25556,10 @@ async function loadSocialQueue(direction) {
             '<div class="flex items-center gap-2 flex-wrap">' +
               '<span class="text-sm font-bold text-white">' + escapeHtml(platformLabel) + '</span>' +
               statusBadge +
+              validationBadge +
             '</div>' +
             '<div class="text-xs text-gray-400 mt-1 truncate">' + escapeHtml(caption || "(no caption)") + '</div>' +
+            (campaignLabel ? '<div class="text-[10px] text-gray-500 mt-1">Post/Campaign: ' + escapeHtml(campaignLabel) + '</div>' : "") +
             (errors ? '<div class="text-[10px] text-red-400 mt-1">' + escapeHtml(errors) + '</div>' : "") +
             (warnings ? '<div class="text-[10px] text-yellow-400 mt-1">' + escapeHtml(warnings) + '</div>' : "") +
           '</div>' +
@@ -25459,6 +25569,7 @@ async function loadSocialQueue(direction) {
           (item.status === "queued" || item.status === "ready" || item.status === "needs_connection" || item.status === "invalid_media" || item.status === "draft_queue"
             ? '<button type="button" onclick="cancelSocialQueueItem(\'' + item.id + '\')" class="px-3 py-1.5 rounded-lg bg-[#30121b] border border-red-400/20 text-[10px] font-bold text-red-200 hover:opacity-80"><i class="ph-bold ph-x"></i> Cancel</button>'
             : "") +
+          '<button type="button" onclick="revalidateSocialQueueItem(\'' + item.id + '\')" class="px-3 py-1.5 rounded-lg bg-[#181125] border border-white/5 text-[10px] font-bold text-gray-300 hover:text-white"><i class="ph-bold ph-check-circle"></i> Revalidate</button>' +
           (item.status === "queued" || item.status === "ready"
             ? '<button type="button" onclick="publishOneSocialQueue(\'' + item.id + '\')" class="px-3 py-1.5 rounded-lg bg-[#181125] border border-white/5 text-[10px] font-bold text-gray-300 hover:text-white"><i class="ph-bold ph-rocket-launch"></i> Publish</button>'
             : "") +
@@ -25474,6 +25585,17 @@ async function loadSocialQueue(direction) {
   } catch (err) {
     grid.innerHTML = '<div class="text-center py-16 text-gray-500"><i class="ph-bold ph-warning text-4xl block mb-3"></i><p>Failed to load queue: ' + escapeHtml(err.message || "") + '</p><button onclick="loadSocialQueue()" class="mt-4 px-4 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300">Retry</button></div>';
   }
+}
+
+function getSocialValidationBadge(validation) {
+  var severity = String(validation.severity || "").toLowerCase();
+  var cls = severity === "error"
+    ? "bg-[#2e1a1a] text-red-300 border border-red-400/20"
+    : severity === "warning"
+    ? "bg-[#2e2a1a] text-yellow-300 border border-yellow-400/20"
+    : "bg-[#1a2e1a] text-emerald-300 border border-emerald-400/20";
+  var label = severity === "error" ? "Validation Error" : severity === "warning" ? "Validation Warning" : "Validated";
+  return '<span title="' + escapeHtml(validation.message || "") + '" class="px-2 py-0.5 rounded text-[9px] uppercase tracking-wider font-bold ' + cls + '">' + label + '</span>';
 }
 
 function getSocialPlatformIcon(platform) {
@@ -25532,6 +25654,22 @@ async function publishDueSocialQueue() {
     loadSocialQueue();
   } catch (err) {
     showToast("Publish failed", err.message || "Could not publish due items", "ph-warning", "text-yellow-400");
+  }
+}
+
+async function revalidateSocialQueueItem(id) {
+  try {
+    var meta = getWorkspaceRequestMetadata();
+    var result = await callSupabaseEdgeFunction("social-schedule", {
+      action: "revalidate_queue_item",
+      workspace_id: meta.workspace_id,
+      id: id,
+    });
+    var validation = result.result && result.result.validation || {};
+    showToast("Revalidated", validation.message || "Queue item validation refreshed.", validation.valid === false ? "ph-warning" : "ph-check", validation.valid === false ? "text-yellow-400" : "text-emerald-400");
+    loadSocialQueue();
+  } catch (err) {
+    showToast("Revalidate failed", err.message || "Could not revalidate", "ph-warning", "text-yellow-400");
   }
 }
 
@@ -28892,6 +29030,8 @@ window.reconnectSocialAccount = reconnectSocialAccount;
 window.disconnectConnectedAccount = disconnectConnectedAccount;
 window.importConnectedSocialPost = importConnectedSocialPost;
 window.openCalendarDate = openCalendarDate;
+window.setLedgerSubView = setLedgerSubView;
+window.revalidateSocialQueueItem = revalidateSocialQueueItem;
 
 window.openModal = function(
   title = "",
@@ -28940,7 +29080,7 @@ function getViewHealthKey(label) {
 }
 
 function getRegisteredViewNames() {
-  return ["calendar", "ledger", "constellation", "media", "social", "inspo", "notes", "write-idea", "performance", "audit"];
+  return ["calendar", "ledger", "constellation", "media", "inspo", "notes", "write-idea", "performance", "audit"];
 }
 
 function getViewRenderFunction(viewName) {
@@ -28949,7 +29089,6 @@ function getViewRenderFunction(viewName) {
     ledger: typeof renderLedger === "function" ? renderLedger : null,
     constellation: typeof renderConstellation === "function" ? renderConstellation : null,
     media: typeof renderMedia === "function" ? renderMedia : null,
-    social: typeof loadSocialQueue === "function" ? loadSocialQueue : null,
     inspo: typeof renderInspo === "function" ? renderInspo : null,
     notes: typeof renderNotes === "function" ? renderNotes : null,
     "write-idea": typeof renderWriteIdeaScaffold === "function" ? renderWriteIdeaScaffold : null,
