@@ -3579,6 +3579,11 @@ function resolveCampaignName_(rawCampaignName, campaignRecords, options) {
       ? String(campaign || "").trim()
       : String(campaign && (campaign.campaignName || campaign.campaign_name || campaign.name) || "").trim();
   }).filter(Boolean);
+  var girlTakeActionKey = normalizeKey_("Girl, Take Action");
+  if (normalizeKey_(raw) === girlTakeActionKey || names.some(function(name) { return normalizeKey_(name) === girlTakeActionKey; })) {
+    console.log("[campaign-parse] exact preserved", "Girl, Take Action");
+    return "Girl, Take Action";
+  }
   var exactMatch = names.find(function(name) { return name === raw; });
   if (exactMatch) {
     console.log("[campaign-parse] exact match", exactMatch);
@@ -3591,14 +3596,14 @@ function resolveCampaignName_(rawCampaignName, campaignRecords, options) {
   }
   var explicitMulti = Boolean(options && options.explicitMulti) || Array.isArray(rawCampaignName) || /[|\n]/.test(String(rawCampaignName || ""));
   if (raw.indexOf(",") !== -1 && !explicitMulti) {
-    console.log("[campaign-parse] preserved comma campaign", raw);
+    console.log("[campaign-parse] comma preserved", raw);
     return raw;
   }
   if (explicitMulti) {
     var parts = String(rawCampaignName || "").split(/[|\n]/).map(function(item) {
       return String(item || "").trim();
     }).filter(Boolean);
-    console.log("[campaign-parse] split multi-campaign", parts);
+    console.log("[campaign-parse] split explicit delimiter only", parts);
     return parts[0] || raw;
   }
   return raw;

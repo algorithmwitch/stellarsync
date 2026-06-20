@@ -7226,20 +7226,6 @@ function getPillarSymbol(pillar) {
   return d.icon;
 }
 
-function renderPillarCornerBadge(pillar, options = {}) {
-  var canonicalPillar = getCanonicalPillarValue(pillar);
-  if (!canonicalPillar) return "";
-  var symbol = getPillarSymbol(canonicalPillar);
-  if (!symbol) return "";
-  var theme = getPillarTheme(canonicalPillar);
-  var label = formatContentPillarLabel(canonicalPillar);
-  var bottom = options.bottom || "8px";
-  var right = options.right || "8px";
-  var size = options.size || "20px";
-  var fontSize = options.fontSize || "10px";
-  return `<span title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}" style="position:absolute;right:${escapeHtml(right)};bottom:${escapeHtml(bottom)};width:${escapeHtml(size)};height:${escapeHtml(size)};border-radius:999px;border:1px solid ${escapeHtml(theme.border || hexToRgba(theme.color || "#c77dff", 0.3))};background:${escapeHtml(theme.bg || "rgba(24,17,37,0.92)")};color:${escapeHtml(theme.color || "#c77dff")};display:inline-flex;align-items:center;justify-content:center;pointer-events:none;box-shadow:0 4px 14px rgba(0,0,0,0.22);"><i class="${escapeHtml(symbol)}" style="font-size:${escapeHtml(fontSize)};"></i></span>`;
-}
-
 function getConstellationCampaignLaneKey(campaign) {
   return String(campaign?.campaignId || campaign?.campaignName || "uncategorized").trim().toLowerCase().replace(/[^a-z0-9]+/g, "_") || "uncategorized";
 }
@@ -7429,9 +7415,13 @@ function filterRenderableArtifacts(list, type) {
 
 function getCampaignName(item, fallback = "") {
   if (!item) return fallback;
-  return String(
+  if (typeof item === "string") {
+    return resolveCampaignName(item, getAvailableCampaignRecords()) || String(item || "").trim() || fallback;
+  }
+  const raw = String(
     item.campaignName || item.campaign_name || item.campaign || item.targetCampaign || item.sourceCampaign || fallback
-  ).trim() || fallback;
+  ).trim();
+  return resolveCampaignName(raw, getAvailableCampaignRecords()) || raw || fallback;
 }
 
 function getMetricValue(item, aliases, fallback = 0) {
@@ -8220,7 +8210,7 @@ function normalizePlatformTarget(value) {
   if (text.includes("tiktok") || text.includes("tik tok")) return "tiktok";
   if (text.includes("youtube")) return "youtube";
   if (text.includes("facebook") || text.includes("fb")) return "facebook";
-  return SUPPORTED_POST_PLATFORMS.includes(text) ? text : "";
+  return text;
 }
 
 function parsePlatformTargets(value, fallback = "") {
@@ -8237,9 +8227,18 @@ function parsePlatformTargets(value, fallback = "") {
 }
 
 function getPostTargetPlatforms(post) {
+  if (!post || typeof post !== "object") return [];
+  const directPlatforms = Array.isArray(post.platforms) && post.platforms.length
+    ? post.platforms
+    : post.platforms
+      ? parsePlatformTargets(post.platforms)
+      : [];
+  if (directPlatforms.length) return directPlatforms;
+  const directPlatform = String(post.platform || "").trim();
+  if (directPlatform) return parsePlatformTargets(directPlatform);
   return parsePlatformTargets(
-    post?.platforms || post?.platformTargets || post?.platform_targets || "",
-    post?.platform || "linkedin"
+    post?.platformTargets || post?.platform_targets || post?.targetPlatforms || post?.target_platforms || "",
+    "linkedin"
   );
 }
 
@@ -9658,6 +9657,11 @@ function resolveCampaignName(rawCampaignName, campaignRecords = [], options = {}
       : campaign;
   }).filter(Boolean);
   const names = records.map((campaign) => String(campaign.campaignName || campaign.campaign_name || campaign.name || "").trim()).filter(Boolean);
+  const girlTakeActionKey = normalizeLookupValue("Girl, Take Action");
+  if (normalizeLookupValue(raw) === girlTakeActionKey || names.some((name) => normalizeLookupValue(name) === girlTakeActionKey)) {
+    console.log("[campaign-parse] exact preserved", "Girl, Take Action");
+    return "Girl, Take Action";
+  }
   const exactMatch = names.find((name) => name === raw);
   if (exactMatch) {
     console.log("[campaign-parse] exact match", exactMatch);
@@ -9670,7 +9674,7 @@ function resolveCampaignName(rawCampaignName, campaignRecords = [], options = {}
   }
   const explicitMulti = Boolean(options.explicitMulti) || Array.isArray(rawCampaignName) || /[|\n]/.test(String(rawCampaignName || ""));
   if (raw.indexOf(",") !== -1 && !explicitMulti) {
-    console.log("[campaign-parse] preserved comma campaign", raw);
+    console.log("[campaign-parse] comma preserved", raw);
     return raw;
   }
   if (explicitMulti) {
@@ -9679,7 +9683,7 @@ function resolveCampaignName(rawCampaignName, campaignRecords = [], options = {}
       const matched = names.find((name) => name === part) || names.find((name) => normalizeLookupValue(name) === normalizeLookupValue(part));
       return matched || part;
     }).filter(Boolean);
-    console.log("[campaign-parse] split multi-campaign", resolvedParts);
+    console.log("[campaign-parse] split explicit delimiter only", resolvedParts);
     return resolvedParts[0] || raw;
   }
   return raw;
@@ -12264,11 +12268,11 @@ function renderMobileDayCalendar() {
     const dayPillarValue = getPostContentPillar(post);
     const dayPillarSymbol = getPillarSymbol(dayPillarValue);
     return `
-      <button type="button" class="mobile-day-post calendar-day-post-card relative" onclick="openCalendarPost(this)" style="border-left:3px solid ${dayCampaignColor};" ${renderPostIdentityDataAttributes(post)}>
+      <button type="button" class="mobile-day-post calendar-day-post-card relative pr-6 pb-4" onclick="openCalendarPost(this)" style="border-left:3px solid ${dayCampaignColor};" ${renderPostIdentityDataAttributes(post)}>
         <div class="flex items-start justify-between gap-3 mb-2">
           <div class="flex-1 min-w-0">
             <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${escapeHtml(post.queueTimeLabel || "No time")}</div>
-            <h4 class="text-white text-sm font-bold wrap-safe mt-1 flex items-center gap-1.5">${escapeHtml(getPostDisplayTitle(post, "Untitled post"))}${dayPillarSymbol ? `<span class="text-[9px] text-gray-500 opacity-50 shrink-0" title="${escapeHtml(formatContentPillarLabel(dayPillarValue))}"><i class="${dayPillarSymbol}"></i></span>` : ""}</h4>
+            <h4 class="text-white text-sm font-bold wrap-safe mt-1">${escapeHtml(getPostDisplayTitle(post, "Untitled post"))}</h4>
           </div>
           <span class="publishing-chip shrink-0" style="color:${badge.color};border-color:${badge.color}33;">
             <i class="ph-bold ${badge.icon}"></i>${escapeHtml(badge.label)}
@@ -12276,7 +12280,7 @@ function renderMobileDayCalendar() {
         </div>
         <div class="flex flex-wrap gap-1 mb-2">${renderPlatformChips(post)}</div>
         <p class="text-xs text-gray-400 wrap-safe">${escapeHtml(getDisplayExcerpt(post.description, post.description || "No description"))}</p>
-        ${renderPillarCornerBadge(dayPillarValue)}
+        ${dayPillarSymbol ? `<span class="absolute bottom-2 right-2 text-white text-[11px] pointer-events-none" title="${escapeHtml(formatContentPillarLabel(dayPillarValue))}"><i class="ph ${escapeHtml(dayPillarSymbol)} text-white"></i></span>` : ""}
       </button>
     `;
   }).join("")}</div>`;
@@ -12286,11 +12290,6 @@ function renderCalendarPill(post, isWeekMode = false) {
   const compactMonth = window.innerWidth <= 768 && calendarMode === "month" && !isWeekMode;
   const iconBlock = `<span class="flex items-center gap-1">${renderPlatformChips(post, { compact: true })}</span>`;
 
-  const statusColor =
-    post.status === "published" ? "#00ffaa" :
-    post.status === "scheduled" ? "#ffd700" :
-    "#94a3b8";
-
   const displayTitle = getPostDisplayTitle(post);
   const pillTitle = isWeekMode
     ? `${post.queueTimeLabel || ""} ${displayTitle}`.trim()
@@ -12299,6 +12298,7 @@ function renderCalendarPill(post, isWeekMode = false) {
   const campaignColor = getCampaignColorForPost(post);
   const postPillar = getPostContentPillar(hydrated);
   const pillarSymbol = getPillarSymbol(postPillar);
+  const pillarMarker = pillarSymbol ? `<span class="absolute bottom-2 right-2 text-white text-[11px] pointer-events-none" title="${escapeHtml(formatContentPillarLabel(postPillar))}"><i class="ph ${escapeHtml(pillarSymbol)} text-white"></i></span>` : "";
   const mediaTypeLabel = renderPostMediaTypeBadge(hydrated);
   const carouselCover = derivePostFormatFromMedia(hydrated).isCarousel ? getCarouselCoverAsset(hydrated) : null;
   const carouselCoverUrl = carouselCover ? getMediaPreviewUrl(carouselCover) : "";
@@ -12313,40 +12313,35 @@ function renderCalendarPill(post, isWeekMode = false) {
   }
   if (compactMonth) {
     return `
-      <button type="button" class="post-pill compact-month mt-1 text-left relative" onclick="event.stopPropagation();openCalendarPost(this)" title="${escapeHtml(buildDateDiagnosticTitle(post))}" style="background:${campaignColor}14;border:1px solid ${campaignColor}30;box-shadow:inset 2px 0 0 ${campaignColor};" ${renderPostIdentityDataAttributes(post)}>
+      <button type="button" class="post-pill compact-month mt-1 text-left relative pr-6 pb-4" onclick="event.stopPropagation();openCalendarPost(this)" title="${escapeHtml(buildDateDiagnosticTitle(post))}" style="background:${campaignColor}14;border:1px solid ${campaignColor}30;box-shadow:inset 2px 0 0 ${campaignColor};" ${renderPostIdentityDataAttributes(post)}>
         <span class="compact-month-icons">
            ${carouselCoverUrl
              ? `<img src="${escapeHtml(carouselCoverUrl)}" alt="${escapeHtml(getMediaDisplayTitle(carouselCover, null, "Carousel cover"))}" class="w-4 h-4 rounded object-cover shrink-0 border border-white/10" onerror="handleBrokenMediaPreview(this)">`
-             : pillarSymbol ? `<i class="ph ${pillarSymbol}"></i>` : ""}
+             : ""}
           ${iconBlock}
-          <span class="w-1.5 h-1.5 rounded-full ml-auto" style="background:${statusColor}"></span>
         </span>
         <span class="compact-month-text">${escapeHtml(displayTitle)}</span>
-        ${pillarSymbol ? `<span class="text-[7px] text-gray-500 opacity-70 ml-0.5" title="${escapeHtml(formatContentPillarLabel(postPillar))}"><i class="ph ${escapeHtml(pillarSymbol)}"></i></span>` : ""}
+        ${pillarMarker}
       </button>
     `;
   }
 
   return `
-    <button type="button" class="post-pill mt-1 text-left relative" onclick="event.stopPropagation();openCalendarPost(this)" title="${escapeHtml(buildDateDiagnosticTitle(post))}" style="background:${campaignColor}14;border:1px solid ${campaignColor}30;box-shadow:inset 3px 0 0 ${campaignColor};" ${renderPostIdentityDataAttributes(post)}>
+    <button type="button" class="post-pill mt-1 text-left relative pr-6 pb-4" onclick="event.stopPropagation();openCalendarPost(this)" title="${escapeHtml(buildDateDiagnosticTitle(post))}" style="background:${campaignColor}14;border:1px solid ${campaignColor}30;box-shadow:inset 3px 0 0 ${campaignColor};" ${renderPostIdentityDataAttributes(post)}>
       <div class="flex items-center gap-1.5 w-full">
            ${carouselCoverUrl
            ? `<img src="${escapeHtml(carouselCoverUrl)}" alt="${escapeHtml(getMediaDisplayTitle(carouselCover, null, "Carousel cover"))}" class="w-5 h-5 rounded object-cover shrink-0 border border-white/10" onerror="handleBrokenMediaPreview(this)">`
-           : pillarSymbol ? `<i class="ph ${pillarSymbol}"></i>` : ""}
+           : ""}
         ${iconBlock}
-        <div class="w-1.5 h-1.5 rounded-full ml-auto" style="background:${statusColor}"></div>
       </div>
       <span class="flex items-center gap-1 w-full">
         <span class="text-[9px] text-gray-300 wrap-safe flex-1 min-w-0 truncate">${escapeHtml(pillTitle)}</span>
-        ${pillarSymbol ? `<span class="text-[8px] text-gray-500 opacity-50 shrink-0" title="${escapeHtml(formatContentPillarLabel(postPillar))}"><i class="ph ${pillarSymbol}"></i></span>` : ""}
       </span>
       <span class="text-[8px] text-gray-500 wrap-safe w-full block mt-0.5">${escapeHtml(mediaTypeLabel)}</span>
-      ${renderPillarCornerBadge(postPillar, { bottom: "6px", right: "6px", size: "18px", fontSize: "8px" })}
+      ${pillarMarker}
     </button>
   `;
 }
-
-
 function postMatchesCalendarViewFilters(post) {
   const filters = mobileFilterState.calendar || {};
   if ((filters.platform || "all") !== "all" && !getPostTargetPlatforms(post).includes(String(filters.platform || "").toLowerCase())) return false;
@@ -14504,7 +14499,86 @@ function getSocialCardState() {
 }
 
 function getConnectedAccount(platform) {
-  return (connectedAccounts || []).find((item) => item.platform === platform) || null;
+  const normalized = normalizePlatformTarget(platform);
+  return normalizeSocialConnectedAccounts(connectedAccounts || []).find((item) => normalizePlatformTarget(item.platform || item.provider) === normalized) || null;
+}
+
+function normalizeSocialConnectedAccount(account, platformHint = "") {
+  if (!account || typeof account !== "object") return null;
+  const platform = normalizePlatformTarget(account.platform || account.provider || platformHint || "");
+  if (!platform || !["linkedin", "facebook", "instagram", "threads", "bluesky", "tiktok"].includes(platform)) return null;
+  const rawNotes = [account.appReviewNotes, account.setupNotes, account.notes].filter(Boolean).join(" ");
+  const sanitizedNotes = String(rawNotes || "")
+    .replace(/Apps Script/gi, "Supabase Edge Functions")
+    .replace(/Script Properties/gi, "Supabase Secrets")
+    .replace(/GPE backend/gi, "Supabase Edge Functions");
+  let sanitizedConfig = undefined;
+  let removedLegacyConfigKey = false;
+  if (account.config && typeof account.config === "object") {
+    sanitizedConfig = {};
+    Object.keys(account.config).forEach((key) => {
+      if (/apps_script|script properties|gpe backend/i.test(key)) {
+        removedLegacyConfigKey = true;
+        return;
+      }
+      sanitizedConfig[key] = account.config[key];
+    });
+  }
+  const requiredSetupKeys = filterLegacyRedirectKeys(Array.isArray(account.requiredSetupKeys) ? account.requiredSetupKeys : []);
+  const missingSetupKeys = filterLegacyRedirectKeys(Array.isArray(account.missingSetupKeys) ? account.missingSetupKeys : []);
+  const setupChecklist = Array.isArray(account.setupChecklist)
+    ? account.setupChecklist
+      .map((item) => String(item || "").trim())
+      .filter(Boolean)
+      .filter((item) => !/apps script|script properties|gpe backend/i.test(item))
+    : [];
+  const accessStatus = String(account.accessStatus || account.access_status || account.status || "").trim().toLowerCase();
+  const connected = !!(account.connected || accessStatus === "connected");
+  const tokenStatus = String(account.tokenStatus || account.token_status || "").trim() || (connected ? "active" : "missing");
+  const publishSupported = account.publishSupported !== undefined ? !!account.publishSupported : connected && !missingSetupKeys.length;
+  const publishSupportLabel = String(account.publishSupportLabel || "").trim().replace(/Apps Script|Script Properties|GPE backend/ig, "Supabase Edge Functions");
+  const accountLabel = String(account.accountLabel || account.displayName || account.username || account.provider_username || "").trim();
+  if (/apps script|script properties|gpe backend/i.test([accountLabel, publishSupportLabel, sanitizedNotes].join(" ")) || removedLegacyConfigKey) {
+    console.log("[social-card] ignoring apps script social setup", { platform });
+  }
+  return {
+    ...account,
+    platform,
+    provider: platform,
+    config: sanitizedConfig,
+    accountLabel,
+    displayName: String(account.displayName || account.accountLabel || account.username || account.provider_username || "").trim(),
+    username: String(account.username || account.provider_username || "").trim(),
+    accessStatus,
+    connected,
+    tokenStatus,
+    publishSupported,
+    publishSupportLabel: publishSupportLabel || (missingSetupKeys.length ? "Requires setup" : connected ? "Publishing enabled" : "Publishing preparation available"),
+    requiredSetupKeys,
+    missingSetupKeys,
+    setupChecklist,
+    appReviewNotes: sanitizedNotes,
+    lastError: String(account.lastError || account.last_error || "").trim(),
+    requiredScopes: Array.isArray(account.requiredScopes) ? account.requiredScopes.slice() : [],
+    scopesGranted: Array.isArray(account.scopesGranted) ? account.scopesGranted.slice() : [],
+    connectionStatusLabel: String(account.connectionStatusLabel || "").trim() || (connected ? "Connected" : missingSetupKeys.length ? "Setup Required" : "Not connected"),
+    hasClientId: !!account.hasClientId,
+    hasClientSecret: !!account.hasClientSecret,
+    hasRedirectUri: !!account.hasRedirectUri,
+    tokenExpiresAt: String(account.tokenExpiresAt || account.expiresAt || account.expires_at || "").trim(),
+    lastSyncAt: String(account.lastSyncAt || account.last_sync_at || "").trim()
+  };
+}
+
+function normalizeSocialConnectedAccounts(accounts) {
+  return (Array.isArray(accounts) ? accounts : [])
+    .map((account) => normalizeSocialConnectedAccount(account))
+    .filter(Boolean);
+}
+
+function setSocialConnectedAccounts(accounts) {
+  connectedAccounts = normalizeSocialConnectedAccounts(accounts);
+  return connectedAccounts;
 }
 
 function getWorkspaceConnection(provider) {
@@ -14788,13 +14862,14 @@ function getSocialPlatformSetupInfo(platform) {
   };
   if (p === "linkedin") {
     info.label = "LinkedIn";
-    info.secrets = shared.concat(["LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"]);
+    info.secrets = shared.concat(["LINKEDIN_CLIENT_ID or LINKEDIN_APP_ID", "LINKEDIN_CLIENT_SECRET or LINKEDIN_APP_SECRET"]);
     info.scopes = ["openid", "profile", "email", "w_member_social"];
     info.bullets = [
       "Register a LinkedIn app/client.",
       "Configure the Supabase OAuth callback URL as the redirect URI.",
       "Required scopes may include: openid, profile, email, w_member_social.",
-      "Historical post sync may require r_member_social or restricted LinkedIn approval."
+      "Historical post sync may require r_member_social or restricted LinkedIn approval.",
+      "Edge Function status decides whether the Connect button is enabled."
     ];
   } else if (p === "facebook") {
     info.label = "Facebook Pages";
@@ -14859,8 +14934,7 @@ function mergeSocialSetupKeys(platform, requiredKeys, missingKeys) {
 }
 
 function getSocialSetupMissingMessage(platform, missingKeys) {
-  const info = getSocialPlatformSetupInfo(platform);
-  return `${info.label} OAuth is not configured yet. Add the required Supabase Secrets, then test status again.`;
+  return "Publishing for this platform is not enabled yet. Request setup from StellarSync.";
 }
 
 function handleDisabledSocialConnect(platform) {
@@ -15127,45 +15201,25 @@ async function disconnectConnectedAccount(platform) {
 async function testConnectedAccountStatus(platform) {
   setConnectedAccountActionLoading(platform, "test", true);
   try {
-    // Social platforms should always use Supabase Edge Function (no GPE fallback)
-    if (isSocialPlatform(platform)) {
-      if (STELLARSYNC_SUPABASE_CLIENT && SUPABASE_URL) {
-        var workspaceId = getWorkspaceRequestMetadata().workspace_id || "";
-        if (workspaceId) {
-          var edgeResult = await callSupabaseEdgeFunction("social-connection-status", { workspace_id: workspaceId });
-          if (edgeResult && Array.isArray(edgeResult.accounts)) {
-            connectedAccounts = edgeResult.accounts;
-            console.log("[social-setup] test status refreshed from edge function (" + platform + ")", { platform, accounts: edgeResult.accounts.length });
-          }
-        }
-      } else {
-        showToast("Status unavailable", "Status unavailable when Supabase is not configured.", "ph-warning", "text-yellow-400");
-        return;
-      }
-    } else {
-      // Refresh from Edge Function for fresh secret resolution
-      if (STELLARSYNC_SUPABASE_CLIENT && SUPABASE_URL) {
-        var workspaceId = getWorkspaceRequestMetadata().workspace_id || "";
-        if (workspaceId) {
-          var edgeResult = await callSupabaseEdgeFunction("social-connection-status", { workspace_id: workspaceId });
-          if (edgeResult && Array.isArray(edgeResult.accounts)) {
-            connectedAccounts = edgeResult.accounts;
-            console.log("[social-setup] test status refreshed from edge function", { platform, accounts: edgeResult.accounts.length });
-          }
-        }
-      } else {
-        // Fallback: GPE Apps Script path (for non-social platforms only)
-        const result = await apiTestPlatformConnection(platform);
-        const updated = result?.account || null;
-        if (updated) {
-          connectedAccounts = (connectedAccounts || []).filter((item) => item.platform !== platform).concat(updated);
-        }
+    if (!STELLARSYNC_SUPABASE_CLIENT || !SUPABASE_URL) {
+      showToast("Status unavailable", "Status unavailable when Supabase is not configured.", "ph-warning", "text-yellow-400");
+      return;
+    }
+    var workspaceId = getWorkspaceRequestMetadata().workspace_id || "";
+    if (workspaceId) {
+      var edgeResult = await callSupabaseEdgeFunction("social-connection-status", { workspace_id: workspaceId });
+      if (edgeResult && Array.isArray(edgeResult.accounts)) {
+        setSocialConnectedAccounts(edgeResult.accounts);
+        console.log("[social-setup] test status refreshed from edge function", { platform, accounts: edgeResult.accounts.length });
       }
     }
     // Clear any stale cached setup keys after refresh
     var freshAccount = getConnectedAccount(platform) || {};
     var freshMissing = Array.isArray(freshAccount.missingSetupKeys) ? freshAccount.missingSetupKeys : [];
     console.log("[social-setup] test status result", { platform, connected: !!freshAccount.connected, missingSetupKeys: freshMissing });
+    console.log("[social-card] setup ready", { platform, ready: !freshMissing.length });
+    console.log("[social-card] token missing", { platform, tokenStatus: freshAccount.tokenStatus || "missing" });
+    console.log("[social-card] connect enabled", { platform, enabled: !freshMissing.length && !freshAccount.connected });
     if (!workspaceHubModal?.classList.contains("opacity-0")) renderWorkspaceHub();
     var statusLabel = freshAccount.connectionStatusLabel || freshAccount.accessStatus || "Unknown";
     showToast("Test complete", toTitleCase(platform) + ": " + statusLabel, "ph-plugs-connected", freshAccount.connected ? "text-[#00ffaa]" : freshMissing.length ? "text-yellow-400" : "text-gray-400");
@@ -15288,6 +15342,7 @@ async function refreshSocialImportContext() {
   connectedAccountsStatusLoading = true;
   if (!workspaceHubModal?.classList.contains("opacity-0")) renderWorkspaceHub();
   if (!APP_CONFIG.ENABLE_REMOTE_SYNC || !isRemoteConfigured()) {
+    setSocialConnectedAccounts([]);
     connectedAccountsStatusLoading = false;
     return;
   }
@@ -15297,14 +15352,15 @@ async function refreshSocialImportContext() {
       apiGetConnectedAccountsStatus()
     ]);
     socialImportCapabilities = capabilitiesResult?.capabilities || capabilitiesResult || null;
-    connectedAccounts = accountsResult?.accounts || accountsResult || [];
+    setSocialConnectedAccounts(accountsResult?.accounts || accountsResult || []);
     console.log("connected accounts status hydrated", {
-      linkedinConnected: !!(connectedAccounts || []).find((item) => item.platform === "linkedin" && (item.connected || item.hasAccessToken)),
+      linkedinConnected: !!(connectedAccounts || []).find((item) => normalizePlatformTarget(item.platform || item.provider) === "linkedin" && (item.connected || item.hasAccessToken)),
       fetchedAt: new Date().toISOString()
     });
     if (!workspaceHubModal?.classList.contains("opacity-0")) renderWorkspaceHub();
   } catch (err) {
     console.error(err);
+    setSocialConnectedAccounts([]);
   } finally {
     connectedAccountsStatusLoading = false;
     if (!workspaceHubModal?.classList.contains("opacity-0")) renderWorkspaceHub();
@@ -15636,7 +15692,7 @@ function closeConnectionSetupModal() {
   connectionSetupModalCard?.classList.add("scale-95");
 }
 
-function getSimpleConnectedAccountCard(platform, account, planFeatures) {
+function renderSocialConnectionCard(platform, account, planFeatures) {
   const missingKeys = filterLegacyRedirectKeys(Array.isArray(account.missingSetupKeys) ? account.missingSetupKeys : []);
   const setupBlocked = missingKeys.length > 0;
   const statusLabel = setupBlocked ? "Setup Required" : account.connected ? "Connected" : "Not Connected";
@@ -15650,6 +15706,13 @@ function getSimpleConnectedAccountCard(platform, account, planFeatures) {
   const disconnectLoading = isConnectedAccountActionLoading(platform, "disconnect");
   const anyLoading = connectLoading || disconnectLoading;
   const statusTone = account.connected ? "text-emerald-300" : setupBlocked ? "text-yellow-300" : "text-sky-300";
+  if (setupBlocked) {
+    console.log("[social-card] setup ready", { platform, ready: false });
+  } else {
+    console.log("[social-card] setup ready", { platform, ready: true });
+    console.log("[social-card] token missing", { platform, tokenStatus: account.tokenStatus || "missing" });
+    console.log("[social-card] connect enabled", { platform, enabled: !account.connected });
+  }
   return `
     <div class="platform-card">
       <div class="flex items-start justify-between gap-3 mb-4">
@@ -15675,6 +15738,10 @@ function getSimpleConnectedAccountCard(platform, account, planFeatures) {
   `;
 }
 
+function getSimpleConnectedAccountCard(platform, account, planFeatures) {
+  return renderSocialConnectionCard(platform, account, planFeatures);
+}
+
 function getConnectedAccountsMarkup(options = {}) {
   if (connectedAccountsStatusLoading) {
     return CONNECTED_ACCOUNT_PLATFORMS.map((platform) => `
@@ -15690,14 +15757,14 @@ function getConnectedAccountsMarkup(options = {}) {
       </div>
     `).join("");
   }
-  const accounts = Array.isArray(connectedAccounts) ? connectedAccounts : [];
+  const accounts = normalizeSocialConnectedAccounts(connectedAccounts);
   const platforms = CONNECTED_ACCOUNT_PLATFORMS;
   const planFeatures = ACTIVE_PLAN_FEATURES || getWorkspacePlanFeatures(WORKSPACE_RUNTIME_CONFIG?.active || {});
   const managedWorkspace = isManagedWorkspace(WORKSPACE_RUNTIME_CONFIG?.active || {});
   const adminMaster = isAdminMasterWorkspaceUser(WORKSPACE_RUNTIME_CONFIG?.active || {});
   const userCanSeeAdminDetails = managedWorkspace || adminMaster;
   return platforms.map((platform) => {
-    const account = accounts.find((item) => item.platform === platform) || {
+    const account = accounts.find((item) => normalizePlatformTarget(item.platform || item.provider) === platform) || {
       platform,
       accessStatus: "not_connected",
       connectionStatusLabel: "Not connected",
@@ -15709,7 +15776,7 @@ function getConnectedAccountsMarkup(options = {}) {
       missingSetupKeys: []
     };
     if (!userCanSeeAdminDetails) {
-      return getSimpleConnectedAccountCard(platform, account, planFeatures);
+      return renderSocialConnectionCard(platform, account, planFeatures);
     }
     const historicalAccess = platform === "linkedin" ? (connectedAccountsHistoricalAccess.linkedin || null) : null;
     const requiredKeys = filterLegacyRedirectKeys(Array.isArray(account.requiredSetupKeys) ? account.requiredSetupKeys : []);
@@ -24825,7 +24892,9 @@ async function syncRemoteIfConfigured() {
       socialImportCapabilities = results[1].value?.capabilities || results[1].value;
     }
     if (results[2].status === "fulfilled") {
-      connectedAccounts = results[2].value?.accounts || results[2].value || [];
+      setSocialConnectedAccounts(results[2].value?.accounts || results[2].value || []);
+    } else {
+      setSocialConnectedAccounts([]);
     }
 
     try { loadAIProviders().catch(function() {}); } catch (err) { /* silent */ }
@@ -25717,14 +25786,16 @@ function generateSupabaseAIDraftId() {
 function buildSupabasePostRow(payload = {}) {
   const meta = getWorkspaceRequestMetadata();
   const postId = getSupabasePostId(payload);
-  const targets = Array.isArray(payload.platform_targets)
-    ? payload.platform_targets
-    : Array.isArray(payload.platformTargets)
-      ? payload.platformTargets
-      : String(payload.platform_targets || payload.platformTargets || payload.platform || "")
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean);
+  const targets = Array.isArray(payload.platforms)
+    ? payload.platforms
+    : Array.isArray(payload.platform_targets)
+      ? payload.platform_targets
+      : Array.isArray(payload.platformTargets)
+        ? payload.platformTargets
+        : String(payload.platform_targets || payload.platformTargets || payload.platform || "")
+          .split(/[|,\n]/)
+          .map((item) => item.trim())
+          .filter(Boolean);
   const now = new Date().toISOString();
   return {
     workspace_id: payload.workspace_id || payload.workspaceId || meta.workspace_id || null,
@@ -25738,6 +25809,7 @@ function buildSupabasePostRow(payload = {}) {
     publish_time: payload.publish_time || payload.publishTime || payload.queueTimeLabel || "",
     scheduled_at: payload.scheduled_at || payload.scheduledAt || null,
     platform: payload.platform || targets[0] || "linkedin",
+    platforms: targets,
     platform_targets: targets,
     campaign_id: payload.campaignId || payload.campaign_id || "",
     campaign_name: payload.campaignName || payload.campaign_name || "",
@@ -25786,8 +25858,17 @@ function normalizeSupabasePostRecord(row = {}) {
     publish_time: row.publish_time || row.publishTime || "",
     scheduledAt: row.scheduled_at || row.scheduledAt || "",
     scheduled_at: row.scheduled_at || row.scheduledAt || "",
-    platformTargets: Array.isArray(row.platform_targets) ? row.platform_targets : String(row.platform_targets || row.platform || "").split(",").map((item) => item.trim()).filter(Boolean),
-    platform_targets: Array.isArray(row.platform_targets) ? row.platform_targets.join(",") : String(row.platform_targets || ""),
+    platforms: Array.isArray(row.platforms)
+      ? row.platforms
+      : Array.isArray(row.platform_targets)
+      ? row.platform_targets
+      : String(row.platform_targets || row.platform || "").split(/[|,\n]/).map((item) => item.trim()).filter(Boolean),
+    platformTargets: Array.isArray(row.platforms)
+      ? row.platforms
+      : Array.isArray(row.platform_targets)
+        ? row.platform_targets
+        : String(row.platform_targets || row.platform || "").split(/[|,\n]/).map((item) => item.trim()).filter(Boolean),
+    platform_targets: Array.isArray(row.platform_targets) ? row.platform_targets.join("|") : Array.isArray(row.platforms) ? row.platforms.join("|") : String(row.platform_targets || row.platforms || ""),
     campaignName: row.campaign_name || row.campaignName || "",
     campaign_name: row.campaign_name || row.campaignName || "",
     mondayItemId: row.monday_item_id || row.mondayItemId || "",
@@ -26828,52 +26909,21 @@ async function apiGetSocialImportCapabilities() {
 }
 
 async function apiGetConnectedAccountsStatus(platform) {
-  // Social platforms should only use Supabase Edge Function (no GPE fallback)
-  if (isSocialPlatform(platform)) {
-    if (STELLARSYNC_SUPABASE_CLIENT && SUPABASE_URL) {
-      try {
-        const workspaceId = getWorkspaceRequestMetadata().workspace_id || "";
-        if (workspaceId) {
-          const result = await callSupabaseEdgeFunction("social-connection-status", { workspace_id: workspaceId });
-          var accounts = result && (result.accounts || result.data || result);
-          if (Array.isArray(accounts) && accounts.length) {
-            console.log("[social-setup] connected accounts from edge function (" + platform + ")", accounts.length);
-            return accounts;
-          }
-        }
-      } catch (edgeErr) {
-        console.log("[social-setup] edge function failed for " + platform + ", showing status unavailable", edgeErr instanceof Error ? edgeErr.message : String(edgeErr));
-        // For social platforms, if Edge Function fails, show "Status unavailable" instead of falling back to GPE
-        return [];
-      }
-    } else {
-      console.log("[social-setup] " + platform + " status unavailable - Supabase not configured");
-      return [];
-    }
+  if (!STELLARSYNC_SUPABASE_CLIENT || !SUPABASE_URL) {
+    console.log("[social-card] render source edge", { platform: platform || "all", status: "supabase_missing" });
+    return [];
   }
-  
-  // For non-social platforms, prefer Supabase Edge Function when available (checks Supabase secrets)
-  if (STELLARSYNC_SUPABASE_CLIENT && SUPABASE_URL) {
-    try {
-      const workspaceId = getWorkspaceRequestMetadata().workspace_id || "";
-      if (workspaceId) {
-        const result = await callSupabaseEdgeFunction("social-connection-status", { workspace_id: workspaceId });
-        var accounts = result && (result.accounts || result.data || result);
-        if (Array.isArray(accounts) && accounts.length) {
-          console.log("[social-setup] connected accounts from edge function", accounts.length);
-          return accounts;
-        }
-      }
-    } catch (edgeErr) {
-      console.warn("[social-setup] edge function fallback to gpe", edgeErr instanceof Error ? edgeErr.message : String(edgeErr));
-    }
+  try {
+    const workspaceId = getWorkspaceRequestMetadata().workspace_id || "";
+    if (!workspaceId) return [];
+    const result = await callSupabaseEdgeFunction("social-connection-status", { workspace_id: workspaceId });
+    const accounts = normalizeSocialConnectedAccounts(result && (result.accounts || result.data || result));
+    console.log("[social-card] render source edge", { platform: platform || "all", accounts: accounts.length });
+    return accounts;
+  } catch (edgeErr) {
+    console.log("[social-setup] edge function failed for " + (platform || "all") + ", showing status unavailable", edgeErr instanceof Error ? edgeErr.message : String(edgeErr));
+    return [];
   }
-  // Fallback: GPE Apps Script path (for non-social platforms only)
-  const result = await apiGet("getConnectedAccountsStatus");
-  const gpeAccounts = result.accounts || result.data || result;
-  const parsed = Array.isArray(gpeAccounts) ? gpeAccounts : Object.values(gpeAccounts || {});
-  console.log("[social-setup] connected accounts from gpe", parsed.length);
-  return parsed;
 }
 
 async function apiGetConnectedAccounts() {
@@ -27886,7 +27936,7 @@ function renderDiagnosticsPanel() {
         <button type="button" data-workspace-open-tab="accounts" class="px-3 py-2 rounded-xl bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white hover:bg-[#2d1b4e] transition-colors">Open Full Panel</button>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        ${(connectedAccounts.length ? connectedAccounts : (socialImportCapabilities?.connectedAccounts || [])).map((account) => `
+        ${(normalizeSocialConnectedAccounts(connectedAccounts)).map((account) => `
           <div class="p-3 rounded-xl bg-[#120c1d] border border-white/5">
             <div class="flex items-center justify-between gap-3 mb-1">
               <span class="text-sm font-bold text-white">${escapeHtml(toTitleCase(account.platform || "unknown"))}</span>
