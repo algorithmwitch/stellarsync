@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Redirecting...</title>
+<script>
+(function() {
+  var PROVIDER = 'linkedin';
+  var SUPABASE_URL = 'https://szdlvyzjeqkfxsoqltwg.supabase.co';
+  var params = new URLSearchParams(window.location.search);
+  var code = params.get('code');
+  var state = params.get('state');
+  var error = params.get('error');
+  var errorDescription = params.get('error_description');
+  var origin = window.location.origin;
+  function redirect(url) { window.location.replace(url); }
+  if (error) {
+    redirect(origin + '/app/?social_error=' + encodeURIComponent(errorDescription || error));
+  } else if (code && state) {
+    fetch(SUPABASE_URL + '/functions/v1/social-auth-callback?provider=' + encodeURIComponent(PROVIDER) + '&code=' + encodeURIComponent(code) + '&state=' + encodeURIComponent(state) + '&json=true')
+      .then(function(r) { return r.json(); })
+      .then(function(data) { redirect(data.redirectUrl || (origin + '/app/')); })
+      .catch(function() { redirect(origin + '/app/?social_error=callback_failed'); });
+  } else {
+    redirect(origin + '/app/');
+  }
+})();
+</script>
+</head>
+<body>Redirecting...</body>
+</html>

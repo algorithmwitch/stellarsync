@@ -838,21 +838,25 @@
     background: currentColor;
   }
 
-  .pillar-shape-authority {
+  .pillar-shape-advocacy {
     clip-path: polygon(50% 0, 0 100%, 100% 100%);
   }
 
-  .pillar-shape-distribution {
+  .pillar-shape-community {
     border-radius: 999px;
   }
 
-  .pillar-shape-identity {
+  .pillar-shape-wellness {
     transform: rotate(45deg);
     border-radius: 1px;
   }
 
-  .pillar-shape-application {
+  .pillar-shape-leadership {
     border-radius: 2px;
+  }
+
+  .pillar-shape-authority {
+    clip-path: polygon(50% 0, 0 100%, 100% 100%);
   }
 
   .campaign-color-dot {
@@ -1329,6 +1333,10 @@
         .pillar-btn.active.promo { border-color: var(--p-promo); color: var(--p-promo); background: rgba(178, 95, 255, 0.05); }
         .pillar-btn.active.engage { border-color: var(--p-engage); color: var(--p-engage); background: rgba(255, 215, 0, 0.05); }
         .pillar-btn.active.aware { border-color: var(--p-aware); color: var(--p-aware); background: rgba(0, 255, 170, 0.05); }
+        .pillar-btn.active.advocacy { border-color: #c77dff; color: #c77dff; background: rgba(199,125,255,0.05); }
+        .pillar-btn.active.community { border-color: #00ffaa; color: #00ffaa; background: rgba(0,255,170,0.05); }
+        .pillar-btn.active.wellness { border-color: #00f0ff; color: #00f0ff; background: rgba(0,240,255,0.05); }
+        .pillar-btn.active.leadership { border-color: #ffd700; color: #ffd700; background: rgba(255,215,0,0.05); }
         
         .nav-btn.active { background-color: #2d1b4e !important; color: white !important; border-color: transparent !important; }
         .nav-btn:hover:not(.active) { background-color: #1a1128 !important; color: white !important; }
@@ -2414,6 +2422,10 @@
                 </button>
                 <button type="button" id="dropdown-install-plugin-btn" class="workspace-menu-btn" data-plugin-action="openPluginInstallModal" onclick="event.preventDefault();event.stopPropagation();console.log('[plugin-install] dropdown clicked');console.log('[plugin-install] prevented default navigation');toggleProfileMenu(false);openPluginInstallModal();console.log('[plugin-install] in-app modal opened');">
                   <span class="flex items-center gap-3"><i class="ph-bold ph-puzzle-piece text-[#c77dff]"></i> Install Plugin</span>
+                  <i class="ph-bold ph-caret-right text-gray-500"></i>
+                </button>
+                <button type="button" class="workspace-menu-btn" data-workspace-action="install">
+                  <span class="flex items-center gap-3"><i class="ph-bold ph-download-simple text-[#38bdf8]"></i> Install App</span>
                   <i class="ph-bold ph-caret-right text-gray-500"></i>
                 </button>
                 <button type="button" class="workspace-menu-btn" data-workspace-action="support">
@@ -4027,10 +4039,10 @@
         <div>
           <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2">Suggested Pillar</label>
           <select id="note-pillar" class="form-input text-sm font-medium">
-            <option value="authority">Authority</option>
-            <option value="distribution">Distribution</option>
-            <option value="identity">Identity</option>
-            <option value="application">Application</option>
+            <option value="advocacy">Advocacy</option>
+            <option value="community">Community</option>
+            <option value="wellness">Wellness</option>
+            <option value="leadership">Leadership</option>
           </select>
         </div>
       </div>
@@ -4336,10 +4348,10 @@
       <div>
         <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2">Default Pillar</label>
         <select id="campaign-pillar-input" class="form-input text-sm font-medium">
-          <option value="authority">Authority</option>
-          <option value="distribution">Distribution</option>
-          <option value="identity">Identity</option>
-          <option value="application">Application</option>
+          <option value="advocacy">Advocacy</option>
+          <option value="community">Community</option>
+          <option value="wellness">Wellness</option>
+          <option value="leadership">Leadership</option>
         </select>
       </div>
 
@@ -5815,7 +5827,7 @@ function normalizeSupabaseWorkspaceConfig(workspace) {
     media_bucket: String(source.media_bucket || source.storage_bucket || "media").trim(),
     media_prefix: String(source.media_prefix || "").trim() || String(source.slug || source.workspace_slug || "").trim() + "/",
     default_platforms: Array.isArray(source.default_platforms) ? source.default_platforms : String(source.default_platforms || "").split(/[|,\n]/).map((value) => String(value || "").trim()).filter(Boolean),
-    default_pillars: Array.isArray(source.default_pillars) ? source.default_pillars : String(source.default_pillars || "").split(/[|,\n]/).map((value) => String(value || "").trim()).filter(Boolean),
+    default_pillars: Array.isArray(source.default_pillars) ? source.default_pillars.map(function(p) { return typeof p === "object" && p !== null ? p : getDefaultPillarObject(String(p || "").trim()); }).filter(Boolean) : String(source.default_pillars || "").split(/[|,\n]/).map(function(v) { return getDefaultPillarObject(String(v || "").trim()); }).filter(Boolean),
     default_statuses: Array.isArray(source.default_statuses) ? source.default_statuses : String(source.default_statuses || "").split(/[|,\n]/).map((value) => String(value || "").trim()).filter(Boolean),
     default_post_types: Array.isArray(source.default_post_types) ? source.default_post_types : String(source.default_post_types || "").split(/[|,\n]/).map((value) => String(value || "").trim()).filter(Boolean),
     current_month: String(source.current_month || source.currentMonth || "").trim(),
@@ -5875,7 +5887,7 @@ function mergeWorkspaceSettings(workspace, settings) {
     media_bucket: String(settings.media_bucket || workspace.media_bucket || workspace.storage_bucket || "media").trim(),
     media_prefix: String(settings.media_prefix || workspace.media_prefix || "").trim(),
     default_platforms: Array.isArray(settings.default_platforms) ? settings.default_platforms : (workspace.default_platforms || []),
-    default_pillars: Array.isArray(settings.default_pillars) ? settings.default_pillars : (workspace.default_pillars || []),
+    default_pillars: Array.isArray(settings.default_pillars) ? settings.default_pillars.map(function(p) { return typeof p === "object" && p !== null ? p : getDefaultPillarObject(String(p || "").trim()); }).filter(Boolean) : (Array.isArray(workspace.default_pillars) ? workspace.default_pillars.map(function(p) { return typeof p === "object" && p !== null ? p : getDefaultPillarObject(String(p || "").trim()); }).filter(Boolean) : []),
     default_statuses: Array.isArray(settings.default_statuses) ? settings.default_statuses : (workspace.default_statuses || []),
     default_post_types: Array.isArray(settings.default_post_types) ? settings.default_post_types : (workspace.default_post_types || []),
     current_month: String(settings.current_month || settings.currentMonth || workspace.current_month || workspace.currentMonth || "").trim(),
@@ -5903,7 +5915,6 @@ async function loadWorkspaceBrandingSettings(workspaceId, workspace = {}) {
   const primaryFields = [
     "id",
     "workspace_id",
-    "workspace_slug",
     "display_name",
     "plan",
     "plan_slug",
@@ -6996,19 +7007,31 @@ function formatCampaignDisplayName(value) {
 }
 
 function getPillarTheme(pillar) {
-  const key = normalizePillarToken(pillar);
-  const themes = {
-    authority: { color: "#c77dff", bg: "rgba(199,125,255,0.12)", border: "rgba(199,125,255,0.28)" },
-    community: { color: "#00ffaa", bg: "rgba(0,255,170,0.10)", border: "rgba(0,255,170,0.25)" },
-    education: { color: "#00f0ff", bg: "rgba(0,240,255,0.10)", border: "rgba(0,240,255,0.25)" },
-    promotion: { color: "#ffd700", bg: "rgba(255,215,0,0.10)", border: "rgba(255,215,0,0.25)" }
-  };
-  return themes[key] || themes.authority;
+  var key = normalizePillarToken(pillar);
+  var wp = getWorkspacePillarBySlug(key);
+  if (wp && wp.color) {
+    var c = wp.color;
+    return { color: c, bg: hexToRgba(c, 0.12), border: hexToRgba(c, 0.28) };
+  }
+  var d = getDefaultPillarObject(key);
+  var c = d.color;
+  return { color: c, bg: hexToRgba(c, 0.12), border: hexToRgba(c, 0.28) };
+}
+
+function hexToRgba(hex, a) {
+  var h = String(hex || "#c77dff").replace("#", "");
+  if (h.length === 3) h = h.split("").map(function(c) { return c + c; }).join("");
+  var num = parseInt(h, 16);
+  return "rgba(" + ((num >> 16) & 255) + "," + ((num >> 8) & 255) + "," + (num & 255) + "," + a + ")";
 }
 
 function getAvailableContentPillars() {
-  const configured = appState?.settings?.pillars;
-  return Array.isArray(configured) && configured.length ? configured : ["authority", "community", "education", "promotion"];
+  var names = getWorkspacePillarNames();
+  if (names.length) return names;
+  var slugs = getWorkspacePillarSlugs();
+  if (slugs.length) return slugs;
+  console.log("[pillars] fallback default used");
+  return ["Advocacy", "Community", "Wellness", "Leadership"];
 }
 
 function getAvailableCampaignRecords() {
@@ -7053,6 +7076,73 @@ function getDisplayPostContentPillar(post) {
 
 function getCampaignColor(item, pillar = "") {
   return String(item?.color || item?.campaignColor || item?.hexColor || getPillarTheme(pillar || item?.pillar).color || "#c77dff").trim() || "#c77dff";
+}
+
+function getCampaignColorForPost(post) {
+  if (!post) return "#c77dff";
+  var directColor = post.campaignColor || post.campaign_color || post.color || "";
+  if (directColor) { console.log("[calendar-color] post direct", { postId: post.post_id || post.id, color: directColor }); return directColor; }
+  var campaignName = post.campaignName || post.campaign_name || "";
+  var campaignId = post.campaignId || post.campaign_id || "";
+  var campaign = (campaignId ? getCampaignById(campaignId) : null) || (campaignName ? getCampaignByName(campaignName) : null);
+  if (campaign && campaign.color) { console.log("[calendar-color] campaign match", { campaignName: campaign.campaignName, color: campaign.color }); return campaign.color; }
+  var settingsColors = appState?.settings?.campaignColors || {};
+  if (campaignName && settingsColors[campaignName]) { console.log("[calendar-color] campaign match", { campaignName, color: settingsColors[campaignName] }); return settingsColors[campaignName]; }
+  var fallback = getCampaignColor(post, getPostContentPillar(post));
+  console.log("[calendar-color] fallback", { color: fallback });
+  return fallback;
+}
+
+function getWorkspacePillars() {
+  var wp = appState?.settings?.default_pillars;
+  if (!Array.isArray(wp) || !wp.length) wp = WORKSPACE_RUNTIME_CONFIG?.active?.default_pillars;
+  if (Array.isArray(wp) && wp.length && typeof wp[0] === "object") return wp;
+  if (Array.isArray(wp) && wp.length) {
+    return wp.map(function(p) {
+      var s = typeof p === "string" ? p.trim().toLowerCase() : "";
+      return getDefaultPillarObject(s);
+    }).filter(Boolean);
+  }
+  return [];
+}
+
+function getWorkspacePillarBySlug(slug) {
+  var s = String(slug || "").trim().toLowerCase();
+  var pillars = getWorkspacePillars();
+  return pillars.find(function(p) { return String(p.slug || "").toLowerCase() === s; }) || null;
+}
+
+function getWorkspacePillarNames() {
+  return getWorkspacePillars().map(function(p) { return p.name || ""; }).filter(Boolean);
+}
+
+function getWorkspacePillarSlugs() {
+  return getWorkspacePillars().map(function(p) { return p.slug || ""; }).filter(Boolean);
+}
+
+function getDefaultPillarObject(slug) {
+  var s = String(slug || "").trim().toLowerCase();
+  var defaults = {
+    advocacy: { name: "Advocacy", slug: "advocacy", icon: "ph-megaphone", color: "#c77dff", enabled: true },
+    community: { name: "Community", slug: "community", icon: "ph-users-three", color: "#00ffaa", enabled: true },
+    wellness: { name: "Wellness", slug: "wellness", icon: "ph-heart", color: "#00f0ff", enabled: true },
+    leadership: { name: "Leadership", slug: "leadership", icon: "ph-crown", color: "#ffd700", enabled: true },
+    authority: { name: "Authority", slug: "authority", icon: "ph-megaphone", color: "#c77dff", enabled: true },
+    distribution: { name: "Distribution", slug: "distribution", icon: "ph-users-three", color: "#00ffaa", enabled: true },
+    identity: { name: "Identity", slug: "identity", icon: "ph-heart", color: "#00f0ff", enabled: true },
+    application: { name: "Application", slug: "application", icon: "ph-crown", color: "#ffd700", enabled: true },
+    education: { name: "Education", slug: "education", icon: "ph-book-open", color: "#b25fff", enabled: true },
+    promotion: { name: "Promotion", slug: "promotion", icon: "ph-sparkle", color: "#f472b6", enabled: true }
+  };
+  return defaults[s] || { name: toTitleCase(s.replace(/[-_]+/g, " ")), slug: s, icon: "ph-sparkle", color: "#c77dff", enabled: true };
+}
+
+function getPillarSymbol(pillar) {
+  var p = getWorkspacePillarBySlug(pillar);
+  if (p && p.icon) { console.log("[pillar-symbol] resolved from workspace", { pillar, symbol: p.icon }); return p.icon; }
+  var d = getDefaultPillarObject(pillar);
+  console.log("[pillar-symbol] resolved", { pillar, symbol: d.icon });
+  return d.icon;
 }
 
 function getConstellationCampaignLaneKey(campaign) {
@@ -8313,7 +8403,7 @@ const DEFAULT_STATE = {
   campaigns: [],
   settings: {
     platforms: ["linkedin", "instagram", "both"],
-    pillars: ["authority", "distribution", "identity", "application"],
+    pillars: ["Advocacy", "Community", "Wellness", "Leadership"],
     statuses: ["draft", "scheduled", "published"],
     postTypes: ["image", "carousel", "video", "article", "text", "poll"],
     campaigns: [
@@ -9681,6 +9771,12 @@ function openNoteModal() {
   noteModal.classList.remove("opacity-0", "pointer-events-none");
   noteModalCard.classList.remove("scale-95");
   noteModalCard.classList.add("scale-100");
+  if (notePillarInput) {
+    var pillars = getAvailableContentPillars();
+    if (notePillarInput.options.length < 2 || notePillarInput.options[0].value !== "advocacy") {
+      notePillarInput.innerHTML = pillars.map(function(p) { return '<option value="' + escapeHtml(normalizePillar(p)) + '">' + escapeHtml(p) + '</option>'; }).join("");
+    }
+  }
 }
 
 function closeNoteModal() {
@@ -11275,12 +11371,18 @@ function populateCampaignDropdown() {
 }
 
 function normalizePillar(value) {
-  const v = String(value || "").toLowerCase();
-  if (v.includes("identity") || v.includes("iden") || v.includes("ident")) return "identity";
-  if (v.includes("author")) return "authority";
-  if (v.includes("distribut")) return "distribution";
-  if (v.includes("applic")) return "application";
-  return getCanonicalPillarValue(value, (appState.settings?.pillars || [])[0] || "authority") || ((appState.settings?.pillars || [])[0] || "authority");
+  var v = String(value || "").trim().toLowerCase();
+  if (!v) return getWorkspacePillarSlugs()[0] || "advocacy";
+  var wp = getWorkspacePillarBySlug(v);
+  if (wp) return wp.slug;
+  wp = getWorkspacePillarBySlug(v.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, ""));
+  if (wp) return wp.slug;
+  var wpNames = getWorkspacePillars();
+  for (var i = 0; i < wpNames.length; i++) {
+    if (v === String(wpNames[i].name || "").toLowerCase() || v === String(wpNames[i].slug || "").toLowerCase()) return wpNames[i].slug;
+  }
+  console.log("[pillars] mismatch - value not in workspace taxonomy", { value: v });
+  return getWorkspacePillarSlugs()[0] || "advocacy";
 }
 
 function defaultCampaignColor(campaignName, pillar) {
@@ -11821,14 +11923,17 @@ function renderMobileDayCalendar() {
 
   list.innerHTML = `<div class="calendar-day-shell">${posts.map((post) => {
     const badge = getPublishingBadge(post);
+    const dayCampaignColor = getCampaignColorForPost(post);
+    const dayPillarValue = getPostContentPillar(post);
+    const dayPillarSymbol = getPillarSymbol(dayPillarValue);
     return `
-      <button type="button" class="mobile-day-post calendar-day-post-card" onclick="openCalendarPost(this)" ${renderPostIdentityDataAttributes(post)}>
+      <button type="button" class="mobile-day-post calendar-day-post-card" onclick="openCalendarPost(this)" style="border-left:3px solid ${dayCampaignColor};" ${renderPostIdentityDataAttributes(post)}>
         <div class="flex items-start justify-between gap-3 mb-2">
-          <div>
+          <div class="flex-1 min-w-0">
             <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${escapeHtml(post.queueTimeLabel || "No time")}</div>
-            <h4 class="text-white text-sm font-bold wrap-safe mt-1">${escapeHtml(getPostDisplayTitle(post, "Untitled post"))}</h4>
+            <h4 class="text-white text-sm font-bold wrap-safe mt-1 flex items-center gap-1.5">${escapeHtml(getPostDisplayTitle(post, "Untitled post"))}${dayPillarSymbol ? `<span class="text-[9px] text-gray-500 opacity-50 shrink-0" title="${escapeHtml(formatContentPillarLabel(dayPillarValue))}"><i class="${dayPillarSymbol}"></i></span>` : ""}</h4>
           </div>
-          <span class="publishing-chip" style="color:${badge.color};border-color:${badge.color}33;">
+          <span class="publishing-chip shrink-0" style="color:${badge.color};border-color:${badge.color}33;">
             <i class="ph-bold ${badge.icon}"></i>${escapeHtml(badge.label)}
           </span>
         </div>
@@ -11853,7 +11958,9 @@ function renderCalendarPill(post, isWeekMode = false) {
     ? `${post.queueTimeLabel || ""} ${displayTitle}`.trim()
     : displayTitle;
   const hydrated = hydratePostCampaign(post);
-  const campaignColor = getCampaignColor(hydrated, getPostContentPillar(hydrated));
+  const campaignColor = getCampaignColorForPost(post);
+  const postPillar = getPostContentPillar(hydrated);
+  const pillarSymbol = getPillarSymbol(postPillar);
   const mediaTypeLabel = renderPostMediaTypeBadge(hydrated);
   const carouselCover = derivePostFormatFromMedia(hydrated).isCarousel ? getCarouselCoverAsset(hydrated) : null;
   const carouselCoverUrl = carouselCover ? getMediaPreviewUrl(carouselCover) : "";
@@ -11877,6 +11984,7 @@ function renderCalendarPill(post, isWeekMode = false) {
           <span class="w-1.5 h-1.5 rounded-full ml-auto" style="background:${statusColor}"></span>
         </span>
         <span class="compact-month-text">${escapeHtml(displayTitle)}</span>
+        ${pillarSymbol ? `<span class="text-[7px] text-gray-500 opacity-50 ml-0.5" title="${escapeHtml(formatContentPillarLabel(postPillar))}"><i class="${pillarSymbol}"></i></span>` : ""}
       </button>
     `;
   }
@@ -11890,7 +11998,10 @@ function renderCalendarPill(post, isWeekMode = false) {
         ${iconBlock}
         <div class="w-1.5 h-1.5 rounded-full ml-auto" style="background:${statusColor}"></div>
       </div>
-      <span class="text-[9px] text-gray-300 wrap-safe w-full block mt-0.5">${escapeHtml(pillTitle)}</span>
+      <span class="flex items-center gap-1 w-full">
+        <span class="text-[9px] text-gray-300 wrap-safe flex-1 min-w-0 truncate">${escapeHtml(pillTitle)}</span>
+        ${pillarSymbol ? `<span class="text-[8px] text-gray-500 opacity-50 shrink-0" title="${escapeHtml(formatContentPillarLabel(postPillar))}"><i class="${pillarSymbol}"></i></span>` : ""}
+      </span>
       <span class="text-[8px] text-gray-500 wrap-safe w-full block mt-0.5">${escapeHtml(mediaTypeLabel)}</span>
     </button>
   `;
@@ -11990,7 +12101,7 @@ function renderLedger() {
     const pillarValue = getPostContentPillar(hydrated);
     const displayPillarValue = getDisplayPostContentPillar(hydrated);
     const pillarLabel = displayPillarValue ? formatContentPillarLabel(displayPillarValue) : "No Pillar";
-    const campaignColor = getCampaignColor(hydrated, pillarValue);
+    const campaignColor = getCampaignColorForPost(hydrated);
 
     const platformIcon = getPostTargetPlatforms(post)[0] === "instagram" ? "ph-instagram-logo" : getPostTargetPlatforms(post)[0] === "threads" ? "ph-at" : getPostTargetPlatforms(post)[0] === "bluesky" ? "ph-butterfly" : getPostTargetPlatforms(post)[0] === "tiktok" ? "ph-music-note" : getPostTargetPlatforms(post)[0] === "youtube" ? "ph-youtube-logo" : getPostTargetPlatforms(post)[0] === "facebook" ? "ph-facebook-logo" : "ph-linkedin-logo";
     const iconColor = getPostTargetPlatforms(post)[0] === "linkedin" ? "#0A66C2" : getPostTargetPlatforms(post)[0] === "instagram" ? "#b25fff" : getPostTargetPlatforms(post)[0] === "youtube" ? "#ff4d4d" : getPostTargetPlatforms(post)[0] === "facebook" ? "#1877F2" : "#ffd700";
@@ -14691,7 +14802,7 @@ async function testConnectedAccountStatus(platform) {
 function getThreadsRedirectUri() {
   return (backendDiagnostics?.providerDashboardUrls?.metaThreadsRedirectUri) ||
     (backendDiagnostics?.oauthRouteHealth?.find(function(r) { return r.platform === "threads"; })?.derivedRedirectUri) ||
-    (APP_CONFIG.APP_SCRIPT_URL + "?action=threadsCallback");
+    (window.location.origin + "/auth/threads/callback");
 }
 
 window.copyThreadsRedirectUri = function() {
@@ -15357,7 +15468,7 @@ function getConnectedAccountsMarkup(options = {}) {
             <div><strong>Redirect URI (add to Meta → Facebook Login → Settings → Valid OAuth Redirect URIs):</strong></div>
             <div id="threads-redirect-uri-display" class="text-[11px] text-white font-mono wrap-safe bg-[#120c1d] p-2 rounded-lg border border-white/5">${escapeHtml(getThreadsRedirectUri())}</div>
             <button type="button" onclick="copyThreadsRedirectUri()" class="px-3 py-1 rounded-lg bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors mt-1">Copy Redirect URI</button>
-            <div class="text-[10px] text-yellow-300/70 mt-2">Required: Client OAuth Login = ON, Web OAuth Login = ON, and the Supabase/StellarSync callback URL is whitelisted in the Meta app.</div>
+            <div class="text-[10px] text-yellow-300/70 mt-2">Required: Client OAuth Login = ON, Web OAuth Login = ON, and the <strong>stellarsync.app/auth/threads/callback</strong> URL is whitelisted in the Meta app.</div>
             <div class="text-[10px] text-yellow-300/70">If Meta returns error_code 1349168, the redirect URI is not yet whitelisted in the Meta App dashboard.</div>
           </div>
         </div>` : ""}
@@ -15370,7 +15481,7 @@ function getConnectedAccountsMarkup(options = {}) {
           <div class="text-[10px] text-gray-500 space-y-0.5 mt-1">
             <div>• Ensure <strong class="text-white">Client OAuth Login</strong> is enabled in Meta App settings.</div>
             <div>• Ensure <strong class="text-white">Web OAuth Login</strong> is enabled for Threads.</div>
-            <div>• App Domains and valid redirect URIs must match the Supabase/StellarSync OAuth callback URL.</div>
+            <div>• App Domains and valid redirect URIs must match the <strong>stellarsync.app/auth/{provider}/callback</strong> pattern.</div>
           </div>
         </div>` : ""}
         ${platform === "bluesky" ? `
@@ -16476,7 +16587,7 @@ function renderWorkspaceHub() {
   const postTypeSummary = document.getElementById("settings-posttype-summary");
   const queueSummary = document.getElementById("settings-queue-summary");
   if (platformSummary) platformSummary.textContent = (settings.platforms || []).map(toTitleCase).join(", ") || "None";
-  if (pillarSummary) pillarSummary.textContent = (settings.pillars || []).map(formatContentPillarLabel).join(", ") || "None";
+  if (pillarSummary) pillarSummary.textContent = (getWorkspacePillarNames().length ? getWorkspacePillarNames() : (settings.pillars || [])).map(formatContentPillarLabel).join(", ") || "None";
   if (postTypeSummary) postTypeSummary.textContent = (settings.postTypes || []).map(toTitleCase).join(", ") || "None";
   if (queueSummary) queueSummary.textContent = settings.queueLimit || "No queue limit";
   renderConnectedAccounts();
@@ -27412,81 +27523,167 @@ function renderAIDraftList() {
 function renderBrandFrameworkEditor() {
   console.log("[brand-os] render panel");
   if (!brandFrameworkSectionList || !brandFrameworkEditor || !brandFrameworkDiagnostics) return;
-  const items = (appState.brandFramework || []).slice().sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
-  if (!items.length) {
-    brandFrameworkSectionList.innerHTML = "";
-    brandFrameworkEditor.innerHTML = makeEmptyState("Brand OS unavailable", "Load or create Brand OS entries to edit semantic guidance here.", "ph-book-open-text");
-    brandFrameworkDiagnostics.innerHTML = `<div class="text-sm text-gray-300 wrap-safe">No framework items are loaded yet.</div>`;
+  var items = (appState.brandFramework || []).slice().sort(function(a, b) { return (a.sortOrder || 0) - (b.sortOrder || 0); });
+  var sections = [];
+  if (items.length) sections = sections.concat([...new Set(items.map(function(item) { return item.section; }).filter(Boolean))]);
+  if (!currentBrandFrameworkSection) currentBrandFrameworkSection = "__pillars__";
+  var sideButtons = [];
+  sideButtons.push('<button type="button" onclick="setBrandFrameworkSection(\'__pillars__\')" class="w-full text-left p-3 rounded-xl border ' + (currentBrandFrameworkSection === "__pillars__" ? "bg-[#231738] border-[#c77dff]/30 text-white" : "bg-[#181125] border-white/5 text-gray-300") + ' transition-colors">');
+  sideButtons.push('<div class="flex items-center gap-2"><i class="ph-bold ph-layout text-sm"></i><span class="text-sm font-bold">Pillars</span></div>');
+  sideButtons.push('<div class="text-[10px] text-gray-500 mt-1">Manage workspace pillar taxonomy</div>');
+  sideButtons.push('</button>');
+  sideButtons = sideButtons.concat(sections.map(function(section) {
+    return '<button type="button" onclick="setBrandFrameworkSection(\'' + escapeHtml(section) + '\')" class="w-full text-left p-3 rounded-xl border ' + (currentBrandFrameworkSection === section ? "bg-[#231738] border-[#c77dff]/30 text-white" : "bg-[#181125] border-white/5 text-gray-300") + ' transition-colors"><div class="text-sm font-bold wrap-safe">' + escapeHtml(section) + '</div></button>';
+  }));
+  brandFrameworkSectionList.innerHTML = sideButtons.join("");
+  if (currentBrandFrameworkSection === "__pillars__") {
+    renderBrandOSPillarEditor();
     return;
   }
-  const sections = [...new Set(items.map((item) => item.section).filter(Boolean))];
-  if (!currentBrandFrameworkSection) currentBrandFrameworkSection = sections[0] || "";
-  brandFrameworkSectionList.innerHTML = sections.map((section) => `
-    <button type="button" onclick="setBrandFrameworkSection('${escapeHtml(section)}')" class="w-full text-left p-3 rounded-xl border ${currentBrandFrameworkSection === section ? "bg-[#231738] border-[#c77dff]/30 text-white" : "bg-[#181125] border-white/5 text-gray-300"} transition-colors">
-      <div class="text-sm font-bold wrap-safe">${escapeHtml(section)}</div>
-    </button>
-  `).join("");
-  const sectionItems = items.filter((item) => item.section === currentBrandFrameworkSection);
-  brandFrameworkEditor.innerHTML = sectionItems.map((item, index) => `
-    <div class="p-4 rounded-2xl bg-[#181125] border border-white/5 space-y-3">
-      <div class="flex items-center justify-between gap-3">
-        <div class="text-sm font-bold text-white wrap-safe">${escapeHtml(item.title || item.frameworkKey || `Rule ${index + 1}`)}</div>
-        <label class="text-xs text-gray-400 flex items-center gap-2"><input type="checkbox" data-framework-key="${escapeHtml(item.frameworkKey)}" data-field="enabled" ${item.enabled !== false ? "checked" : ""}> Enabled</label>
-      </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <input class="form-input text-sm" data-framework-key="${escapeHtml(item.frameworkKey)}" data-field="title" value="${escapeHtml(item.title || "")}" placeholder="Rule title">
-        <input class="form-input text-sm" data-framework-key="${escapeHtml(item.frameworkKey)}" data-field="ruleType" value="${escapeHtml(item.ruleType || "principle")}" placeholder="Rule type">
-      </div>
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <input class="form-input text-sm" data-framework-key="${escapeHtml(item.frameworkKey)}" data-field="importance" value="${escapeHtml(String(item.importance || 0))}" placeholder="Importance">
-        <input class="form-input text-sm" data-framework-key="${escapeHtml(item.frameworkKey)}" data-field="sortOrder" value="${escapeHtml(String(item.sortOrder || 0))}" placeholder="Sort order">
-        <input class="form-input text-sm" data-framework-key="${escapeHtml(item.frameworkKey)}" data-field="strictness" value="${escapeHtml(item.strictness || "medium")}" placeholder="Strictness">
-        <input class="form-input text-sm" data-framework-key="${escapeHtml(item.frameworkKey)}" data-field="semanticCategory" value="${escapeHtml(item.semanticCategory || "")}" placeholder="Semantic category">
-      </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <input class="form-input text-sm" data-framework-key="${escapeHtml(item.frameworkKey)}" data-field="appliesToPlatform" value="${escapeHtml(item.appliesToPlatform || "")}" placeholder="Applies to platform">
-        <input class="form-input text-sm" data-framework-key="${escapeHtml(item.frameworkKey)}" data-field="appliesToPostType" value="${escapeHtml(item.appliesToPostType || "")}" placeholder="Applies to post type">
-      </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <label class="text-xs text-gray-400 flex items-center gap-2 p-3 rounded-xl bg-[#120c1d] border border-white/5"><input type="checkbox" data-framework-key="${escapeHtml(item.frameworkKey)}" data-field="preferredPattern" ${item.preferredPattern ? "checked" : ""}> Preferred pattern</label>
-        <label class="text-xs text-gray-400 flex items-center gap-2 p-3 rounded-xl bg-[#120c1d] border border-white/5"><input type="checkbox" data-framework-key="${escapeHtml(item.frameworkKey)}" data-field="antiPattern" ${item.antiPattern ? "checked" : ""}> Anti-pattern</label>
-      </div>
-      <textarea class="form-input min-h-[120px] text-sm" data-framework-key="${escapeHtml(item.frameworkKey)}" data-field="content">${escapeHtml(item.content || "")}</textarea>
-      <textarea class="form-input min-h-[80px] text-sm" data-framework-key="${escapeHtml(item.frameworkKey)}" data-field="examples" placeholder="Examples, preferred hooks, avoided hooks, successful patterns, strongest-performing references">${escapeHtml(item.examples || "")}</textarea>
-    </div>
-  `).join("");
-  const diagnostics = [];
-  const antiPatterns = new Set();
-  items.forEach((item) => {
-    const key = normalizeLookupValue(item.title || item.content || "");
+  var sectionItems = items.filter(function(item) { return item.section === currentBrandFrameworkSection; });
+  brandFrameworkEditor.innerHTML = sectionItems.map(function(item, index) {
+    return '<div class="p-4 rounded-2xl bg-[#181125] border border-white/5 space-y-3">' +
+      '<div class="flex items-center justify-between gap-3"><div class="text-sm font-bold text-white wrap-safe">' + escapeHtml(item.title || item.frameworkKey || "Rule " + (index + 1)) + '</div><label class="text-xs text-gray-400 flex items-center gap-2"><input type="checkbox" data-framework-key="' + escapeHtml(item.frameworkKey) + '" data-field="enabled" ' + (item.enabled !== false ? "checked" : "") + '> Enabled</label></div>' +
+      '<div class="grid grid-cols-1 md:grid-cols-2 gap-3"><input class="form-input text-sm" data-framework-key="' + escapeHtml(item.frameworkKey) + '" data-field="title" value="' + escapeHtml(item.title || "") + '" placeholder="Rule title"><input class="form-input text-sm" data-framework-key="' + escapeHtml(item.frameworkKey) + '" data-field="ruleType" value="' + escapeHtml(item.ruleType || "principle") + '" placeholder="Rule type"></div>' +
+      '<div class="grid grid-cols-1 md:grid-cols-4 gap-3">' +
+      '<input class="form-input text-sm" data-framework-key="' + escapeHtml(item.frameworkKey) + '" data-field="importance" value="' + escapeHtml(String(item.importance || 0)) + '" placeholder="Importance">' +
+      '<input class="form-input text-sm" data-framework-key="' + escapeHtml(item.frameworkKey) + '" data-field="sortOrder" value="' + escapeHtml(String(item.sortOrder || 0)) + '" placeholder="Sort order">' +
+      '<input class="form-input text-sm" data-framework-key="' + escapeHtml(item.frameworkKey) + '" data-field="strictness" value="' + escapeHtml(item.strictness || "medium") + '" placeholder="Strictness">' +
+      '<input class="form-input text-sm" data-framework-key="' + escapeHtml(item.frameworkKey) + '" data-field="semanticCategory" value="' + escapeHtml(item.semanticCategory || "") + '" placeholder="Semantic category">' +
+      '</div>' +
+      '<div class="grid grid-cols-1 md:grid-cols-2 gap-3"><input class="form-input text-sm" data-framework-key="' + escapeHtml(item.frameworkKey) + '" data-field="appliesToPlatform" value="' + escapeHtml(item.appliesToPlatform || "") + '" placeholder="Applies to platform"><input class="form-input text-sm" data-framework-key="' + escapeHtml(item.frameworkKey) + '" data-field="appliesToPostType" value="' + escapeHtml(item.appliesToPostType || "") + '" placeholder="Applies to post type"></div>' +
+      '<div class="grid grid-cols-1 md:grid-cols-2 gap-3">' +
+      '<label class="text-xs text-gray-400 flex items-center gap-2 p-3 rounded-xl bg-[#120c1d] border border-white/5"><input type="checkbox" data-framework-key="' + escapeHtml(item.frameworkKey) + '" data-field="preferredPattern" ' + (item.preferredPattern ? "checked" : "") + '> Preferred pattern</label>' +
+      '<label class="text-xs text-gray-400 flex items-center gap-2 p-3 rounded-xl bg-[#120c1d] border border-white/5"><input type="checkbox" data-framework-key="' + escapeHtml(item.frameworkKey) + '" data-field="antiPattern" ' + (item.antiPattern ? "checked" : "") + '> Anti-pattern</label>' +
+      '</div>' +
+      '<textarea class="form-input min-h-[120px] text-sm" data-framework-key="' + escapeHtml(item.frameworkKey) + '" data-field="content">' + escapeHtml(item.content || "") + '</textarea>' +
+      '<textarea class="form-input min-h-[80px] text-sm" data-framework-key="' + escapeHtml(item.frameworkKey) + '" data-field="examples" placeholder="Examples, preferred hooks, avoided hooks, successful patterns, strongest-performing references">' + escapeHtml(item.examples || "") + '</textarea>' +
+      '</div>';
+  }).join("");
+  var diagnostics = [];
+  var antiPatterns = new Set();
+  items.forEach(function(item) {
+    var key = normalizeLookupValue(item.title || item.content || "");
     if (item.antiPattern && antiPatterns.has(key)) diagnostics.push("Duplicate anti-pattern detected.");
     if (item.antiPattern) antiPatterns.add(key);
   });
-  [
-    "Core Identity",
-    "System Philosophy",
-    "Participation Architecture",
-    "Orientation",
-    "Spatial / Geographic Systems",
-    "Interpreter of Systems",
-    "Classification Before Distribution",
-    "Community-Led Systems",
-    "Language Carries Structure",
-    "Embedded Builder Perspective",
-    "Legibility",
-    "Platform-Specific Strategy",
-    "CTA Philosophy",
-    "Hook Patterns",
-    "Emotional Entry Points",
-    "Carousel Philosophy",
-    "AI Anti-Patterns",
-    "Grammar Rules",
-    "Preferred Vocabulary",
-    "Avoid Vocabulary"
-  ].forEach((section) => {
-    if (!sections.includes(section)) diagnostics.push(`Missing framework section: ${section}.`);
+  ["Core Identity", "System Philosophy", "Participation Architecture", "Orientation", "Spatial / Geographic Systems", "Interpreter of Systems", "Classification Before Distribution", "Community-Led Systems", "Language Carries Structure", "Embedded Builder Perspective", "Legibility", "Platform-Specific Strategy", "CTA Philosophy", "Hook Patterns", "Emotional Entry Points", "Carousel Philosophy", "AI Anti-Patterns", "Grammar Rules", "Preferred Vocabulary", "Avoid Vocabulary"].forEach(function(section) {
+    if (sections.indexOf(section) === -1) diagnostics.push("Missing framework section: " + section + ".");
   });
-  brandFrameworkDiagnostics.innerHTML = (diagnostics.length ? diagnostics : ["No framework conflicts detected from local Brand OS data."]).map((item) => `<div class="text-sm text-gray-300 wrap-safe">${escapeHtml(item)}</div>`).join("");
+  brandFrameworkDiagnostics.innerHTML = (diagnostics.length ? diagnostics : ["No framework conflicts detected from local Brand OS data."]).map(function(item) { return '<div class="text-sm text-gray-300 wrap-safe">' + escapeHtml(item) + '</div>'; }).join("");
+}
+
+function renderBrandOSPillarEditor() {
+  console.log("[brand-os] render pillar editor");
+  if (!brandFrameworkEditor || !brandFrameworkDiagnostics) return;
+  var pillars = getWorkspacePillars();
+  console.log("[pillars] loaded workspace pillars", pillars.length);
+  var html = '<div class="p-4 rounded-2xl bg-[#181125] border border-white/5">';
+  html += '<div class="flex items-center justify-between gap-3 mb-4"><div class="text-sm font-bold text-white">Workspace Pillars</div>';
+  html += '<button type="button" onclick="addBrandOSPillar()" class="px-3 py-1.5 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] text-white text-[10px] uppercase tracking-wider font-bold border border-white/5 transition-colors"><i class="ph-bold ph-plus"></i> Add Pillar</button>';
+  html += '</div>';
+  if (!pillars.length) {
+    html += '<div class="text-sm text-gray-400 py-4 text-center">No pillars defined. Add one to get started.</div>';
+  } else {
+    html += pillars.map(function(p, i) {
+      var c = p.color || "#c77dff";
+      return '<div class="flex items-center gap-3 p-3 rounded-xl bg-[#120c1d] border border-white/5 mb-2">' +
+        '<button type="button" onclick="moveBrandOSPillar(' + i + ', -1)" class="text-gray-500 hover:text-white transition-colors" title="Move up"><i class="ph-bold ph-caret-up"></i></button>' +
+        '<button type="button" onclick="moveBrandOSPillar(' + i + ', 1)" class="text-gray-500 hover:text-white transition-colors" title="Move down"><i class="ph-bold ph-caret-down"></i></button>' +
+        '<span class="inline-block w-6 h-6 rounded-full shrink-0" style="background:' + escapeHtml(c) + '"></span>' +
+        '<input class="form-input text-sm flex-1 min-w-0" data-pillar-idx="' + i + '" data-field="name" value="' + escapeHtml(p.name || "") + '" placeholder="Pillar name" oninput="updateBrandOSPillarField(' + i + ', \'name\', this.value)">' +
+        '<select class="form-input text-sm w-28" data-pillar-idx="' + i + '" data-field="icon" onchange="updateBrandOSPillarField(' + i + ', \'icon\', this.value)">' +
+        '<option value="ph-megaphone" ' + (p.icon === "ph-megaphone" ? "selected" : "") + '>Advocacy</option>' +
+        '<option value="ph-users-three" ' + (p.icon === "ph-users-three" ? "selected" : "") + '>Community</option>' +
+        '<option value="ph-heart" ' + (p.icon === "ph-heart" ? "selected" : "") + '>Wellness</option>' +
+        '<option value="ph-crown" ' + (p.icon === "ph-crown" ? "selected" : "") + '>Leadership</option>' +
+        '<option value="ph-book-open" ' + (p.icon === "ph-book-open" ? "selected" : "") + '>Education</option>' +
+        '<option value="ph-hand-heart" ' + (p.icon === "ph-hand-heart" ? "selected" : "") + '>Fundraising</option>' +
+        '<option value="ph-leaf" ' + (p.icon === "ph-leaf" ? "selected" : "") + '>Climate</option>' +
+        '<option value="ph-briefcase" ' + (p.icon === "ph-briefcase" ? "selected" : "") + '>Jobs</option>' +
+        '<option value="ph-sparkle" ' + (p.icon === "ph-sparkle" ? "selected" : "") + '>Sparkle</option>' +
+        '<option value="ph-star" ' + (p.icon === "ph-star" ? "selected" : "") + '>Star</option>' +
+        '<option value="ph-lightbulb" ' + (p.icon === "ph-lightbulb" ? "selected" : "") + '>Lightbulb</option>' +
+        '<option value="ph-target" ' + (p.icon === "ph-target" ? "selected" : "") + '>Target</option>' +
+        '<option value="ph-trend-up" ' + (p.icon === "ph-trend-up" ? "selected" : "") + '>Growth</option>' +
+        '<option value="ph-graph" ' + (p.icon === "ph-graph" ? "selected" : "") + '>Analytics</option>' +
+        '<option value="ph-globe" ' + (p.icon === "ph-globe" ? "selected" : "") + '>Global</option>' +
+        '</select>' +
+        '<input type="color" class="w-8 h-8 rounded cursor-pointer border border-white/10" data-pillar-idx="' + i + '" data-field="color" value="' + escapeHtml(c) + '" onchange="updateBrandOSPillarField(' + i + ', \'color\', this.value)" title="Pick color">' +
+        '<label class="text-xs text-gray-400 flex items-center gap-1 shrink-0"><input type="checkbox" data-pillar-idx="' + i + '" data-field="enabled" ' + (p.enabled !== false ? "checked" : "") + ' onchange="updateBrandOSPillarField(' + i + ', \'enabled\', this.checked)"> Active</label>' +
+        '<button type="button" onclick="removeBrandOSPillar(' + i + ')" class="text-red-400 hover:text-red-300 transition-colors" title="Remove pillar"><i class="ph-bold ph-trash"></i></button>' +
+        '</div>';
+    }).join("");
+  }
+  html += '<div class="mt-4 flex justify-end gap-2">';
+  html += '<button type="button" onclick="saveBrandOSPillars()" class="px-4 py-2 bg-gradient-to-r from-[#9d4edd] to-[#c77dff] hover:opacity-90 text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all border border-white/10"><i class="ph-bold ph-check"></i> Save Pillars</button>';
+  html += '</div></div>';
+  brandFrameworkEditor.innerHTML = html;
+  brandFrameworkDiagnostics.innerHTML = '<div class="text-sm text-gray-300 wrap-safe">Pillars control the taxonomy used across calendar, posts, campaigns, and filters. ' + (pillars.length ? pillars.length + " pillar" + (pillars.length !== 1 ? "s" : "") + " defined." : "No pillars defined yet.") + '</div>';
+}
+
+var BRAND_OS_PILLAR_EDIT_BUFFER = null;
+
+function getPillarEditBuffer() {
+  if (!BRAND_OS_PILLAR_EDIT_BUFFER) BRAND_OS_PILLAR_EDIT_BUFFER = JSON.parse(JSON.stringify(getWorkspacePillars()));
+  return BRAND_OS_PILLAR_EDIT_BUFFER;
+}
+
+function updateBrandOSPillarField(idx, field, value) {
+  var buf = getPillarEditBuffer();
+  if (!buf[idx]) return;
+  buf[idx][field] = value;
+  if (field === "name" && value) buf[idx].slug = String(value).trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || buf[idx].slug;
+}
+
+function addBrandOSPillar() {
+  var buf = getPillarEditBuffer();
+  buf.push({ name: "New Pillar", slug: "new-pillar", icon: "ph-sparkle", color: "#c77dff", enabled: true });
+  renderBrandOSPillarEditor();
+}
+
+function removeBrandOSPillar(idx) {
+  var buf = getPillarEditBuffer();
+  buf.splice(idx, 1);
+  renderBrandOSPillarEditor();
+}
+
+function moveBrandOSPillar(idx, dir) {
+  var buf = getPillarEditBuffer();
+  var target = idx + dir;
+  if (target < 0 || target >= buf.length) return;
+  var tmp = buf[idx];
+  buf[idx] = buf[target];
+  buf[target] = tmp;
+  renderBrandOSPillarEditor();
+}
+
+async function saveBrandOSPillars() {
+  console.log("[pillars] saved workspace pillars");
+  var buf = getPillarEditBuffer();
+  var payload = { default_pillars: buf.map(function(p) { return { name: String(p.name || "").trim(), slug: String(p.slug || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, ""), icon: p.icon || "ph-sparkle", color: p.color || "#c77dff", enabled: p.enabled !== false }; }).filter(function(p) { return p.name && p.slug; }) };
+  try {
+    var loadingId = showLoadingToast("Saving pillars", "Saving workspace pillar taxonomy...");
+    var wsId = appState?.workspace?.workspace_id || appState?.workspace?.id || "";
+    if (!wsId) throw new Error("No workspace ID");
+    if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase client not available");
+    var existing = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").select("id").eq("workspace_id", wsId).maybeSingle();
+    var result;
+    if (existing?.data?.id) {
+      result = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").update({ default_pillars: payload.default_pillars }).eq("id", existing.data.id);
+    } else {
+      result = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").insert({ workspace_id: wsId, default_pillars: payload.default_pillars });
+    }
+    if (result.error) throw result.error;
+    BRAND_OS_PILLAR_EDIT_BUFFER = null;
+    if (appState?.settings) appState.settings.default_pillars = payload.default_pillars;
+    if (appState?.workspace) appState.workspace.default_pillars = payload.default_pillars;
+    updateToast(loadingId, "success", "Pillars saved", "Workspace pillar taxonomy updated.");
+    renderBrandFrameworkEditor();
+    refreshSettingsSheetMirrorCard();
+  } catch (err) {
+    showToast("Save failed", err.message || "Could not save pillars.", "ph-warning", "text-yellow-400");
+  }
 }
 
 function setBrandFrameworkSection(section) {
@@ -29071,7 +29268,7 @@ function renderQueue(queueItems) {
 
   queueList.innerHTML = items.map(item => {
     const hydrated = hydratePostCampaign(item);
-    const color = getCampaignColor(hydrated, hydrated.pillar);
+    const color = getCampaignColorForPost(item);
     const pillarColor = getPillarTheme(hydrated.pillar);
 
     const platformIcons = `<div class="flex gap-1 text-gray-400">${renderPlatformChips(item, { compact: true })}</div>`;
@@ -29428,12 +29625,7 @@ function clamp(value, min, max) {
 }
 
 function pillarColor(pillar) {
-  const canonical = normalizePillar(pillar);
-  return canonical === "authority" ? "#00f0ff" :
-         canonical === "distribution" ? "#b25fff" :
-         canonical === "application" ? "#ffd700" :
-         canonical === "identity" ? "#fb7185" :
-         "#00ffaa";
+  return getPillarTheme(normalizePillar(pillar)).color || "#00ffaa";
 }
 
 function formatLedgerDate(value) {
@@ -30446,7 +30638,7 @@ function populatePWModal() {
   if (wsMediaPrefixEl) wsMediaPrefixEl.value = String(wsActive.media_prefix || slug + "/").trim();
   if (wsBrandVoiceEl) wsBrandVoiceEl.value = String(wsActive.brand_voice || wsActive.brandVoice || "").trim();
   if (wsDefaultPlatformsEl) wsDefaultPlatformsEl.value = Array.isArray(wsActive.default_platforms) ? wsActive.default_platforms.join(", ") : String(wsActive.default_platforms || "").trim();
-  if (wsDefaultPillarsEl) wsDefaultPillarsEl.value = Array.isArray(wsActive.default_pillars) ? wsActive.default_pillars.join(", ") : String(wsActive.default_pillars || "").trim();
+  if (wsDefaultPillarsEl) wsDefaultPillarsEl.value = Array.isArray(wsActive.default_pillars) ? wsActive.default_pillars.map(function(p) { return typeof p === "object" ? p.name || p.slug || "" : String(p).trim(); }).filter(Boolean).join(", ") : String(wsActive.default_pillars || "").trim();
   if (wsDefaultStatusesEl) wsDefaultStatusesEl.value = Array.isArray(wsActive.default_statuses) ? wsActive.default_statuses.join(", ") : String(wsActive.default_statuses || "").trim();
   if (wsDefaultPostTypesEl) wsDefaultPostTypesEl.value = Array.isArray(wsActive.default_post_types) ? wsActive.default_post_types.join(", ") : String(wsActive.default_post_types || "").trim();
   if (wsCurrentMonthEl) wsCurrentMonthEl.value = String(wsActive.current_month || wsActive.currentMonth || "").trim();
@@ -30515,8 +30707,8 @@ async function savePWProfile() {
 }
 
 var WORKSPACE_SETTINGS_COLUMNS_CACHE = null;
-var WORKSPACE_SETTINGS_OPTIONAL_FIELDS = ["brand_accent", "icon", "avatar_mode", "avatar_initials", "constellation_shape", "short_name", "media_prefix", "media_bucket", "brand_voice", "current_month", "current_year", "default_platforms", "default_pillars", "default_statuses", "default_post_types", "sheet_sync_enabled", "sheet_id", "google_sheet_id", "apps_script_url", "sheet_sync_direction", "sheet_last_pushed_at", "sheet_last_pulled_at", "monday_board_id", "monday_sync_enabled", "monday_sync_direction", "monday_last_pushed_at", "monday_last_pulled_at", "plan_slug", "subscription_tier", "managed_account", "is_admin_workspace", "feature_flags"];
-var WORKSPACE_SETTINGS_REQUIRE_CONFIRMED_FIELDS = ["brand_accent", "current_month", "default_platforms", "default_pillars", "icon", "avatar_mode", "avatar_initials", "constellation_shape", "short_name", "media_prefix", "media_bucket", "plan_slug", "subscription_tier", "managed_account", "is_admin_workspace", "feature_flags"];
+var WORKSPACE_SETTINGS_OPTIONAL_FIELDS = ["brand_accent", "icon", "avatar_mode", "avatar_initials", "constellation_shape", "short_name", "media_prefix", "media_bucket", "brand_voice", "current_month", "current_year", "default_platforms", "default_pillars", "default_statuses", "default_post_types", "sheet_sync_enabled", "sheet_id", "google_sheet_id", "apps_script_url", "sheet_sync_direction", "sheet_last_pushed_at", "sheet_last_pulled_at", "monday_board_id", "monday_sync_enabled", "monday_sync_direction", "monday_last_pushed_at", "monday_last_pulled_at", "plan_slug", "subscription_tier", "managed_account", "is_admin_workspace", "feature_flags", "workspace_slug"];
+var WORKSPACE_SETTINGS_REQUIRE_CONFIRMED_FIELDS = ["brand_accent", "current_month", "default_platforms", "default_pillars", "icon", "avatar_mode", "avatar_initials", "constellation_shape", "short_name", "media_prefix", "media_bucket", "plan_slug", "subscription_tier", "managed_account", "is_admin_workspace", "feature_flags", "workspace_slug"];
 
 async function getWorkspaceSettingsColumns() {
   if (WORKSPACE_SETTINGS_COLUMNS_CACHE) return WORKSPACE_SETTINGS_COLUMNS_CACHE;
@@ -30629,7 +30821,15 @@ async function selectWorkspaceSettingsByWorkspaceWithMissingColumnRetry(workspac
     }
     if (!result || !result.data) {
       result = slug
-        ? await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").select(remainingFields.join(",")).eq("workspace_slug", slug).maybeSingle()
+        ? await (async function() {
+            var wsLookup = await STELLARSYNC_SUPABASE_CLIENT.from("workspaces").select("id").eq("slug", slug).maybeSingle();
+            var widFromSlug = wsLookup?.data?.id ? String(wsLookup.data.id).trim() : "";
+            if (widFromSlug) {
+              console.log("[workspace-save] slug read from workspaces", { slug, wid: widFromSlug });
+              return await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").select(remainingFields.join(",")).eq("workspace_id", widFromSlug).maybeSingle();
+            }
+            return { data: null, error: null };
+          })()
         : { data: null, error: null };
     }
     if (!result?.error) return { ...result, fields: remainingFields };
@@ -30708,7 +30908,7 @@ async function savePWWorkspace() {
     media_prefix: (document.getElementById("pw-workspace-media-prefix") || {}).value || (activeWorkspace.workspace_slug || activeWorkspace.slug || "") + "/",
     brand_voice: (document.getElementById("pw-workspace-brand-voice") || {}).value || "",
     default_platforms: String((document.getElementById("pw-workspace-default-platforms") || {}).value || "").split(/[|,\n]/).map((v) => v.trim()).filter(Boolean),
-    default_pillars: String((document.getElementById("pw-workspace-default-pillars") || {}).value || "").split(/[|,\n]/).map((v) => v.trim()).filter(Boolean),
+    default_pillars: String((document.getElementById("pw-workspace-default-pillars") || {}).value || "").split(/[|,\n]/).map(function(v) { return getDefaultPillarObject(String(v || "").trim()); }).filter(Boolean),
     default_statuses: String((document.getElementById("pw-workspace-default-statuses") || {}).value || "").split(/[|,\n]/).map((v) => v.trim()).filter(Boolean),
     default_post_types: String((document.getElementById("pw-workspace-default-post-types") || {}).value || "").split(/[|,\n]/).map((v) => v.trim()).filter(Boolean),
     current_month: (document.getElementById("pw-workspace-current-month") || {}).value || "",
@@ -30736,8 +30936,9 @@ async function savePWWorkspace() {
           .eq("id", workspaceId);
         if (workspaceUpdate.error) throw workspaceUpdate.error;
       }
-      var settingsPayload = { ...payload, workspace_id: workspaceId, workspace_slug: slug };
+      var settingsPayload = { ...payload, workspace_id: workspaceId };
       delete settingsPayload.name;
+      delete settingsPayload.workspace_slug;
       await upsertWorkspaceSettings(workspaceId, settingsPayload);
       console.log("[icon-save] response", { ok: true, workspace_slug: slug });
       console.log("[workspace-icon] save response", { ok: true, workspace_slug: slug });
@@ -30754,7 +30955,7 @@ async function savePWWorkspace() {
         }
       }
       var wsColumns = await getWorkspaceSettingsColumns();
-      var reloadFields = ["workspace_id","workspace_slug","display_name","short_name","avatar_mode","icon","avatar_initials","constellation_shape","brand_accent","media_bucket","media_prefix","brand_voice","current_month","current_year"];
+      var reloadFields = ["workspace_id","display_name","short_name","avatar_mode","icon","avatar_initials","constellation_shape","brand_accent","media_bucket","media_prefix","brand_voice","current_month","current_year"];
       reloadFields = filterWorkspaceSettingsFieldsForKnownSchema(reloadFields, wsColumns, "verification");
       var reloadedWorkspace = await selectWorkspaceSettingsWithMissingColumnRetry(workspaceId, reloadFields);
       console.log("[icon-save] reload check", reloadedWorkspace?.data || null);

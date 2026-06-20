@@ -1079,7 +1079,7 @@ const INSIGHT_METRIC_KEYS = [
 
 const SETTINGS_DEFAULTS = {
   platforms: ["linkedin", "instagram", "both"],
-  pillars: ["authority", "distribution", "identity", "application"],
+  pillars: ["Advocacy", "Community", "Wellness", "Leadership"],
   statuses: ["draft", "scheduled", "published"],
   postTypes: ["image", "carousel", "video", "article", "text", "poll"],
   campaigns: [
@@ -3496,7 +3496,7 @@ function getCampaignColorFromSettings_(campaignName, settings) {
   return String(colorMap[normalizedName] || "").trim();
 }
 
-function normalizePillar_(value, fallback) {
+function normalizePillar_(value, fallback, pillarList) {
   var normalized = String(value || "")
     .trim()
     .toLowerCase()
@@ -3507,16 +3507,37 @@ function normalizePillar_(value, fallback) {
     return fallback === undefined ? "" : normalizePillar_(fallback);
   }
 
+  var list = pillarList || null;
+  if (!list || !list.length) {
+    try { var s = getSettingsRegistry(); list = s && s.pillars; } catch (e) { list = null; }
+  }
+  if (Array.isArray(list) && list.length) {
+    for (var i = 0; i < list.length; i++) {
+      var p = typeof list[i] === "object" ? String(list[i].slug || list[i].name || "").trim().toLowerCase() : String(list[i] || "").trim().toLowerCase();
+      if (p === normalized || normalized.indexOf(p) !== -1 || p.indexOf(normalized) !== -1) return typeof list[i] === "object" ? String(list[i].slug || list[i].name || "").trim().toLowerCase() : p;
+    }
+  }
+
   var canonicalMap = {
     iden: "identity",
     ident: "identity",
     identity: "identity",
+    advocacy: "advocacy",
+    wellness: "wellness",
+    community: "community",
+    leadership: "leadership",
     authority: "authority",
     distribution: "distribution",
-    application: "application"
+    application: "application",
+    education: "education",
+    promotion: "promotion"
   };
 
   if (canonicalMap[normalized]) return canonicalMap[normalized];
+  if (normalized.indexOf("advocacy") !== -1) return "advocacy";
+  if (normalized.indexOf("wellness") !== -1) return "wellness";
+  if (normalized.indexOf("community") !== -1) return "community";
+  if (normalized.indexOf("leadership") !== -1) return "leadership";
   if (normalized.indexOf("identity") !== -1 || normalized === "iden" || normalized === "ident") return "identity";
   if (normalized.indexOf("author") !== -1) return "authority";
   if (normalized.indexOf("distribut") !== -1) return "distribution";
@@ -8748,11 +8769,7 @@ function normalizeDeploymentUrl_(url) {
 function getOAuthRedirectUri_(platform) {
   var baseUrl = getPublicWebAppBaseUrl_();
   if (!baseUrl) return "";
-  if (platform === "linkedin") return baseUrl + "?action=linkedinCallback";
-  if (platform === "instagram") return baseUrl + "?action=instagramCallback";
-  if (platform === "threads") return baseUrl + "?action=threadsCallback";
-  if (platform === "tiktok") return baseUrl + "?action=tiktokCallback";
-  return "";
+  return baseUrl.replace(/\/+$/, "") + "/auth/" + String(platform || "").trim().toLowerCase() + "/callback";
 }
 
 function getPlatformClientId_(platform) {
@@ -8986,8 +9003,7 @@ function buildOAuthRouteHealth_(frontendUrl) {
         tokenHostMismatchIssue: platform === "instagram" && getInstagramAuthMode_() === "instagram_login" && getInstagramGraphBase_().indexOf("graph.instagram.com") === -1 ? "Instagram Login tokens must use graph.instagram.com endpoints." : "",
         threadsRedirectAllowlistIssue: platform === "threads" ? function() {
           var redirectUri = derivedRedirectUri;
-          var endsWithCallback = redirectUri.indexOf("threadsCallback") !== -1;
-          if (!endsWithCallback) return "Threads redirect URI must end with ?action=threadsCallback";
+          if (redirectUri.indexOf("/threads/callback") === -1) return "Threads redirect URI must end with /auth/threads/callback";
           return "";
         }() : "",
         threadsError1349168: platform === "threads" ? "If Meta returns error_code 1349168, the redirect URI is not whitelisted in Meta App dashboard. Add " + derivedRedirectUri + " to Valid OAuth Redirect URIs under Facebook Login > Settings." : ""
@@ -9234,9 +9250,9 @@ function metaCallback(e) {
     action: "metaCallback"
   }, [
     "This shared callback URL (?action=metaCallback) is no longer used for new connections.",
-    "Update Meta App dashboard Valid OAuth Redirect URIs to include:",
-    "  " + getPublicWebappBaseUrl_() + "?action=instagramCallback",
-    "  " + getPublicWebappBaseUrl_() + "?action=threadsCallback",
+    "Update Meta App dashboard Valid OAuth Redirect URIs to include the per-platform callback URLs:",
+    "  " + getOAuthRedirectUri_("instagram"),
+    "  " + getOAuthRedirectUri_("threads"),
     "Restart the connection flow from StellarSync using the platform-specific buttons."
   ])).setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
@@ -11755,6 +11771,10 @@ function collectKeywordCandidatesFromContext_(item, context) {
   var pillar = String(pickFirstDefined_(item.pillar, item.suggested_pillar, "")).trim().toLowerCase();
   if (pillar) {
     addCandidate(pillar, "pillar", 0.65);
+    if (pillar === "advocacy") addCandidate("policy advocacy and public messaging", "pillar", 0.6);
+    if (pillar === "wellness") addCandidate("wellbeing and holistic health", "pillar", 0.6);
+    if (pillar === "community") addCandidate("audience engagement and community building", "pillar", 0.6);
+    if (pillar === "leadership") addCandidate("thought leadership and vision", "pillar", 0.6);
     if (pillar === "edu" || pillar === "education") addCandidate("educational content", "pillar", 0.6);
     if (pillar === "engage" || pillar === "engagement") addCandidate("audience engagement", "pillar", 0.6);
     if (pillar === "aware" || pillar === "awareness") addCandidate("brand awareness", "pillar", 0.6);
