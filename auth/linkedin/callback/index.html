@@ -35,85 +35,71 @@ pre {
   var PROVIDER = "linkedin";
   var SUPABASE_URL = "https://szdlvyzjeqkfxsoqltwg.supabase.co";
 
-var params = new URLSearchParams(window.location.search);
+  var params = new URLSearchParams(window.location.search);
+  var code = params.get("code");
+  var state = params.get("state");
+  var error = params.get("error");
+  var errorDescription = params.get("error_description");
 
-var code = params.get(“code”);
-var state = params.get(“state”);
-var error = params.get(“error”);
-var errorDescription = params.get(“error_description”);
+  function log(message) {
+    console.log("[linkedin-callback]", message);
+    var el = document.getElementById("status");
+    if (el) el.textContent += "\n" + message;
+  }
 
-function log(message) {
-console.log(”[linkedin-callback]”, message);
+  function redirect(url) {
+    log("Redirecting to: " + url);
+    window.location.replace(url);
+  }
 
-var el = document.getElementById("status");
-if (el) {
-  el.textContent += "\n" + message;
-}
+  window.addEventListener("DOMContentLoaded", function () {
+    log("Callback page loaded");
 
-}
-
-function redirect(url) {
-log(“Redirecting to: “ + url);
-window.location.replace(url);
-}
-
-window.addEventListener(“DOMContentLoaded”, function () {
-log(“Callback page loaded”);
-
-if (error) {
-  log("LinkedIn error: " + (errorDescription || error));
-  redirect(
-    window.location.origin +
-    "/app/?social_error=" +
-    encodeURIComponent(errorDescription || error)
-  );
-  return;
-}
-if (!code || !state) {
-  log("Missing code or state");
-  redirect(window.location.origin + "/app/");
-  return;
-}
-log("Received OAuth code");
-log("Calling Supabase callback");
-fetch(
-  SUPABASE_URL +
-  "/functions/v1/social-auth-callback" +
-  "?provider=" + encodeURIComponent(PROVIDER) +
-  "&code=" + encodeURIComponent(code) +
-  "&state=" + encodeURIComponent(state) +
-  "&json=true"
-)
-  .then(function (response) {
-    log("Callback status: " + response.status);
-    return response.json();
-  })
-  .then(function (data) {
-    log("Response:");
-    log(JSON.stringify(data, null, 2));
-    if (data.redirectUrl) {
-      redirect(data.redirectUrl);
+    if (error) {
+      log("LinkedIn error: " + (errorDescription || error));
+      redirect(window.location.origin + "/app/?social_error=" + encodeURIComponent(errorDescription || error));
       return;
     }
-    redirect(window.location.origin + "/app/");
-  })
-  .catch(function (err) {
-    log("Callback failed:");
-    log(err && err.message ? err.message : String(err));
-    redirect(
-      window.location.origin +
-      "/app/?social_error=callback_failed"
-    );
-  });
 
-});
+    if (!code || !state) {
+      log("Missing code or state");
+      redirect(window.location.origin + "/app/");
+      return;
+    }
+
+    log("Received OAuth code");
+    log("Calling Supabase callback");
+
+    fetch(
+      SUPABASE_URL +
+        "/functions/v1/social-auth-callback" +
+        "?provider=" + encodeURIComponent(PROVIDER) +
+        "&code=" + encodeURIComponent(code) +
+        "&state=" + encodeURIComponent(state) +
+        "&json=true"
+    )
+      .then(function (response) {
+        log("Callback status: " + response.status);
+        return response.json();
+      })
+      .then(function (data) {
+        log("Response:");
+        log(JSON.stringify(data, null, 2));
+        redirect(data.redirectUrl || (window.location.origin + "/app/"));
+      })
+      .catch(function (err) {
+        log("Callback failed:");
+        log(err && err.message ? err.message : String(err));
+        redirect(window.location.origin + "/app/?social_error=callback_failed");
+      });
+  });
 })();
 </script>
 </head>
 <body>
 <div class="card">
-<h2>LinkedIn Authentication</h2>
-<pre id="status">Starting callback...</pre>
+  <h2>LinkedIn Authentication</h2>
+  <pre id="status">Starting callback...</pre>
 </div>
 </body>
 </html>
