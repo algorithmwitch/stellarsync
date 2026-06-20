@@ -5832,6 +5832,11 @@ function normalizeSupabaseWorkspaceConfig(workspace) {
     monday_last_pushed_at: source.monday_last_pushed_at || null,
     monday_last_pulled_at: source.monday_last_pulled_at || null,
     monday_auto_sync_on_save: source.monday_auto_sync_on_save !== undefined ? Boolean(source.monday_auto_sync_on_save) : true,
+    plan_slug: normalizeWorkspacePlan(source.plan_slug || source.plan || source.subscription_tier || "starter"),
+    subscription_tier: normalizeWorkspacePlan(source.subscription_tier || source.plan_slug || source.plan || "starter"),
+    managed_account: Boolean(source.managed_account),
+    is_admin_workspace: Boolean(source.is_admin_workspace),
+    feature_flags: source.feature_flags && typeof source.feature_flags === "object" ? source.feature_flags : {},
     created_at: source.created_at || null,
     updated_at: source.updated_at || null
   };
@@ -5844,12 +5849,22 @@ function mergeWorkspaceSettings(workspace, settings) {
   const avatarInitials = String(settings.avatar_initials || settings.avatarInitials || "").trim();
   const avatarMode = String(settings.avatar_mode || settings.avatarMode || "").trim();
   const icon = String(settings.icon || settings.avatar_icon || settings.avatarIcon || "").trim();
-  const plan = String(settings.plan || "").trim();
+  const plan = normalizeWorkspacePlan(settings.plan_slug || settings.plan || settings.subscription_tier || workspace.plan_slug || workspace.plan || workspace.subscription_tier || "starter");
+  const featureFlags = {
+    ...getDefaultFeatureFlagsForPlan(plan),
+    ...(workspace.feature_flags && typeof workspace.feature_flags === "object" ? workspace.feature_flags : {}),
+    ...(settings.feature_flags && typeof settings.feature_flags === "object" ? settings.feature_flags : {})
+  };
   return {
     ...workspace,
     name: displayName || workspace.name,
     plan: workspace.plan || plan,
+    plan_slug: plan,
+    subscription_tier: normalizeWorkspacePlan(settings.subscription_tier || workspace.subscription_tier || plan),
     settings_plan: plan,
+    managed_account: settings.managed_account !== undefined ? Boolean(settings.managed_account) : Boolean(workspace.managed_account),
+    is_admin_workspace: settings.is_admin_workspace !== undefined ? Boolean(settings.is_admin_workspace) : Boolean(workspace.is_admin_workspace),
+    feature_flags: featureFlags,
     short_name: shortName || workspace.short_name || "",
     avatar_initials: avatarInitials || workspace.avatar_initials || "",
     avatar_mode: avatarMode || workspace.avatar_mode || "initials",
@@ -5891,6 +5906,11 @@ async function loadWorkspaceBrandingSettings(workspaceId, workspace = {}) {
     "workspace_slug",
     "display_name",
     "plan",
+    "plan_slug",
+    "subscription_tier",
+    "managed_account",
+    "is_admin_workspace",
+    "feature_flags",
     "backend_type",
     "short_name",
     "avatar_mode",
@@ -5921,7 +5941,7 @@ async function loadWorkspaceBrandingSettings(workspaceId, workspace = {}) {
     "current_month",
     "current_year"
   ].join(",");
-  const minimalFields = "id,workspace_id,workspace_slug,display_name,plan,backend_type";
+  const minimalFields = "id,workspace_id,workspace_slug,display_name,plan,plan_slug,subscription_tier,managed_account,is_admin_workspace,feature_flags,backend_type";
 
   async function runSettingsSelect(fields) {
     const wsColumns = await getWorkspaceSettingsColumns();
@@ -6005,7 +6025,11 @@ function mergeWorkspaceRole(workspace, role) {
 }
 
 function selectWorkspaceForRoute(workspaces, requestedSlug) {
-  const list = Array.isArray(workspaces) ? workspaces.filter(workspace => workspace && workspace.slug) : [];
+  const source = Array.isArray(workspaces) ? workspaces.filter(workspace => workspace && workspace.slug) : [];
+  const canSeeAdminWorkspaces = source.some(isAdminMasterWorkspaceUser);
+  const list = source.filter(function(workspace) {
+    return !workspace.is_admin_workspace || canSeeAdminWorkspaces;
+  });
   if (!list.length) return null;
   if (requestedSlug) {
     const match = list.find(workspace => workspace.slug === requestedSlug);
@@ -6200,6 +6224,28 @@ function showWorkspacePicker(workspaces) {
     const loadingEl = document.getElementById("boot-loading");
     if (loadingEl) loadingEl.classList.add("hidden");
     const overlay = document.createElement("div");
+    const canSeeAdminWorkspaces = (workspaces || []).some(isAdminMasterWorkspaceUser);
+    const regularWorkspaces = (workspaces || []).filter(function(workspace) { return !workspace.is_admin_workspace; });
+    const adminWorkspaces = canSeeAdminWorkspaces ? (workspaces || []).filter(function(workspace) { return workspace.is_admin_workspace; }) : [];
+    const renderWorkspaceButton = function(workspace, index) {
+      return `
+        <button type="button" data-router-workspace-index="${index}" class="w-full text-left p-5 rounded-2xl bg-[#181125] border border-white/5 hover:border-[#c77dff]/40 transition-colors">
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="workspace-menu-avatar">${renderWorkspaceAvatar(workspace)}</div>
+              <div class="min-w-0">
+                <div class="text-white font-bold truncate">${escapeHtml(workspace.name || workspace.slug)}</div>
+                <div class="text-xs text-gray-500 mt-1 truncate">${escapeHtml(workspace.slug || "")}</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              ${workspace.is_admin_workspace ? '<span class="diagnostic-chip text-amber-300">ADMIN</span>' : ""}
+              <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${escapeHtml(workspace.role || workspace.plan || "")}</div>
+            </div>
+          </div>
+        </button>
+      `;
+    };
     overlay.id = "app-router-workspace-picker";
     overlay.className = "fixed inset-0 z-[10000] flex items-center justify-center p-6";
     overlay.style.background = "#0a0514";
@@ -6210,21 +6256,15 @@ function showWorkspacePicker(workspaces) {
           <h1 class="text-2xl font-extrabold text-white">Choose a workspace</h1>
           <p class="text-sm text-gray-400 mt-2">Select the workspace you want to open.</p>
         </div>
-        <div class="space-y-3">
-          ${workspaces.map((workspace, index) => `
-            <button type="button" data-router-workspace-index="${index}" class="w-full text-left p-5 rounded-2xl bg-[#181125] border border-white/5 hover:border-[#c77dff]/40 transition-colors">
-              <div class="flex items-start justify-between gap-4">
-                <div class="flex items-center gap-3 min-w-0">
-                  <div class="workspace-menu-avatar">${renderWorkspaceAvatar(workspace)}</div>
-                  <div class="min-w-0">
-                    <div class="text-white font-bold truncate">${escapeHtml(workspace.name || workspace.slug)}</div>
-                    <div class="text-xs text-gray-500 mt-1 truncate">${escapeHtml(workspace.slug || "")}</div>
-                  </div>
-                </div>
-                <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${escapeHtml(workspace.role || workspace.plan || "")}</div>
-              </div>
-            </button>
-          `).join("")}
+        <div class="space-y-5">
+          <div>
+            ${adminWorkspaces.length ? '<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Regular Workspaces</div>' : ""}
+            <div class="space-y-3">${regularWorkspaces.map(function(workspace) { return renderWorkspaceButton(workspace, workspaces.indexOf(workspace)); }).join("")}</div>
+          </div>
+          ${adminWorkspaces.length ? `<div>
+            <div class="text-[10px] uppercase tracking-widest text-amber-300 font-bold mb-2">Admin Workspaces</div>
+            <div class="space-y-3">${adminWorkspaces.map(function(workspace) { return renderWorkspaceButton(workspace, workspaces.indexOf(workspace)); }).join("")}</div>
+          </div>` : ""}
         </div>
       </div>
     `;
@@ -6240,6 +6280,8 @@ function showWorkspacePicker(workspaces) {
 }
 
 async function pickWorkspaceForUser(workspaces, requestedSlug) {
+  const canSeeAdminWorkspaces = (workspaces || []).some(isAdminMasterWorkspaceUser);
+  workspaces = (workspaces || []).filter(function(workspace) { return !workspace.is_admin_workspace || canSeeAdminWorkspaces; });
   if (requestedSlug) {
     const match = workspaces.find(workspace => workspace.slug === requestedSlug);
     if (!match) {
@@ -8414,9 +8456,118 @@ let activeConnectionSetupPlatform = "";
 const SUPPORTED_POST_PLATFORMS = ["linkedin", "facebook", "instagram", "threads", "bluesky", "tiktok"];
 const CONNECTED_ACCOUNT_PLATFORMS = ["linkedin", "facebook", "instagram", "threads", "bluesky", "tiktok"];
 const WORKSPACE_CONNECTION_PROVIDERS = ["google_sheets", "google_drive", "monday"]; // stripe removed — belongs in Billing tab, not Connections
+const PLAN_CAPABILITIES = {
+  starter: {
+    workspace_limit: 1,
+    team_members: false,
+    media_storage: "basic",
+    csv_import_export: false,
+    plugin: true,
+    plugin_exports_enabled: true,
+    monday: false,
+    google_sheets: false,
+    drive_setup: false,
+    advanced_integrations: false
+  },
+  growth: {
+    workspace_limit: 1,
+    team_members: true,
+    media_storage: true,
+    csv_import_export: true,
+    linkedin_import_tools: true,
+    plugin: true,
+    plugin_exports: true,
+    plugin_exports_enabled: true,
+    publishing_readiness: true,
+    advanced_reporting: true,
+    diagnostics: true,
+    monday: false,
+    google_sheets: false,
+    drive_setup: false,
+    advanced_integrations: false
+  },
+  agency: {
+    workspace_limit: "multiple",
+    team_members: true,
+    media_storage: true,
+    csv_import_export: true,
+    linkedin_import_tools: true,
+    plugin: true,
+    plugin_exports: true,
+    plugin_exports_enabled: true,
+    multiple_workspaces: true,
+    client_management: true,
+    templates: true,
+    advanced_permissions: true,
+    priority_support: true,
+    workspace_migration_tools: true,
+    monday: false,
+    google_sheets: false,
+    drive_setup: false,
+    advanced_integrations: false
+  },
+  managed: {
+    workspace_limit: "multiple",
+    team_members: true,
+    media_storage: true,
+    csv_import_export: true,
+    linkedin_import_tools: true,
+    plugin: true,
+    plugin_exports: true,
+    plugin_exports_enabled: true,
+    multiple_workspaces: true,
+    client_management: true,
+    templates: true,
+    advanced_permissions: true,
+    priority_support: true,
+    workspace_migration_tools: true,
+    managed_onboarding: true,
+    google_sheets: true,
+    monday: true,
+    drive_setup: true,
+    apps_script: true,
+    migration_support: true,
+    workflow_design: true,
+    team_training: true,
+    strategic_support: true,
+    ongoing_admin: true,
+    advanced_integrations: true
+  },
+  admin_master: {
+    internal_only: true,
+    hidden: true,
+    all_features: true,
+    admin_workspaces: true,
+    advanced_integrations: true
+  }
+};
+
+function getPlanCapabilities(plan) {
+  const slug = normalizeWorkspacePlan(plan || "starter");
+  const caps = PLAN_CAPABILITIES[slug] || PLAN_CAPABILITIES.starter;
+  if (caps.all_features) {
+    return { ...PLAN_CAPABILITIES.managed, ...caps };
+  }
+  return { ...caps };
+}
+
+function getDefaultFeatureFlagsForPlan(plan) {
+  const slug = normalizeWorkspacePlan(plan || "starter");
+  const caps = getPlanCapabilities(slug);
+  return {
+    show_advanced_integrations: !!caps.advanced_integrations,
+    managed_integrations: slug === "managed" || slug === "admin_master",
+    google_sheets_enabled: !!caps.google_sheets,
+    monday_enabled: !!caps.monday,
+    drive_setup_enabled: !!caps.drive_setup,
+    plugin_exports_enabled: caps.plugin_exports_enabled !== false,
+    csv_import_export_enabled: !!caps.csv_import_export
+  };
+}
+
 function normalizeWorkspacePlan(value) {
   const normalized = String(value || "").trim().toLowerCase();
-  if (["starter", "growth", "agency", "managed", "custom"].includes(normalized)) return normalized;
+  if (["starter", "growth", "agency", "managed", "admin_master", "custom"].includes(normalized)) return normalized;
   if (normalized === "free") return "starter";
   if (normalized === "pro") return "growth";
   if (normalized === "enterprise") return "managed";
@@ -8424,8 +8575,9 @@ function normalizeWorkspacePlan(value) {
 }
 
 function getWorkspacePlanFeatures(workspace = {}) {
-  const rawPlan = String(workspace.plan || workspace.workspace_plan || workspace.settings_plan || "").trim();
+  const rawPlan = String(workspace.plan_slug || workspace.plan || workspace.subscription_tier || workspace.workspace_plan || workspace.settings_plan || "").trim();
   const plan = normalizeWorkspacePlan(rawPlan);
+  const planCaps = getPlanCapabilities(plan || "starter");
   const subscriptionStatus = String(workspace.subscription_status || workspace.subscriptionStatus || "").trim().toLowerCase();
   const backendType = String(workspace.backend_type || "").trim().toLowerCase();
   const gsConn = typeof getWorkspaceConnection === "function" ? getWorkspaceConnection("google_sheets") : null;
@@ -8437,24 +8589,27 @@ function getWorkspacePlanFeatures(workspace = {}) {
   const agencyAccess = managedAccess || plan === "agency";
   const growthAccess = agencyAccess || plan === "growth";
   const base = {
-    plan: plan || "core",
+    plan: plan || "starter",
+    capabilities: planCaps,
     calendar: true,
     posts: true,
     notes: true,
     inspo: true,
     basicMediaReferences: true,
-    campaigns: false,
-    mediaLibraryStorage: false,
-    publishingReadiness: false,
-    basicIntegrations: false,
-    agencyTools: false,
-    templates: false,
-    advancedPermissions: false,
-    prioritySupport: false,
-    googleSheetsHybrid: false,
-    googleDriveSetup: false,
-    mondaySetup: false,
-    migrationWorkflowSupport: false
+    campaigns: true,
+    mediaLibraryStorage: planCaps.media_storage === true,
+    publishingReadiness: !!planCaps.publishing_readiness,
+    basicIntegrations: !!planCaps.plugin,
+    csvImportExport: !!planCaps.csv_import_export,
+    pluginExports: !!planCaps.plugin_exports,
+    agencyTools: !!planCaps.client_management,
+    templates: !!planCaps.templates,
+    advancedPermissions: !!planCaps.advanced_permissions,
+    prioritySupport: !!planCaps.priority_support,
+    googleSheetsHybrid: !!planCaps.google_sheets,
+    googleDriveSetup: !!planCaps.drive_setup,
+    mondaySetup: !!planCaps.monday,
+    migrationWorkflowSupport: !!planCaps.migration_support
   };
   if (!rawPlan && subscriptionStatus === "active") {
     Object.assign(base, {
@@ -14031,22 +14186,51 @@ function isManagedHybridWorkspace(workspace = {}, connections = []) {
   const activeWorkspace = workspace || {};
   const list = Array.isArray(connections) ? connections : [];
   const slug = String(activeWorkspace.slug || activeWorkspace.workspace_slug || "").trim().toLowerCase();
-  const plan = String(activeWorkspace.plan || activeWorkspace.workspace_plan || activeWorkspace.settings_plan || "").trim().toLowerCase();
+  const plan = normalizeWorkspacePlan(activeWorkspace.plan_slug || activeWorkspace.plan || activeWorkspace.workspace_plan || activeWorkspace.settings_plan || activeWorkspace.subscription_tier || "");
   const backendType = String(activeWorkspace.backend_type || "").trim().toLowerCase();
   const workspaceUrl = String(activeWorkspace.apps_script_url || "").trim();
+  const featureFlags = activeWorkspace.feature_flags && typeof activeWorkspace.feature_flags === "object" ? activeWorkspace.feature_flags : {};
   const gsConn = list.find((item) => item && item.provider === "google_sheets") || null;
   const connUrl = String(gsConn?.config?.apps_script_url || "").trim();
   const connStatus = String(gsConn?.status || "").trim().toLowerCase();
   return !!(
     slug === "gpe" ||
     plan === "managed" ||
+    plan === "admin_master" ||
     plan === "custom" ||
+    activeWorkspace.managed_account === true ||
+    featureFlags.show_advanced_integrations === true ||
+    featureFlags.managed_integrations === true ||
     backendType === "google_sheets_hybrid" ||
+    backendType === "managed" ||
     backendType === "managed_hybrid" ||
     workspaceUrl ||
     connUrl ||
     connStatus === "connected"
   );
+}
+
+function isManagedWorkspace(workspaceConfig = {}) {
+  const workspace = workspaceConfig || {};
+  const plan = normalizeWorkspacePlan(workspace.plan_slug || workspace.plan || workspace.workspace_plan || workspace.settings_plan || workspace.subscription_tier || "");
+  const backendType = String(workspace.backend_type || "").trim().toLowerCase();
+  const featureFlags = workspace.feature_flags && typeof workspace.feature_flags === "object" ? workspace.feature_flags : {};
+  return !!(
+    plan === "managed" ||
+    plan === "admin_master" ||
+    backendType === "google_sheets_hybrid" ||
+    backendType === "managed" ||
+    Boolean(workspace.managed_account) ||
+    featureFlags.show_advanced_integrations === true ||
+    featureFlags.managed_integrations === true
+  );
+}
+
+function isAdminMasterWorkspaceUser(workspaceConfig = {}) {
+  const workspace = workspaceConfig || WORKSPACE_RUNTIME_CONFIG?.active || {};
+  const plan = normalizeWorkspacePlan(workspace.plan_slug || workspace.plan || workspace.subscription_tier || "");
+  const featureFlags = workspace.feature_flags && typeof workspace.feature_flags === "object" ? workspace.feature_flags : {};
+  return plan === "admin_master" || featureFlags.admin_master === true || featureFlags.admin_workspaces === true;
 }
 
 function getWorkspaceBackendMode(workspace = {}, connections = []) {
@@ -14963,6 +15147,45 @@ function closeConnectionSetupModal() {
   connectionSetupModalCard?.classList.add("scale-95");
 }
 
+function getSimpleConnectedAccountCard(platform, account, planFeatures) {
+  const missingKeys = filterLegacyRedirectKeys(Array.isArray(account.missingSetupKeys) ? account.missingSetupKeys : []);
+  const setupBlocked = missingKeys.length > 0;
+  const statusLabel = setupBlocked ? "Setup Required" : account.connected ? "Connected" : "Not Connected";
+  const accountLabel = account.accountLabel || account.displayName || account.username || "No account connected";
+  const publishSupport = setupBlocked
+    ? "Publishing for this platform is not enabled yet. Request setup from StellarSync."
+    : account.publishSupportLabel || (account.publishSupported ? "Publishing enabled" : "Publishing preparation available");
+  const canUseCsv = !!(planFeatures.csvImportExport || planFeatures.capabilities?.csv_import_export);
+  const canUseLinkedInTools = platform === "linkedin" && !!(planFeatures.capabilities?.linkedin_import_tools || planFeatures.csvImportExport);
+  const connectLoading = isConnectedAccountActionLoading(platform, "connect");
+  const disconnectLoading = isConnectedAccountActionLoading(platform, "disconnect");
+  const anyLoading = connectLoading || disconnectLoading;
+  const statusTone = account.connected ? "text-emerald-300" : setupBlocked ? "text-yellow-300" : "text-sky-300";
+  return `
+    <div class="platform-card">
+      <div class="flex items-start justify-between gap-3 mb-4">
+        <div>
+          <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${escapeHtml(toTitleCase(platform))}</div>
+          <div class="text-lg font-bold ${statusTone} mt-1">${escapeHtml(statusLabel)}</div>
+        </div>
+        <span class="diagnostic-chip">${escapeHtml(account.connected ? "Connected" : setupBlocked ? "Setup Required" : "Ready")}</span>
+      </div>
+      <div class="platform-meta-grid">
+        <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Account</div><div class="text-sm text-white wrap-safe">${escapeHtml(accountLabel)}</div></div>
+        <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Publish Support</div><div class="text-sm text-white wrap-safe">${escapeHtml(publishSupport)}</div></div>
+      </div>
+      ${setupBlocked ? `<div class="mt-4 rounded-xl border border-yellow-400/20 bg-yellow-900/20 p-3 text-xs text-yellow-200 wrap-safe">Publishing for this platform is not enabled yet. Request setup from StellarSync.</div>` : ""}
+      <div class="mt-4 flex flex-wrap gap-2">
+        ${setupBlocked ? `<button type="button" onclick="openSupportModal('Integration setup')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Request Setup</button>` : `
+          <button type="button" onclick="connectSocialAccount('${escapeHtml(platform)}')" data-platform="${escapeHtml(platform)}" data-action="connect" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors ${anyLoading ? "opacity-60" : ""}" ${connectLoading ? "disabled" : ""}>${connectLoading ? "Loading..." : account.connected ? "Reconnect" : "Connect"}</button>
+          ${account.connected ? `<button type="button" onclick="disconnectConnectedAccount('${escapeHtml(platform)}')" data-platform="${escapeHtml(platform)}" data-action="disconnect" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 transition-colors ${anyLoading ? "opacity-60" : ""}" ${disconnectLoading ? "disabled" : ""}>${disconnectLoading ? "Working..." : "Disconnect"}</button>` : ""}
+        `}
+        ${(canUseCsv || canUseLinkedInTools) && platform === "linkedin" ? `<button type="button" onclick="openLinkedInBulkImportModal()" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-200 transition-colors">Import CSV</button>` : ""}
+      </div>
+    </div>
+  `;
+}
+
 function getConnectedAccountsMarkup(options = {}) {
   if (connectedAccountsStatusLoading) {
     return CONNECTED_ACCOUNT_PLATFORMS.map((platform) => `
@@ -14980,7 +15203,10 @@ function getConnectedAccountsMarkup(options = {}) {
   }
   const accounts = Array.isArray(connectedAccounts) ? connectedAccounts : [];
   const platforms = CONNECTED_ACCOUNT_PLATFORMS;
-  const userCanSeeAdminDetails = userCanManageMembers();
+  const planFeatures = ACTIVE_PLAN_FEATURES || getWorkspacePlanFeatures(WORKSPACE_RUNTIME_CONFIG?.active || {});
+  const managedWorkspace = isManagedWorkspace(WORKSPACE_RUNTIME_CONFIG?.active || {});
+  const adminMaster = isAdminMasterWorkspaceUser(WORKSPACE_RUNTIME_CONFIG?.active || {});
+  const userCanSeeAdminDetails = managedWorkspace || adminMaster;
   return platforms.map((platform) => {
     const account = accounts.find((item) => item.platform === platform) || {
       platform,
@@ -14993,6 +15219,9 @@ function getConnectedAccountsMarkup(options = {}) {
       setupChecklist: [],
       missingSetupKeys: []
     };
+    if (!userCanSeeAdminDetails) {
+      return getSimpleConnectedAccountCard(platform, account, planFeatures);
+    }
     const historicalAccess = platform === "linkedin" ? (connectedAccountsHistoricalAccess.linkedin || null) : null;
     const requiredKeys = filterLegacyRedirectKeys(Array.isArray(account.requiredSetupKeys) ? account.requiredSetupKeys : []);
     const missingKeys = filterLegacyRedirectKeys(Array.isArray(account.missingSetupKeys) ? account.missingSetupKeys : []);
@@ -15042,6 +15271,14 @@ function getConnectedAccountsMarkup(options = {}) {
           <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Token Expires / Last Sync</div><div class="text-sm text-white wrap-safe">${escapeHtml(lastSync)}</div></div>
           <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Last Error</div><div class="text-sm text-white wrap-safe">${escapeHtml(lastError)}</div></div>
         </div>
+        <details class="mt-4 rounded-xl border border-white/5 bg-[#0f0a18] p-3" open>
+          <summary class="cursor-pointer text-[10px] uppercase tracking-widest text-gray-400 font-bold">Advanced / Managed Tools</summary>
+          <div class="mt-3 text-xs text-gray-400 space-y-1">
+            <div>Manual import can be used while API access is pending.</div>
+            <div>CSV import does not require OAuth.</div>
+            <div>Automated publishing still requires approved platform API access.</div>
+          </div>
+        </details>
         <div class="mt-4">
           <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Required Supabase Secrets</div>
           ${setupBlocked ? `<div class="mb-3 rounded-xl border border-yellow-400/20 bg-yellow-900/20 p-3 text-xs text-yellow-200 wrap-safe">
@@ -30164,8 +30401,8 @@ async function savePWProfile() {
 }
 
 var WORKSPACE_SETTINGS_COLUMNS_CACHE = null;
-var WORKSPACE_SETTINGS_OPTIONAL_FIELDS = ["brand_accent", "icon", "avatar_mode", "avatar_initials", "constellation_shape", "short_name", "media_prefix", "media_bucket", "brand_voice", "current_month", "current_year", "default_platforms", "default_pillars", "default_statuses", "default_post_types", "sheet_sync_enabled", "sheet_id", "google_sheet_id", "apps_script_url", "sheet_sync_direction", "sheet_last_pushed_at", "sheet_last_pulled_at", "monday_board_id", "monday_sync_enabled", "monday_sync_direction", "monday_last_pushed_at", "monday_last_pulled_at"];
-var WORKSPACE_SETTINGS_REQUIRE_CONFIRMED_FIELDS = ["brand_accent", "current_month", "default_platforms", "default_pillars", "icon", "avatar_mode", "avatar_initials", "constellation_shape", "short_name", "media_prefix", "media_bucket"];
+var WORKSPACE_SETTINGS_OPTIONAL_FIELDS = ["brand_accent", "icon", "avatar_mode", "avatar_initials", "constellation_shape", "short_name", "media_prefix", "media_bucket", "brand_voice", "current_month", "current_year", "default_platforms", "default_pillars", "default_statuses", "default_post_types", "sheet_sync_enabled", "sheet_id", "google_sheet_id", "apps_script_url", "sheet_sync_direction", "sheet_last_pushed_at", "sheet_last_pulled_at", "monday_board_id", "monday_sync_enabled", "monday_sync_direction", "monday_last_pushed_at", "monday_last_pulled_at", "plan_slug", "subscription_tier", "managed_account", "is_admin_workspace", "feature_flags"];
+var WORKSPACE_SETTINGS_REQUIRE_CONFIRMED_FIELDS = ["brand_accent", "current_month", "default_platforms", "default_pillars", "icon", "avatar_mode", "avatar_initials", "constellation_shape", "short_name", "media_prefix", "media_bucket", "plan_slug", "subscription_tier", "managed_account", "is_admin_workspace", "feature_flags"];
 
 async function getWorkspaceSettingsColumns() {
   if (WORKSPACE_SETTINGS_COLUMNS_CACHE) return WORKSPACE_SETTINGS_COLUMNS_CACHE;
@@ -30720,12 +30957,18 @@ function copyPWInviteLink(token) {
 
 async function createNewWorkspace(name, slug, plan) {
   if (!name || !slug) throw new Error("Workspace name and slug are required");
-  console.log("[workspace] create", { name, slug, plan: plan || "starter" });
+  var planSlug = normalizeWorkspacePlan(plan || "starter");
+  var featureFlags = getDefaultFeatureFlagsForPlan(planSlug);
+  console.log("[workspace] create", { name, slug, plan: planSlug });
   var result = await callSupabaseEdgeFunction("workspace-members", {
     action: "create_workspace",
     name: name,
     slug: slug,
-    plan: plan || "starter"
+    plan: planSlug,
+    plan_slug: planSlug,
+    subscription_tier: planSlug,
+    managed_account: planSlug === "managed",
+    feature_flags: featureFlags
   });
   console.log("[workspace] create result", result);
   if (!result || !result.ok) throw new Error(result?.error || "Workspace creation failed");

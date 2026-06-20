@@ -6,8 +6,44 @@ export const corsHeaders = {
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
-export const socialProviders = ["linkedin", "instagram", "threads", "bluesky"] as const;
-export const connectionProviders = ["linkedin", "instagram", "threads", "bluesky", "monday"] as const;
+export const socialProviders = ["linkedin", "facebook", "instagram", "threads", "bluesky", "tiktok"] as const;
+export const connectionProviders = ["linkedin", "facebook", "instagram", "threads", "bluesky", "tiktok", "monday"] as const;
+export type SocialProvider = (typeof socialProviders)[number];
+export type SocialMediaClassification = "empty" | "text" | "image" | "carousel" | "video" | "document" | "mixed";
+export type SocialValidationSeverity = "ok" | "warning" | "error";
+
+export interface SocialValidationResult {
+  valid: boolean;
+  severity: SocialValidationSeverity;
+  code: string;
+  message: string;
+  fix_hint: string;
+  details: Record<string, unknown>;
+}
+
+export interface SocialMediaInput {
+  id?: string;
+  media_asset_id?: string;
+  media_url?: string;
+  mediaUrl?: string;
+  url?: string;
+  mime_type?: string;
+  mimeType?: string;
+  media_type?: string;
+  mediaType?: string;
+  filename?: string;
+  storage_path?: string;
+  storagePath?: string;
+  title?: string;
+  sort_order?: number;
+  sortOrder?: number;
+}
+
+const IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "webp", "avif", "svg"];
+const VIDEO_EXTENSIONS = ["mp4", "mov", "m4v", "webm", "avi", "mkv"];
+const DOCUMENT_EXTENSIONS = ["pdf", "doc", "docx", "ppt", "pptx", "xls", "xlsx", "txt", "csv"];
+const LONG_CAPTION_WARNING = 2800;
+const THREADS_LONG_TEXT_WARNING = 500;
 
 export function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -34,6 +70,40 @@ export function getEnv(name: string, required = false) {
   const value = Deno.env.get(name) || "";
   if (required && !value) throw new Error(`Missing ${name}`);
   return value;
+}
+
+export function getEnvAny(names: string[], required = false) {
+  for (const name of names) {
+    const value = Deno.env.get(name) || "";
+    if (value) return value;
+  }
+  if (required) throw new Error(`Missing Supabase Secret: ${names.join(" or ")}`);
+  return "";
+}
+
+export function getPublicWebappBaseUrl(required = false) {
+  return getEnv("PUBLIC_WEBAPP_BASE_URL", required).replace(/\/+$/, "");
+}
+
+export function getSocialCallbackUrl(provider: string) {
+  const base = getEnv("SUPABASE_URL", true).replace(/\/+$/, "");
+  const url = new URL(`${base}/functions/v1/social-auth-callback`);
+  url.searchParams.set("provider", normalizeProvider(provider));
+  return url.toString();
+}
+
+export function getRequiredSocialSecrets(provider: string) {
+  const p = normalizeProvider(provider);
+  const shared = ["PUBLIC_WEBAPP_BASE_URL"];
+  if (p === "linkedin") return [...shared, "LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"];
+  if (p === "facebook" || p === "instagram" || p === "threads") return [...shared, "META_CLIENT_ID", "META_CLIENT_SECRET"];
+  if (p === "tiktok") return [...shared, "TIKTOK_CLIENT_KEY", "TIKTOK_CLIENT_SECRET"];
+  if (p === "bluesky") return shared;
+  return shared;
+}
+
+export function getMissingSocialSecrets(provider: string) {
+  return getRequiredSocialSecrets(provider).filter((name) => !getEnv(name));
 }
 
 export function getSupabaseServiceClient() {
@@ -96,7 +166,11 @@ export function scrubSocialAccount(account: Record<string, unknown>) {
   delete metadata.token_data;
   delete metadata.access_token;
   delete metadata.refresh_token;
-  return { ...account, metadata };
+  delete metadata.app_password;
+  delete metadata.aggregator_profile_key;
+  const scrubbed = { ...account, metadata };
+  delete scrubbed.aggregator_profile_key;
+  return scrubbed;
 }
 
 export function readinessForAccount(account: Record<string, unknown> | null | undefined) {
@@ -170,3 +244,169 @@ export function randomState() {
   crypto.getRandomValues(bytes);
   return btoa(String.fromCharCode(...bytes)).replace(/[+/=]/g, "");
 }
+
+function getFileExtension(value: string) {
+  const clean = String(value || "").split(/[?#]/)[0];
+  const match = clean.match(/\.([a-z0-9]+)$/i);
+  return match ? match[1].toLowerCase() : "";
+}
+
+export function classifySingleMediaAsset(asset: SocialMediaInput | string) {
+  const source = typeof asset === "string" ? { url: asset } : (asset || {});
+  const mime = String(source.mime_type || source.mimeType || "").toLowerCase();
+  const mediaType = String(source.media_type || source.mediaType || "").toLowerCase();
+  const locator = String(source.media_url || source.mediaUrl || source.url || source.filename || source.storage_path || source.storagePath || source.title || "").toLowerCase();
+  const ext = getFileExtension(locator);
+  if (mime.startsWith("image/") || mediaType === "image" || IMAGE_EXTENSIONS.includes(ext)) return "image";
+  if (mime.startsWith("video/") || mediaType === "video" || VIDEO_EXTENSIONS.includes(ext)) return "video";
+  if (mime.includes("pdf") || mime.includes("document") || mediaType === "document" || DOCUMENT_EXTENSIONS.includes(ext)) return "document";
+  if (mediaType === "file") return "document";
+  return locator ? "image" : "unknown";
+}
+
+export function classifyPostMedia(post: Record<string, unknown> = {}, context: Record<string, unknown> = {}) {
+  const caption = String(post.caption || post.description || post.text || "").trim();
+  const contextMedia = Array.isArray(context.media) ? context.media : Array.isArray(context.mediaAssets) ? context.mediaAssets : [];
+  const postMedia = Array.isArray(post.media) ? post.media : Array.isArray(post.media_assets) ? post.media_assets : [];
+  const media = [...contextMedia, ...postMedia] as Array<SocialMediaInput | string>;
+  const mediaUrls = [
+    ...(Array.isArray(post.media_urls) ? post.media_urls : []),
+    ...(Array.isArray(post.mediaUrls) ? post.mediaUrls : []),
+    ...media.map((asset) => typeof asset === "string" ? asset : String(asset.media_url || asset.mediaUrl || asset.url || "")).filter(Boolean),
+  ].map(String).filter(Boolean);
+  if (!media.length) mediaUrls.forEach((url) => media.push(url));
+
+  const kinds = media.map(classifySingleMediaAsset).filter((kind) => kind !== "unknown");
+  const imageCount = kinds.filter((kind) => kind === "image").length;
+  const videoCount = kinds.filter((kind) => kind === "video").length;
+  const documentCount = kinds.filter((kind) => kind === "document").length;
+  const mediaCount = kinds.length;
+  let classification: SocialMediaClassification = "empty";
+  if (mediaCount === 0) classification = caption ? "text" : "empty";
+  else if (documentCount > 0 && (imageCount > 0 || videoCount > 0)) classification = "mixed";
+  else if (imageCount > 0 && videoCount > 0) classification = mediaCount > 1 ? "carousel" : "mixed";
+  else if (documentCount > 0) classification = mediaCount > 1 ? "mixed" : "document";
+  else if (videoCount > 0) classification = mediaCount > 1 ? "carousel" : "video";
+  else if (imageCount > 1) classification = "carousel";
+  else if (imageCount === 1) classification = "image";
+
+  return {
+    classification,
+    mediaCount,
+    imageCount,
+    videoCount,
+    documentCount,
+    hasText: !!caption,
+    captionLength: caption.length,
+    media,
+    mediaUrls,
+  };
+}
+
+function validationResult(
+  valid: boolean,
+  severity: SocialValidationSeverity,
+  code: string,
+  message: string,
+  fix_hint: string,
+  details: Record<string, unknown>,
+): SocialValidationResult {
+  return { valid, severity, code, message, fix_hint, details };
+}
+
+function firstError(code: string, message: string, fixHint: string, details: Record<string, unknown>) {
+  return validationResult(false, "error", code, message, fixHint, details);
+}
+
+function warning(code: string, message: string, fixHint: string, details: Record<string, unknown>) {
+  return validationResult(true, "warning", code, message, fixHint, details);
+}
+
+export function validatePostForPlatform(
+  post: Record<string, unknown> = {},
+  platform: string,
+  context: Record<string, unknown> = {},
+): SocialValidationResult {
+  const p = normalizeProvider(platform);
+  const media = classifyPostMedia(post, context);
+  const details = {
+    platform: p,
+    classification: media.classification,
+    media_count: media.mediaCount,
+    image_count: media.imageCount,
+    video_count: media.videoCount,
+    document_count: media.documentCount,
+    caption_length: media.captionLength,
+  };
+  const hasMedia = media.mediaCount > 0;
+  const hasPublicVideoUrl = media.mediaUrls.some((url) => /^https:\/\//i.test(url) && /\.(mp4|mov|m4v|webm)(?:[?#].*)?$/i.test(url));
+  const adapterSupportsThreadsVideo = context.threadsVideoSupported === true || context.adapterSupportsVideo === true;
+  const adapterSupportsBlueskyVideo = context.blueskyVideoSupported === true;
+
+  if (!p || !socialProviders.includes(p as SocialProvider)) {
+    return firstError("unsupported_platform", "Unsupported social platform.", "Choose a supported platform.", details);
+  }
+  if (media.documentCount > 0 && p !== "linkedin") {
+    return firstError("document_not_supported", `${p} does not support PDF/document posts.`, "Remove the document or schedule it for LinkedIn only.", details);
+  }
+
+  if (p === "linkedin") {
+    if (media.captionLength > LONG_CAPTION_WARNING) return warning("caption_long", "LinkedIn caption is long and may be truncated.", "Shorten the caption before publishing.", details);
+    return validationResult(true, "ok", "ready", "LinkedIn post is ready.", "", details);
+  }
+
+  if (p === "facebook") {
+    if (!hasMedia && !media.hasText) return warning("empty_post", "Facebook post has no text or media.", "Add text, an image, or a video.", details);
+    return validationResult(true, "ok", "ready", "Facebook Page post is ready.", "", details);
+  }
+
+  if (p === "instagram") {
+    if (!hasMedia || media.classification === "text" || media.classification === "empty") {
+      return firstError("media_required", "Instagram Business requires image, video, or carousel media.", "Attach an image, video/Reel, or 2-10 carousel assets.", details);
+    }
+    if (media.classification === "carousel" && (media.mediaCount < 2 || media.mediaCount > 10)) {
+      return firstError("carousel_count_invalid", "Instagram carousel requires 2-10 image/video assets.", "Adjust the carousel to 2-10 assets.", details);
+    }
+    if (media.classification === "mixed") return firstError("mixed_media_not_supported", "Instagram cannot publish this mixed media set.", "Use only image/video carousel assets.", details);
+    return validationResult(true, "ok", "ready", "Instagram Business post is ready.", "", details);
+  }
+
+  if (p === "threads") {
+    if (media.documentCount > 0) return firstError("document_not_supported", "Threads does not support PDF/document posts.", "Remove the document.", details);
+    if (media.videoCount > 0 && !adapterSupportsThreadsVideo) {
+      return warning("video_needs_testing", "Threads video publishing needs adapter verification.", "Use text/image or verify Threads video support before publishing.", details);
+    }
+    if (media.captionLength > THREADS_LONG_TEXT_WARNING) return warning("text_long", "Threads text is long and may be truncated.", "Shorten the text for Threads.", details);
+    return validationResult(true, "ok", "ready", "Threads post is ready.", "", details);
+  }
+
+  if (p === "bluesky") {
+    if (media.captionLength > 300) {
+      return firstError("text_over_limit", `Bluesky text is ${media.captionLength - 300} characters over the 300 character limit.`, "Shorten the post to 300 characters or less.", details);
+    }
+    if (media.imageCount > 4) return firstError("image_count_over_limit", "Bluesky supports up to 4 images.", "Remove images until 4 or fewer remain.", details);
+    if (media.videoCount > 0 && !adapterSupportsBlueskyVideo) return firstError("video_not_supported", "Bluesky video publishing is not verified in this adapter.", "Use text/images only for Bluesky.", details);
+    if (!media.hasText && !media.imageCount) return firstError("text_required", "Bluesky requires text content.", "Add text to the Bluesky post.", details);
+    return validationResult(true, "ok", "ready", "Bluesky post is ready.", "", details);
+  }
+
+  if (p === "tiktok") {
+    if (media.videoCount === 0) return firstError("video_required", "TikTok requires a video.", "Attach a compatible public video URL.", details);
+    if (!hasPublicVideoUrl) {
+      return firstError("public_video_url_required", "TikTok PULL_FROM_URL requires an externally accessible compatible video URL.", "Use an HTTPS MP4/MOV/M4V/WebM URL that TikTok can fetch.", details);
+    }
+    if (media.documentCount > 0 || media.imageCount > 0) return firstError("unsupported_media_mix", "TikTok queue item must be video-only.", "Remove non-video assets.", details);
+    return validationResult(true, "ok", "ready", "TikTok video post is ready.", "", details);
+  }
+
+  return firstError("unsupported_platform", "Unsupported social platform.", "Choose a supported platform.", details);
+}
+
+export const SOCIAL_COMPATIBILITY_MATRIX: Record<string, Record<SocialProvider, string>> = {
+  Text: { linkedin: "Supported", facebook: "Supported", instagram: "Not Supported", threads: "Supported", bluesky: "Supported", tiktok: "Not Supported" },
+  Image: { linkedin: "Supported", facebook: "Supported", instagram: "Supported", threads: "Supported", bluesky: "Supported", tiktok: "Not Supported" },
+  Carousel: { linkedin: "Limited / Needs Testing", facebook: "Limited / Needs Testing", instagram: "Supported", threads: "Limited / Needs Testing", bluesky: "Limited / Needs Testing", tiktok: "Not Supported" },
+  Video: { linkedin: "Supported", facebook: "Supported", instagram: "Supported", threads: "Limited / Needs Testing", bluesky: "Limited / Needs Testing", tiktok: "Supported" },
+  "PDF/Document": { linkedin: "Supported", facebook: "Not Supported", instagram: "Not Supported", threads: "Not Supported", bluesky: "Not Supported", tiktok: "Not Supported" },
+  "Mixed Media": { linkedin: "Limited / Needs Testing", facebook: "Limited / Needs Testing", instagram: "Not Supported", threads: "Limited / Needs Testing", bluesky: "Not Supported", tiktok: "Not Supported" },
+};

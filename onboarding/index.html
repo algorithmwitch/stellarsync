@@ -1829,7 +1829,7 @@ video {
                             <span class="plan-check w-6 h-6 rounded-full border-4 border-purple-500 shadow-[0_0_10px_rgba(199,125,255,0.5)]" vid="308"></span>
                         </div>
                         <h3 class="text-xl font-bold text-white mb-2" vid="309">Starter</h3>
-                        <p class="text-xs text-gray-500 leading-relaxed mb-5 flex-1" vid="310">Basic workspace for calendar, campaigns, inspo, and notes.</p>
+                        <p class="text-xs text-gray-500 leading-relaxed mb-5 flex-1" vid="310">Campaign planning, calendar, ledger, notes, inspo, AI Drafts, publishing prep, and Plugin access.</p>
                         <p class="text-sm font-bold text-purple-300" vid="311">$49/month</p>
                     </div>
 
@@ -1841,7 +1841,7 @@ video {
                             <span class="plan-check w-6 h-6 rounded-full border-2 border-white/10" vid="316"></span>
                         </div>
                         <h3 class="text-xl font-bold text-white mb-2" vid="317">Growth</h3>
-                        <p class="text-xs text-gray-500 leading-relaxed mb-5 flex-1" vid="318">Adds Sheets, media readiness, publishing readiness, and team collaboration.</p>
+                        <p class="text-xs text-gray-500 leading-relaxed mb-5 flex-1" vid="318">Adds team collaboration, media storage, CSV import/export, LinkedIn import tools, reporting, and diagnostics.</p>
                         <p class="text-sm font-bold text-cyan-300" vid="319">$149/month</p>
                     </div>
 
@@ -1865,7 +1865,7 @@ video {
                             <span class="plan-check w-6 h-6 rounded-full border-2 border-white/10" vid="332"></span>
                         </div>
                         <h3 class="text-xl font-bold text-white mb-2" vid="333">Managed</h3>
-                        <p class="text-xs text-gray-500 leading-relaxed mb-5 flex-1" vid="334">Managed setup and support for migration-heavy workflows. No self-serve checkout.</p>
+                        <p class="text-xs text-gray-500 leading-relaxed mb-5 flex-1" vid="334">Managed Setup includes Monday, Google Sheets, Drive, migrations, onboarding, and workflow support.</p>
                         <p class="text-sm font-bold text-amber-300" vid="335">Contact for pricing</p>
                     </div>
                 </div>
@@ -2031,6 +2031,25 @@ video {
             agency: '$399/month',
             managed: 'Contact for pricing'
         };
+        const PLAN_CAPABILITIES = {
+            starter: { workspace_limit: 1, team_members: false, media_storage: 'basic', csv_import_export: false, plugin: true, monday: false, google_sheets: false, drive_setup: false, advanced_integrations: false },
+            growth: { workspace_limit: 1, team_members: true, media_storage: true, csv_import_export: true, linkedin_import_tools: true, plugin_exports: true, publishing_readiness: true, advanced_reporting: true, diagnostics: true, monday: false, google_sheets: false, drive_setup: false, advanced_integrations: false },
+            agency: { workspace_limit: 'multiple', team_members: true, media_storage: true, csv_import_export: true, linkedin_import_tools: true, plugin_exports: true, multiple_workspaces: true, client_management: true, templates: true, advanced_permissions: true, priority_support: true, workspace_migration_tools: true, monday: false, google_sheets: false, drive_setup: false, advanced_integrations: false },
+            managed: { workspace_limit: 'multiple', team_members: true, media_storage: true, csv_import_export: true, linkedin_import_tools: true, plugin_exports: true, multiple_workspaces: true, client_management: true, templates: true, advanced_permissions: true, priority_support: true, managed_onboarding: true, google_sheets: true, monday: true, drive_setup: true, apps_script: true, migration_support: true, workflow_design: true, team_training: true, strategic_support: true, ongoing_admin: true, advanced_integrations: true }
+        };
+        function getDefaultFeatureFlagsForPlan(plan) {
+            const normalized = normalizePlan(plan);
+            const caps = PLAN_CAPABILITIES[normalized] || PLAN_CAPABILITIES.starter;
+            return {
+                show_advanced_integrations: !!caps.advanced_integrations,
+                managed_integrations: normalized === 'managed',
+                google_sheets_enabled: !!caps.google_sheets,
+                monday_enabled: !!caps.monday,
+                drive_setup_enabled: !!caps.drive_setup,
+                plugin_exports_enabled: true,
+                csv_import_export_enabled: !!caps.csv_import_export
+            };
+        }
         const PAYMENT_LINKS = {
             starter: "",
             growth: "",
@@ -2039,28 +2058,28 @@ video {
         };
         const CONNECTIONS_BY_PLAN = {
             starter: [
-                ['Basic workspace', 'Calendar, campaigns, inspo, and notes are included.', 'ph-squares-four'],
+                ['Basic workspace', '1 workspace with campaign planning, calendar, ledger, notes, inspo, and AI Drafts.', 'ph-squares-four'],
                 ['Content calendar', 'Plan upcoming content across your core platforms.', 'ph-calendar-check'],
-                ['Campaign planning', 'Track campaign ideas, launches, and evergreen work.', 'ph-megaphone'],
-                ['Inspo and notes', 'Capture references, reminders, and content prompts.', 'ph-notebook']
+                ['Publishing preparation', 'Prepare captions and manual publishing steps without advanced integrations.', 'ph-paper-plane-right'],
+                ['StellarSync Plugin', 'Capture references into your workspace.', 'ph-puzzle-piece']
             ],
             growth: [
                 ['Everything in Starter', 'Basic workspace, calendar, campaigns, inspo, and notes.', 'ph-sparkle'],
-                ['Google Sheets readiness', 'Prepare content databases and planning sources for setup.', 'ph-table'],
+                ['CSV and LinkedIn import tools', 'Import/export planning data without OAuth during onboarding.', 'ph-file-csv'],
                 ['Media and publishing readiness', 'Organize assets and prepare publishing workflows.', 'ph-folder-open'],
-                ['Team collaboration', 'Support shared planning and review workflows.', 'ph-users-three']
+                ['Team collaboration, reporting, diagnostics', 'Support shared planning and review workflows.', 'ph-users-three']
             ],
             agency: [
-                ['Everything in Growth', 'Sheets, media readiness, publishing readiness, and collaboration.', 'ph-chart-line-up'],
+                ['Everything in Growth', 'Import tools, media storage, readiness, reporting, and collaboration.', 'ph-chart-line-up'],
                 ['Multiple workspaces', 'Separate client or initiative spaces under one operating system.', 'ph-stack'],
-                ['Client management', 'Manage client-facing planning and shared assets.', 'ph-briefcase'],
-                ['Advanced permissions', 'Prepare role-based access for broader teams.', 'ph-lock-key']
+                ['Client management and templates', 'Manage client-facing planning and reusable workspace systems.', 'ph-briefcase'],
+                ['Advanced permissions and migration tools', 'Prepare role-based access and workspace migration support.', 'ph-lock-key']
             ],
             managed: [
-                ['Google Sheets setup', 'Setup is handled for Sheets-based content operations.', 'ph-table'],
-                ['Monday setup', 'Workflow mapping and migration support for Monday.com.', 'ph-circles-three'],
-                ['Drive organization', 'Source folders and assets are structured during setup.', 'ph-folder'],
-                ['Workflow migration', 'Hands-on migration from existing planning systems.', 'ph-arrows-clockwise']
+                ['Managed onboarding', 'Monday, Google Sheets, Drive, migration, onboarding, and workflow support are included.', 'ph-handshake'],
+                ['Google Sheets and Monday integration', 'Workflow mapping and integration setup are handled with you.', 'ph-circles-three'],
+                ['Google Drive setup', 'Source folders and assets are structured during setup.', 'ph-folder'],
+                ['Workflow design and training', 'Migration support, team training, strategic consulting, and ongoing administration.', 'ph-arrows-clockwise']
             ]
         };
         let formData = {
@@ -2072,7 +2091,11 @@ video {
             pillars: [],
             connections: [],
             startOption: 'Sample',
-            selectedPlan: 'starter'
+            selectedPlan: 'starter',
+            plan_slug: 'starter',
+            subscription_tier: 'starter',
+            managed_account: false,
+            feature_flags: {}
         };
 
         const SUPABASE_URL = "https://szdlvyzjeqkfxsoqltwg.supabase.co";
@@ -2305,6 +2328,10 @@ video {
 
         function selectPlan(el, plan) {
             formData.selectedPlan = normalizePlan(plan);
+            formData.plan_slug = formData.selectedPlan;
+            formData.subscription_tier = formData.selectedPlan;
+            formData.managed_account = formData.selectedPlan === 'managed';
+            formData.feature_flags = getDefaultFeatureFlagsForPlan(formData.selectedPlan);
             document.querySelectorAll('#stage-5 .plan-card').forEach(card => {
                 card.classList.remove('border-purple-500/30', 'bg-purple-500/5');
                 card.classList.add('border-white/5');

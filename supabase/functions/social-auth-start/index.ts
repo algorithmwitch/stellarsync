@@ -1,9 +1,16 @@
-import { corsHeaders, getAuthUser, getEnv, getSupabaseServiceClient, json, normalizeProvider, randomState, readBody, requireWorkspaceMember, safeRedirect } from "../_shared/social.ts";
+import { corsHeaders, getAuthUser, getEnv, getEnvAny, getMissingSocialSecrets, getPublicWebappBaseUrl, getSocialCallbackUrl, getSupabaseServiceClient, json, normalizeProvider, randomState, readBody, requireWorkspaceMember, safeRedirect } from "../_shared/social.ts";
 
 function buildAuthUrl(provider: string, state: string) {
+  const missingSecrets = getMissingSocialSecrets(provider);
+  if (missingSecrets.length) {
+    const err = new Error(`Missing Supabase Secret: ${missingSecrets.join(", ")}`);
+    (err as Error & { missingSetupKeys?: string[] }).missingSetupKeys = missingSecrets;
+    throw err;
+  }
+
   if (provider === "linkedin") {
     const clientId = getEnv("LINKEDIN_CLIENT_ID", true);
-    const redirectUri = getEnv("LINKEDIN_REDIRECT_URI", true);
+    const redirectUri = getSocialCallbackUrl(provider);
     const params = new URLSearchParams({
       response_type: "code",
       client_id: clientId,
@@ -14,22 +21,24 @@ function buildAuthUrl(provider: string, state: string) {
     return `https://www.linkedin.com/oauth/v2/authorization?${params.toString()}`;
   }
 
-  if (provider === "instagram") {
-    const appId = getEnv("META_APP_ID", true);
-    const redirectUri = getEnv("META_REDIRECT_URI", true);
+  if (provider === "facebook" || provider === "instagram") {
+    const appId = getEnvAny(["META_CLIENT_ID", "META_APP_ID", provider === "facebook" ? "FACEBOOK_CLIENT_ID" : "INSTAGRAM_CLIENT_ID"], true);
+    const redirectUri = getSocialCallbackUrl(provider);
     const params = new URLSearchParams({
       client_id: appId,
       redirect_uri: redirectUri,
       response_type: "code",
       state,
-      scope: "instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement",
+      scope: provider === "facebook"
+        ? "pages_show_list,pages_read_engagement,pages_manage_posts"
+        : "instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement",
     });
     return `https://www.facebook.com/${getEnv("META_API_VERSION") || "v20.0"}/dialog/oauth?${params.toString()}`;
   }
 
   if (provider === "threads") {
-    const appId = getEnv("THREADS_APP_ID", true);
-    const redirectUri = getEnv("THREADS_REDIRECT_URI", true);
+    const appId = getEnvAny(["META_CLIENT_ID", "THREADS_CLIENT_ID", "THREADS_APP_ID", "META_APP_ID"], true);
+    const redirectUri = getSocialCallbackUrl(provider);
     const params = new URLSearchParams({
       client_id: appId,
       redirect_uri: redirectUri,
@@ -40,8 +49,21 @@ function buildAuthUrl(provider: string, state: string) {
     return `https://threads.net/oauth/authorize?${params.toString()}`;
   }
 
+  if (provider === "tiktok") {
+    const clientKey = getEnv("TIKTOK_CLIENT_KEY", true);
+    const redirectUri = getSocialCallbackUrl(provider);
+    const params = new URLSearchParams({
+      client_key: clientKey,
+      redirect_uri: redirectUri,
+      response_type: "code",
+      state,
+      scope: "user.info.basic,video.publish,video.upload",
+    });
+    return `https://www.tiktok.com/v2/auth/authorize/?${params.toString()}`;
+  }
+
   throw new Error(provider === "bluesky"
-    ? "Bluesky OAuth is not implemented in Phase 1. Manual app-password flow will be added server-side later."
+    ? "Bluesky OAuth is not implemented. Use the server-side app-password flow; never store Bluesky credentials in localStorage."
     : "Unsupported provider");
 }
 
@@ -59,7 +81,7 @@ Deno.serve(async (req) => {
     await requireWorkspaceMember(supabase, workspaceId, user.id);
 
     const state = randomState();
-    const redirectTo = safeRedirect(String(body.redirect_to || ""), "https://stellarsync.app/app/");
+    const redirectTo = safeRedirect(String(body.redirect_to || ""), `${getPublicWebappBaseUrl() || "https://stellarsync.app"}/app/`);
     const authUrl = buildAuthUrl(provider, state);
 
     const { error } = await supabase.from("social_oauth_states").insert({
@@ -75,6 +97,10 @@ Deno.serve(async (req) => {
     return json({ ok: true, provider, authUrl });
   } catch (err) {
     console.error("[social] auth start error", err instanceof Error ? err.message : String(err));
-    return json({ ok: false, error: err instanceof Error ? err.message : "Auth start failed" }, 400);
+    return json({
+      ok: false,
+      error: err instanceof Error ? err.message : "Auth start failed",
+      missingSetupKeys: (err as Error & { missingSetupKeys?: string[] }).missingSetupKeys || [],
+    }, 400);
   }
 });
