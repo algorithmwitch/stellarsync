@@ -24316,7 +24316,7 @@ async function syncRemoteIfConfigured() {
 
   var loadingEl = document.getElementById("boot-loading");
 
-  // Phase 1: Fetch posts from Sheets (direct getPosts 60s, then pull fallback)
+  // Phase 1: Fetch posts from Sheets (pull route first, then direct fallback)
   console.log("[posts] loading from sheets");
   let postsData = [];
   let postsLoadError = null;
@@ -24351,6 +24351,7 @@ async function syncRemoteIfConfigured() {
     lastSyncError = postsLoadError.message || String(postsLoadError);
     console.log("[data]", getAppStateCounts());
     rerenderAll();
+    if (loadingEl) loadingEl.classList.add("hidden");
     var syncErrEl2 = document.getElementById("sync-error-state");
     if (!syncErrEl2) {
       syncErrEl2 = document.createElement("div");
@@ -24367,27 +24368,6 @@ async function syncRemoteIfConfigured() {
         '<button onclick="var e=document.getElementById(\'sync-error-state\');if(e)e.remove()" class="px-5 py-2.5 rounded-xl border border-white/5 bg-transparent text-gray-500 text-xs uppercase tracking-widest font-bold transition-colors hover:text-white">Dismiss</button>' +
         '</div></div>';
       document.body.appendChild(syncErrEl2);
-    }
-  } else if (postsData.length === 0) {
-    console.log("[data] 0 posts received from backend");
-    showToast("No posts found", "No posts found in connected sheet.", "ph-file-text", "text-gray-400");
-    var zeroEl2 = document.getElementById("zero-posts-state");
-    if (!zeroEl2) {
-      zeroEl2 = document.createElement("div");
-      zeroEl2.id = "zero-posts-state";
-      zeroEl2.className = "fixed inset-0 z-[130] sheet-backdrop flex items-center justify-center p-6";
-      zeroEl2.style.background = "rgba(10,5,20,0.92)";
-      zeroEl2.innerHTML =
-        '<div class="w-full max-w-lg bg-[#120c1d] border border-white/10 rounded-2xl p-8 text-center shadow-2xl">' +
-        '<div class="w-14 h-14 rounded-2xl bg-[#231738] flex items-center justify-center mx-auto mb-6 text-gray-400"><i class="ph-bold ph-file-text text-2xl"></i></div>' +
-        '<h2 class="text-lg font-extrabold text-white mb-3">No posts found in connected sheet</h2>' +
-        '<p class="text-sm text-gray-300 leading-relaxed mb-6">Your sheet is connected, but no posts were returned.</p>' +
-        '<div class="flex flex-wrap gap-3 justify-center">' +
-        '<button onclick="var z=document.getElementById(\'zero-posts-state\');if(z)z.remove();syncRemoteIfConfigured()" class="px-5 py-2.5 rounded-xl bg-[#2d1b4e] hover:bg-[#3d2b5e] text-white text-xs uppercase tracking-widest font-bold transition-colors">Retry Sync</button>' +
-        '<button onclick="openSupportModal(\'Integration setup\')" class="px-5 py-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white text-xs uppercase tracking-widest font-bold transition-colors">Report Issue</button>' +
-        '<button onclick="var z=document.getElementById(\'zero-posts-state\');if(z)z.remove()" class="px-5 py-2.5 rounded-xl border border-white/5 bg-transparent text-gray-500 text-xs uppercase tracking-widest font-bold transition-colors hover:text-white">Dismiss</button>' +
-        '</div></div>';
-      document.body.appendChild(zeroEl2);
     }
   }
 
@@ -24626,16 +24606,14 @@ async function pullSheetsToSupabase() {
     var supabaseTable = tableMap[tab];
     try {
       if (tab === "MEDIA_ATTACHMENTS") {
-        var respAttach = await fetch(config.appsScriptUrl, { method: "POST", mode: "cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "read_tab", sheet_id: config.sheetId, tab: tab }) });
-        var respAttachData = await respAttach.json();
+        var respAttachData = await readSheetTabFromAppsScript(config, tab);
         if (!respAttachData.ok || !Array.isArray(respAttachData.rows)) { results[tab] = { ok: false, error: respAttachData.error || "Read failed" }; errorCount++; continue; }
         var attachmentApply = await applyMediaAttachmentSheetRows(respAttachData.rows, workspaceId);
         results[tab] = { ok: true, applied: attachmentApply.count || 0 };
         totalCount += attachmentApply.count || 0;
         continue;
       }
-      var resp = await fetch(config.appsScriptUrl, { method: "POST", mode: "cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "read_tab", sheet_id: config.sheetId, tab: tab }) });
-      var respData = await resp.json();
+      var respData = await readSheetTabFromAppsScript(config, tab);
       if (!respData.ok || !Array.isArray(respData.rows)) { results[tab] = { ok: false, error: respData.error || "Read failed" }; errorCount++; continue; }
       var rows = respData.rows;
       var inserted = 0;
@@ -24680,6 +24658,23 @@ async function pullSheetsToSupabase() {
   }
   console.log("[sheet-mirror] pull complete", results);
   return results;
+}
+
+async function readSheetTabFromAppsScript(config, tab) {
+  if (!config || !config.appsScriptUrl || !config.sheetId) {
+    throw new Error("Sheet mirror not configured");
+  }
+  var resp = await fetch(config.appsScriptUrl, {
+    method: "POST",
+    mode: "cors",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({ action: "read_tab", sheet_id: config.sheetId, tab: tab })
+  });
+  var data = await resp.json();
+  if (!resp.ok) {
+    throw new Error((data && data.error) || ("Request failed: " + resp.status));
+  }
+  return data;
 }
 
 function updateSheetMirrorTimestamps(updates) {
@@ -25034,10 +25029,26 @@ async function loadSheetsPostsForHybrid() {
     throw new Error("Google Sheets backend is not configured. Set apps_script_url in workspace settings.");
   }
 
-  var firstError = null;
+  console.log("[posts] using pull route as primary");
 
-  // Try 1: Direct getPosts via GET with 60s timeout
+  // Try 1: Pull route via read_tab (POST) — same reliable path as pullSheetsToSupabase
   try {
+    var config = getSheetMirrorConfig();
+    var primaryData = await readSheetTabFromAppsScript(config, "POSTS");
+    console.log("[posts] pull primary result keys", Object.keys(primaryData || {}));
+    if (!primaryData.ok) throw new Error(primaryData.error || "read_tab failed");
+    var primaryPosts = extractPostsFromSheetPullResult(primaryData);
+    console.log("[posts] pull primary posts count", Array.isArray(primaryPosts) ? primaryPosts.length : 0);
+    var filteredPrimary = filterBlankPostsForRender(primaryPosts);
+    console.log("[posts] pull primary loaded count", filteredPrimary.length);
+    if (filteredPrimary.length > 0) return filteredPrimary;
+  } catch (primaryErr) {
+    console.log("[posts] pull primary failed", primaryErr && primaryErr.message ? primaryErr.message : String(primaryErr));
+  }
+
+  // Try 2: Direct getPosts via GET with 60s timeout
+  try {
+    console.log("[posts] direct fallback request started");
     const meta = getWorkspaceRequestMetadata();
     const params = new URLSearchParams({ action: "getPosts" });
     Object.entries(meta).forEach(function(entry) {
@@ -25046,52 +25057,26 @@ async function loadSheetsPostsForHybrid() {
     });
     const url = apiUrl + "?" + params.toString();
     var response = await fetchWithTimeout(url, { method: "GET", mode: "cors" }, 60000);
-    console.log("[posts] sheets response raw", response.ok ? "ok" : "error", response.status);
     if (!response.ok) throw new Error("Google Sheets request failed: " + response.status);
     var text = null;
     try { text = await response.text(); } catch (_) { text = null; }
     if (text === null || text === "") throw new Error("Google Sheets returned empty response");
     var result = null;
     try { result = JSON.parse(text); } catch (_) {
-      console.log("[posts] sheets response raw text", text.slice(0, 500));
+      console.log("[posts] direct fallback raw text", text.slice(0, 500));
       throw new Error("Google Sheets returned non-JSON response");
     }
     if (!result.ok) throw new Error(result.error || "Unknown Apps Script error");
-    console.log("[posts] sheets response keys", Object.keys(result));
+    console.log("[posts] direct fallback result keys", Object.keys(result));
     const rawPosts = extractPostsFromGetPostsResult(result);
     const filteredPosts = filterBlankPostsForRender(rawPosts);
-    console.log("[posts] sheets loaded count", filteredPosts.length);
+    console.log("[posts] direct fallback loaded count", filteredPosts.length);
     if (filteredPosts.length > 0) return filteredPosts;
-    console.log("[posts] direct sheets returned 0 posts");
-    return [];
-  } catch (directErr) {
-    firstError = directErr;
-    console.log("[posts] direct sheets timed out, trying pull fallback", directErr?.name || "");
-  }
-
-  // Try 2: Pull fallback via read_tab (POST) — same reliable path as pullSheetsToSupabase
-  try {
-    var config = getSheetMirrorConfig();
-    if (!config.sheetId || !config.appsScriptUrl) throw new Error("Sheet mirror not configured for fallback");
-    var fallbackResp = await fetch(config.appsScriptUrl, {
-      method: "POST", mode: "cors",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "read_tab", sheet_id: config.sheetId, tab: "POSTS" })
-    });
-    var fallbackData = await fallbackResp.json();
-    if (!fallbackData.ok) throw new Error(fallbackData.error || "read_tab failed");
-    console.log("[posts] pull fallback result keys", Object.keys(fallbackData));
-    var fallbackPosts = extractPostsFromSheetPullResult(fallbackData);
-    console.log("[posts] pull fallback posts count", fallbackPosts.length);
-    var filteredFallback = filterBlankPostsForRender(fallbackPosts);
-    console.log("[posts] pull fallback loaded count", filteredFallback.length);
-    if (filteredFallback.length > 0) return filteredFallback;
     throw new Error("Fallback returned 0 posts");
   } catch (fallbackErr) {
+    console.log("[posts] direct fallback failed", fallbackErr && fallbackErr.message ? fallbackErr.message : String(fallbackErr));
     console.log("[posts] all sheet loaders failed");
-    var combinedMsg = "Google Sheets posts could not be loaded";
-    if (firstError) combinedMsg += " (" + (firstError.message || String(firstError)) + ")";
-    throw new Error(combinedMsg);
+    throw new Error("Google Sheets posts could not be loaded");
   }
 }
 
