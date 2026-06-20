@@ -25029,21 +25029,23 @@ async function loadSheetsPostsForHybrid() {
     throw new Error("Google Sheets backend is not configured. Set apps_script_url in workspace settings.");
   }
 
-  console.log("[posts] using pull route as primary");
+  console.log("[posts] boot using manual pull action");
 
   // Try 1: Pull route via read_tab (POST) — same reliable path as pullSheetsToSupabase
   try {
     var config = getSheetMirrorConfig();
+    const pullPayload = { action: "read_tab", sheet_id: config.sheetId, tab: "POSTS" };
+    console.log("[posts] boot pull payload", pullPayload);
     var primaryData = await readSheetTabFromAppsScript(config, "POSTS");
-    console.log("[posts] pull primary result keys", Object.keys(primaryData || {}));
+    console.log("[posts] boot pull result keys", Object.keys(primaryData || {}));
     if (!primaryData.ok) throw new Error(primaryData.error || "read_tab failed");
     var primaryPosts = extractPostsFromSheetPullResult(primaryData);
-    console.log("[posts] pull primary posts count", Array.isArray(primaryPosts) ? primaryPosts.length : 0);
+    console.log("[posts] boot pull posts count", Array.isArray(primaryPosts) ? primaryPosts.length : 0);
     var filteredPrimary = filterBlankPostsForRender(primaryPosts);
-    console.log("[posts] pull primary loaded count", filteredPrimary.length);
+    console.log("[posts] boot pull loaded count", filteredPrimary.length);
     if (filteredPrimary.length > 0) return filteredPrimary;
   } catch (primaryErr) {
-    console.log("[posts] pull primary failed", primaryErr && primaryErr.message ? primaryErr.message : String(primaryErr));
+    console.log("[posts] boot pull failed", primaryErr && primaryErr.message ? primaryErr.message : String(primaryErr));
   }
 
   // Try 2: Direct getPosts via GET with 60s timeout

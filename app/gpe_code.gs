@@ -123,6 +123,7 @@ function getActionFromRequest_(e, body) {
 function normalizeRouteName_(route) {
   var value = String(route || "").trim();
   var normalized = value.toLowerCase().replace(/[\s-]+/g, "_");
+  if (normalized === "readtab" || normalized === "read_tab") return "readTab";
   if (normalized === "getposts" || normalized === "get_posts" || normalized === "posts") return "getPosts";
   if (normalized === "savepost" || normalized === "save_post" || normalized === "updatepost" || normalized === "update_post") return "savePost";
   if (normalized === "backfillpostids" || normalized === "backfill_post_ids" || normalized === "repairpostids" || normalized === "repair_post_ids") return "backfillPostIds";
@@ -257,6 +258,50 @@ function buildPostsResponse_(result, context, requestedRoute) {
   response.missingPostIdCount = diagnostics.missingPostIdCount;
   response.diagnostics = Object.assign({}, response.diagnostics || {}, diagnostics);
   return response;
+}
+
+function readTabRows_(payload, context) {
+  payload = payload || {};
+  context = context || getCurrentWorkspaceRequestContext_();
+  var tab = String(payload.tab || payload.sheet_tab || "").trim();
+  if (!tab) throw new Error("Missing tab");
+
+  var normalizedTab = tab.toUpperCase();
+  var rows = [];
+  var sheet = null;
+
+  if (normalizedTab === "POSTS") {
+    sheet = getPostsSheet_();
+    rows = getPostsData_();
+  } else {
+    var tabKeyMap = {
+      NOTES: "notes",
+      INSPO: "inspo",
+      AI_DRAFTS: "aiDrafts",
+      MEDIA: "media",
+      CAMPAIGNS: "campaign",
+      CAMPAIGN: "campaign",
+      SETTINGS: "settings",
+      BRAND_FRAMEWORK: "brandFramework",
+      SCHEMA_NOTES: "schema_notes",
+      AI_CHAIN_SETTINGS: "ai_chain_settings",
+      FLOW_EVENT_LOG: "flow_event_log"
+    };
+    var sheetKey = tabKeyMap[normalizedTab];
+    if (!sheetKey) throw new Error("Unsupported tab: " + normalizedTab);
+    sheet = getOptionalCoreSheet_(sheetKey);
+    if (!sheet) throw new Error("Missing sheet: " + normalizedTab);
+    rows = getRowsByNormalizedHeaders_(sheet, []);
+  }
+
+  return {
+    ok: true,
+    source: "google_sheets",
+    tab: normalizedTab,
+    rows: rows,
+    rowCount: Array.isArray(rows) ? rows.length : 0,
+    workspace_slug: context.workspace_slug || ""
+  };
 }
 
 function buildDiagnosticsResponse_(diagnostics, context, requestedRoute) {
@@ -1133,6 +1178,8 @@ function doGet(e) {
 
     if (!action) {
       const availableActions = [
+        "read_tab",
+        "readTab",
         "getPosts",
         "get_posts",
         "posts",
@@ -1234,6 +1281,9 @@ function doGet(e) {
     if (route === "getPosts") {
       const result = getPosts();
       return jsonResponse(buildPostsResponse_(result, context, action));
+    }
+    if (route === "readTab" || action === "read_tab") {
+      return jsonResponse(readTabRows_(payloadOrParams_(e), context));
     }
     if (route === "backfillPostIds") return jsonResponse(backfillPostIds());
     if (action === "getWorkspaceConfig") return jsonResponse({ ok: true, workspace: getWorkspaceServerConfig_(payloadOrParams_(e)) });
@@ -1348,6 +1398,9 @@ function doPost(e) {
     if (route === "getPosts") {
       const result = getPosts();
       return jsonResponse(buildPostsResponse_(result, context, action));
+    }
+    if (route === "readTab" || action === "read_tab") {
+      return jsonResponse(readTabRows_(payload, context));
     }
 
     if (route === "backfillPostIds") {
