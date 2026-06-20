@@ -3623,20 +3623,29 @@ function normalizePostType_(value) {
   return allowed[normalized] || "";
 }
 
-function normalizeCampaignName_(value) {
-  var raw = String(value || "")
-    .replace(/[_-]+/g, " ")
+function normalizeCampaignDisplayName_(value) {
+  return String(value || "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function splitExplicitCampaignValues_(value) {
+  return String(value || "")
+    .split(/[|\n]/)
+    .map(function(item) {
+      return normalizeCampaignDisplayName_(item);
+    })
+    .filter(Boolean);
+}
+
+function normalizeCampaignName_(value) {
+  var raw = normalizeCampaignDisplayName_(value);
   if (!raw) return "";
   return resolveCampaignName_(raw, getAllowedCampaignNames_());
 }
 
 function resolveCampaignName_(rawCampaignName, campaignRecords, options) {
-  var raw = String(rawCampaignName || "")
-    .replace(/[_-]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  var raw = normalizeCampaignDisplayName_(rawCampaignName);
   console.log("[campaign-parse] raw", raw);
   if (!raw) return "";
   var records = Array.isArray(campaignRecords) ? campaignRecords : [];
@@ -3678,9 +3687,7 @@ function resolveCampaignName_(rawCampaignName, campaignRecords, options) {
     return raw;
   }
   if (explicitMulti) {
-    var parts = String(rawCampaignName || "").split(/[|\n]/).map(function(item) {
-      return String(item || "").trim();
-    }).filter(Boolean);
+    var parts = splitExplicitCampaignValues_(rawCampaignName);
     console.log("[campaign-parse] split explicit delimiter only", parts);
     return parts[0] || raw;
   }
@@ -4308,6 +4315,15 @@ function getPosts() {
   const mediaItems = getMedia();
   const rawRows = getPostsData_();
   console.log("[posts] sheet raw row count", rawRows.length);
+  console.log("[campaign-audit] raw", rawRows.slice(0, 10).map(function(rawRow) {
+    const row = normalizePostSchemaAliases_(rawRow);
+    return {
+      sourceRowId: String(row.row_number || "").trim(),
+      sourcePostId: String(pickFirstDefined_(row.post_id, row.postId, row.id, "")).trim(),
+      rawCampaignValue: normalizeCampaignDisplayName_(pickFirstDefined_(row.campaign_name, row.campaignName, row.campaign, "")),
+      sourceCampaignId: String(pickFirstDefined_(row.campaign_id, row.campaignID, "")).trim()
+    };
+  }));
   var droppedRows = [];
   const normalizedPosts = rawRows.map(function(rawRow) {
     const row = normalizePostSchemaAliases_(rawRow);
@@ -4507,6 +4523,24 @@ function getPosts() {
       platform: d.platform || ""
     };
   }));
+  console.log("[campaign-audit] normalized", filteredPosts.slice(0, 10).map(function(post) {
+    return {
+      sourceRowId: String(post.row_number || "").trim(),
+      sourcePostId: String(post.postId || "").trim(),
+      rawCampaignValue: normalizeCampaignDisplayName_(post.campaign_name || post.campaignName || ""),
+      normalizedCampaignValue: normalizeCampaignDisplayName_(post.campaignName || ""),
+      campaignValuesAfterParsing: splitExplicitCampaignValues_(post.campaignName || post.campaign_name || "")
+    };
+  }));
+  console.log("[campaign-audit] fragments", filteredPosts.filter(function(post) {
+    return splitExplicitCampaignValues_(post.campaignName || post.campaign_name || "").length > 1;
+  }).map(function(post) {
+    return {
+      sourceRowId: String(post.row_number || "").trim(),
+      sourcePostId: String(post.postId || "").trim(),
+      campaignValuesAfterParsing: splitExplicitCampaignValues_(post.campaignName || post.campaign_name || "")
+    };
+  }));
   return filteredPosts;
 }
 
@@ -4695,6 +4729,14 @@ function getCampaigns() {
     return !campaign.isArchived && (campaign.campaignId || campaign.campaignName);
   });
 
+  console.log("[campaign-audit] constellation campaigns", rows.map(function(campaign) {
+    return {
+      campaignId: String(campaign.campaignId || "").trim(),
+      campaignName: normalizeCampaignDisplayName_(campaign.campaignName || ""),
+      sourceRowId: String(campaign.row_number || "").trim()
+    };
+  }));
+
   const byName = {};
   rows.forEach(function(campaign) {
     byName[normalizeCampaignLookup_(campaign.campaignName)] = campaign;
@@ -4705,7 +4747,7 @@ function getCampaigns() {
     const matched = byName[normalizeCampaignLookup_(campaignName)];
     return matched || {
       campaignId: createDeterministicCampaignId_(campaignName),
-      campaignName: normalizeCampaignName_(campaignName),
+      campaignName: normalizeCampaignDisplayName_(campaignName),
       pillar: "",
       color: getCampaignColorFromSettings_(campaignName, settings),
       x: 0,
@@ -4968,13 +5010,11 @@ function getCampaignCleanupDiagnostics_(posts, campaigns) {
   });
   var invalidComboCampaigns = [];
   posts.forEach(function(post) {
-    var name = String(post.campaignName || "").trim();
+    var name = normalizeCampaignDisplayName_(post.campaignName || "");
     if (!name) return;
     var explicitMulti = /[|\n]/.test(name);
     if (!explicitMulti) return;
-    var labels = name.split(/[|\n]/).map(function(label) {
-      return normalizeCampaignName_(label);
-    }).filter(Boolean);
+    var labels = splitExplicitCampaignValues_(name);
     if (!labels.length) return;
     var normalizedLabels = labels.map(function(label) { return normalizeCampaignLookup_(label); });
     var hasMessaging = normalizedLabels.indexOf("messaging") !== -1;
@@ -4994,6 +5034,7 @@ function getCampaignCleanupDiagnostics_(posts, campaigns) {
         : "Review affected posts and reassign to one clean campaign label."
     });
   });
+  console.log("[campaign-audit] duplicate candidates", sameNormalizedNameDifferentIds);
   return {
     nearDuplicateCampaigns: nearDuplicateCampaigns,
     invalidComboCampaigns: invalidComboCampaigns,
@@ -13505,10 +13546,10 @@ function buildFlowIntegrityDiagnostics_(posts, notes, inspo, campaigns, importJo
   var normalizedKeyMap = {};
   campaigns.forEach(function(campaign) {
     var cid = String(campaign.campaignId || "").trim();
-    var cname = String(campaign.campaignName || "").trim();
+    var cname = normalizeCampaignDisplayName_(campaign.campaignName || "");
     var nkey = normalizeCampaignLookup_(cname);
-    if (cname.indexOf(",") !== -1) {
-      campaignKeyIssues.push({ campaignId: cid, campaignName: cname, issue: "comma-separated campaign name", normalizedKey: nkey });
+    if (/[|\n]/.test(cname)) {
+      campaignKeyIssues.push({ campaignId: cid, campaignName: cname, issue: "explicit multi-value campaign name", normalizedKey: nkey });
     }
     if (!cid) {
       campaignKeyIssues.push({ campaignId: cid, campaignName: cname, issue: "empty campaign id", normalizedKey: nkey });

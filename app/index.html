@@ -976,7 +976,6 @@
     border: 1px solid rgba(255,255,255,0.06);
     background: rgba(24,17,37,0.92);
   }
-  
   .ph-megaphone,
   .ph-heart,
   .ph-users-three,
@@ -7089,31 +7088,40 @@ function getAvailableContentPillars() {
   return getFallbackWorkspacePillars().map(function(pillar) { return pillar.name || pillar.slug || ""; }).filter(Boolean);
 }
 
-function getAvailableCampaignRecords() {
-  const allowed = Array.isArray(appState?.settings?.campaigns) ? appState.settings.campaigns.filter(Boolean) : [];
+function buildCanonicalCampaignRecords() {
+  const settingsCampaigns = Array.isArray(appState?.settings?.campaigns) ? appState.settings.campaigns : [];
   const sourceRecords = Array.isArray(appState?.campaigns) ? appState.campaigns : [];
-  const orderedNames = allowed.length
-    ? allowed.slice()
-    : sourceRecords.map((campaign) => campaign?.campaignName || campaign?.campaign_name || campaign?.name || "").filter(Boolean);
+  const sourceNames = sourceRecords.map((campaign) => String(campaign?.campaignName || campaign?.campaign_name || campaign?.name || "").trim()).filter(Boolean);
+  const orderedNames = settingsCampaigns.length ? settingsCampaigns.slice() : sourceNames;
+  const seen = new Set();
   return orderedNames.map((campaignName, index) => {
-    const resolvedName = resolveCanonicalCampaignName(campaignName, sourceRecords);
-    const matched = sourceRecords.find((campaign) => normalizeLookupValue(campaign.campaignName || campaign.name || "") === normalizeLookupValue(resolvedName || campaignName));
+    const displayName = normalizeCampaignDisplayName(campaignName);
+    const key = normalizeLookupValue(displayName);
+    if (!displayName || seen.has(key)) return null;
+    seen.add(key);
+    const matched = sourceRecords.find((campaign) => normalizeLookupValue(campaign.campaignName || campaign.campaign_name || campaign.name || "") === key) || null;
     return {
       ...(matched || {}),
-      campaignId: matched?.campaignId || `CMP-${normalizeLookupValue(campaignName).replace(/[^a-z0-9]+/g, "").toUpperCase().slice(0, 8) || index}`,
-      campaignName: resolvedName || campaignName,
+      campaignId: String(matched?.campaignId || matched?.campaign_id || matched?.campaignID || matched?.id || `CMP-${key.replace(/[^a-z0-9]+/g, "").toUpperCase().slice(0, 8) || index}`).trim(),
+      campaignName: String(matched?.campaignName || matched?.campaign_name || matched?.name || displayName).trim(),
+      campaign_name: String(matched?.campaign_name || matched?.campaignName || matched?.name || displayName).trim(),
+      name: String(matched?.name || matched?.campaignName || matched?.campaign_name || displayName).trim(),
       sortOrder: Number(matched?.sortOrder ?? index) || index,
       isArchived: Boolean(matched?.isArchived)
     };
-  }).filter((campaign) => !campaign.isArchived);
+  }).filter(Boolean);
+}
+
+function getAvailableCampaignRecords() {
+  return buildCanonicalCampaignRecords().filter((campaign) => !campaign.isArchived);
 }
 
 function logCampaignQASummary(source = "hybrid") {
   const posts = Array.isArray(appState?.posts) ? appState.posts : [];
   const campaignRecords = getAvailableCampaignRecords();
-  const rawNames = [...new Set(posts.map((post) => normalizeDisplayText(pickRemoteValue(post?.campaignName, post?.campaign_name, ""))).filter(Boolean))];
+  const rawNames = [...new Set(posts.map((post) => normalizeCampaignDisplayName(pickRemoteValue(post?.campaignName, post?.campaign_name, ""))).filter(Boolean))];
   const resolvedNames = [...new Set(posts.map((post) => resolveCanonicalCampaignName(pickRemoteValue(post?.campaignName, post?.campaign_name, ""), campaignRecords)).filter(Boolean))];
-  const registryNames = [...new Set(campaignRecords.map((campaign) => normalizeDisplayText(campaign?.campaignName || "")).filter(Boolean))];
+  const registryNames = [...new Set(campaignRecords.map((campaign) => normalizeCampaignDisplayName(campaign?.campaignName || "")).filter(Boolean))];
   const suspiciousFragments = ["Girl", "Take Action"].filter((fragment) => rawNames.some((name) => normalizeLookupValue(name) === normalizeLookupValue(fragment)));
   console.log("[campaign-qa] source", source);
   console.log("[campaign-qa] sheet campaign records", registryNames);
@@ -7701,7 +7709,7 @@ function coerceHybridSheetSettings(input) {
     var category = normalizeHybridSettingsCategoryKey(row[categoryKey]);
     var values = splitHybridSheetValues(row[valueKey]);
     if (category === "campaignColors") {
-      var campaignName = normalizeDisplayText(row.campaign || row.campaign_name || row.name || row.label || "");
+      var campaignName = normalizeCampaignDisplayName(row.campaign || row.campaign_name || row.name || row.label || "");
       var colorValue = String(row.color || row.campaign_color || row.hex || row[valueKey] || "").trim();
       if (campaignName && colorValue && /^#|rgb|hsl/i.test(colorValue)) settings.campaignColors[campaignName] = colorValue;
       return;
@@ -7902,10 +7910,64 @@ function normalizeScheduledAt(value) {
   return parsed && !Number.isNaN(parsed.getTime()) ? parsed.toISOString() : "";
 }
 
+const MISSING_POST_TRACE_ID = "post_e1a00447-932a-4a20-b60c-1fba7034edc3";
+const missingPostTraceState = typeof window !== "undefined"
+  ? (window.__missingPostTraceState = window.__missingPostTraceState || { logged: {} })
+  : { logged: {} };
+
+function isMissingPostTraceTarget(postOrId) {
+  if (!postOrId) return false;
+  const postId = typeof postOrId === "string"
+    ? String(postOrId || "").trim()
+    : String(getCanonicalPostId(postOrId) || postOrId.postId || postOrId.post_id || postOrId.id || "").trim();
+  return postId === MISSING_POST_TRACE_ID;
+}
+
+function logMissingPostTrace(stage, payload = {}) {
+  const postId = String(payload.postId || payload.post_id || payload.id || "").trim();
+  if (postId !== MISSING_POST_TRACE_ID) return;
+  if (missingPostTraceState.logged[stage]) return;
+  missingPostTraceState.logged[stage] = true;
+  console.log(stage, payload);
+}
+
 function normalizePostPlanningFields(post = {}, fallback = {}) {
-  const queueDateLabel = normalizeQueueDateLabel(post.queueDateLabel || post.queue_date_label || post.plannedDate || post.queueDate || fallback.queueDateLabel || fallback.date || post.date || post.scheduledAt || "");
-  const queueTimeLabel = String(post.queueTimeLabel || post.queue_time_label || fallback.queueTimeLabel || "").trim();
-  const parsedDate = parsePostDate(queueDateLabel || post.scheduledAt || post.date || fallback.scheduledAt || fallback.date);
+  const queueDateLabel = normalizeQueueDateLabel(
+    post.queueDateLabel ||
+    post.queue_date_label ||
+    post.plannedDate ||
+    post.queueDate ||
+    fallback.queueDateLabel ||
+    fallback.date ||
+    post.date ||
+    post.scheduledAt ||
+    post.publishDate ||
+    post.publish_date ||
+    fallback.publishDate ||
+    fallback.publish_date ||
+    ""
+  );
+  const queueTimeLabel = String(
+    post.queueTimeLabel ||
+    post.queue_time_label ||
+    post.publishTime ||
+    post.publish_time ||
+    fallback.queueTimeLabel ||
+    fallback.publishTime ||
+    fallback.publish_time ||
+    ""
+  ).trim();
+  const parsedDate = parsePostDate(
+    queueDateLabel ||
+    post.scheduledAt ||
+    post.date ||
+    post.publishDate ||
+    post.publish_date ||
+    fallback.scheduledAt ||
+    fallback.date ||
+    fallback.publishDate ||
+    fallback.publish_date
+  );
   let hours = 9;
   let minutes = 15;
   const timeMatch = queueTimeLabel.match(/^(\d{1,2}):(\d{2})(?:\s*([AP]M))?$/i);
@@ -7918,7 +7980,7 @@ function normalizePostPlanningFields(post = {}, fallback = {}) {
   }
   const scheduled = parsedDate ? new Date(parsedDate.getFullYear(), parsedDate.getMonth(), parsedDate.getDate(), hours, minutes, 0, 0) : null;
   const finalLabel = queueDateLabel || (scheduled ? formatQueueDateLabel(scheduled) : "");
-  return {
+  const planning = {
     queueDateLabel: finalLabel,
     queueTimeLabel,
     scheduledAt: scheduled ? scheduled.toISOString() : "",
@@ -7927,6 +7989,20 @@ function normalizePostPlanningFields(post = {}, fallback = {}) {
     calendarDay: scheduled ? scheduled.getDate() : "",
     hasUserSelectedTime: !!queueTimeLabel
   };
+  if (isMissingPostTraceTarget(post) || isMissingPostTraceTarget(fallback)) {
+    logMissingPostTrace("[missing-post] normalized planning", {
+      postId: String(post.postId || post.post_id || fallback.postId || fallback.post_id || "").trim(),
+      planning,
+      input: {
+        queueDateLabel: String(post.queueDateLabel || post.queue_date_label || post.plannedDate || post.queueDate || "").trim(),
+        publishDate: String(post.publishDate || post.publish_date || fallback.publishDate || fallback.publish_date || "").trim(),
+        publishTime: String(post.publishTime || post.publish_time || fallback.publishTime || fallback.publish_time || "").trim(),
+        scheduledAt: String(post.scheduledAt || post.scheduled_at || post.date || fallback.scheduledAt || fallback.date || "").trim(),
+        date: String(post.date || fallback.date || "").trim()
+      }
+    });
+  }
+  return planning;
 }
 
 function hydratePostCampaign(post) {
@@ -9649,8 +9725,22 @@ function normalizeDisplayText(value) {
     .trim();
 }
 
+function normalizeCampaignDisplayName(value) {
+  return String(value || "")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function splitExplicitCampaignValues(value) {
+  return String(value || "")
+    .split(/[|\n]/)
+    .map((item) => normalizeCampaignDisplayName(item))
+    .filter(Boolean);
+}
+
 function normalizeCampaignName(value) {
-  const raw = normalizeDisplayText(value);
+  const raw = normalizeCampaignDisplayName(value);
   if (!raw) return "";
   const configured = Array.isArray(appState?.settings?.campaigns) ? appState.settings.campaigns : [];
   const hydrated = Array.isArray(appState?.campaigns)
@@ -9663,7 +9753,7 @@ function normalizeCampaignName(value) {
 }
 
 function resolveCanonicalCampaignName(rawCampaignName, campaignRecords = [], options = {}) {
-  const raw = normalizeDisplayText(rawCampaignName);
+  const raw = normalizeCampaignDisplayName(rawCampaignName);
   console.log("[campaign-parse] raw", raw);
   if (!raw) return "";
   const records = (Array.isArray(campaignRecords) ? campaignRecords : []).map((campaign) => {
@@ -9705,7 +9795,7 @@ function resolveCanonicalCampaignName(rawCampaignName, campaignRecords = [], opt
     return raw;
   }
   if (explicitMulti) {
-    const parts = String(rawCampaignName || "").split(/[|\n]/).map((item) => normalizeDisplayText(item)).filter(Boolean);
+    const parts = String(rawCampaignName || "").split(/[|\n]/).map((item) => normalizeCampaignDisplayName(item)).filter(Boolean);
     const resolvedParts = parts.map((part) => {
       const matched = names.find((name) => name === part) || names.find((name) => normalizeLookupValue(name) === normalizeLookupValue(part));
       return matched || part;
@@ -12235,6 +12325,17 @@ function renderCalendarCell(dateObj, inCurrentMonth = true, isWeekMode = false) 
     .filter(post => normalizePostCalendarDateKey(post) === key)
     .filter(postMatchesCalendarViewFilters)
     .sort((a, b) => (parsePostDate(normalizePostCalendarDateKey(a) || a.date)?.getTime() || 0) - (parsePostDate(normalizePostCalendarDateKey(b) || b.date)?.getTime() || 0));
+  const missingPostInCell = posts.find(isMissingPostTraceTarget);
+  if (missingPostInCell) {
+    logMissingPostTrace("[missing-post] included in calendar", {
+      postId: String(missingPostInCell.postId || missingPostInCell.post_id || missingPostInCell.id || "").trim(),
+      key,
+      view: isWeekMode ? "week" : "month",
+      queueDateLabel: String(missingPostInCell.queueDateLabel || missingPostInCell.queue_date_label || "").trim(),
+      scheduledAt: String(missingPostInCell.scheduledAt || missingPostInCell.scheduled_at || "").trim(),
+      date: String(missingPostInCell.date || "").trim()
+    });
+  }
 
   const cellClasses = [
     "cal-cell",
@@ -12288,6 +12389,17 @@ function renderMobileDayCalendar() {
     .filter(post => normalizePostCalendarDateKey(post) === selectedCalendarDateKey)
     .filter(postMatchesCalendarViewFilters)
     .sort((a, b) => (parsePostDate(normalizePostCalendarDateKey(a) || a.date)?.getTime() || 0) - (parsePostDate(normalizePostCalendarDateKey(b) || b.date)?.getTime() || 0));
+  const missingPostInDay = posts.find(isMissingPostTraceTarget);
+  if (missingPostInDay) {
+    logMissingPostTrace("[missing-post] included in calendar", {
+      postId: String(missingPostInDay.postId || missingPostInDay.post_id || missingPostInDay.id || "").trim(),
+      key: selectedCalendarDateKey,
+      view: "day",
+      queueDateLabel: String(missingPostInDay.queueDateLabel || missingPostInDay.queue_date_label || "").trim(),
+      scheduledAt: String(missingPostInDay.scheduledAt || missingPostInDay.scheduled_at || "").trim(),
+      date: String(missingPostInDay.date || "").trim()
+    });
+  }
 
   if (!posts.length) {
     list.innerHTML = `<div class="calendar-day-shell">${makeEmptyState("No posts on selected day", `No posts are scheduled for ${label.textContent}.`, "ph-calendar-x")}</div>`;
@@ -12600,7 +12712,7 @@ function buildConstellationRows() {
   }, "uncategorized");
 
   hydratedPosts.forEach((post) => {
-    const rawCampaign = normalizeDisplayText(pickRemoteValue(post?.campaignName, post?.campaign_name, ""));
+    const rawCampaign = normalizeCampaignDisplayName(pickRemoteValue(post?.campaignName, post?.campaign_name, ""));
     const resolvedCampaign = resolveCanonicalCampaignName(rawCampaign, campaignRecords);
     console.log("[constellation-campaign] raw campaign", rawCampaign || "");
     console.log("[constellation-campaign] resolved campaign", resolvedCampaign || "Uncategorized");
@@ -12673,14 +12785,12 @@ function normalizeCampaignLaneKey(value = "") {
 }
 
 function getConstellationCampaignLabelParts(value = "") {
-  const raw = normalizeDisplayText(value);
-  if (!raw) return [];
-  if (/[|\n]/.test(raw)) {
-    return raw
-      .split(/[|\n]/)
-      .map((item) => resolveCanonicalCampaignName(item, getAvailableCampaignRecords()))
-      .filter(Boolean);
+  const values = splitExplicitCampaignValues(value);
+  if (values.length) {
+    return values.map((item) => resolveCanonicalCampaignName(item, getAvailableCampaignRecords())).filter(Boolean);
   }
+  const raw = normalizeCampaignDisplayName(value);
+  if (!raw) return [];
   return [resolveCanonicalCampaignName(raw, getAvailableCampaignRecords())];
 }
 
@@ -17310,7 +17420,7 @@ function renderCampaignCleanupDiagnosticsCard() {
       <div class="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Campaign Cleanup Review</div>
-          <div class="text-sm text-gray-300 mt-1">Near-duplicate and comma-combined campaign names need review before Constellation stays clean.</div>
+        <div class="text-sm text-gray-300 mt-1">Near-duplicate and explicitly delimited campaign names need review before Constellation stays clean.</div>
         </div>
       </div>
       ${cleanup.nearDuplicates.map((item, index) => `
@@ -17346,7 +17456,7 @@ function renderCampaignCleanupDiagnosticsCard() {
           <div class="flex items-center justify-between gap-3 flex-wrap">
             <div>
               <div class="text-sm font-bold text-white">Invalid combo campaign</div>
-              <div class="text-[11px] text-gray-400 wrap-safe">Flagged value: ${escapeHtml(cleanup.invalidComboCampaigns[0].campaignName || "Algorithm Best Practices, Messaging,Offerings")}</div>
+              <div class="text-[11px] text-gray-400 wrap-safe">Flagged value: ${escapeHtml(cleanup.invalidComboCampaigns[0].campaignName || "Algorithm Best Practices | Messaging | Offerings")}</div>
             </div>
             <span class="diagnostic-chip">INVALID</span>
           </div>
@@ -17491,7 +17601,7 @@ function renderWorkspaceDiagnosticsPanel() {
     })),
     ...(cleanup.invalidComboCampaigns || []).length ? [{
       label: "Invalid combo campaign names",
-      detail: `${(cleanup.invalidComboCampaigns || []).length} posts need manual reassignment from comma-combined campaign names.`,
+      detail: `${(cleanup.invalidComboCampaigns || []).length} posts need manual reassignment from explicitly delimited campaign names.`,
       severity: "error"
     }] : []
   ];
@@ -21160,13 +21270,14 @@ function getUniqueLedgerCampaignOptions() {
     .filter(c => !c.isArchived)
     .map(c => ({
       value: String(c.campaignId || "").trim(),
-      label: String(c.campaignName || "").trim(),
-      color: getCampaignColor(c, c.pillar || "")
+      label: normalizeCampaignDisplayName(c.campaignName || ""),
+      color: getCampaignColor(c, c.pillar || ""),
+      _key: normalizeLookupValue(c.campaignName || "")
     }))
     .filter(item => {
       if (!item.value || !item.label) return false;
-      if (seen.has(item.value)) return false;
-      seen.add(item.value);
+      if (seen.has(item._key)) return false;
+      seen.add(item._key);
       return true;
     })
     .sort((a, b) => a.label.localeCompare(b.label));
@@ -29208,7 +29319,7 @@ function normalizeRemoteSettings(settings) {
     default_pillars: normalizedDefaultPillars.length ? normalizedDefaultPillars : getFallbackWorkspacePillars(),
     statuses: normalizeList(settings?.statuses, defaults.statuses, (value) => String(value || "").trim().toLowerCase()),
     postTypes: normalizeList(settings?.postTypes || settings?.post_types, defaults.postTypes, (value) => String(value || "").trim().toLowerCase()),
-    campaigns: normalizeList(settings?.campaigns, [], (value) => normalizeDisplayText(value)),
+    campaigns: normalizeList(settings?.campaigns, [], (value) => normalizeCampaignDisplayName(value)),
     campaignColors: { ...(defaults.campaignColors || {}), ...(settings?.campaignColors || settings?.campaign_colors || {}) },
     months: Array.isArray(settings?.months) ? settings.months.map((value) => String(value || "").trim()).filter(Boolean) : defaults.months.slice(),
     queueLimit: settings?.queueLimit || settings?.queue_limit || defaults.queueLimit,
@@ -29229,15 +29340,44 @@ function normalizeRemotePost(post, campaigns = [], mediaItems = [], index = 0) {
   const title = getPostDisplayTitle({ ...post, description: rawDescription }, "");
   const scheduledAt = String(pickRemoteValue(post?.scheduledAt, post?.scheduled_at, post?.date, "")).trim();
   const publishDate = String(pickRemoteValue(post?.publishDate, post?.publish_date, "")).trim();
+  const publishTime = String(pickRemoteValue(post?.publishTime, post?.publish_time, "")).trim();
+  const sourceDate = String(pickRemoteValue(post?.date, post?.scheduledAt, post?.scheduled_at, post?.publishDate, post?.publish_date, "")).trim();
   const postedAt = String(pickRemoteValue(post?.postedAt, post?.posted_at, post?.publishedAt, post?.published_at, "")).trim();
+  logMissingPostTrace("[missing-post] publishDate", {
+    postId,
+    rowNumber: getRemotePostSheetRow(post),
+    publishDate,
+    publish_date: String(pickRemoteValue(post?.publishDate, post?.publish_date, "")).trim(),
+    publishTime,
+    publish_time: String(pickRemoteValue(post?.publishTime, post?.publish_time, "")).trim(),
+    scheduledAt,
+    scheduled_at: String(pickRemoteValue(post?.scheduledAt, post?.scheduled_at, "")).trim(),
+    date: sourceDate
+  });
   const planning = normalizePostPlanningFields({
+    postId,
+    post_id: postId,
     scheduledAt,
     queueDateLabel: String(pickRemoteValue(post?.queueDateLabel, post?.queue_date_label, "")).trim(),
     queueTimeLabel: String(pickRemoteValue(post?.queueTimeLabel, post?.queue_time_label, "")).trim(),
+    publishDate,
+    publish_date: String(pickRemoteValue(post?.publishDate, post?.publish_date, "")).trim(),
+    publishTime,
+    publish_time: String(pickRemoteValue(post?.publishTime, post?.publish_time, "")).trim(),
+    date: sourceDate,
     calendarMonth: pickRemoteValue(post?.calendarMonth, post?.calendar_month, ""),
     calendarYear: pickRemoteValue(post?.calendarYear, post?.calendar_year, ""),
     calendarDay: pickRemoteValue(post?.calendarDay, post?.calendar_day, ""),
     hasUserSelectedTime: pickRemoteValue(post?.hasUserSelectedTime, post?.has_user_selected_time, "")
+  });
+  logMissingPostTrace("[missing-post] normalized planning", {
+    postId,
+    planning,
+    publishDate,
+    publishTime,
+    queueDateLabel: String(pickRemoteValue(post?.queueDateLabel, post?.queue_date_label, "")).trim(),
+    scheduledAt,
+    date: sourceDate
   });
   const linkedAsset = mediaItems.find(asset => String(asset.postId || asset.linkedPostId || "") === postId);
   const carouselAssetIds = Array.isArray(post?.carouselAssetIds)
@@ -30681,11 +30821,13 @@ function getPostCalendarDateKey(post) {
   if (schedKey) return schedKey;
   var fromSchedAt = parseDisplayDateKey(String(post.scheduledAt || post.scheduled_at || post.date || "").slice(0, 10));
   if (fromSchedAt) return fromSchedAt;
+  var fromPublishDate = parseDisplayDateKey(String(post.publishDate || post.publish_date || "").slice(0, 10));
+  if (fromPublishDate) return fromPublishDate;
   var fromCreated = parseDisplayDateKey(String(post.createdAt || post.created_at || "").slice(0, 10));
   if (fromCreated) return fromCreated;
-  var fromValue = getPlanningDateKeyFromValue(post.scheduledAt || post.scheduled_at || post.date || post.createdAt || post.created_at);
+  var fromValue = getPlanningDateKeyFromValue(post.scheduledAt || post.scheduled_at || post.date || post.publishDate || post.publish_date || post.createdAt || post.created_at);
   if (fromValue) return fromValue;
-  return toDateKey(post.scheduledAt || post.scheduled_at || post.date || post.createdAt || post.created_at);
+  return toDateKey(post.scheduledAt || post.scheduled_at || post.date || post.publishDate || post.publish_date || post.createdAt || post.created_at);
 }
 
 function getCalendarPlacementKey(post) {
@@ -30694,21 +30836,50 @@ function getCalendarPlacementKey(post) {
 
 function normalizePostCalendarDateKey(post) {
   if (!post || typeof post !== "object") return toDateKey(post);
+  var tracePostId = String(post.postId || post.post_id || post.id || "").trim();
   var label = parseDisplayDateKey(post.queueDateLabel || post.queue_date_label || post.dateLabel || "");
-  if (label) return label;
+  if (label) {
+    if (isMissingPostTraceTarget(tracePostId)) logMissingPostTrace("[missing-post] calendar date key", { postId: tracePostId, key: label, source: "queueDateLabel" });
+    return label;
+  }
   var planned = parseDisplayDateKey(post.plannedDate || post.planned_date || post.queueDate || post.queue_date || "");
-  if (planned) return planned;
+  if (planned) {
+    if (isMissingPostTraceTarget(tracePostId)) logMissingPostTrace("[missing-post] calendar date key", { postId: tracePostId, key: planned, source: "plannedDate" });
+    return planned;
+  }
   var origDate = parseDisplayDateKey(post.originalPostDate || post.original_post_date || "");
-  if (origDate) return origDate;
+  if (origDate) {
+    if (isMissingPostTraceTarget(tracePostId)) logMissingPostTrace("[missing-post] calendar date key", { postId: tracePostId, key: origDate, source: "originalPostDate" });
+    return origDate;
+  }
   var schedKey = parseDisplayDateKey(post.scheduledDateKey || "");
-  if (schedKey) return schedKey;
+  if (schedKey) {
+    if (isMissingPostTraceTarget(tracePostId)) logMissingPostTrace("[missing-post] calendar date key", { postId: tracePostId, key: schedKey, source: "scheduledDateKey" });
+    return schedKey;
+  }
   var fromSchedAt = parseDisplayDateKey(String(post.scheduledAt || post.scheduled_at || post.date || "").slice(0, 10));
-  if (fromSchedAt) return fromSchedAt;
+  if (fromSchedAt) {
+    if (isMissingPostTraceTarget(tracePostId)) logMissingPostTrace("[missing-post] calendar date key", { postId: tracePostId, key: fromSchedAt, source: "scheduledAt" });
+    return fromSchedAt;
+  }
+  var fromPublishDate = parseDisplayDateKey(String(post.publishDate || post.publish_date || "").slice(0, 10));
+  if (fromPublishDate) {
+    if (isMissingPostTraceTarget(tracePostId)) logMissingPostTrace("[missing-post] calendar date key", { postId: tracePostId, key: fromPublishDate, source: "publishDate" });
+    return fromPublishDate;
+  }
   var fromCreated = parseDisplayDateKey(String(post.createdAt || post.created_at || "").slice(0, 10));
-  if (fromCreated) return fromCreated;
-  var fromValue = getPlanningDateKeyFromValue(post.scheduledAt || post.scheduled_at || post.date || post.createdAt || post.created_at);
-  if (fromValue) return fromValue;
-  return toDateKey(post.scheduledAt || post.scheduled_at || post.date || post.createdAt || post.created_at);
+  if (fromCreated) {
+    if (isMissingPostTraceTarget(tracePostId)) logMissingPostTrace("[missing-post] calendar date key", { postId: tracePostId, key: fromCreated, source: "createdAt" });
+    return fromCreated;
+  }
+  var fromValue = getPlanningDateKeyFromValue(post.scheduledAt || post.scheduled_at || post.date || post.publishDate || post.publish_date || post.createdAt || post.created_at);
+  if (fromValue) {
+    if (isMissingPostTraceTarget(tracePostId)) logMissingPostTrace("[missing-post] calendar date key", { postId: tracePostId, key: fromValue, source: "parsedValue" });
+    return fromValue;
+  }
+  var fallbackKey = toDateKey(post.scheduledAt || post.scheduled_at || post.date || post.publishDate || post.publish_date || post.createdAt || post.created_at);
+  if (isMissingPostTraceTarget(tracePostId)) logMissingPostTrace("[missing-post] calendar date key", { postId: tracePostId, key: fallbackKey, source: "toDateKey" });
+  return fallbackKey;
 }
 
 function getPlanningDateKeyFromValue(value) {
@@ -30889,7 +31060,6 @@ window.openModal = function(
   if (!matched) {
     matched = appState.posts.find(post => post.title === title);
   }
-    
   openPostModal(
     matched?.title || title,
     matched?.platform || platform,
