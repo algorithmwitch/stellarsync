@@ -24260,181 +24260,190 @@ async function syncRemoteIfConfigured() {
     }
   }
 
-  // HYBRID/GPE PATH — posts first, then everything else
+  // HYBRID/GPE PATH — posts first, then background data
+  window.__SHEET_POSTS_LOADED = false;
+  console.log("[boot] hybrid mode detected");
+
+  dismissToast(syncLoadingToastId);
+  var staleErr2 = document.getElementById("sync-error-state");
+  if (staleErr2) staleErr2.remove();
+  var staleZero2 = document.getElementById("zero-posts-state");
+  if (staleZero2) staleZero2.remove();
+
+  var loadingEl = document.getElementById("boot-loading");
+
+  // Phase 1: Fetch posts from Sheets with 20s timeout
+  console.log("[posts] loading from sheets");
+  let postsData = [];
+  let postsLoadError = null;
   try {
-    console.log("[boot] hybrid mode detected");
+    postsData = await loadSheetsPostsForHybrid();
+  } catch (err) {
+    postsLoadError = err;
+    console.log("[posts] sheets load error", err && err.message ? err.message : String(err));
+  }
 
-    // Phase 1: Fetch posts first and render immediately
-    updateToast(syncLoadingToastId, "loading", "Loading posts", "Loading posts from Google Sheets...");
-    let postsData = [];
-    let postsLoadError = null;
-    try {
-      const postsResult = await apiGetPosts();
-      postsData = Array.isArray(postsResult) ? postsResult : [];
-      console.log("[posts] loading from sheets");
-      console.log("[posts] sheets loaded count", postsData.length);
-    } catch (err) {
-      postsLoadError = err;
-      console.warn("[posts] sheets load failed", err?.message || err);
+  if (loadingEl) loadingEl.classList.add("hidden");
+  console.log("[boot] loading overlay hidden");
+
+  if (postsData.length > 0 && !postsLoadError) {
+    appState.posts = postsData.map(function(post, index) {
+      return normalizeRemotePost(post, getAvailableCampaignRecords(), appState.media || [], index);
+    });
+    console.log("[posts] appState.posts set count", appState.posts.length);
+    console.log("[posts] render after sheets");
+    window.__SHEET_POSTS_LOADED = true;
+    calendarCursor = getInitialCalendarCursor();
+    selectedCalendarDateKey = toDateKey(calendarCursor);
+    offlineMode = false;
+    backendReachable = true;
+    lastSyncError = "";
+    rerenderAll();
+    console.log("[boot] first render complete");
+  } else if (postsLoadError) {
+    // Show visible error overlay with retry
+    offlineMode = true;
+    backendReachable = false;
+    lastSyncError = postsLoadError.message || String(postsLoadError);
+    console.log("[data]", getAppStateCounts());
+    rerenderAll();
+    var syncErrEl2 = document.getElementById("sync-error-state");
+    if (!syncErrEl2) {
+      syncErrEl2 = document.createElement("div");
+      syncErrEl2.id = "sync-error-state";
+      syncErrEl2.className = "fixed inset-0 z-[130] sheet-backdrop flex items-center justify-center p-6";
+      syncErrEl2.style.background = "rgba(10,5,20,0.92)";
+      syncErrEl2.innerHTML =
+        '<div class="w-full max-w-lg bg-[#120c1d] border border-white/10 rounded-2xl p-8 text-center shadow-2xl">' +
+        '<div class="w-14 h-14 rounded-2xl bg-[#231738] flex items-center justify-center mx-auto mb-6 text-yellow-400"><i class="ph-bold ph-cloud-slash text-2xl"></i></div>' +
+        '<h2 class="text-lg font-extrabold text-white mb-3">Google Sheets posts could not be loaded</h2>' +
+        '<p class="text-sm text-gray-300 leading-relaxed mb-6">' + (postsLoadError.message || String(postsLoadError)).replace(/</g, "&lt;").replace(/>/g, "&gt;") + '</p>' +
+        '<div class="flex flex-wrap gap-3 justify-center">' +
+        '<button onclick="var e=document.getElementById(\'sync-error-state\');if(e)e.remove();syncRemoteIfConfigured()" class="px-5 py-2.5 rounded-xl bg-[#2d1b4e] hover:bg-[#3d2b5e] text-white text-xs uppercase tracking-widest font-bold transition-colors">Retry loading posts</button>' +
+        '<button onclick="var e=document.getElementById(\'sync-error-state\');if(e)e.remove()" class="px-5 py-2.5 rounded-xl border border-white/5 bg-transparent text-gray-500 text-xs uppercase tracking-widest font-bold transition-colors hover:text-white">Dismiss</button>' +
+        '</div></div>';
+      document.body.appendChild(syncErrEl2);
     }
-
-    var staleErr = document.getElementById("sync-error-state");
-    if (staleErr) staleErr.remove();
-    var staleZero = document.getElementById("zero-posts-state");
-    if (staleZero) staleZero.remove();
-
-    if (postsData.length > 0) {
-      appState.posts = postsData.map((post, index) => normalizeRemotePost(post, getAvailableCampaignRecords(), appState.media || [], index));
-      console.log("[posts] render after sheets");
-      calendarCursor = getInitialCalendarCursor();
-      selectedCalendarDateKey = toDateKey(calendarCursor);
-      offlineMode = false;
-      backendReachable = true;
-      lastSyncError = "";
-      rerenderAll();
+  } else if (postsData.length === 0) {
+    console.log("[data] 0 posts received from backend");
+    showToast("No posts found", "No posts found in connected sheet.", "ph-file-text", "text-gray-400");
+    var zeroEl2 = document.getElementById("zero-posts-state");
+    if (!zeroEl2) {
+      zeroEl2 = document.createElement("div");
+      zeroEl2.id = "zero-posts-state";
+      zeroEl2.className = "fixed inset-0 z-[130] sheet-backdrop flex items-center justify-center p-6";
+      zeroEl2.style.background = "rgba(10,5,20,0.92)";
+      zeroEl2.innerHTML =
+        '<div class="w-full max-w-lg bg-[#120c1d] border border-white/10 rounded-2xl p-8 text-center shadow-2xl">' +
+        '<div class="w-14 h-14 rounded-2xl bg-[#231738] flex items-center justify-center mx-auto mb-6 text-gray-400"><i class="ph-bold ph-file-text text-2xl"></i></div>' +
+        '<h2 class="text-lg font-extrabold text-white mb-3">No posts found in connected sheet</h2>' +
+        '<p class="text-sm text-gray-300 leading-relaxed mb-6">Your sheet is connected, but no posts were returned.</p>' +
+        '<div class="flex flex-wrap gap-3 justify-center">' +
+        '<button onclick="var z=document.getElementById(\'zero-posts-state\');if(z)z.remove();syncRemoteIfConfigured()" class="px-5 py-2.5 rounded-xl bg-[#2d1b4e] hover:bg-[#3d2b5e] text-white text-xs uppercase tracking-widest font-bold transition-colors">Retry Sync</button>' +
+        '<button onclick="openSupportModal(\'Integration setup\')" class="px-5 py-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white text-xs uppercase tracking-widest font-bold transition-colors">Report Issue</button>' +
+        '<button onclick="var z=document.getElementById(\'zero-posts-state\');if(z)z.remove()" class="px-5 py-2.5 rounded-xl border border-white/5 bg-transparent text-gray-500 text-xs uppercase tracking-widest font-bold transition-colors hover:text-white">Dismiss</button>' +
+        '</div></div>';
+      document.body.appendChild(zeroEl2);
     }
+  }
 
-    // Phase 2: Everything else in background
-    updateToast(syncLoadingToastId, "loading", "Syncing workspace", "Loading remaining workspace data...");
-
-    const [settingsResult, mediaResult, inspoResult, notesResult, campaignsResult, aiDraftsResult, brandFrameworkResult, socialCapabilitiesResult, connectedAccountsResult] = await Promise.allSettled([
-      apiGetSettings(),
-      apiGetMedia(),
-      apiGetInspo(),
-      apiGetNotes(),
-      apiGetCampaigns(),
-      apiGetAIDrafts(),
-      apiGetBrandFramework(),
-      apiGetSocialImportCapabilities(),
-      apiGetConnectedAccounts()
-    ]);
-
-    const settings = settingsResult.status === "fulfilled" ? settingsResult.value : (console.log("[workspace-settings] background load failed nonfatal"), {});
-    const media = mediaResult.status === "fulfilled" ? mediaResult.value : [];
-    const inspo = inspoResult.status === "fulfilled" ? inspoResult.value : [];
-    const notes = notesResult.status === "fulfilled" ? notesResult.value : [];
-    const campaigns = campaignsResult.status === "fulfilled" ? campaignsResult.value : [];
-    const aiDrafts = aiDraftsResult.status === "fulfilled" ? aiDraftsResult.value : [];
-    const brandFramework = brandFrameworkResult.status === "fulfilled" ? brandFrameworkResult.value : [];
-    socialImportCapabilities = socialCapabilitiesResult.status === "fulfilled" ? (socialCapabilitiesResult.value?.capabilities || socialCapabilitiesResult.value) : socialImportCapabilities;
-    connectedAccounts = connectedAccountsResult.status === "fulfilled" ? (connectedAccountsResult.value?.accounts || connectedAccountsResult.value || []) : connectedAccounts;
+  // Phase 2: Everything else in background (fire and forget, must not overwrite Sheet posts)
+  Promise.allSettled([
+    apiGetSettings(),
+    apiGetMedia(),
+    apiGetInspo(),
+    apiGetNotes(),
+    apiGetCampaigns(),
+    apiGetAIDrafts(),
+    apiGetBrandFramework(),
+    apiGetSocialImportCapabilities(),
+    apiGetConnectedAccounts()
+  ]).then(function(results) {
+    var settings = results[0].status === "fulfilled" ? results[0].value : (console.log("[workspace-settings] background load failed nonfatal"), {});
+    var media = results[1].status === "fulfilled" ? results[1].value : [];
+    var inspo = results[2].status === "fulfilled" ? results[2].value : [];
+    var notes = results[3].status === "fulfilled" ? results[3].value : [];
+    var campaigns = results[4].status === "fulfilled" ? results[4].value : [];
+    var aiDrafts = results[5].status === "fulfilled" ? results[5].value : [];
+    var brandFramework = results[6].status === "fulfilled" ? results[6].value : [];
+    if (results[7].status === "fulfilled") {
+      socialImportCapabilities = results[7].value?.capabilities || results[7].value;
+    }
+    if (results[8].status === "fulfilled") {
+      connectedAccounts = results[8].value?.accounts || results[8].value || [];
+    }
 
     try { loadAIProviders().catch(function() {}); } catch (err) { /* silent */ }
 
     appState.settings = normalizeRemoteSettings(settings);
 
     if (Array.isArray(campaigns)) {
-      appState.campaigns = campaigns.map(campaign => normalizeRemoteCampaign(campaign));
+      appState.campaigns = campaigns.map(function(c) { return normalizeRemoteCampaign(c); });
     }
 
     if (Array.isArray(media)) {
-      var normalizedMedia = media.map(asset => normalizeRemoteMedia(asset));
-      var filteredMedia = filterRenderableArtifacts(normalizedMedia, "media");
+      var normMedia = media.map(function(asset) { return normalizeRemoteMedia(asset); });
+      var filteredMedia = filterRenderableArtifacts(normMedia, "media");
       if (isSupabaseMediaEnabled()) {
         try {
-          var supabaseMediaResult = await loadSupabaseMediaAssets(activeCfg);
-          console.log("[media-backend] source", supabaseMediaResult.source);
-          if (Array.isArray(supabaseMediaResult.assets) && supabaseMediaResult.assets.length > 0) {
-            var seenKeys = new Set();
-            filteredMedia.forEach(function(asset) {
-              var key = String(asset.asset_id || asset.assetId || asset.storage_path || asset.storagePath || asset.url || asset.media_url || "").trim();
-              if (key) seenKeys.add(key);
-            });
-            supabaseMediaResult.assets.forEach(function(asset) {
-              var key = String(asset.asset_id || asset.assetId || asset.storage_path || asset.storagePath || asset.url || asset.media_url || "").trim();
-              if (key && !seenKeys.has(key)) {
-                seenKeys.add(key);
-                filteredMedia.push(asset);
-              }
-            });
-          }
-          console.log("[media-backend] merged media count", filteredMedia.length);
+          loadSupabaseMediaAssets(activeCfg).then(function(supabaseMediaResult) {
+            console.log("[media-backend] source", supabaseMediaResult.source);
+            if (Array.isArray(supabaseMediaResult.assets) && supabaseMediaResult.assets.length > 0) {
+              var seenKeys = new Set();
+              filteredMedia.forEach(function(asset) {
+                var key = String(asset.asset_id || asset.assetId || asset.storage_path || asset.storagePath || asset.url || asset.media_url || "").trim();
+                if (key) seenKeys.add(key);
+              });
+              supabaseMediaResult.assets.forEach(function(asset) {
+                var key = String(asset.asset_id || asset.assetId || asset.storage_path || asset.storagePath || asset.url || asset.media_url || "").trim();
+                if (key && !seenKeys.has(key)) {
+                  seenKeys.add(key);
+                  filteredMedia.push(asset);
+                }
+              });
+            }
+            console.log("[media-backend] merged media count", filteredMedia.length);
+            appState.media = filteredMedia;
+            rerenderAll();
+          }).catch(function(err) {
+            console.log("[media-backend] load error", err?.message || err);
+          });
         } catch (err) {
           console.log("[media-backend] load error", err?.message || err);
         }
+      } else {
+        appState.media = filteredMedia;
       }
-      appState.media = filteredMedia;
     }
 
     if (Array.isArray(inspo)) {
-      var normalizedInspo = inspo.map(item => normalizeRemoteInspo(item));
-      appState.inspo = filterRenderableArtifacts(normalizedInspo, "inspo");
+      var normInspo = inspo.map(function(item) { return normalizeRemoteInspo(item); });
+      appState.inspo = filterRenderableArtifacts(normInspo, "inspo");
     }
-
     if (Array.isArray(notes)) {
-      var normalizedNotes = notes.map(item => normalizeRemoteNote(item));
-      appState.notes = filterRenderableArtifacts(normalizedNotes, "note");
+      var normNotes = notes.map(function(item) { return normalizeRemoteNote(item); });
+      appState.notes = filterRenderableArtifacts(normNotes, "note");
     }
     if (Array.isArray(aiDrafts)) {
-      var normalizedAIDrafts = aiDrafts.map(item => normalizeRemoteAIDraft(item));
-      appState.aiDrafts = filterRenderableArtifacts(normalizedAIDrafts, "aiDraft");
+      var normDrafts = aiDrafts.map(function(item) { return normalizeRemoteAIDraft(item); });
+      appState.aiDrafts = filterRenderableArtifacts(normDrafts, "aiDraft");
     }
     if (Array.isArray(brandFramework)) {
-      appState.brandFramework = brandFramework.map(item => normalizeRemoteBrandFrameworkItem(item));
+      appState.brandFramework = brandFramework.map(function(item) { return normalizeRemoteBrandFrameworkItem(item); });
     }
 
-    if (!calendarCursor) {
+    if (!window.__SHEET_POSTS_LOADED && !calendarCursor) {
       calendarCursor = getInitialCalendarCursor();
       selectedCalendarDateKey = toDateKey(calendarCursor);
     }
-    offlineMode = false;
-    backendReachable = true;
-    lastSyncError = "";
+
     persistLocalState();
     maybeAutoPullMondayUpdatesForWorkspace().catch(function() {});
     console.log("[data]", getAppStateCounts());
     rerenderAll();
-    updateLoadingToastSuccess(syncLoadingToastId, "Workspace loaded", "Syncing StellarSync connections…");
-
-    if (postsData.length === 0 && !postsLoadError) {
-      console.log("[data] 0 posts received from backend");
-      showToast("No posts found", "No posts found in connected sheet.", "ph-file-text", "text-gray-400");
-      var zeroEl = document.getElementById("zero-posts-state");
-      if (!zeroEl) {
-        zeroEl = document.createElement("div");
-        zeroEl.id = "zero-posts-state";
-        zeroEl.className = "fixed inset-0 z-[130] sheet-backdrop flex items-center justify-center p-6";
-        zeroEl.style.background = "rgba(10,5,20,0.92)";
-        zeroEl.innerHTML =
-          '<div class="w-full max-w-lg bg-[#120c1d] border border-white/10 rounded-2xl p-8 text-center shadow-2xl">' +
-          '<div class="w-14 h-14 rounded-2xl bg-[#231738] flex items-center justify-center mx-auto mb-6 text-gray-400"><i class="ph-bold ph-file-text text-2xl"></i></div>' +
-          '<h2 class="text-lg font-extrabold text-white mb-3">No posts found in connected sheet</h2>' +
-          '<p class="text-sm text-gray-300 leading-relaxed mb-6">Your sheet is connected, but no posts were returned.</p>' +
-          '<div class="flex flex-wrap gap-3 justify-center">' +
-          '<button onclick="var z=document.getElementById(\'zero-posts-state\');if(z)z.remove();syncRemoteIfConfigured()" class="px-5 py-2.5 rounded-xl bg-[#2d1b4e] hover:bg-[#3d2b5e] text-white text-xs uppercase tracking-widest font-bold transition-colors">Retry Sync</button>' +
-          '<button onclick="openSupportModal(\'Integration setup\')" class="px-5 py-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white text-xs uppercase tracking-widest font-bold transition-colors">Report Issue</button>' +
-          '<button onclick="var z=document.getElementById(\'zero-posts-state\');if(z)z.remove()" class="px-5 py-2.5 rounded-xl border border-white/5 bg-transparent text-gray-500 text-xs uppercase tracking-widest font-bold transition-colors hover:text-white">Dismiss</button>' +
-          '</div></div>';
-        document.body.appendChild(zeroEl);
-      }
-    }
-  } catch (err) {
-    console.error(err);
-    offlineMode = true;
-    backendReachable = false;
-    lastSyncError = err && err.message ? err.message : String(err);
-    console.log("[data]", getAppStateCounts());
-    rerenderAll();
-    updateLoadingToastError(syncLoadingToastId, "Workspace sync issue", "Your workspace is connected, but posts could not be loaded.");
-    var syncErrEl = document.getElementById("sync-error-state");
-    if (!syncErrEl) {
-      syncErrEl = document.createElement("div");
-      syncErrEl.id = "sync-error-state";
-      syncErrEl.className = "fixed inset-0 z-[130] sheet-backdrop flex items-center justify-center p-6";
-      syncErrEl.style.background = "rgba(10,5,20,0.92)";
-      syncErrEl.innerHTML =
-        '<div class="w-full max-w-lg bg-[#120c1d] border border-white/10 rounded-2xl p-8 text-center shadow-2xl">' +
-        '<div class="w-14 h-14 rounded-2xl bg-[#231738] flex items-center justify-center mx-auto mb-6 text-yellow-400"><i class="ph-bold ph-cloud-slash text-2xl"></i></div>' +
-        '<h2 class="text-lg font-extrabold text-white mb-3">Workspace sync issue</h2>' +
-        '<p class="text-sm text-gray-300 leading-relaxed mb-6">Your workspace is connected, but posts could not be loaded.</p>' +
-        '<div class="flex flex-wrap gap-3 justify-center">' +
-        '<button onclick="syncRemoteIfConfigured()" class="px-5 py-2.5 rounded-xl bg-[#2d1b4e] hover:bg-[#3d2b5e] text-white text-xs uppercase tracking-widest font-bold transition-colors">Retry Sync</button>' +
-        '<button onclick="openSupportModal(\'Integration setup\')" class="px-5 py-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white text-xs uppercase tracking-widest font-bold transition-colors">Report Issue</button>' +
-        '<button onclick="var e=document.getElementById(\'sync-error-state\');if(e)e.remove()" class="px-5 py-2.5 rounded-xl border border-white/5 bg-transparent text-gray-500 text-xs uppercase tracking-widest font-bold transition-colors hover:text-white">Dismiss</button>' +
-        '</div></div>';
-      document.body.appendChild(syncErrEl);
-    }
-  }
+  }).catch(function(err) {
+    console.log("[background] nonfatal error", err?.message || err);
+  });
 }
 
 function getSheetMirrorConfig() {
@@ -24961,6 +24970,60 @@ function isRemoteConfigured() {
   );
 }
 
+async function fetchWithTimeout(url, options = {}, timeoutMs = 15000) {
+  const controller = new AbortController();
+  const timer = setTimeout(function() { controller.abort(); }, timeoutMs);
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    return response;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function loadSheetsPostsForHybrid() {
+  console.log("[posts] loading from sheets");
+  console.log("[posts] sheets request started");
+  const apiUrl = getWorkspaceApiUrl();
+  if (!apiUrl) {
+    console.log("[posts] sheets load error — no Apps Script URL configured");
+    throw new Error("Google Sheets backend is not configured. Set apps_script_url in workspace settings.");
+  }
+  const meta = getWorkspaceRequestMetadata();
+  const params = new URLSearchParams({ action: "getPosts" });
+  Object.entries(meta).forEach(function(entry) {
+    var key = entry[0], value = entry[1];
+    if (value !== undefined && value !== null && value !== "") params.set(key, String(value));
+  });
+  const url = apiUrl + "?" + params.toString();
+  var response = null;
+  try {
+    response = await fetchWithTimeout(url, { method: "GET", mode: "cors" }, 20000);
+  } catch (fetchErr) {
+    if (fetchErr && fetchErr.name === "AbortError") {
+      console.log("[posts] sheets request timed out after 20s");
+      throw new Error("Google Sheets request timed out after 20 seconds.");
+    }
+    throw fetchErr;
+  }
+  console.log("[posts] sheets response raw", response.ok ? "ok" : "error", response.status);
+  if (!response.ok) throw new Error("Google Sheets request failed: " + response.status);
+  var text = null;
+  try { text = await response.text(); } catch (_) { text = null; }
+  if (text === null || text === "") throw new Error("Google Sheets returned empty response");
+  var result = null;
+  try { result = JSON.parse(text); } catch (_) {
+    console.log("[posts] sheets response raw text", text.slice(0, 500));
+    throw new Error("Google Sheets returned non-JSON response");
+  }
+  if (!result.ok) throw new Error(result.error || "Unknown Apps Script error");
+  console.log("[posts] sheets response keys", Object.keys(result));
+  const rawPosts = extractPostsFromGetPostsResult(result);
+  const filteredPosts = filterBlankPostsForRender(rawPosts);
+  console.log("[posts] sheets loaded count", filteredPosts.length);
+  return filteredPosts;
+}
+
 async function apiGet(action, params = {}) {
   const apiUrl = getWorkspaceApiUrl();
   if (!apiUrl) throw new Error("Workspace setup needed: missing Apps Script backend URL.");
@@ -25061,6 +25124,8 @@ async function callSupabaseEdgeFunction(functionName, payload = {}) {
 function getSupabasePostId(payload = {}) {
   const existing = getCanonicalPostId(payload);
   if (existing) return existing;
+  const sheetRow = getRemotePostSheetRow(payload);
+  if (sheetRow) return "row_" + sheetRow;
   if (window.crypto && typeof window.crypto.randomUUID === "function") return window.crypto.randomUUID();
   return "post_" + Date.now() + "_" + Math.random().toString(36).slice(2, 10);
 }
@@ -25821,26 +25886,129 @@ async function createSupabaseInspoFromNote(noteId, payload) {
   return result;
 }
 
-async function mirrorGoogleSheetPostsToSupabase(posts = []) {
-  const backendMode = getActiveWorkspaceBackendMode();
-  if (backendMode.mode === "supabase_native") return 0;
-  if (!STELLARSYNC_SUPABASE_CLIENT) return 0;
-  const meta = getWorkspaceRequestMetadata();
-  const workspaceId = String(meta.workspace_id || "").trim();
-  if (!workspaceId) return 0;
-  const rows = (Array.isArray(posts) ? posts : [])
-    .filter(post => getCanonicalPostId(post))
-    .map(post => buildSupabasePostRow({ ...post, workspace_id: workspaceId, workspaceId, workspace_slug: meta.workspace_slug || "" }));
-  if (!rows.length) return 0;
+var POSTS_TABLE_COLUMNS_CACHE = null;
+
+async function getPostsTableColumns() {
+  if (POSTS_TABLE_COLUMNS_CACHE) return POSTS_TABLE_COLUMNS_CACHE;
   try {
-    const result = await STELLARSYNC_SUPABASE_CLIENT
+    if (!STELLARSYNC_SUPABASE_CLIENT) return null;
+    var colResult = await STELLARSYNC_SUPABASE_CLIENT
+      .from("information_schema")
+      .select("column_name")
+      .eq("table_schema", "public")
+      .eq("table_name", "posts");
+    if (colResult.error || !Array.isArray(colResult.data)) return null;
+    var cols = colResult.data.map(function(r) { return r.column_name; });
+    POSTS_TABLE_COLUMNS_CACHE = cols;
+    console.log("[mirror] posts table columns", cols);
+    return cols;
+  } catch (_) { return null; }
+}
+
+function filterPostRowToKnownColumns(row, columnNames) {
+  if (!columnNames || !Array.isArray(columnNames) || !columnNames.length) return row;
+  var filtered = {};
+  for (var key of Object.keys(row)) {
+    if (columnNames.indexOf(key) !== -1) {
+      filtered[key] = row[key];
+    }
+  }
+  return filtered;
+}
+
+async function mirrorGoogleSheetPostsToSupabase(posts = []) {
+  console.log("[mirror] start");
+  const backendMode = getActiveWorkspaceBackendMode();
+  if (backendMode.mode === "supabase_native") {
+    console.log("[mirror] skip — supabase_native mode");
+    return 0;
+  }
+  if (!STELLARSYNC_SUPABASE_CLIENT) {
+    console.log("[mirror] skip — no supabase client");
+    return 0;
+  }
+
+  // Resolve UUID workspace_id from WORKSPACE_RUNTIME_CONFIG.active.id
+  var activeCfg = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active;
+  var wsId = String(activeCfg && activeCfg.id || "").trim();
+  console.log("[mirror] workspace_id", wsId || "(empty)");
+
+  // Validate UUID shape (8-4-4-4-12 hex pattern)
+  var uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!wsId || !uuidPattern.test(wsId)) {
+    console.log("[mirror] missing uuid workspace_id — skipping mirror");
+    return 0;
+  }
+
+  var postList = Array.isArray(posts) ? posts : [];
+  console.log("[mirror] posts received count", postList.length);
+  if (!postList.length) {
+    console.log("[mirror] no posts to mirror");
+    return 0;
+  }
+
+  // Log normalized sample of first post
+  if (postList.length > 0) {
+    var samplePost = postList[0];
+    console.log("[mirror] normalized sample", JSON.stringify({
+      post_id: getSupabasePostId(samplePost),
+      title: String(samplePost.title || "").slice(0, 60),
+      campaign_name: String(samplePost.campaignName || samplePost.campaign_name || "").slice(0, 40),
+      pillar: String(samplePost.pillar || samplePost.hubPillarLabel || "").slice(0, 30),
+      status: samplePost.status || samplePost.publish_status || "draft",
+      publish_date: samplePost.publish_date || samplePost.publishDate || samplePost.queueDateLabel || "",
+      publish_time: samplePost.publish_time || samplePost.publishTime || samplePost.queueTimeLabel || "",
+      platform: samplePost.platform || ""
+    }));
+  }
+
+  // Build rows: no filter on getCanonicalPostId — use getSupabasePostId for stable IDs
+  var wsSlug = String(activeCfg && (activeCfg.workspace_slug || activeCfg.slug) || "").trim();
+  var rows = postList.map(function(post) {
+    return buildSupabasePostRow({ ...post, workspace_id: wsId, workspaceId: wsId, workspace_slug: wsSlug });
+  });
+
+  // Filter each row to only columns that exist in the posts table
+  try {
+    var knownCols = await getPostsTableColumns();
+    if (Array.isArray(knownCols) && knownCols.length > 0) {
+      rows = rows.map(function(row) { return filterPostRowToKnownColumns(row, knownCols); });
+    }
+  } catch (colErr) {
+    console.log("[mirror] column inspection skipped", colErr?.message || colErr);
+  }
+
+  // Log upsert payload sample
+  if (rows.length > 0) {
+    console.log("[mirror] upsert payload sample", JSON.stringify({
+      workspace_id: rows[0].workspace_id,
+      post_id: rows[0].post_id,
+      title: String(rows[0].title || "").slice(0, 60),
+      pillar: rows[0].pillar || "",
+      status: rows[0].status || "draft"
+    }));
+  }
+
+  if (!rows.length) {
+    console.log("[mirror] no rows after column filtering");
+    return 0;
+  }
+
+  try {
+    var result = await STELLARSYNC_SUPABASE_CLIENT
       .from("posts")
       .upsert(rows, { onConflict: "workspace_id,post_id" });
-    if (result.error) throw result.error;
-    console.log("[supabase-mirror] mirrored posts", rows.length);
+    if (result.error) {
+      console.log("[mirror] upsert error", JSON.stringify(result.error));
+      throw result.error;
+    }
+    console.log("[mirror] upsert success count", rows.length);
     return rows.length;
   } catch (err) {
-    console.warn("[supabase-mirror] mirror skipped", err?.message || err);
+    console.log("[mirror] upsert error", err && err.message ? err.message : String(err));
+    if (err && err.details) console.log("[mirror] error details", err.details);
+    if (err && err.hint) console.log("[mirror] error hint", err.hint);
+    if (err && err.code) console.log("[mirror] error code", err.code);
     return 0;
   }
 }
@@ -32008,13 +32176,16 @@ function renderWorkspaceBranding() {
 
 async function bootAppWithWorkspaceRouter() {
   try {
+    console.log("[boot] init started");
     var loadingEl = document.getElementById("boot-loading");
     if (loadingEl) loadingEl.classList.remove("hidden");
 
     const activeWorkspace = await ensureSupabaseWorkspaceBeforeBoot();
     if (!activeWorkspace) return;
+    console.log("[boot] workspace resolved");
     loadWorkspaceConfig();
     var cfg = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active;
+    console.log("[boot] backend_type", cfg ? (cfg.backend_type || "unknown") : "unknown");
     console.log("[data] active workspace", cfg ? (cfg.workspace_slug || cfg.slug) : "none");
     console.log("[data] backend_type", cfg ? (cfg.backend_type || "unknown") : "unknown");
     console.log("[data] google_sheets apps_script_url present", (cfg && cfg.apps_script_url) ? "true" : "false");
@@ -32022,6 +32193,7 @@ async function bootAppWithWorkspaceRouter() {
     initApp();
 
     if (loadingEl) loadingEl.classList.add("hidden");
+    console.log("[boot] first render complete");
   } catch (error) {
     var loadEl = document.getElementById("boot-loading");
     if (loadEl) loadEl.classList.add("hidden");
