@@ -26831,8 +26831,8 @@ async function apiGetConnectedAccountsStatus() {
   }
   // Fallback: GPE Apps Script path
   const result = await apiGet("getConnectedAccountsStatus");
-  const accounts = result.accounts || result.data || result;
-  const parsed = Array.isArray(accounts) ? accounts : Object.values(accounts || {});
+  const gpeAccounts = result.accounts || result.data || result;
+  const parsed = Array.isArray(gpeAccounts) ? gpeAccounts : Object.values(gpeAccounts || {});
   console.log("[social-setup] connected accounts from gpe", parsed.length);
   return parsed;
 }
