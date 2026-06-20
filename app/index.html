@@ -7506,6 +7506,32 @@ function extractPostsFromGetPostsResult(result) {
   return candidates.find(Array.isArray) || [];
 }
 
+function extractPostsFromSheetPullResult(result) {
+  if (!result || typeof result !== "object") return [];
+  var postsObj = result.POSTS || result.posts;
+  if (postsObj && typeof postsObj === "object" && !Array.isArray(postsObj)) {
+    var nested = [postsObj.rows, postsObj.items, postsObj.records, postsObj.data];
+    for (var i = 0; i < nested.length; i++) {
+      if (Array.isArray(nested[i]) && nested[i].length > 0) return nested[i];
+    }
+  }
+  if (Array.isArray(postsObj) && postsObj.length > 0) return postsObj;
+  var top = [result.rows, result.data, result.items, result.records];
+  for (var i = 0; i < top.length; i++) {
+    if (Array.isArray(top[i]) && top[i].length > 0) return top[i];
+  }
+  if (postsObj && typeof postsObj === "object") {
+    var flat = [];
+    for (var k in postsObj) {
+      if (Object.prototype.hasOwnProperty.call(postsObj, k) && Array.isArray(postsObj[k])) {
+        flat = flat.concat(postsObj[k]);
+      }
+    }
+    if (flat.length > 0) return flat;
+  }
+  return [];
+}
+
 function firstNonEmpty(...args) {
   for (const arg of args) {
     const str = String(arg || '').trim();
@@ -24290,7 +24316,7 @@ async function syncRemoteIfConfigured() {
 
   var loadingEl = document.getElementById("boot-loading");
 
-  // Phase 1: Fetch posts from Sheets with 20s timeout
+  // Phase 1: Fetch posts from Sheets (direct getPosts 60s, then pull fallback)
   console.log("[posts] loading from sheets");
   let postsData = [];
   let postsLoadError = null;
@@ -25007,39 +25033,66 @@ async function loadSheetsPostsForHybrid() {
     console.log("[posts] sheets load error — no Apps Script URL configured");
     throw new Error("Google Sheets backend is not configured. Set apps_script_url in workspace settings.");
   }
-  const meta = getWorkspaceRequestMetadata();
-  const params = new URLSearchParams({ action: "getPosts" });
-  Object.entries(meta).forEach(function(entry) {
-    var key = entry[0], value = entry[1];
-    if (value !== undefined && value !== null && value !== "") params.set(key, String(value));
-  });
-  const url = apiUrl + "?" + params.toString();
-  var response = null;
+
+  var firstError = null;
+
+  // Try 1: Direct getPosts via GET with 60s timeout
   try {
-    response = await fetchWithTimeout(url, { method: "GET", mode: "cors" }, 20000);
-  } catch (fetchErr) {
-    if (fetchErr && fetchErr.name === "AbortError") {
-      console.log("[posts] sheets request timed out after 20s");
-      throw new Error("Google Sheets request timed out after 20 seconds.");
+    const meta = getWorkspaceRequestMetadata();
+    const params = new URLSearchParams({ action: "getPosts" });
+    Object.entries(meta).forEach(function(entry) {
+      var key = entry[0], value = entry[1];
+      if (value !== undefined && value !== null && value !== "") params.set(key, String(value));
+    });
+    const url = apiUrl + "?" + params.toString();
+    var response = await fetchWithTimeout(url, { method: "GET", mode: "cors" }, 60000);
+    console.log("[posts] sheets response raw", response.ok ? "ok" : "error", response.status);
+    if (!response.ok) throw new Error("Google Sheets request failed: " + response.status);
+    var text = null;
+    try { text = await response.text(); } catch (_) { text = null; }
+    if (text === null || text === "") throw new Error("Google Sheets returned empty response");
+    var result = null;
+    try { result = JSON.parse(text); } catch (_) {
+      console.log("[posts] sheets response raw text", text.slice(0, 500));
+      throw new Error("Google Sheets returned non-JSON response");
     }
-    throw fetchErr;
+    if (!result.ok) throw new Error(result.error || "Unknown Apps Script error");
+    console.log("[posts] sheets response keys", Object.keys(result));
+    const rawPosts = extractPostsFromGetPostsResult(result);
+    const filteredPosts = filterBlankPostsForRender(rawPosts);
+    console.log("[posts] sheets loaded count", filteredPosts.length);
+    if (filteredPosts.length > 0) return filteredPosts;
+    console.log("[posts] direct sheets returned 0 posts");
+    return [];
+  } catch (directErr) {
+    firstError = directErr;
+    console.log("[posts] direct sheets timed out, trying pull fallback", directErr?.name || "");
   }
-  console.log("[posts] sheets response raw", response.ok ? "ok" : "error", response.status);
-  if (!response.ok) throw new Error("Google Sheets request failed: " + response.status);
-  var text = null;
-  try { text = await response.text(); } catch (_) { text = null; }
-  if (text === null || text === "") throw new Error("Google Sheets returned empty response");
-  var result = null;
-  try { result = JSON.parse(text); } catch (_) {
-    console.log("[posts] sheets response raw text", text.slice(0, 500));
-    throw new Error("Google Sheets returned non-JSON response");
+
+  // Try 2: Pull fallback via read_tab (POST) — same reliable path as pullSheetsToSupabase
+  try {
+    var config = getSheetMirrorConfig();
+    if (!config.sheetId || !config.appsScriptUrl) throw new Error("Sheet mirror not configured for fallback");
+    var fallbackResp = await fetch(config.appsScriptUrl, {
+      method: "POST", mode: "cors",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "read_tab", sheet_id: config.sheetId, tab: "POSTS" })
+    });
+    var fallbackData = await fallbackResp.json();
+    if (!fallbackData.ok) throw new Error(fallbackData.error || "read_tab failed");
+    console.log("[posts] pull fallback result keys", Object.keys(fallbackData));
+    var fallbackPosts = extractPostsFromSheetPullResult(fallbackData);
+    console.log("[posts] pull fallback posts count", fallbackPosts.length);
+    var filteredFallback = filterBlankPostsForRender(fallbackPosts);
+    console.log("[posts] pull fallback loaded count", filteredFallback.length);
+    if (filteredFallback.length > 0) return filteredFallback;
+    throw new Error("Fallback returned 0 posts");
+  } catch (fallbackErr) {
+    console.log("[posts] all sheet loaders failed");
+    var combinedMsg = "Google Sheets posts could not be loaded";
+    if (firstError) combinedMsg += " (" + (firstError.message || String(firstError)) + ")";
+    throw new Error(combinedMsg);
   }
-  if (!result.ok) throw new Error(result.error || "Unknown Apps Script error");
-  console.log("[posts] sheets response keys", Object.keys(result));
-  const rawPosts = extractPostsFromGetPostsResult(result);
-  const filteredPosts = filterBlankPostsForRender(rawPosts);
-  console.log("[posts] sheets loaded count", filteredPosts.length);
-  return filteredPosts;
 }
 
 async function apiGet(action, params = {}) {
