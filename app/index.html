@@ -6384,13 +6384,8 @@ async function ensureSupabaseWorkspaceBeforeBoot() {
   activeWorkspace = await loadWorkspaceSettingsForWorkspace(activeWorkspace);
   console.log("[app-router] selected workspace slug", activeWorkspace.slug);
   if (!activeWorkspace.default_pillars || (Array.isArray(activeWorkspace.default_pillars) && !activeWorkspace.default_pillars.length)) {
-    console.log("[workspace-settings] default_pillars missing, falling back to generic starter pillars");
-    activeWorkspace.default_pillars = [
-      { name: "Educate", slug: "educate", icon: "ph-book-open", color: "#0f766e", enabled: true },
-      { name: "Engage", slug: "engage", icon: "ph-chat-circle-text", color: "#2563eb", enabled: true },
-      { name: "Inform", slug: "inform", icon: "ph-newspaper", color: "#b45309", enabled: true },
-      { name: "Inspire", slug: "inspire", icon: "ph-sparkle", color: "#7c3aed", enabled: true }
-    ];
+    console.log("[workspace-settings] default_pillars missing, falling back to workspace pillars");
+    activeWorkspace.default_pillars = getFallbackWorkspacePillars(activeWorkspace);
   }
 
   if (isSubscriptionBlocked(activeWorkspace) && !isManagedHybridWorkspace(activeWorkspace, [])) {
@@ -6993,16 +6988,69 @@ function toTitleCase(value) {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
+var GPE_CANONICAL_PILLARS = [
+  { name: "Advocacy", slug: "advocacy", icon: "ph-megaphone", color: "#ec4899", enabled: true },
+  { name: "Community", slug: "community", icon: "ph-users-three", color: "#14b8a6", enabled: true },
+  { name: "Wellness", slug: "wellness", icon: "ph-heartbeat", color: "#f59e0b", enabled: true },
+  { name: "Leadership", slug: "leadership", icon: "ph-crown", color: "#8b5cf6", enabled: true }
+];
+
+function clonePillarDefinitions(pillars = []) {
+  return (Array.isArray(pillars) ? pillars : []).map(function(pillar) {
+    return pillar && typeof pillar === "object" ? { ...pillar } : getDefaultPillarObject(String(pillar || "").trim());
+  }).filter(Boolean);
+}
+
+function isGPEHybridWorkspace(workspace = WORKSPACE_RUNTIME_CONFIG?.active || {}) {
+  var activeWorkspace = workspace || {};
+  var slug = String(activeWorkspace.workspace_slug || activeWorkspace.slug || getCurrentWorkspaceSlug() || "").trim().toLowerCase();
+  var backendType = String(activeWorkspace.backend_type || "").trim().toLowerCase();
+  return slug === "gpe" || backendType === "google_sheets_hybrid" || backendType === "managed_hybrid";
+}
+
+function getFallbackWorkspacePillars(workspace = WORKSPACE_RUNTIME_CONFIG?.active || {}) {
+  if (isGPEHybridWorkspace(workspace)) return clonePillarDefinitions(GPE_CANONICAL_PILLARS);
+  return clonePillarDefinitions(BOOTSTRAP_DEFAULT_PILLARS);
+}
+
 function normalizePillarToken(value) {
-  return String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "authority";
+  var normalized = String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  if (!normalized) return String(getFallbackWorkspacePillars()[0]?.slug || "advocacy").trim().toLowerCase();
+  var aliasMap = {
+    advocate: "advocacy",
+    advocacy: "advocacy",
+    community: "community",
+    communal: "community",
+    wellbeing: "wellness",
+    wellness: "wellness",
+    health: "wellness",
+    leader: "leadership",
+    leadership: "leadership",
+    authority: "authority",
+    distribution: "distribution",
+    identity: "identity",
+    application: "application",
+    educate: "educate",
+    education: "educate",
+    engage: "engage",
+    inform: "inform",
+    inspire: "inspire",
+    promotion: "promotion"
+  };
+  if (aliasMap[normalized]) return aliasMap[normalized];
+  if (normalized.indexOf("advoc") !== -1) return "advocacy";
+  if (normalized.indexOf("commun") !== -1) return "community";
+  if (normalized.indexOf("well") !== -1 || normalized.indexOf("health") !== -1) return "wellness";
+  if (normalized.indexOf("leader") !== -1) return "leadership";
+  return normalized;
 }
 
 function normalizePillarLabel(value) {
   return toTitleCase(normalizePillarToken(value));
 }
 
-function getCanonicalPillarValue(value, fallback = "authority") {
-  return normalizePillarToken(value || fallback);
+function getCanonicalPillarValue(value, fallback = "") {
+  return normalizePillarToken(value || fallback || getWorkspacePillarSlugs()[0] || getFallbackWorkspacePillars()[0]?.slug || "advocacy");
 }
 
 function formatContentPillarLabel(value) {
@@ -7040,7 +7088,7 @@ function getAvailableContentPillars() {
   var slugs = getWorkspacePillarSlugs();
   if (slugs.length) return slugs;
   console.log("[pillars] fallback default used");
-  return ["Educate", "Engage", "Inform", "Inspire"];
+  return getFallbackWorkspacePillars().map(function(pillar) { return pillar.name || pillar.slug || ""; }).filter(Boolean);
 }
 
 function getAvailableCampaignRecords() {
@@ -7074,11 +7122,11 @@ function getCampaignByName(campaignName, campaigns = getAvailableCampaignRecords
 }
 
 function getCampaignContentPillar(campaign) {
-  return getCanonicalPillarValue(campaign?.pillar || campaign?.hubPillarLabel || campaign?.contentPillar || "authority");
+  return getCanonicalPillarValue(campaign?.pillar || campaign?.hubPillarLabel || campaign?.contentPillar, (appState?.settings?.pillars || getWorkspacePillarSlugs() || [])[0] || "advocacy");
 }
 
 function getPostContentPillar(post) {
-  return getCanonicalPillarValue(post?.pillar || post?.contentPillar || post?.hubPillarLabel || post?.campaignPillar || "authority");
+  return getCanonicalPillarValue(post?.pillar || post?.contentPillar || post?.hubPillarLabel || post?.campaignPillar, (appState?.settings?.pillars || getWorkspacePillarSlugs() || [])[0] || "advocacy");
 }
 
 function getDisplayPostContentPillar(post) {
@@ -7125,7 +7173,7 @@ function getWorkspacePillars() {
       }).filter(Boolean);
     }
   }
-  return BOOTSTRAP_DEFAULT_PILLARS;
+  return getFallbackWorkspacePillars();
 }
 
 function getWorkspacePillarBySlug(slug) {
@@ -7150,8 +7198,12 @@ var BOOTSTRAP_DEFAULT_PILLARS = [
 ];
 
 function getDefaultPillarObject(slug) {
-  var s = String(slug || "").trim().toLowerCase();
+  var s = normalizePillarToken(slug);
   var defaults = {
+    advocacy: { name: "Advocacy", slug: "advocacy", icon: "ph-megaphone", color: "#ec4899", enabled: true },
+    community: { name: "Community", slug: "community", icon: "ph-users-three", color: "#14b8a6", enabled: true },
+    wellness: { name: "Wellness", slug: "wellness", icon: "ph-heartbeat", color: "#f59e0b", enabled: true },
+    leadership: { name: "Leadership", slug: "leadership", icon: "ph-crown", color: "#8b5cf6", enabled: true },
     educate: { name: "Educate", slug: "educate", icon: "ph-book-open", color: "#0f766e", enabled: true },
     engage: { name: "Engage", slug: "engage", icon: "ph-chat-circle-text", color: "#2563eb", enabled: true },
     inform: { name: "Inform", slug: "inform", icon: "ph-newspaper", color: "#b45309", enabled: true },
@@ -7172,6 +7224,20 @@ function getPillarSymbol(pillar) {
   var d = getDefaultPillarObject(pillar);
   console.log("[pillar-symbol] resolved", { pillar, symbol: d.icon });
   return d.icon;
+}
+
+function renderPillarCornerBadge(pillar, options = {}) {
+  var canonicalPillar = getCanonicalPillarValue(pillar);
+  if (!canonicalPillar) return "";
+  var symbol = getPillarSymbol(canonicalPillar);
+  if (!symbol) return "";
+  var theme = getPillarTheme(canonicalPillar);
+  var label = formatContentPillarLabel(canonicalPillar);
+  var bottom = options.bottom || "8px";
+  var right = options.right || "8px";
+  var size = options.size || "20px";
+  var fontSize = options.fontSize || "10px";
+  return `<span title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}" style="position:absolute;right:${escapeHtml(right)};bottom:${escapeHtml(bottom)};width:${escapeHtml(size)};height:${escapeHtml(size)};border-radius:999px;border:1px solid ${escapeHtml(theme.border || hexToRgba(theme.color || "#c77dff", 0.3))};background:${escapeHtml(theme.bg || "rgba(24,17,37,0.92)")};color:${escapeHtml(theme.color || "#c77dff")};display:inline-flex;align-items:center;justify-content:center;pointer-events:none;box-shadow:0 4px 14px rgba(0,0,0,0.22);"><i class="${escapeHtml(symbol)}" style="font-size:${escapeHtml(fontSize)};"></i></span>`;
 }
 
 function getConstellationCampaignLaneKey(campaign) {
@@ -7579,6 +7645,105 @@ function shouldSkipEmptyOverwrite(existingItems = [], incomingItems = []) {
   return Array.isArray(existingItems) && existingItems.length > 0 && Array.isArray(incomingItems) && incomingItems.length === 0;
 }
 
+function normalizeHybridSettingsCategoryKey(value) {
+  var key = String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+  if (key === "platform" || key === "platforms") return "platforms";
+  if (key === "pillar" || key === "pillars" || key === "defaultpillars") return "pillars";
+  if (key === "status" || key === "statuses" || key === "defaultstatuses") return "statuses";
+  if (key === "posttype" || key === "posttypes" || key === "defaultposttypes") return "postTypes";
+  if (key === "campaign" || key === "campaigns") return "campaigns";
+  if (key === "campaigncolor" || key === "campaigncolors") return "campaignColors";
+  if (key === "month" || key === "months") return "months";
+  if (key === "queuelimit") return "queueLimit";
+  if (key === "currentmonth") return "currentMonth";
+  if (key === "currentyear") return "currentYear";
+  if (key === "mediafolderid") return "mediaFolderId";
+  return "";
+}
+
+function splitHybridSheetValues(value) {
+  if (Array.isArray(value)) return value.flatMap(splitHybridSheetValues).filter(Boolean);
+  return String(value || "").split(/[|,\n]/).map(function(item) { return String(item || "").trim(); }).filter(Boolean);
+}
+
+function coerceHybridSheetSettings(input) {
+  if (!Array.isArray(input)) return input && typeof input === "object" ? { ...input } : {};
+  var settings = {
+    platforms: [],
+    pillars: [],
+    statuses: [],
+    postTypes: [],
+    campaigns: [],
+    campaignColors: {},
+    months: []
+  };
+  input.forEach(function(row) {
+    if (!row || typeof row !== "object") return;
+    Object.keys(row).forEach(function(key) {
+      var category = normalizeHybridSettingsCategoryKey(key);
+      if (!category || category === "campaignColors") return;
+      var values = splitHybridSheetValues(row[key]);
+      if (Array.isArray(settings[category])) settings[category] = settings[category].concat(values);
+      else if (!settings[category] && values.length) settings[category] = values[0];
+    });
+    var categoryKey = Object.keys(row).find(function(key) {
+      return ["category", "setting", "registry", "group", "type", "key"].indexOf(String(key || "").trim().toLowerCase()) !== -1;
+    });
+    var valueKey = Object.keys(row).find(function(key) {
+      return ["value", "item", "option", "name", "label"].indexOf(String(key || "").trim().toLowerCase()) !== -1;
+    });
+    if (!categoryKey || !valueKey) return;
+    var category = normalizeHybridSettingsCategoryKey(row[categoryKey]);
+    var values = splitHybridSheetValues(row[valueKey]);
+    if (category === "campaignColors") {
+      var campaignName = normalizeDisplayText(row.campaign || row.campaign_name || row.name || row.label || "");
+      var colorValue = String(row.color || row.campaign_color || row.hex || row[valueKey] || "").trim();
+      if (campaignName && colorValue && /^#|rgb|hsl/i.test(colorValue)) settings.campaignColors[campaignName] = colorValue;
+      return;
+    }
+    if (Array.isArray(settings[category])) settings[category] = settings[category].concat(values);
+    else if (category && !settings[category] && values.length) settings[category] = values[0];
+  });
+  ["platforms", "pillars", "statuses", "postTypes", "campaigns", "months"].forEach(function(key) {
+    settings[key] = settings[key].filter(Boolean).filter(function(value, index, list) {
+      return list.indexOf(value) === index;
+    });
+  });
+  return settings;
+}
+
+function extractPillarsFromBrandFrameworkRows(rows = []) {
+  var collected = [];
+  (Array.isArray(rows) ? rows : []).forEach(function(row) {
+    if (!row || typeof row !== "object") return;
+    var rowKeys = Object.keys(row);
+    var pillarField = rowKeys.find(function(key) {
+      return String(key || "").trim().toLowerCase().indexOf("pillar") !== -1;
+    });
+    if (pillarField) {
+      collected = collected.concat(splitHybridSheetValues(row[pillarField]));
+      return;
+    }
+    var hint = String(row.section || row.category || row.key || row.label || row.title || "").trim().toLowerCase();
+    if (hint.indexOf("pillar") === -1) return;
+    collected = collected.concat(splitHybridSheetValues(row.value || row.name || row.description || row.content || row.text || ""));
+  });
+  return collected.map(function(value) { return getDefaultPillarObject(value); }).filter(Boolean).filter(function(value, index, list) {
+    return list.findIndex(function(item) { return item.slug === value.slug; }) === index;
+  });
+}
+
+function resolveHybridWorkspacePillars(sheetData = {}) {
+  var settingsObject = coerceHybridSheetSettings(sheetData.settings);
+  var sheetPillars = clonePillarDefinitions(settingsObject.default_pillars || settingsObject.pillars || []);
+  var brandPillars = extractPillarsFromBrandFrameworkRows(sheetData.brandFramework || []);
+  var canonical = sheetPillars.length ? sheetPillars : brandPillars.length ? brandPillars : getFallbackWorkspacePillars();
+  console.log("[pillars-sync] sheet pillars", sheetPillars.map(function(item) { return item.name || item.slug; }));
+  console.log("[pillars-sync] brand os pillars", brandPillars.map(function(item) { return item.name || item.slug; }));
+  console.log("[pillars-sync] canonical workspace pillars", canonical.map(function(item) { return item.name || item.slug; }));
+  return canonical;
+}
+
 function hydrateHybridSheetData(sheetData = {}) {
   var campaigns = Array.isArray(sheetData.campaigns) ? sheetData.campaigns : [];
   var normalizedCampaigns = campaigns.map(function(campaign) {
@@ -7586,9 +7751,16 @@ function hydrateHybridSheetData(sheetData = {}) {
   }).filter(Boolean);
   appState.campaigns = normalizedCampaigns;
 
-  var settings = sheetData.settings;
-  if (settings && typeof settings === "object" && !Array.isArray(settings)) {
+  var settings = coerceHybridSheetSettings(sheetData.settings);
+  var hybridPillars = resolveHybridWorkspacePillars(sheetData);
+  settings.default_pillars = clonePillarDefinitions(hybridPillars);
+  settings.pillars = hybridPillars.map(function(item) { return item.slug || item.name || ""; }).filter(Boolean);
+  if (settings && typeof settings === "object") {
     appState.settings = normalizeRemoteSettings(settings);
+    appState.settings.default_pillars = clonePillarDefinitions(hybridPillars);
+    appState.settings.pillars = hybridPillars.map(function(item) { return item.slug || item.name || ""; }).filter(Boolean);
+    if (appState.workspace && typeof appState.workspace === "object") appState.workspace.default_pillars = clonePillarDefinitions(hybridPillars);
+    if (WORKSPACE_RUNTIME_CONFIG?.active) WORKSPACE_RUNTIME_CONFIG.active.default_pillars = clonePillarDefinitions(hybridPillars);
   }
 
   var mediaRows = Array.isArray(sheetData.media) ? sheetData.media : [];
@@ -12040,7 +12212,7 @@ function renderMobileDayCalendar() {
     const dayPillarValue = getPostContentPillar(post);
     const dayPillarSymbol = getPillarSymbol(dayPillarValue);
     return `
-      <button type="button" class="mobile-day-post calendar-day-post-card" onclick="openCalendarPost(this)" style="border-left:3px solid ${dayCampaignColor};" ${renderPostIdentityDataAttributes(post)}>
+      <button type="button" class="mobile-day-post calendar-day-post-card relative" onclick="openCalendarPost(this)" style="border-left:3px solid ${dayCampaignColor};" ${renderPostIdentityDataAttributes(post)}>
         <div class="flex items-start justify-between gap-3 mb-2">
           <div class="flex-1 min-w-0">
             <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${escapeHtml(post.queueTimeLabel || "No time")}</div>
@@ -12052,6 +12224,7 @@ function renderMobileDayCalendar() {
         </div>
         <div class="flex flex-wrap gap-1 mb-2">${renderPlatformChips(post)}</div>
         <p class="text-xs text-gray-400 wrap-safe">${escapeHtml(getDisplayExcerpt(post.description, post.description || "No description"))}</p>
+        ${renderPillarCornerBadge(dayPillarValue)}
       </button>
     `;
   }).join("")}</div>`;
@@ -12088,7 +12261,7 @@ function renderCalendarPill(post, isWeekMode = false) {
   }
   if (compactMonth) {
     return `
-      <button type="button" class="post-pill compact-month mt-1 text-left" onclick="event.stopPropagation();openCalendarPost(this)" title="${escapeHtml(buildDateDiagnosticTitle(post))}" style="background:${campaignColor}14;border:1px solid ${campaignColor}30;box-shadow:inset 2px 0 0 ${campaignColor};" ${renderPostIdentityDataAttributes(post)}>
+      <button type="button" class="post-pill compact-month mt-1 text-left relative" onclick="event.stopPropagation();openCalendarPost(this)" title="${escapeHtml(buildDateDiagnosticTitle(post))}" style="background:${campaignColor}14;border:1px solid ${campaignColor}30;box-shadow:inset 2px 0 0 ${campaignColor};" ${renderPostIdentityDataAttributes(post)}>
         <span class="compact-month-icons">
           ${carouselCoverUrl
             ? `<img src="${escapeHtml(carouselCoverUrl)}" alt="${escapeHtml(getMediaDisplayTitle(carouselCover, null, "Carousel cover"))}" class="w-4 h-4 rounded object-cover shrink-0 border border-white/10" onerror="handleBrokenMediaPreview(this)">`
@@ -12098,12 +12271,13 @@ function renderCalendarPill(post, isWeekMode = false) {
         </span>
         <span class="compact-month-text">${escapeHtml(displayTitle)}</span>
         ${pillarSymbol ? `<span class="text-[7px] text-gray-500 opacity-50 ml-0.5" title="${escapeHtml(formatContentPillarLabel(postPillar))}"><i class="${pillarSymbol}"></i></span>` : ""}
+        ${renderPillarCornerBadge(postPillar, { bottom: "4px", right: "4px", size: "16px", fontSize: "8px" })}
       </button>
     `;
   }
 
   return `
-    <button type="button" class="post-pill mt-1 text-left" onclick="event.stopPropagation();openCalendarPost(this)" title="${escapeHtml(buildDateDiagnosticTitle(post))}" style="background:${campaignColor}14;border:1px solid ${campaignColor}30;box-shadow:inset 3px 0 0 ${campaignColor};" ${renderPostIdentityDataAttributes(post)}>
+    <button type="button" class="post-pill mt-1 text-left relative" onclick="event.stopPropagation();openCalendarPost(this)" title="${escapeHtml(buildDateDiagnosticTitle(post))}" style="background:${campaignColor}14;border:1px solid ${campaignColor}30;box-shadow:inset 3px 0 0 ${campaignColor};" ${renderPostIdentityDataAttributes(post)}>
       <div class="flex items-center gap-1.5 w-full">
         ${carouselCoverUrl
           ? `<img src="${escapeHtml(carouselCoverUrl)}" alt="${escapeHtml(getMediaDisplayTitle(carouselCover, null, "Carousel cover"))}" class="w-5 h-5 rounded object-cover shrink-0 border border-white/10" onerror="handleBrokenMediaPreview(this)">`
@@ -12116,6 +12290,7 @@ function renderCalendarPill(post, isWeekMode = false) {
         ${pillarSymbol ? `<span class="text-[8px] text-gray-500 opacity-50 shrink-0" title="${escapeHtml(formatContentPillarLabel(postPillar))}"><i class="${pillarSymbol}"></i></span>` : ""}
       </span>
       <span class="text-[8px] text-gray-500 wrap-safe w-full block mt-0.5">${escapeHtml(mediaTypeLabel)}</span>
+      ${renderPillarCornerBadge(postPillar, { bottom: "6px", right: "6px", size: "18px", fontSize: "8px" })}
     </button>
   `;
 }
@@ -12228,7 +12403,7 @@ function renderLedger() {
     const mediaLabel = renderPostMediaTypeBadge(hydrated);
 
     return `
-      <div class="ledger-card glass-card p-5" data-post-id="${escapeHtml(post.id)}">
+      <div class="ledger-card glass-card p-5 relative" data-post-id="${escapeHtml(post.id)}">
         <div class="flex items-start gap-5">
           <div class="w-14 h-14 rounded-xl bg-[#120c1d] border border-white/5 flex items-center justify-center shrink-0 overflow-hidden">
             ${mediaKind === "carousel"
@@ -12267,6 +12442,7 @@ function renderLedger() {
             </div>
           </div>
         </div>
+        ${renderPillarCornerBadge(pillarValue)}
       </div>
     `;
   }).join("");
@@ -12848,7 +13024,7 @@ function selectConstellationPost(post, color, campaignName = "") {
   });
   if (!constellationSelectionCard) return;
   const badge = getPublishingBadge(post);
-  constellationSelectionTitle.textContent = getPostDisplayTitle(post, "Untitled post");
+  constellationSelectionTitle.innerHTML = `${escapeHtml(getPostDisplayTitle(post, "Untitled post"))}<span class="inline-flex ml-2 align-middle">${renderPillarCornerBadge(getPostContentPillar(post), { bottom: "auto", right: "auto", size: "18px", fontSize: "8px" }).replace("position:absolute;", "position:relative;")}</span>`;
   constellationSelectionMeta.textContent = `${formatCampaignDisplayName(campaignName || post.campaignName || "Unassigned")} • ${toTitleCase(post.platform || "linkedin")} • ${badge.label}`;
   constellationSelectionMeta.style.color = color || "#c77dff";
   constellationSelectionExcerpt.textContent = getDisplayExcerpt(post.description, post.description || "No description yet.");
@@ -13043,7 +13219,8 @@ function renderConstellation() {
       dotLabel.style.left = `${Math.min(dotX + 24, worldWidth - 260)}px`;
       dotLabel.style.top = `${dotY}px`;
       dotLabel.style.borderColor = `${color}40`;
-      dotLabel.innerHTML = `<span>${escapeHtml(getConstellationLabel(post))}</span>`;
+      dotLabel.style.paddingRight = "30px";
+      dotLabel.innerHTML = `<span>${escapeHtml(getConstellationLabel(post))}</span>${renderPillarCornerBadge(getPostContentPillar(post), { bottom: "5px", right: "6px", size: "16px", fontSize: "8px" })}`;
       dotLabel.style.display = "inline-flex";
       dotLabel.style.alignItems = "center";
       dotLabel.style.gap = "8px";
@@ -19257,6 +19434,111 @@ function openSelectedMediaAttachPanel() {
   openMediaAssetModal(first, { items: selected.length ? selected : undefined, openPosts: true });
 }
 
+var MEDIA_RENDER_BATCH_SIZE = 24;
+var MEDIA_RENDER_SESSION_ID = 0;
+
+function renderMediaVaultCard(item) {
+  const itemKey = getMediaItemKey(item);
+  const isSelected = selectedMediaAssetIds.has(itemKey);
+  const isGroup = item.kind === "group";
+  const type = inferMediaKindFromAsset(item);
+  const previewUrl = isGroup
+    ? item.assets?.[0]?.fileUrl || item.assets?.[0]?.sourceUrl || ""
+    : item.fileUrl || item.sourceUrl || "";
+  const hasImagePreview = !!previewUrl && type === "image";
+  const hasVideoPreview = !!previewUrl && type === "video";
+  const icon =
+    type === "video" ? "ph-video-camera" :
+    type === "document" ? "ph-file-text" :
+    type === "carousel" ? "ph-images" :
+    type === "article" ? "ph-article" :
+    "ph-image";
+
+  const linkedPost = item.linkedPost || (appState.posts || []).find(post => post.id === item.postId) || getMediaPostContext(item);
+  const linkedStatus = getMediaLinkedStatus(item);
+  const linkedPostAssets = linkedPost ? getAttachedMediaForPost(linkedPost).slice(0, 20).map((asset) => normalizeRemoteMedia(asset)) : [];
+  const isCarouselPreview = isGroup || (linkedPost && linkedPostAssets.length > 1) || type === "carousel";
+  const campaignLabel = linkedPost?.campaignName
+    ? formatCampaignDisplayName(linkedPost.campaignName)
+    : item.campaign
+    ? formatCampaignDisplayName(item.campaign)
+    : "";
+  const sourceLabel =
+    item.sourceType === "drive"
+      ? "Drive Link"
+      : item.sourceType === "linkedin"
+      ? "LinkedIn URL"
+      : item.sourceType === "external"
+      ? "External URL"
+      : "";
+  const badge = getMediaBadgeLabel(item, linkedPost);
+  const usageLine = getMediaUsageLine(item, linkedPost);
+  const metaLine = [usageLine, linkedStatus, item.meta || "", campaignLabel, sourceLabel].filter(Boolean).join(" - ");
+  const displayTitle = getMediaDisplayTitle(item, linkedPost);
+  var carouselIdx = -1;
+  var carouselTotal = 0;
+  if (linkedPost) {
+    var pmForPost = getAttachedMediaForPost(linkedPost);
+    carouselTotal = pmForPost.length;
+    carouselIdx = pmForPost.findIndex(function(a) { return getMediaAssetId(a) === getMediaAssetId(item); });
+    if (carouselIdx === -1) {
+      console.warn("[carousel-position] raw -1 [carousel-position] display vault card fallback: no position", { postId: linkedPost.id, assetId: getMediaAssetId(item) });
+    } else {
+      formatCarouselPosition(carouselIdx, carouselTotal);
+    }
+  }
+  var subtitle = getMediaSubtitle(item, linkedPost, carouselIdx, carouselTotal);
+  const assetUrl = isGroup ? (item.sourceUrl || linkedPost?.sourceUrl || "") : (item.fileUrl || item.sourceUrl || "");
+  const overlayLabel = item.fileUrl ? "Open Asset" : item.sourceUrl ? "Open Link" : "View";
+  const coverAsset = isCarouselPreview ? getCarouselCoverAsset(isGroup ? (item.assets || []) : linkedPostAssets.length ? linkedPostAssets : linkedPost || item) : null;
+  const coverUrl = coverAsset ? getMediaPreviewUrl(coverAsset) : "";
+  const previewBlock = isCarouselPreview
+    ? `
+      <div class="w-full">
+        <div class="w-full aspect-square rounded-none bg-[#120c1d] border border-white/5 overflow-hidden">${coverUrl ? `<img src="${escapeHtml(coverUrl)}" alt="${escapeHtml(getMediaDisplayTitle(coverAsset, linkedPost, displayTitle))}" class="w-full h-full object-cover" loading="lazy" onerror="handleBrokenMediaPreview(this)">` : `<div class="w-full h-full flex items-center justify-center text-gray-500"><i class="ph-bold ph-images text-4xl"></i></div>`}</div>
+        ${renderMediaGalleryStrip(isGroup ? (item.assets || []).slice(0, 20) : linkedPostAssets, { limit: 20 })}
+      </div>
+    `
+    : hasImagePreview
+    ? `<img src="${escapeHtml(previewUrl)}" alt="${escapeHtml(displayTitle)}" class="w-full h-full object-cover rounded-none" loading="lazy" onerror="handleBrokenMediaPreview(this)">`
+    : hasVideoPreview
+    ? `<video src="${escapeHtml(previewUrl)}" class="w-full h-full object-cover rounded-none" muted playsinline preload="metadata"></video>`
+    : `<div class="w-full h-full flex items-center justify-center"><i class="ph-fill ${icon} text-gray-600 text-5xl"></i></div>`;
+
+  return `
+    <div class="glass-card media-vault-card overflow-hidden group text-left w-full relative ${isSelected ? "ring-2 ring-[#c77dff]/70" : ""}" data-media-card="true" onclick="handleMediaCardClick('${escapeHtml(itemKey)}')">
+      <input type="checkbox" class="media-select-box ${mediaSelectMode ? "" : "hidden"}" ${isSelected ? "checked" : ""} onclick="event.stopPropagation()" onchange="toggleMediaSelection('${escapeHtml(itemKey)}', this.checked)" aria-label="Select media">
+      <div class="aspect-square bg-[#120c1d] border-b border-white/5 flex items-center justify-center relative p-4">
+        ${previewBlock}
+        <span class="absolute top-3 right-3 px-2 py-1 bg-[#181125] border border-white/5 rounded text-[8px] uppercase font-bold text-gray-300">${escapeHtml(badge)}</span>
+        <div class="absolute inset-0 bg-[#2d1b4e]/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
+          <span class="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-white" title="${escapeHtml(overlayLabel)}">
+            <i class="ph-bold ph-arrows-out-simple text-xl"></i>
+          </span>
+        </div>
+      </div>
+      <div class="p-4">
+        <p class="text-white text-sm font-semibold wrap-safe mb-1" title="${escapeHtml(displayTitle)}">${escapeHtml(displayTitle)}</p>
+        ${subtitle ? `<p class="text-gray-500 text-[9px] font-medium wrap-safe">${escapeHtml(subtitle)}</p>` : ""}
+        <p class="text-gray-500 text-[10px] font-medium wrap-safe">${escapeHtml(metaLine)}</p>
+        ${isCarouselPreview ? `<p class="text-gray-600 text-[10px] font-medium wrap-safe mt-1">Carousel · ${(item.assets?.length || linkedPostAssets.length || getAttachedMediaForPost(linkedPost).length)} assets</p>` : ""}
+        ${assetUrl ? `<p class="text-gray-600 text-[10px] font-medium wrap-safe mt-1">${escapeHtml(getDisplayExcerpt(assetUrl, assetUrl))}</p>` : ""}
+      </div>
+    </div>
+  `;
+}
+
+function renderMediaLoadingCard(message = "Loading media…") {
+  return `
+    <div class="glass-card border border-white/5 p-6 flex items-center justify-center text-center min-h-[180px]" data-media-loading-card="true">
+      <div>
+        <div class="text-white text-sm font-semibold mb-2">${escapeHtml(message)}</div>
+        <div class="text-gray-500 text-xs">Additional assets are loading in the background.</div>
+      </div>
+    </div>
+  `;
+}
+
 function renderMedia() {
   console.log("[render] renderMedia start", getAppStateCounts());
   const grid = document.getElementById("media-grid");
@@ -19299,96 +19581,24 @@ function renderMedia() {
     return;
   }
 
-  grid.innerHTML = items.map(item => {
-    const itemKey = getMediaItemKey(item);
-    const isSelected = selectedMediaAssetIds.has(itemKey);
-    const isGroup = item.kind === "group";
-    const type = inferMediaKindFromAsset(item);
-    const previewUrl = isGroup
-      ? item.assets?.[0]?.fileUrl || item.assets?.[0]?.sourceUrl || ""
-      : item.fileUrl || item.sourceUrl || "";
-    const hasImagePreview = !!previewUrl && type === "image";
-    const hasVideoPreview = !!previewUrl && type === "video";
-    const icon =
-      type === "video" ? "ph-video-camera" :
-      type === "document" ? "ph-file-text" :
-      type === "carousel" ? "ph-images" :
-      type === "article" ? "ph-article" :
-      "ph-image";
-
-    const linkedPost = item.linkedPost || (appState.posts || []).find(post => post.id === item.postId) || getMediaPostContext(item);
-    const linkedStatus = getMediaLinkedStatus(item);
-    const linkedPostAssets = linkedPost ? getAttachedMediaForPost(linkedPost).slice(0, 20).map((asset) => normalizeRemoteMedia(asset)) : [];
-    const isCarouselPreview = isGroup || (linkedPost && linkedPostAssets.length > 1) || type === "carousel";
-    const campaignLabel = linkedPost?.campaignName
-      ? formatCampaignDisplayName(linkedPost.campaignName)
-      : item.campaign
-      ? formatCampaignDisplayName(item.campaign)
-      : "";
-    const sourceLabel =
-      item.sourceType === "drive"
-        ? "Drive Link"
-        : item.sourceType === "linkedin"
-        ? "LinkedIn URL"
-        : item.sourceType === "external"
-        ? "External URL"
-        : "";
-    const badge = getMediaBadgeLabel(item, linkedPost);
-    const usageLine = getMediaUsageLine(item, linkedPost);
-    const metaLine = [usageLine, linkedStatus, item.meta || "", campaignLabel, sourceLabel].filter(Boolean).join(" - ");
-    const displayTitle = getMediaDisplayTitle(item, linkedPost);
-    var carouselIdx = -1;
-    var carouselTotal = 0;
-    if (linkedPost) {
-      var pmForPost = getAttachedMediaForPost(linkedPost);
-      carouselTotal = pmForPost.length;
-      carouselIdx = pmForPost.findIndex(function(a) { return getMediaAssetId(a) === getMediaAssetId(item); });
-      if (carouselIdx === -1) {
-        console.warn("[carousel-position] raw -1 [carousel-position] display vault card fallback: no position", { postId: linkedPost.id, assetId: getMediaAssetId(item) });
-      } else {
-        formatCarouselPosition(carouselIdx, carouselTotal);
-      }
-    }
-    var subtitle = getMediaSubtitle(item, linkedPost, carouselIdx, carouselTotal);
-    const assetUrl = isGroup ? (item.sourceUrl || linkedPost?.sourceUrl || "") : (item.fileUrl || item.sourceUrl || "");
-    const overlayLabel = item.fileUrl ? "Open Asset" : item.sourceUrl ? "Open Link" : "View";
-    const coverAsset = isCarouselPreview ? getCarouselCoverAsset(isGroup ? (item.assets || []) : linkedPostAssets.length ? linkedPostAssets : linkedPost || item) : null;
-    const coverUrl = coverAsset ? getMediaPreviewUrl(coverAsset) : "";
-    const previewBlock = isCarouselPreview
-      ? `
-        <div class="w-full">
-          <div class="w-full aspect-square rounded-none bg-[#120c1d] border border-white/5 overflow-hidden">${coverUrl ? `<img src="${escapeHtml(coverUrl)}" alt="${escapeHtml(getMediaDisplayTitle(coverAsset, linkedPost, displayTitle))}" class="w-full h-full object-cover" loading="lazy" onerror="handleBrokenMediaPreview(this)">` : `<div class="w-full h-full flex items-center justify-center text-gray-500"><i class="ph-bold ph-images text-4xl"></i></div>`}</div>
-          ${renderMediaGalleryStrip(isGroup ? (item.assets || []).slice(0, 20) : linkedPostAssets, { limit: 20 })}
-        </div>
-      `
-      : hasImagePreview
-      ? `<img src="${escapeHtml(previewUrl)}" alt="${escapeHtml(displayTitle)}" class="w-full h-full object-cover rounded-none" loading="lazy" onerror="handleBrokenMediaPreview(this)">`
-      : hasVideoPreview
-      ? `<video src="${escapeHtml(previewUrl)}" class="w-full h-full object-cover rounded-none" muted playsinline preload="metadata"></video>`
-      : `<div class="w-full h-full flex items-center justify-center"><i class="ph-fill ${icon} text-gray-600 text-5xl"></i></div>`;
-
-    return `
-      <div class="glass-card media-vault-card overflow-hidden group text-left w-full relative ${isSelected ? "ring-2 ring-[#c77dff]/70" : ""}" onclick="handleMediaCardClick('${escapeHtml(itemKey)}')">
-        <input type="checkbox" class="media-select-box ${mediaSelectMode ? "" : "hidden"}" ${isSelected ? "checked" : ""} onclick="event.stopPropagation()" onchange="toggleMediaSelection('${escapeHtml(itemKey)}', this.checked)" aria-label="Select media">
-        <div class="aspect-square bg-[#120c1d] border-b border-white/5 flex items-center justify-center relative p-4">
-          ${previewBlock}
-          <span class="absolute top-3 right-3 px-2 py-1 bg-[#181125] border border-white/5 rounded text-[8px] uppercase font-bold text-gray-300">${escapeHtml(badge)}</span>
-          <div class="absolute inset-0 bg-[#2d1b4e]/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
-            <span class="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-white" title="${escapeHtml(overlayLabel)}">
-              <i class="ph-bold ph-arrows-out-simple text-xl"></i>
-            </span>
-          </div>
-        </div>
-        <div class="p-4">
-          <p class="text-white text-sm font-semibold wrap-safe mb-1" title="${escapeHtml(displayTitle)}">${escapeHtml(displayTitle)}</p>
-          ${subtitle ? `<p class="text-gray-500 text-[9px] font-medium wrap-safe">${escapeHtml(subtitle)}</p>` : ""}
-          <p class="text-gray-500 text-[10px] font-medium wrap-safe">${escapeHtml(metaLine)}</p>
-          ${isCarouselPreview ? `<p class="text-gray-600 text-[10px] font-medium wrap-safe mt-1">Carousel · ${(item.assets?.length || linkedPostAssets.length || getAttachedMediaForPost(linkedPost).length)} assets</p>` : ""}
-          ${assetUrl ? `<p class="text-gray-600 text-[10px] font-medium wrap-safe mt-1">${escapeHtml(getDisplayExcerpt(assetUrl, assetUrl))}</p>` : ""}
-        </div>
-      </div>
-    `;
-  }).join("");
+  var renderSessionId = ++MEDIA_RENDER_SESSION_ID;
+  var firstBatch = items.slice(0, MEDIA_RENDER_BATCH_SIZE);
+  var remainingBatch = items.slice(MEDIA_RENDER_BATCH_SIZE);
+  console.log("[media] first batch render count", firstBatch.length);
+  grid.innerHTML = firstBatch.map(renderMediaVaultCard).join("") + (remainingBatch.length ? renderMediaLoadingCard() : "");
+  if (remainingBatch.length) {
+    setTimeout(function() {
+      if (renderSessionId !== MEDIA_RENDER_SESSION_ID) return;
+      var loadingCard = grid.querySelector("[data-media-loading-card='true']");
+      if (loadingCard) loadingCard.remove();
+      grid.insertAdjacentHTML("beforeend", remainingBatch.map(renderMediaVaultCard).join(""));
+      console.log("[media] background media loaded count", remainingBatch.length);
+      console.log("[media] association reconcile complete");
+    }, 0);
+  } else {
+    console.log("[media] background media loaded count", 0);
+    console.log("[media] association reconcile complete");
+  }
   console.log("[render] renderMedia done", { childCount: grid.children.length, htmlLength: grid.innerHTML.length });
 }
 
@@ -25248,7 +25458,7 @@ async function loadSheetsWorkspaceDataForHybrid() {
         notes: extractSheetRowsFromPullResult(result, "NOTES"),
         inspo: extractSheetRowsFromPullResult(result, "INSPO"),
         aiDrafts: extractSheetRowsFromPullResult(result, "AI_DRAFTS"),
-        settings: extractSheetRowsFromPullResult(result, "SETTINGS")[0] || {},
+        settings: extractSheetRowsFromPullResult(result, "SETTINGS"),
         brandFramework: extractSheetRowsFromPullResult(result, "BRAND_FRAMEWORK")
       };
     }
@@ -28625,10 +28835,20 @@ function normalizeRemoteSettings(settings) {
       .filter(Boolean)
       .filter((value, index, list) => list.indexOf(value) === index);
   };
+  const normalizedDefaultPillars = Array.isArray(settings?.default_pillars)
+    ? settings.default_pillars.map(function(pillar) {
+        return typeof pillar === "object" && pillar !== null
+          ? getDefaultPillarObject(pillar.slug || pillar.name || "")
+          : getDefaultPillarObject(pillar);
+      }).filter(Boolean)
+    : normalizeList(settings?.pillars, defaults.pillars, (value) => normalizePillar(value)).map(function(pillar) {
+        return getDefaultPillarObject(pillar);
+      }).filter(Boolean);
 
   return {
     platforms: normalizeList(settings?.platforms, defaults.platforms, (value) => String(value || "").trim().toLowerCase()),
     pillars: normalizeList(settings?.pillars, defaults.pillars, (value) => normalizePillar(value)),
+    default_pillars: normalizedDefaultPillars.length ? normalizedDefaultPillars : getFallbackWorkspacePillars(),
     statuses: normalizeList(settings?.statuses, defaults.statuses, (value) => String(value || "").trim().toLowerCase()),
     postTypes: normalizeList(settings?.postTypes || settings?.post_types, defaults.postTypes, (value) => String(value || "").trim().toLowerCase()),
     campaigns: normalizeList(settings?.campaigns, [], (value) => normalizeDisplayText(value)),
@@ -29792,7 +30012,7 @@ function renderQueue(queueItems) {
     const carouselCoverUrl = carouselCover ? getMediaPreviewUrl(carouselCover) : "";
 
     return `
-      <div class="bg-[#181125] border border-white/5 rounded-xl p-4 flex gap-4 items-center cursor-pointer hover:border-white/10 transition-colors"
+      <div class="bg-[#181125] border border-white/5 rounded-xl p-4 flex gap-4 items-center cursor-pointer hover:border-white/10 transition-colors relative"
            onclick="openModalById('${escapeHtml(postOpenId)}')"
            title="${escapeHtml(item.title || "")}">
         <div class="bg-[#120c1d] rounded-lg w-12 h-12 flex flex-col items-center justify-center shrink-0"
@@ -29810,6 +30030,7 @@ function renderQueue(queueItems) {
             <span>${escapeHtml(renderPostMediaTypeBadge(hydrated))}</span>
           </div>
         </div>
+        ${renderPillarCornerBadge(hydrated.pillar)}
       </div>
     `;
   }).join("");

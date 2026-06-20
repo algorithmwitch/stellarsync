@@ -1163,7 +1163,7 @@ const INSIGHT_METRIC_KEYS = [
 
 const SETTINGS_DEFAULTS = {
   platforms: ["linkedin", "instagram", "facebook"],
-  pillars: ["Educate", "Engage", "Inform", "Inspire"],
+  pillars: ["Advocacy", "Community", "Wellness", "Leadership"],
   statuses: ["draft", "scheduled", "published"],
   postTypes: ["carousel", "single image", "video", "short video", "text post", "newsletter", "blog", "case study", "event promotion", "quote graphic"],
   campaigns: [],
@@ -2162,6 +2162,15 @@ function getSettingsRegistry() {
   if (!arrayAssignments.statuses || !settings.statuses.length) settings.statuses = cloneSettingsDefaults_().statuses;
   if (!arrayAssignments.postTypes || !settings.postTypes.length) settings.postTypes = cloneSettingsDefaults_().postTypes;
   settings.campaignColors = buildCampaignColorMap_(settings.campaignColors);
+  settings.default_pillars = settings.pillars.map(function(value) {
+    return {
+      name: pillarDisplayLabel_(value, value),
+      slug: normalizePillar_(value, value),
+      enabled: true
+    };
+  }).filter(function(value) {
+    return value && value.slug;
+  });
 
   return settings;
 }
@@ -4171,12 +4180,14 @@ function getSetting_(key) {
 
 function getPosts() {
   const settings = getSettingsRegistry();
-  const defaultPillar = settings.pillars[0] || "authority";
+  const defaultPillar = settings.pillars[0] || "advocacy";
   const campaignMap = buildCampaignMap_();
   const campaignNameMap = buildCampaignNameMap_();
   const mediaItems = getMedia();
-
-  return getPostsData_().map(function(rawRow) {
+  const rawRows = getPostsData_();
+  console.log("[posts] sheet raw row count", rawRows.length);
+  var droppedRows = [];
+  const normalizedPosts = rawRows.map(function(rawRow) {
     const row = normalizePostSchemaAliases_(rawRow);
     const title = derivePostTitle_(row);
     const rawCampaignId = normalizeScalar_(pickFirstDefined_(row.campaign_id, row.campaignID));
@@ -4189,7 +4200,8 @@ function getPosts() {
       pickFirstDefined_(row.hub_pillar_label, row.hubPillarLabel, row.pillar, matchedCampaign && matchedCampaign.pillar),
       matchedCampaign && matchedCampaign.pillar
     );
-    const postId = String(pickFirstDefined_(row.post_id, row.postId, row.id)).trim();
+    const fallbackPostId = row.row_number ? "row_" + String(row.row_number).trim() : "";
+    const postId = String(pickFirstDefined_(row.post_id, row.postId, row.id, fallbackPostId)).trim();
     const canonicalPillar = normalizePillar_(
       pickFirstDefined_(row.pillar, row.hub_pillar_label, row.hubPillarLabel, matchedCampaign && matchedCampaign.pillar),
       matchedCampaign && matchedCampaign.pillar || defaultPillar
@@ -4300,11 +4312,50 @@ function getPosts() {
       scheduledDateKey: scheduledDateKey,
       dateDiagnostics: buildDateDiagnostics_(scheduledAt, scheduledDateKey, queueDateLabel, planning.queueTimeLabel, planning.hasUserSelectedTime)
     }, semanticFieldsFromRow_(row)));
-  }).filter(function(post) {
-    return post.postId || post.title;
-  }).sort(function(a, b) {
-    return parseSheetDate_(b.scheduledAt) - parseSheetDate_(a.scheduledAt);
   });
+  var filteredPosts = normalizedPosts.filter(function(post) {
+    var hasVisibleContent = !!String(pickFirstDefined_(
+      post && post.title,
+      post && post.description,
+      post && post.caption,
+      post && post.body,
+      post && post.content,
+      post && post.publishDate,
+      post && post.publishTime,
+      post && post.queueDateLabel,
+      post && post.queueTimeLabel,
+      post && post.scheduledAt,
+      post && post.campaignName,
+      post && post.platform,
+      ""
+    )).trim();
+    if (hasVisibleContent) return true;
+    droppedRows.push({
+      row_number: post && post.row_number || post && post.rowNumber || "",
+      reason: "blank_after_normalize"
+    });
+    return false;
+  });
+  filteredPosts.sort(function(a, b) {
+    var bDate = parseSheetDate_(pickFirstDefined_(b && b.scheduledAt, b && b.publishDate, b && b.date, "")) || new Date(0);
+    var aDate = parseSheetDate_(pickFirstDefined_(a && a.scheduledAt, a && a.publishDate, a && a.date, "")) || new Date(0);
+    var delta = bDate.getTime() - aDate.getTime();
+    if (delta !== 0) return delta;
+    return Number(pickFirstDefined_(b && b.row_number, b && b.rowNumber, 0)) - Number(pickFirstDefined_(a && a.row_number, a && a.rowNumber, 0));
+  });
+  console.log("[posts] normalized row count", filteredPosts.length);
+  console.log("[posts] last 5 posts", filteredPosts.slice(0, 5).map(function(post) {
+    return {
+      row_number: pickFirstDefined_(post && post.row_number, post && post.rowNumber, ""),
+      post_id: pickFirstDefined_(post && post.postId, post && post.post_id, ""),
+      title: pickFirstDefined_(post && post.title, post && post.description, ""),
+      publish_date: pickFirstDefined_(post && post.publishDate, post && post.publish_date, ""),
+      publish_time: pickFirstDefined_(post && post.publishTime, post && post.publish_time, ""),
+      scheduled_at: pickFirstDefined_(post && post.scheduledAt, post && post.scheduled_at, "")
+    };
+  }));
+  console.log("[posts] dropped rows with reason", droppedRows);
+  return filteredPosts;
 }
 
 function getMedia() {
