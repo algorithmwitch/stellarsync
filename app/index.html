@@ -7103,16 +7103,27 @@ function getCampaignColorForPost(post) {
 }
 
 function getWorkspacePillars() {
-  var wp = appState?.settings?.default_pillars;
-  if (!Array.isArray(wp) || !wp.length) wp = WORKSPACE_RUNTIME_CONFIG?.active?.default_pillars;
-  if (Array.isArray(wp) && wp.length && typeof wp[0] === "object") return wp;
-  if (Array.isArray(wp) && wp.length) {
-    return wp.map(function(p) {
-      var s = typeof p === "string" ? p.trim().toLowerCase() : "";
-      return getDefaultPillarObject(s);
-    }).filter(Boolean);
+  if (typeof appState !== "undefined" && appState) {
+    var wp = appState?.settings?.default_pillars;
+    if (Array.isArray(wp) && wp.length && typeof wp[0] === "object") return wp;
+    if (Array.isArray(wp) && wp.length) {
+      return wp.map(function(p) {
+        var s = typeof p === "string" ? p.trim().toLowerCase() : "";
+        return getDefaultPillarObject(s);
+      }).filter(Boolean);
+    }
   }
-  return [];
+  if (typeof WORKSPACE_RUNTIME_CONFIG !== "undefined" && WORKSPACE_RUNTIME_CONFIG) {
+    var wp2 = WORKSPACE_RUNTIME_CONFIG?.active?.default_pillars;
+    if (Array.isArray(wp2) && wp2.length && typeof wp2[0] === "object") return wp2;
+    if (Array.isArray(wp2) && wp2.length) {
+      return wp2.map(function(p) {
+        var s = typeof p === "string" ? p.trim().toLowerCase() : "";
+        return getDefaultPillarObject(s);
+      }).filter(Boolean);
+    }
+  }
+  return BOOTSTRAP_DEFAULT_PILLARS;
 }
 
 function getWorkspacePillarBySlug(slug) {
@@ -7128,6 +7139,13 @@ function getWorkspacePillarNames() {
 function getWorkspacePillarSlugs() {
   return getWorkspacePillars().map(function(p) { return p.slug || ""; }).filter(Boolean);
 }
+
+var BOOTSTRAP_DEFAULT_PILLARS = [
+  { name: "Advocacy", slug: "advocacy", icon: "ph-megaphone", color: "#c77dff", enabled: true },
+  { name: "Community", slug: "community", icon: "ph-users-three", color: "#00ffaa", enabled: true },
+  { name: "Wellness", slug: "wellness", icon: "ph-heart", color: "#00f0ff", enabled: true },
+  { name: "Leadership", slug: "leadership", icon: "ph-crown", color: "#ffd700", enabled: true }
+];
 
 function getDefaultPillarObject(slug) {
   var s = String(slug || "").trim().toLowerCase();
