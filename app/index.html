@@ -4150,6 +4150,7 @@
                         </div>
                         <div vid="554">
                             <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2" vid="555">Content Pillar</label>
+                            <div id="modal-pillar-meta" class="text-xs text-gray-400 mb-2"></div>
                             <div id="modal-pillar-buttons" class="grid grid-cols-2 gap-2"></div>
                         </div>
                     </div>
@@ -6991,7 +6992,7 @@ function toTitleCase(value) {
 var GPE_CANONICAL_PILLARS = [
   { name: "Advocacy", slug: "advocacy", icon: "ph-megaphone", color: "#ec4899", enabled: true },
   { name: "Community", slug: "community", icon: "ph-users-three", color: "#14b8a6", enabled: true },
-  { name: "Wellness", slug: "wellness", icon: "ph-heartbeat", color: "#f59e0b", enabled: true },
+  { name: "Wellness", slug: "wellness", icon: "ph-heart", color: "#f59e0b", enabled: true },
   { name: "Leadership", slug: "leadership", icon: "ph-crown", color: "#8b5cf6", enabled: true }
 ];
 
@@ -7098,11 +7099,12 @@ function getAvailableCampaignRecords() {
     ? allowed.slice()
     : sourceRecords.map((campaign) => campaign?.campaignName || campaign?.campaign_name || campaign?.name || "").filter(Boolean);
   return orderedNames.map((campaignName, index) => {
-    const matched = sourceRecords.find((campaign) => normalizeLookupValue(campaign.campaignName || campaign.name || "") === normalizeLookupValue(campaignName));
+    const resolvedName = resolveCampaignName(campaignName, sourceRecords);
+    const matched = sourceRecords.find((campaign) => normalizeLookupValue(campaign.campaignName || campaign.name || "") === normalizeLookupValue(resolvedName || campaignName));
     return {
       ...(matched || {}),
       campaignId: matched?.campaignId || `CMP-${normalizeLookupValue(campaignName).replace(/[^a-z0-9]+/g, "").toUpperCase().slice(0, 8) || index}`,
-      campaignName,
+      campaignName: resolvedName || campaignName,
       sortOrder: Number(matched?.sortOrder ?? index) || index,
       isArchived: Boolean(matched?.isArchived)
     };
@@ -7116,7 +7118,8 @@ function getCampaignById(campaignId, campaigns = getAvailableCampaignRecords()) 
 }
 
 function getCampaignByName(campaignName, campaigns = getAvailableCampaignRecords()) {
-  const name = normalizeLookupValue(campaignName || "");
+  const resolvedName = resolveCampaignName(campaignName, campaigns);
+  const name = normalizeLookupValue(resolvedName || "");
   if (!name) return null;
   return campaigns.find((campaign) => normalizeLookupValue(campaign.campaignName || campaign.name || "") === name) || null;
 }
@@ -7202,7 +7205,7 @@ function getDefaultPillarObject(slug) {
   var defaults = {
     advocacy: { name: "Advocacy", slug: "advocacy", icon: "ph-megaphone", color: "#ec4899", enabled: true },
     community: { name: "Community", slug: "community", icon: "ph-users-three", color: "#14b8a6", enabled: true },
-    wellness: { name: "Wellness", slug: "wellness", icon: "ph-heartbeat", color: "#f59e0b", enabled: true },
+    wellness: { name: "Wellness", slug: "wellness", icon: "ph-heart", color: "#f59e0b", enabled: true },
     leadership: { name: "Leadership", slug: "leadership", icon: "ph-crown", color: "#8b5cf6", enabled: true },
     educate: { name: "Educate", slug: "educate", icon: "ph-book-open", color: "#0f766e", enabled: true },
     engage: { name: "Engage", slug: "engage", icon: "ph-chat-circle-text", color: "#2563eb", enabled: true },
@@ -7745,11 +7748,15 @@ function resolveHybridWorkspacePillars(sheetData = {}) {
 }
 
 function hydrateHybridSheetData(sheetData = {}) {
-  var campaigns = Array.isArray(sheetData.campaigns) ? sheetData.campaigns : [];
-  var normalizedCampaigns = campaigns.map(function(campaign) {
-    return normalizeRemoteCampaign(campaign);
-  }).filter(Boolean);
-  appState.campaigns = normalizedCampaigns;
+  if (Array.isArray(sheetData.campaigns)) {
+    var campaigns = sheetData.campaigns;
+    var normalizedCampaigns = campaigns.map(function(campaign) {
+      return normalizeRemoteCampaign(campaign);
+    }).filter(Boolean);
+    if (normalizedCampaigns.length > 0 || !Array.isArray(appState.campaigns) || !appState.campaigns.length) {
+      appState.campaigns = normalizedCampaigns;
+    }
+  }
 
   var settings = coerceHybridSheetSettings(sheetData.settings);
   var hybridPillars = resolveHybridWorkspacePillars(sheetData);
@@ -9641,9 +9648,44 @@ function normalizeCampaignName(value) {
       }).filter(Boolean)
     : [];
   const allowed = configured.length ? configured : hydrated;
-  if (!allowed.length) return raw;
-  const found = allowed.find((name) => normalizeLookupValue(name) === normalizeLookupValue(raw));
-  return found || raw;
+  return resolveCampaignName(raw, allowed);
+}
+
+function resolveCampaignName(rawCampaignName, campaignRecords = [], options = {}) {
+  const raw = normalizeDisplayText(rawCampaignName);
+  console.log("[campaign-parse] raw", raw);
+  if (!raw) return "";
+  const records = (Array.isArray(campaignRecords) ? campaignRecords : []).map((campaign) => {
+    return typeof campaign === "string"
+      ? { campaignName: campaign }
+      : campaign;
+  }).filter(Boolean);
+  const names = records.map((campaign) => String(campaign.campaignName || campaign.campaign_name || campaign.name || "").trim()).filter(Boolean);
+  const exactMatch = names.find((name) => name === raw);
+  if (exactMatch) {
+    console.log("[campaign-parse] exact match", exactMatch);
+    return exactMatch;
+  }
+  const normalizedMatch = names.find((name) => normalizeLookupValue(name) === normalizeLookupValue(raw));
+  if (normalizedMatch) {
+    console.log("[campaign-parse] normalized match", normalizedMatch);
+    return normalizedMatch;
+  }
+  const explicitMulti = Boolean(options.explicitMulti) || Array.isArray(rawCampaignName) || /[|\n]/.test(String(rawCampaignName || ""));
+  if (raw.indexOf(",") !== -1 && !explicitMulti) {
+    console.log("[campaign-parse] preserved comma campaign", raw);
+    return raw;
+  }
+  if (explicitMulti) {
+    const parts = String(rawCampaignName || "").split(/[|\n]/).map((item) => normalizeDisplayText(item)).filter(Boolean);
+    const resolvedParts = parts.map((part) => {
+      const matched = names.find((name) => name === part) || names.find((name) => normalizeLookupValue(name) === normalizeLookupValue(part));
+      return matched || part;
+    }).filter(Boolean);
+    console.log("[campaign-parse] split multi-campaign", resolvedParts);
+    return resolvedParts[0] || raw;
+  }
+  return raw;
 }
 
 function getDefaultSettings() {
@@ -12403,7 +12445,7 @@ function renderLedger() {
     const mediaLabel = renderPostMediaTypeBadge(hydrated);
 
     return `
-      <div class="ledger-card glass-card p-5 relative" data-post-id="${escapeHtml(post.id)}">
+      <div class="ledger-card glass-card p-5" data-post-id="${escapeHtml(post.id)}">
         <div class="flex items-start gap-5">
           <div class="w-14 h-14 rounded-xl bg-[#120c1d] border border-white/5 flex items-center justify-center shrink-0 overflow-hidden">
             ${mediaKind === "carousel"
@@ -12442,7 +12484,6 @@ function renderLedger() {
             </div>
           </div>
         </div>
-        ${renderPillarCornerBadge(pillarValue)}
       </div>
     `;
   }).join("");
@@ -13024,7 +13065,7 @@ function selectConstellationPost(post, color, campaignName = "") {
   });
   if (!constellationSelectionCard) return;
   const badge = getPublishingBadge(post);
-  constellationSelectionTitle.innerHTML = `${escapeHtml(getPostDisplayTitle(post, "Untitled post"))}<span class="inline-flex ml-2 align-middle">${renderPillarCornerBadge(getPostContentPillar(post), { bottom: "auto", right: "auto", size: "18px", fontSize: "8px" }).replace("position:absolute;", "position:relative;")}</span>`;
+  constellationSelectionTitle.textContent = getPostDisplayTitle(post, "Untitled post");
   constellationSelectionMeta.textContent = `${formatCampaignDisplayName(campaignName || post.campaignName || "Unassigned")} • ${toTitleCase(post.platform || "linkedin")} • ${badge.label}`;
   constellationSelectionMeta.style.color = color || "#c77dff";
   constellationSelectionExcerpt.textContent = getDisplayExcerpt(post.description, post.description || "No description yet.");
@@ -13219,8 +13260,7 @@ function renderConstellation() {
       dotLabel.style.left = `${Math.min(dotX + 24, worldWidth - 260)}px`;
       dotLabel.style.top = `${dotY}px`;
       dotLabel.style.borderColor = `${color}40`;
-      dotLabel.style.paddingRight = "30px";
-      dotLabel.innerHTML = `<span>${escapeHtml(getConstellationLabel(post))}</span>${renderPillarCornerBadge(getPostContentPillar(post), { bottom: "5px", right: "6px", size: "16px", fontSize: "8px" })}`;
+      dotLabel.innerHTML = `<span>${escapeHtml(getConstellationLabel(post))}</span>`;
       dotLabel.style.display = "inline-flex";
       dotLabel.style.alignItems = "center";
       dotLabel.style.gap = "8px";
@@ -19436,6 +19476,45 @@ function openSelectedMediaAttachPanel() {
 
 var MEDIA_RENDER_BATCH_SIZE = 24;
 var MEDIA_RENDER_SESSION_ID = 0;
+var HYBRID_MEDIA_LOADED = false;
+var HYBRID_MEDIA_LOADING = false;
+var HYBRID_MEDIA_LAZY_LOAD_PROMISE = null;
+
+async function ensureLazyHybridMediaLoad(options = {}) {
+  if (!isGPEHybridWorkspace()) return { skipped: true };
+  if (HYBRID_MEDIA_LOADED) {
+    console.log("[media] media load skipped already loaded");
+    return { skipped: true, assets: appState.media || [] };
+  }
+  if (HYBRID_MEDIA_LAZY_LOAD_PROMISE) return HYBRID_MEDIA_LAZY_LOAD_PROMISE;
+  console.log("[media] lazy load requested");
+  HYBRID_MEDIA_LOADING = true;
+  HYBRID_MEDIA_LAZY_LOAD_PROMISE = Promise.allSettled([
+    loadSheetsWorkspaceDataForHybrid(["MEDIA"]),
+    isSupabaseMediaEnabled() ? loadSupabaseMediaAssets(WORKSPACE_RUNTIME_CONFIG?.active || loadWorkspaceConfig(), { silent: true }) : Promise.resolve({ assets: [], postMedia: [] })
+  ]).then(function(results) {
+    var sheetResult = results[0].status === "fulfilled" ? results[0].value : {};
+    var supabaseResult = results[1].status === "fulfilled" ? results[1].value : { assets: [], postMedia: [] };
+    var sheetMedia = Array.isArray(sheetResult.media) ? sheetResult.media.map(function(asset) { return normalizeRemoteMedia(asset); }) : [];
+    var supabaseMedia = Array.isArray(supabaseResult.assets) ? supabaseResult.assets.map(function(asset) { return normalizeRemoteMedia(asset); }) : [];
+    var mergedMedia = mergeMediaAssetsPreservingExisting(sheetMedia, supabaseMedia);
+    appState.media = mergeMediaAssetsPreservingExisting(appState.media || [], filterRenderableArtifacts(mergedMedia, "media"));
+    if (Array.isArray(supabaseResult.postMedia) && supabaseResult.postMedia.length) {
+      appState.postMedia = supabaseResult.postMedia;
+      appState.post_media = supabaseResult.postMedia;
+    }
+    HYBRID_MEDIA_LOADED = true;
+    HYBRID_MEDIA_LOADING = false;
+    HYBRID_MEDIA_LAZY_LOAD_PROMISE = null;
+    if (currentView === "media" && options.render !== false) renderMedia();
+    return { skipped: false, assets: appState.media };
+  }).catch(function(err) {
+    HYBRID_MEDIA_LOADING = false;
+    HYBRID_MEDIA_LAZY_LOAD_PROMISE = null;
+    throw err;
+  });
+  return HYBRID_MEDIA_LAZY_LOAD_PROMISE;
+}
 
 function renderMediaVaultCard(item) {
   const itemKey = getMediaItemKey(item);
@@ -19559,6 +19638,10 @@ function renderMedia() {
   console.log("[media] renderable count", items.length);
   console.log("[media] unlinked count", unlinkedCount);
   console.log("[media] missing url count", missingUrlCount);
+  if (HYBRID_MEDIA_LOADING && !items.length) {
+    grid.innerHTML = renderMediaLoadingCard("Loading media…");
+    return;
+  }
   if (!items.length) {
     grid.innerHTML = `
       <div class="col-span-full">
@@ -19585,16 +19668,19 @@ function renderMedia() {
   var firstBatch = items.slice(0, MEDIA_RENDER_BATCH_SIZE);
   var remainingBatch = items.slice(MEDIA_RENDER_BATCH_SIZE);
   console.log("[media] first batch render count", firstBatch.length);
+  console.log("[media] first media chunk rendered", firstBatch.length);
   grid.innerHTML = firstBatch.map(renderMediaVaultCard).join("") + (remainingBatch.length ? renderMediaLoadingCard() : "");
   if (remainingBatch.length) {
-    setTimeout(function() {
+    var scheduleChunk = window.requestIdleCallback ? window.requestIdleCallback : function(callback) { return setTimeout(callback, 0); };
+    scheduleChunk(function() {
       if (renderSessionId !== MEDIA_RENDER_SESSION_ID) return;
       var loadingCard = grid.querySelector("[data-media-loading-card='true']");
       if (loadingCard) loadingCard.remove();
       grid.insertAdjacentHTML("beforeend", remainingBatch.map(renderMediaVaultCard).join(""));
       console.log("[media] background media loaded count", remainingBatch.length);
+      console.log("[media] next media chunk rendered", remainingBatch.length);
       console.log("[media] association reconcile complete");
-    }, 0);
+    });
   } else {
     console.log("[media] background media loaded count", 0);
     console.log("[media] association reconcile complete");
@@ -20949,6 +21035,15 @@ function getActivePillar() {
   return active?.dataset.pillar || "";
 }
 
+function updateModalPillarMeta(pillar) {
+  const target = document.getElementById("modal-pillar-meta");
+  if (!target) return;
+  const normalized = normalizePillar(pillar || getActivePillar() || getAvailableContentPillars()[0] || "advocacy");
+  const symbol = getPillarSymbol(normalized);
+  const label = formatContentPillarLabel(normalized);
+  target.innerHTML = `<span class="inline-flex items-center gap-1.5" title="${escapeHtml(label)}">${symbol ? `<i class="${escapeHtml(symbol)}"></i>` : ""}<span>${escapeHtml(label)}</span></span>`;
+}
+
 function setPillar(pillar) {
   document.querySelectorAll("#modal-pillar-buttons .pillar-btn").forEach((btn) => {
     const isActive = btn.dataset.pillar === pillar;
@@ -20958,6 +21053,7 @@ function setPillar(pillar) {
     btn.style.color = isActive ? color : "#94a3b8";
     btn.style.background = isActive ? `${color}14` : "#181125";
   });
+  updateModalPillarMeta(pillar);
 }
 
 function positionLedgerDropdown(panel, toggle) {
@@ -22189,7 +22285,12 @@ function switchView(viewName) {
       }
 
       if (targetName === "media") {
-        safeRender(renderMedia, "switchView/media");
+        safeRender(function() {
+          renderMedia();
+          ensureLazyHybridMediaLoad().catch(function(err) {
+            console.log("[media-backend] load error", err?.message || err);
+          });
+        }, "switchView/media");
         return;
       }
 
@@ -24575,6 +24676,8 @@ async function syncRemoteIfConfigured() {
 
   // HYBRID/GPE PATH — sheet-backed first render, background mirror second
   window.__SHEET_POSTS_LOADED = false;
+  HYBRID_MEDIA_LOADING = false;
+  HYBRID_MEDIA_LAZY_LOAD_PROMISE = null;
   console.log("[boot] hybrid mode detected");
   console.log("[hybrid] source google_sheets");
 
@@ -24587,11 +24690,11 @@ async function syncRemoteIfConfigured() {
   var loadingEl = document.getElementById("boot-loading");
 
   // Phase 1: Fetch posts and campaigns from Sheets first
-  console.log("[hybrid] pull tabs start");
+  console.log("[hybrid] phase 1 start");
   let sheetHydration = null;
   let postsLoadError = null;
   try {
-    sheetHydration = await loadSheetsWorkspaceDataForHybrid();
+    sheetHydration = await loadSheetsWorkspaceDataForHybrid(["POSTS", "CAMPAIGNS"]);
   } catch (err) {
     postsLoadError = err;
     console.log("[posts] sheets load error", err && err.message ? err.message : String(err));
@@ -24603,12 +24706,8 @@ async function syncRemoteIfConfigured() {
     appState.posts = postsData.map(function(post, index) {
       return normalizeRemotePost(post, getAvailableCampaignRecords(), appState.media || [], index);
     });
-    console.log("[hybrid] tabs returned", sheetHydration?.tabsReturned || []);
-    console.log("[hybrid] posts count", appState.posts.length);
-    console.log("[hybrid] campaigns count", Array.isArray(appState.campaigns) ? appState.campaigns.length : 0);
-    console.log("[hybrid] media refs count", Array.isArray(appState.media) ? appState.media.length : 0);
-    console.log("[hybrid] notes count", Array.isArray(appState.notes) ? appState.notes.length : 0);
-    console.log("[hybrid] no seed defaults for existing workspace");
+    console.log("[hybrid] phase 1 posts count", appState.posts.length);
+    console.log("[hybrid] phase 1 campaigns count", Array.isArray(appState.campaigns) ? appState.campaigns.length : 0);
     console.log("[posts] appState.posts set count", appState.posts.length);
     console.log("[posts] render after sheets");
     window.__SHEET_POSTS_LOADED = true;
@@ -24619,7 +24718,7 @@ async function syncRemoteIfConfigured() {
     lastSyncError = "";
     persistLocalState();
     rerenderAll();
-    console.log("[hybrid] render after sheet hydration");
+    console.log("[hybrid] phase 1 render complete");
     if (loadingEl) loadingEl.classList.add("hidden");
     console.log("[boot] loading overlay hidden");
     console.log("[boot] first render complete");
@@ -24661,80 +24760,31 @@ async function syncRemoteIfConfigured() {
   }
 
   // Phase 2: Everything else in background (fire and forget, must not overwrite Sheet posts)
+  console.log("[hybrid] phase 2 background start");
   Promise.allSettled([
-    apiGetSettings(),
-    apiGetMedia(),
-    apiGetInspo(),
-    apiGetNotes(),
-    apiGetCampaigns(),
-    apiGetAIDrafts(),
-    apiGetBrandFramework(),
+    loadSheetsWorkspaceDataForHybrid(["SETTINGS", "NOTES", "INSPO", "AI_DRAFTS", "BRAND_FRAMEWORK"]),
     apiGetSocialImportCapabilities(),
     apiGetConnectedAccounts()
   ]).then(function(results) {
-    var settings = results[0].status === "fulfilled" ? results[0].value : (console.log("[workspace-settings] background load failed nonfatal"), {});
-    var media = results[1].status === "fulfilled" ? results[1].value : [];
-    var inspo = results[2].status === "fulfilled" ? results[2].value : [];
-    var notes = results[3].status === "fulfilled" ? results[3].value : [];
-    var campaigns = results[4].status === "fulfilled" ? results[4].value : [];
-    var aiDrafts = results[5].status === "fulfilled" ? results[5].value : [];
-    var brandFramework = results[6].status === "fulfilled" ? results[6].value : [];
-    if (results[7].status === "fulfilled") {
-      socialImportCapabilities = results[7].value?.capabilities || results[7].value;
+    var backgroundSheetHydration = results[0].status === "fulfilled" ? results[0].value : {};
+    var settings = backgroundSheetHydration?.settings || {};
+    var notes = backgroundSheetHydration?.notes || [];
+    var inspo = backgroundSheetHydration?.inspo || [];
+    var aiDrafts = backgroundSheetHydration?.aiDrafts || [];
+    var brandFramework = backgroundSheetHydration?.brandFramework || [];
+    if (results[1].status === "fulfilled") {
+      socialImportCapabilities = results[1].value?.capabilities || results[1].value;
     }
-    if (results[8].status === "fulfilled") {
-      connectedAccounts = results[8].value?.accounts || results[8].value || [];
+    if (results[2].status === "fulfilled") {
+      connectedAccounts = results[2].value?.accounts || results[2].value || [];
     }
 
     try { loadAIProviders().catch(function() {}); } catch (err) { /* silent */ }
 
-    if (settings && typeof settings === "object" && !Array.isArray(settings)) {
+    if (backgroundSheetHydration && typeof backgroundSheetHydration === "object") {
+      hydrateHybridSheetData(backgroundSheetHydration);
+    } else if (settings && typeof settings === "object" && !Array.isArray(settings)) {
       appState.settings = normalizeRemoteSettings(settings);
-    }
-
-    if (Array.isArray(campaigns)) {
-      var normalizedBackgroundCampaigns = campaigns.map(function(c) { return normalizeRemoteCampaign(c); });
-      if (shouldSkipEmptyOverwrite(appState.campaigns, normalizedBackgroundCampaigns)) {
-        console.log("[hybrid] background supabase skipped empty overwrite", "campaigns");
-      } else {
-        appState.campaigns = normalizedBackgroundCampaigns;
-      }
-    }
-
-    if (Array.isArray(media)) {
-      var normMedia = media.map(function(asset) { return normalizeRemoteMedia(asset); });
-      var filteredMedia = filterRenderableArtifacts(normMedia, "media");
-      if (isSupabaseMediaEnabled()) {
-        try {
-          loadSupabaseMediaAssets(activeCfg).then(function(supabaseMediaResult) {
-            console.log("[media-backend] source", supabaseMediaResult.source);
-            console.log("[media] supabase assets loaded count", Array.isArray(supabaseMediaResult.assets) ? supabaseMediaResult.assets.length : 0);
-            if (Array.isArray(supabaseMediaResult.assets) && supabaseMediaResult.assets.length > 0) {
-              filteredMedia = mergeMediaAssetsPreservingExisting(filteredMedia, supabaseMediaResult.assets);
-            }
-            if (!Array.isArray(appState.posts) || appState.posts.length === 0) {
-              console.log("[media] post associations pending posts");
-            }
-            console.log("[media] showing unlinked media count", filteredMedia.filter(function(asset) {
-              return !String(asset.linkedPostId || asset.linked_post_id || asset.postId || asset.post_id || "").trim();
-            }).length);
-            console.log("[media-backend] merged media count", filteredMedia.length);
-            appState.media = mergeMediaAssetsPreservingExisting(appState.media || [], filteredMedia);
-            console.log("[media] reconciled after posts");
-            rerenderAll();
-          }).catch(function(err) {
-            console.log("[media-backend] load error", err?.message || err);
-          });
-        } catch (err) {
-          console.log("[media-backend] load error", err?.message || err);
-        }
-      } else {
-        if (shouldSkipEmptyOverwrite(appState.media, filteredMedia)) {
-          console.log("[hybrid] background supabase skipped empty overwrite", "media");
-        } else {
-          appState.media = mergeMediaAssetsPreservingExisting(appState.media || [], filteredMedia);
-        }
-      }
     }
 
     if (Array.isArray(inspo)) {
@@ -24782,6 +24832,7 @@ async function syncRemoteIfConfigured() {
     maybeAutoPullMondayUpdatesForWorkspace().catch(function() {});
     console.log("[data]", getAppStateCounts());
     rerenderAll();
+    console.log("[hybrid] phase 2 background complete");
   }).catch(function(err) {
     console.log("[background] nonfatal error", err?.message || err);
   });
@@ -25432,9 +25483,9 @@ async function loadSheetsPostsForHybrid() {
   }
 }
 
-async function loadSheetsWorkspaceDataForHybrid() {
+async function loadSheetsWorkspaceDataForHybrid(requestedTabs) {
   var config = getSheetMirrorConfig();
-  var tabs = ["POSTS", "CAMPAIGNS", "MEDIA", "NOTES", "INSPO", "AI_DRAFTS", "SETTINGS", "BRAND_FRAMEWORK"];
+  var tabs = Array.isArray(requestedTabs) && requestedTabs.length ? requestedTabs : ["POSTS", "CAMPAIGNS", "MEDIA", "NOTES", "INSPO", "AI_DRAFTS", "SETTINGS", "BRAND_FRAMEWORK"];
   var result = null;
   if (!config.sheetId || !config.appsScriptUrl) {
     throw new Error("Google Sheets backend is not configured. Set apps_script_url in workspace settings.");
@@ -25449,21 +25500,34 @@ async function loadSheetsWorkspaceDataForHybrid() {
     var primaryPosts = filterBlankPostsForRender(extractPostsFromSheetPullResult(result));
     console.log("[posts] boot pull posts count", primaryPosts.length);
     console.log("[posts] boot pull loaded count", primaryPosts.length);
-    if (primaryPosts.length > 0) {
-      return {
-        tabsReturned: tabs.filter(function(tab) { return Object.prototype.hasOwnProperty.call(result || {}, tab); }),
-        posts: primaryPosts,
-        campaigns: extractSheetRowsFromPullResult(result, "CAMPAIGNS"),
-        media: extractSheetRowsFromPullResult(result, "MEDIA"),
-        notes: extractSheetRowsFromPullResult(result, "NOTES"),
-        inspo: extractSheetRowsFromPullResult(result, "INSPO"),
-        aiDrafts: extractSheetRowsFromPullResult(result, "AI_DRAFTS"),
-        settings: extractSheetRowsFromPullResult(result, "SETTINGS"),
-        brandFramework: extractSheetRowsFromPullResult(result, "BRAND_FRAMEWORK")
-      };
-    }
+    var payload = {
+      tabsReturned: tabs.filter(function(tab) { return Object.prototype.hasOwnProperty.call(result || {}, tab); }),
+      posts: primaryPosts,
+      campaigns: extractSheetRowsFromPullResult(result, "CAMPAIGNS"),
+      media: extractSheetRowsFromPullResult(result, "MEDIA"),
+      notes: extractSheetRowsFromPullResult(result, "NOTES"),
+      inspo: extractSheetRowsFromPullResult(result, "INSPO"),
+      aiDrafts: extractSheetRowsFromPullResult(result, "AI_DRAFTS"),
+      settings: extractSheetRowsFromPullResult(result, "SETTINGS"),
+      brandFramework: extractSheetRowsFromPullResult(result, "BRAND_FRAMEWORK")
+    };
+    if (!tabs.includes("POSTS") || primaryPosts.length > 0) return payload;
   } catch (err) {
     console.log("[posts] boot pull failed", err && err.message ? err.message : String(err));
+  }
+
+  if (!tabs.includes("POSTS")) {
+    return {
+      tabsReturned: [],
+      posts: [],
+      campaigns: [],
+      media: [],
+      notes: [],
+      inspo: [],
+      aiDrafts: [],
+      settings: {},
+      brandFramework: []
+    };
   }
 
   var fallbackPosts = await loadSheetsPostsForHybrid();
@@ -28863,7 +28927,7 @@ function normalizeRemoteSettings(settings) {
 
 function normalizeRemotePost(post, campaigns = [], mediaItems = [], index = 0) {
   const campaignId = String(pickRemoteValue(post?.campaignId, post?.campaign_id, post?.campaignID, "")).trim();
-  const incomingCampaignName = normalizeCampaignName(pickRemoteValue(post?.campaignName, post?.campaign_name, ""));
+  const incomingCampaignName = resolveCampaignName(pickRemoteValue(post?.campaignName, post?.campaign_name, ""), campaigns);
   const matchedCampaign = getCampaignById(campaignId, campaigns) || getCampaignByName(incomingCampaignName, campaigns);
   const postId = getCanonicalPostId(post);
   const frontendId = ensureFrontendPostId(post, index);
@@ -28963,7 +29027,7 @@ function normalizeRemotePost(post, campaigns = [], mediaItems = [], index = 0) {
     archivedAt: String(pickRemoteValue(post?.archivedAt, post?.archived_at, "")).trim(),
     flowState: String(pickRemoteValue(post?.flowState, post?.flow_state, post?.status, "draft")).trim(),
     campaignId: String(campaignId || matchedCampaign?.campaignId || "").trim(),
-    campaignName: normalizeCampaignName(pickRemoteValue(post?.campaignName, post?.campaign_name, matchedCampaign?.campaignName, "")),
+    campaignName: resolveCampaignName(pickRemoteValue(post?.campaignName, post?.campaign_name, matchedCampaign?.campaignName, ""), campaigns),
     impressions: normalizeMetricNumber(pickRemoteValue(post?.impressions, post?.impression_count, post?.impressionCount, post?.views, post?.view_count, post?.viewCount, post?.reach, 0)),
     impression_count: normalizeMetricNumber(pickRemoteValue(post?.impression_count, post?.impressionCount, post?.impressions, post?.views, post?.reach, 0)),
     views: normalizeMetricNumber(pickRemoteValue(post?.views, post?.view_count, post?.viewCount, post?.impressions, post?.reach, 0)),
@@ -29047,12 +29111,13 @@ function normalizeRemotePost(post, campaigns = [], mediaItems = [], index = 0) {
 
 function normalizeRemoteCampaign(campaign) {
   const pillar = getCanonicalPillarValue(pickRemoteValue(campaign?.pillar, campaign?.hubPillarLabel, campaign?.hub_pillar_label, ""), "");
+  const canonicalCampaignName = resolveCampaignName(pickRemoteValue(campaign?.campaignName, campaign?.campaign_name, campaign?.name, campaign?.title, ""), appState?.campaigns || []);
   return {
     campaignId: String(pickRemoteValue(campaign?.campaignId, campaign?.campaign_id, campaign?.campaignID, campaign?.id, "")).trim(),
     campaign_id: String(pickRemoteValue(campaign?.campaign_id, campaign?.campaignId, campaign?.campaignID, campaign?.id, "")).trim(),
-    campaignName: String(pickRemoteValue(campaign?.campaignName, campaign?.campaign_name, campaign?.name, campaign?.title, "")).trim(),
-    campaign_name: String(pickRemoteValue(campaign?.campaign_name, campaign?.campaignName, campaign?.name, campaign?.title, "")).trim(),
-    name: String(pickRemoteValue(campaign?.name, campaign?.campaignName, campaign?.campaign_name, campaign?.title, "")).trim(),
+    campaignName: String(canonicalCampaignName || pickRemoteValue(campaign?.campaignName, campaign?.campaign_name, campaign?.name, campaign?.title, "")).trim(),
+    campaign_name: String(canonicalCampaignName || pickRemoteValue(campaign?.campaign_name, campaign?.campaignName, campaign?.name, campaign?.title, "")).trim(),
+    name: String(canonicalCampaignName || pickRemoteValue(campaign?.name, campaign?.campaignName, campaign?.campaign_name, campaign?.title, "")).trim(),
     pillar,
     color: String(pickRemoteValue(campaign?.color, getCampaignColor(campaign?.campaignName || campaign?.campaign_name || "", pillar), "#6b7280")).trim() || "#6b7280",
     goal: String(pickRemoteValue(campaign?.goal, "")).trim(),
@@ -30012,7 +30077,7 @@ function renderQueue(queueItems) {
     const carouselCoverUrl = carouselCover ? getMediaPreviewUrl(carouselCover) : "";
 
     return `
-      <div class="bg-[#181125] border border-white/5 rounded-xl p-4 flex gap-4 items-center cursor-pointer hover:border-white/10 transition-colors relative"
+      <div class="bg-[#181125] border border-white/5 rounded-xl p-4 flex gap-4 items-center cursor-pointer hover:border-white/10 transition-colors"
            onclick="openModalById('${escapeHtml(postOpenId)}')"
            title="${escapeHtml(item.title || "")}">
         <div class="bg-[#120c1d] rounded-lg w-12 h-12 flex flex-col items-center justify-center shrink-0"
@@ -30030,7 +30095,6 @@ function renderQueue(queueItems) {
             <span>${escapeHtml(renderPostMediaTypeBadge(hydrated))}</span>
           </div>
         </div>
-        ${renderPillarCornerBadge(hydrated.pillar)}
       </div>
     `;
   }).join("");
@@ -30740,9 +30804,11 @@ function renderModalPillarButtons(selectedPillar = "") {
     const normalized = normalizePillar(pillar);
     const theme = getPillarTheme(normalized);
     const isActive = normalized === active;
-    return `<button type="button" class="pillar-btn ${isActive ? "active" : ""}" data-pillar="${escapeHtml(normalized)}" style="border-color:${isActive ? escapeHtml(theme.color) : "rgba(255,255,255,0.04)"};color:${isActive ? escapeHtml(theme.color) : "#94a3b8"};background:${isActive ? escapeHtml(theme.bg) : "#181125"}">${escapeHtml(formatContentPillarLabel(normalized))}</button>`;
+    const symbol = getPillarSymbol(normalized);
+    return `<button type="button" class="pillar-btn ${isActive ? "active" : ""}" data-pillar="${escapeHtml(normalized)}" style="display:flex;align-items:center;justify-content:center;gap:6px;border-color:${isActive ? escapeHtml(theme.color) : "rgba(255,255,255,0.04)"};color:${isActive ? escapeHtml(theme.color) : "#94a3b8"};background:${isActive ? escapeHtml(theme.bg) : "#181125"}">${symbol ? `<i class="${escapeHtml(symbol)}"></i>` : ""}<span>${escapeHtml(formatContentPillarLabel(normalized))}</span></button>`;
   }).join("");
   target.querySelectorAll(".pillar-btn").forEach((btn) => btn.addEventListener("click", () => setPillar(btn.dataset.pillar || "")));
+  updateModalPillarMeta(active);
 }
 
 function normalizePerformanceFilterKey(value) {

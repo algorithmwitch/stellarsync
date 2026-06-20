@@ -3559,16 +3559,49 @@ function normalizeCampaignName_(value) {
     .replace(/\s+/g, " ")
     .trim();
   if (!raw) return "";
-  var allowed = getAllowedCampaignNames_();
-  if (!allowed.length) return "";
-  var found = allowed.find(function(name) {
-    return normalizeKey_(name) === normalizeKey_(raw);
-  });
-  return found || "";
+  return resolveCampaignName_(raw, getAllowedCampaignNames_());
+}
+
+function resolveCampaignName_(rawCampaignName, campaignRecords, options) {
+  var raw = String(rawCampaignName || "")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  console.log("[campaign-parse] raw", raw);
+  if (!raw) return "";
+  var records = Array.isArray(campaignRecords) ? campaignRecords : [];
+  var names = records.map(function(campaign) {
+    return typeof campaign === "string"
+      ? String(campaign || "").trim()
+      : String(campaign && (campaign.campaignName || campaign.campaign_name || campaign.name) || "").trim();
+  }).filter(Boolean);
+  var exactMatch = names.find(function(name) { return name === raw; });
+  if (exactMatch) {
+    console.log("[campaign-parse] exact match", exactMatch);
+    return exactMatch;
+  }
+  var normalizedMatch = names.find(function(name) { return normalizeKey_(name) === normalizeKey_(raw); });
+  if (normalizedMatch) {
+    console.log("[campaign-parse] normalized match", normalizedMatch);
+    return normalizedMatch;
+  }
+  var explicitMulti = Boolean(options && options.explicitMulti) || Array.isArray(rawCampaignName) || /[|\n]/.test(String(rawCampaignName || ""));
+  if (raw.indexOf(",") !== -1 && !explicitMulti) {
+    console.log("[campaign-parse] preserved comma campaign", raw);
+    return raw;
+  }
+  if (explicitMulti) {
+    var parts = String(rawCampaignName || "").split(/[|\n]/).map(function(item) {
+      return String(item || "").trim();
+    }).filter(Boolean);
+    console.log("[campaign-parse] split multi-campaign", parts);
+    return parts[0] || raw;
+  }
+  return raw;
 }
 
 function normalizeCampaignLookup_(value) {
-  return normalizeSettingKey_(normalizeCampaignName_(value));
+  return normalizeSettingKey_(resolveCampaignName_(value, getAllowedCampaignNames_()));
 }
 
 function buildCampaignColorMap_(source) {
