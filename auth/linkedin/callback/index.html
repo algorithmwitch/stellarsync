@@ -3,30 +3,116 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Redirecting...</title>
+<title>LinkedIn Callback</title>
+<style>
+body {
+  font-family: Inter, system-ui, sans-serif;
+  background: #0f172a;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  margin: 0;
+}
+.card {
+  max-width: 700px;
+  width: 100%;
+  padding: 24px;
+  border-radius: 12px;
+  background: #111827;
+}
+pre {
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  background: #1f2937;
+  padding: 12px;
+  border-radius: 8px;
+}
+</style>
 <script>
-(function() {
-  var PROVIDER = 'linkedin';
-  var SUPABASE_URL = 'https://szdlvyzjeqkfxsoqltwg.supabase.co';
-  var params = new URLSearchParams(window.location.search);
-  var code = params.get('code');
-  var state = params.get('state');
-  var error = params.get('error');
-  var errorDescription = params.get('error_description');
-  var origin = window.location.origin;
-  function redirect(url) { window.location.replace(url); }
-  if (error) {
-    redirect(origin + '/app/?social_error=' + encodeURIComponent(errorDescription || error));
-  } else if (code && state) {
-    fetch(SUPABASE_URL + '/functions/v1/social-auth-callback?provider=' + encodeURIComponent(PROVIDER) + '&code=' + encodeURIComponent(code) + '&state=' + encodeURIComponent(state) + '&json=true')
-      .then(function(r) { return r.json(); })
-      .then(function(data) { redirect(data.redirectUrl || (origin + '/app/')); })
-      .catch(function() { redirect(origin + '/app/?social_error=callback_failed'); });
-  } else {
-    redirect(origin + '/app/');
-  }
+(function () {
+  var PROVIDER = "linkedin";
+  var SUPABASE_URL = "https://szdlvyzjeqkfxsoqltwg.supabase.co";
+
+var params = new URLSearchParams(window.location.search);
+
+var code = params.get(“code”);
+var state = params.get(“state”);
+var error = params.get(“error”);
+var errorDescription = params.get(“error_description”);
+
+function log(message) {
+console.log(”[linkedin-callback]”, message);
+
+var el = document.getElementById("status");
+if (el) {
+  el.textContent += "\n" + message;
+}
+
+}
+
+function redirect(url) {
+log(“Redirecting to: “ + url);
+window.location.replace(url);
+}
+
+window.addEventListener(“DOMContentLoaded”, function () {
+log(“Callback page loaded”);
+
+if (error) {
+  log("LinkedIn error: " + (errorDescription || error));
+  redirect(
+    window.location.origin +
+    "/app/?social_error=" +
+    encodeURIComponent(errorDescription || error)
+  );
+  return;
+}
+if (!code || !state) {
+  log("Missing code or state");
+  redirect(window.location.origin + "/app/");
+  return;
+}
+log("Received OAuth code");
+log("Calling Supabase callback");
+fetch(
+  SUPABASE_URL +
+  "/functions/v1/social-auth-callback" +
+  "?provider=" + encodeURIComponent(PROVIDER) +
+  "&code=" + encodeURIComponent(code) +
+  "&state=" + encodeURIComponent(state) +
+  "&json=true"
+)
+  .then(function (response) {
+    log("Callback status: " + response.status);
+    return response.json();
+  })
+  .then(function (data) {
+    log("Response:");
+    log(JSON.stringify(data, null, 2));
+    if (data.redirectUrl) {
+      redirect(data.redirectUrl);
+      return;
+    }
+    redirect(window.location.origin + "/app/");
+  })
+  .catch(function (err) {
+    log("Callback failed:");
+    log(err && err.message ? err.message : String(err));
+    redirect(
+      window.location.origin +
+      "/app/?social_error=callback_failed"
+    );
+  });
+
+});
 })();
-</script>
 </head>
-<body>Redirecting...</body>
+<body>
+<div class="card">
+<h2>LinkedIn Authentication</h2>
+<pre id="status">Starting callback...</pre>
+</div>
+</body>
 </html>
