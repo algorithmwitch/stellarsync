@@ -13,10 +13,9 @@ function isContentLead(role: string) {
 const VALID_ROLES = ["owner", "admin", "content_lead", "reviewer", "viewer"];
 
 const PLAN_CAPABILITIES: Record<string, Record<string, unknown>> = {
-  starter: { workspace_limit: 1, team_members: false, media_storage: "basic", csv_import_export: false, plugin: true, monday: false, google_sheets: false, drive_setup: false, advanced_integrations: false },
-  growth: { workspace_limit: 1, team_members: true, media_storage: true, csv_import_export: true, linkedin_import_tools: true, plugin_exports: true, publishing_readiness: true, advanced_reporting: true, diagnostics: true, monday: false, google_sheets: false, drive_setup: false, advanced_integrations: false },
-  agency: { workspace_limit: "multiple", team_members: true, media_storage: true, csv_import_export: true, linkedin_import_tools: true, plugin_exports: true, multiple_workspaces: true, client_management: true, templates: true, advanced_permissions: true, priority_support: true, workspace_migration_tools: true, monday: false, google_sheets: false, drive_setup: false, advanced_integrations: false },
-  managed: { workspace_limit: "multiple", managed_onboarding: true, google_sheets: true, monday: true, drive_setup: true, apps_script: true, migration_support: true, workflow_design: true, team_training: true, strategic_support: true, ongoing_admin: true, advanced_integrations: true },
+  starter: { max_workspaces: 1, workspace_limit: 1, team_members: false, media_storage: "basic", csv_import_export: false, advanced_reporting: false, diagnostics: false, personal_profile_publishing: true, byo_api_credentials: true, company_page_publishing: false, managed_api_setup: false, exports_enabled: false, export_formats: [], plugin: true, plugin_exports: false, plugin_exports_enabled: false, monday: false, google_sheets: false, drive_setup: false, advanced_integrations: false },
+  growth: { max_workspaces: 3, workspace_limit: 3, team_members: true, media_storage: true, media_library: true, csv_import_export: true, linkedin_import_tools: true, personal_profile_publishing: true, byo_api_credentials: true, company_page_publishing: false, managed_api_setup: false, exports_enabled: true, export_formats: ["csv", "xlsx"], plugin_exports: true, publishing_readiness: true, advanced_reporting: true, diagnostics: true, monday: false, google_sheets: false, drive_setup: false, advanced_integrations: false },
+  managed: { max_workspaces: "multiple/custom", workspace_limit: "multiple", team_members: true, media_storage: true, media_library: true, csv_import_export: true, linkedin_import_tools: true, personal_profile_publishing: true, byo_api_credentials: true, company_page_publishing: true, managed_api_setup: true, exports_enabled: true, export_formats: ["csv", "xlsx", "json", "backup"], plugin_exports: true, publishing_readiness: true, advanced_reporting: true, diagnostics: true, google_sheets_setup: true, monday_setup: true, drive_setup: true, implementation_support: true, managed_onboarding: true, google_sheets: true, monday: true, apps_script: true, migration_support: true, workflow_design: true, team_training: true, strategic_support: true, ongoing_admin: true, advanced_integrations: true },
   admin_master: { internal_only: true, hidden: true, all_features: true, admin_workspaces: true, advanced_integrations: true },
 };
 
@@ -24,7 +23,7 @@ function normalizePlan(plan: unknown) {
   const value = String(plan || "").trim().toLowerCase().replace(/[-\s]/g, "_");
   if (value === "free" || value === "trial" || value === "free_trial" || value === "starter") return "starter";
   if (value === "pro" || value === "growth") return "growth";
-  if (value === "agency") return "agency";
+  if (value === "agency") return "growth";
   if (value === "managed") return "managed";
   if (value === "admin_master") return "admin_master";
   return "starter";
@@ -39,8 +38,10 @@ function getDefaultFeatureFlagsForPlan(plan: string) {
     google_sheets_enabled: !!caps.google_sheets,
     monday_enabled: !!caps.monday,
     drive_setup_enabled: !!caps.drive_setup,
-    plugin_exports_enabled: true,
+    plugin_exports_enabled: caps.plugin_exports_enabled !== false,
     csv_import_export_enabled: !!caps.csv_import_export,
+    exports_enabled: !!caps.exports_enabled,
+    export_formats: Array.isArray(caps.export_formats) ? caps.export_formats : [],
   };
 }
 

@@ -3000,18 +3000,29 @@ function normalizePostType_(value) {
   return allowed[normalized] || "";
 }
 
-function normalizeCampaignName_(value) {
-  var raw = String(value || "")
-    .replace(/[_-]+/g, " ")
+function normalizeCampaignDisplayName_(value) {
+  return String(value || "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function splitExplicitCampaignValues_(value) {
+  return String(value || "")
+    .split(/[|\n]/)
+    .map(function(item) {
+      return normalizeCampaignDisplayName_(item);
+    })
+    .filter(Boolean);
+}
+
+function normalizeCampaignName_(value) {
+  var raw = normalizeCampaignDisplayName_(value);
   if (!raw) return "";
   var allowed = getAllowedCampaignNames_();
-  if (!allowed.length) return "";
   var found = allowed.find(function(name) {
     return normalizeKey_(name) === normalizeKey_(raw);
   });
-  return found || "";
+  return found || raw;
 }
 
 function normalizeCampaignLookup_(value) {
@@ -3571,8 +3582,19 @@ function getPosts() {
   const campaignMap = buildCampaignMap_();
   const campaignNameMap = buildCampaignNameMap_();
   const mediaItems = getMedia();
+  const rawRows = getPostsData_();
 
-  return getPostsData_().map(function(rawRow) {
+  console.log("[campaign-audit] raw", rawRows.slice(0, 10).map(function(rawRow) {
+    const row = normalizePostSchemaAliases_(rawRow);
+    return {
+      sourceRowId: String(row.row_number || "").trim(),
+      sourcePostId: String(pickFirstDefined_(row.post_id, row.postId, row.id, "")).trim(),
+      rawCampaignValue: normalizeCampaignDisplayName_(pickFirstDefined_(row.campaign_name, row.campaignName, row.campaign, "")),
+      sourceCampaignId: String(pickFirstDefined_(row.campaign_id, row.campaignID, "")).trim()
+    };
+  }));
+
+  const normalizedPosts = rawRows.map(function(rawRow) {
     const row = normalizePostSchemaAliases_(rawRow);
     const title = derivePostTitle_(row);
     const rawCampaignId = normalizeScalar_(pickFirstDefined_(row.campaign_id, row.campaignID));
@@ -3699,6 +3721,27 @@ function getPosts() {
   }).sort(function(a, b) {
     return parseSheetDate_(b.scheduledAt) - parseSheetDate_(a.scheduledAt);
   });
+
+  console.log("[campaign-audit] normalized", normalizedPosts.slice(0, 10).map(function(post) {
+    return {
+      sourceRowId: String(post.row_number || "").trim(),
+      sourcePostId: String(post.postId || "").trim(),
+      rawCampaignValue: normalizeCampaignDisplayName_(post.campaign_name || post.campaignName || ""),
+      normalizedCampaignValue: normalizeCampaignDisplayName_(post.campaignName || ""),
+      campaignValuesAfterParsing: splitExplicitCampaignValues_(post.campaignName || post.campaign_name || "")
+    };
+  }));
+  console.log("[campaign-audit] fragments", normalizedPosts.filter(function(post) {
+    return splitExplicitCampaignValues_(post.campaignName || post.campaign_name || "").length > 1;
+  }).map(function(post) {
+    return {
+      sourceRowId: String(post.row_number || "").trim(),
+      sourcePostId: String(post.postId || "").trim(),
+      campaignValuesAfterParsing: splitExplicitCampaignValues_(post.campaignName || post.campaign_name || "")
+    };
+  }));
+
+  return normalizedPosts;
 }
 
 function getMedia() {
@@ -3886,6 +3929,14 @@ function getCampaigns() {
     return !campaign.isArchived && (campaign.campaignId || campaign.campaignName);
   });
 
+  console.log("[campaign-audit] constellation campaigns", rows.map(function(campaign) {
+    return {
+      campaignId: String(campaign.campaignId || "").trim(),
+      campaignName: normalizeCampaignDisplayName_(campaign.campaignName || ""),
+      sourceRowId: String(campaign.row_number || "").trim()
+    };
+  }));
+
   const byName = {};
   rows.forEach(function(campaign) {
     byName[normalizeCampaignLookup_(campaign.campaignName)] = campaign;
@@ -3896,7 +3947,7 @@ function getCampaigns() {
     const matched = byName[normalizeCampaignLookup_(campaignName)];
     return matched || {
       campaignId: createDeterministicCampaignId_(campaignName),
-      campaignName: normalizeCampaignName_(campaignName),
+      campaignName: normalizeCampaignDisplayName_(campaignName),
       pillar: "",
       color: getCampaignColorFromSettings_(campaignName, settings),
       x: 0,
@@ -4159,11 +4210,9 @@ function getCampaignCleanupDiagnostics_(posts, campaigns) {
   });
   var invalidComboCampaigns = [];
   posts.forEach(function(post) {
-    var name = String(post.campaignName || "").trim();
-    if (!name || name.indexOf(",") === -1) return;
-    var labels = name.split(",").map(function(label) {
-      return normalizeCampaignName_(label);
-    }).filter(Boolean);
+    var name = normalizeCampaignDisplayName_(post.campaignName || "");
+    if (!name || !/[|\n]/.test(name)) return;
+    var labels = splitExplicitCampaignValues_(name);
     if (!labels.length) return;
     var normalizedLabels = labels.map(function(label) { return normalizeCampaignLookup_(label); });
     var hasMessaging = normalizedLabels.indexOf("messaging") !== -1;
@@ -4183,6 +4232,7 @@ function getCampaignCleanupDiagnostics_(posts, campaigns) {
         : "Review affected posts and reassign to one clean campaign label."
     });
   });
+  console.log("[campaign-audit] duplicate candidates", sameNormalizedNameDifferentIds);
   return {
     nearDuplicateCampaigns: nearDuplicateCampaigns,
     invalidComboCampaigns: invalidComboCampaigns,
@@ -12668,10 +12718,10 @@ function buildFlowIntegrityDiagnostics_(posts, notes, inspo, campaigns, importJo
   var normalizedKeyMap = {};
   campaigns.forEach(function(campaign) {
     var cid = String(campaign.campaignId || "").trim();
-    var cname = String(campaign.campaignName || "").trim();
+    var cname = normalizeCampaignDisplayName_(campaign.campaignName || "");
     var nkey = normalizeCampaignLookup_(cname);
-    if (cname.indexOf(",") !== -1) {
-      campaignKeyIssues.push({ campaignId: cid, campaignName: cname, issue: "comma-separated campaign name", normalizedKey: nkey });
+    if (/[|\n]/.test(cname)) {
+      campaignKeyIssues.push({ campaignId: cid, campaignName: cname, issue: "explicit multi-value campaign name", normalizedKey: nkey });
     }
     if (!cid) {
       campaignKeyIssues.push({ campaignId: cid, campaignName: cname, issue: "empty campaign id", normalizedKey: nkey });

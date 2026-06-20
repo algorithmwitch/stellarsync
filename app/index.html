@@ -100,6 +100,7 @@
   }
 
   .ledger-menu-item:hover > .ledger-submenu,
+  .ledger-dropdown-shell:hover > .export-dropdown-panel,
   .ledger-submenu-item:hover > .ledger-subsubmenu {
     display: block;
   }
@@ -2510,6 +2511,7 @@
             </div>
         
             <div id="calendar-header-controls" class="flex items-center gap-4">
+              <div id="calendar-export-actions"></div>
               <div id="calendar-mode-controls" class="flex bg-[#1a1128] rounded-xl border border-white/5 p-1.5 gap-1">
                 <button id="calendar-mode-month" class="calendar-mode-btn active">Month</button>
                 <button id="calendar-mode-week" class="calendar-mode-btn">Week</button>
@@ -2615,8 +2617,9 @@
       </div>
     </div>
 
-    <div class="flex gap-2 items-center overflow-visible">
-      <div class="ledger-dropdown-shell">
+	    <div class="flex gap-2 items-center overflow-visible">
+	      <div id="ledger-export-actions"></div>
+	      <div class="ledger-dropdown-shell">
         <button
           id="ledger-filter-toggle"
           type="button"
@@ -3126,8 +3129,9 @@
       <p class="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mt-2">Image &amp; Video Assets</p>
     </div>
 
-    <div class="flex gap-3 items-center">
-      <div class="relative">
+	    <div class="flex gap-3 items-center">
+	      <div id="media-export-actions"></div>
+	      <div class="relative">
         <button
           id="media-filter-toggle"
           type="button"
@@ -8933,65 +8937,71 @@ let activeConnectionSetupPlatform = "";
 const SUPPORTED_POST_PLATFORMS = ["linkedin", "facebook", "instagram", "threads", "bluesky", "tiktok"];
 const CONNECTED_ACCOUNT_PLATFORMS = ["linkedin", "facebook", "instagram", "threads", "bluesky", "tiktok"];
 const WORKSPACE_CONNECTION_PROVIDERS = ["google_sheets", "google_drive", "monday"]; // stripe removed — belongs in Billing tab, not Connections
-const PLAN_CAPABILITIES = {
-  starter: {
-    workspace_limit: 1,
-    team_members: false,
-    media_storage: "basic",
-    csv_import_export: false,
-    plugin: true,
-    plugin_exports_enabled: true,
-    monday: false,
-    google_sheets: false,
-    drive_setup: false,
-    advanced_integrations: false
-  },
-  growth: {
-    workspace_limit: 1,
-    team_members: true,
-    media_storage: true,
-    csv_import_export: true,
-    linkedin_import_tools: true,
-    plugin: true,
-    plugin_exports: true,
-    plugin_exports_enabled: true,
+  const PLAN_CAPABILITIES = {
+    starter: {
+    max_workspaces: 1,
+      workspace_limit: 1,
+      team_members: false,
+      media_storage: "basic",
+      csv_import_export: false,
+    advanced_reporting: false,
+    diagnostics: false,
+    personal_profile_publishing: true,
+    byo_api_credentials: true,
+    company_page_publishing: false,
+    managed_api_setup: false,
+    exports_enabled: false,
+    export_formats: [],
+      plugin: true,
+    plugin_exports: false,
+    plugin_exports_enabled: false,
+      monday: false,
+      google_sheets: false,
+      drive_setup: false,
+      advanced_integrations: false
+    },
+    growth: {
+    max_workspaces: 3,
+    workspace_limit: 3,
+      team_members: true,
+      media_storage: true,
+      csv_import_export: true,
+      linkedin_import_tools: true,
+    media_library: true,
+    personal_profile_publishing: true,
+    byo_api_credentials: true,
+    company_page_publishing: false,
+    managed_api_setup: false,
+    exports_enabled: true,
+    export_formats: ["csv", "xlsx"],
+      plugin: true,
+      plugin_exports: true,
+      plugin_exports_enabled: true,
     publishing_readiness: true,
     advanced_reporting: true,
     diagnostics: true,
     monday: false,
-    google_sheets: false,
-    drive_setup: false,
-    advanced_integrations: false
-  },
-  agency: {
-    workspace_limit: "multiple",
-    team_members: true,
-    media_storage: true,
-    csv_import_export: true,
-    linkedin_import_tools: true,
-    plugin: true,
-    plugin_exports: true,
-    plugin_exports_enabled: true,
-    multiple_workspaces: true,
-    client_management: true,
-    templates: true,
-    advanced_permissions: true,
-    priority_support: true,
-    workspace_migration_tools: true,
-    monday: false,
-    google_sheets: false,
-    drive_setup: false,
-    advanced_integrations: false
-  },
-  managed: {
-    workspace_limit: "multiple",
-    team_members: true,
-    media_storage: true,
-    csv_import_export: true,
-    linkedin_import_tools: true,
-    plugin: true,
-    plugin_exports: true,
-    plugin_exports_enabled: true,
+      google_sheets: false,
+      drive_setup: false,
+      advanced_integrations: false
+    },
+    managed: {
+    max_workspaces: "multiple/custom",
+      workspace_limit: "multiple",
+      team_members: true,
+      media_storage: true,
+      csv_import_export: true,
+      linkedin_import_tools: true,
+    media_library: true,
+    personal_profile_publishing: true,
+    byo_api_credentials: true,
+    company_page_publishing: true,
+    managed_api_setup: true,
+    exports_enabled: true,
+    export_formats: ["csv", "xlsx", "json", "backup"],
+      plugin: true,
+      plugin_exports: true,
+      plugin_exports_enabled: true,
     multiple_workspaces: true,
     client_management: true,
     templates: true,
@@ -9003,10 +9013,11 @@ const PLAN_CAPABILITIES = {
     monday: true,
     drive_setup: true,
     apps_script: true,
-    migration_support: true,
-    workflow_design: true,
-    team_training: true,
-    strategic_support: true,
+      migration_support: true,
+    implementation_support: true,
+      workflow_design: true,
+      team_training: true,
+      strategic_support: true,
     ongoing_admin: true,
     advanced_integrations: true
   },
@@ -9038,13 +9049,16 @@ function getDefaultFeatureFlagsForPlan(plan) {
     monday_enabled: !!caps.monday,
     drive_setup_enabled: !!caps.drive_setup,
     plugin_exports_enabled: caps.plugin_exports_enabled !== false,
-    csv_import_export_enabled: !!caps.csv_import_export
+    csv_import_export_enabled: !!caps.csv_import_export,
+    exports_enabled: !!caps.exports_enabled,
+    export_formats: Array.isArray(caps.export_formats) ? caps.export_formats : []
   };
 }
 
 function normalizeWorkspacePlan(value) {
   const normalized = String(value || "").trim().toLowerCase();
-  if (["starter", "growth", "agency", "managed", "admin_master", "custom"].includes(normalized)) return normalized;
+  if (normalized === "agency") return "growth";
+  if (["starter", "growth", "managed", "admin_master", "custom"].includes(normalized)) return normalized;
   if (normalized === "free") return "starter";
   if (normalized === "pro") return "growth";
   if (normalized === "enterprise") return "managed";
@@ -9063,8 +9077,7 @@ function getWorkspacePlanFeatures(workspace = {}) {
   const hybridEnabled = managedHybrid || explicitHybrid || (!!String(workspace.apps_script_url || "").trim() && !!gsConn && isWorkspaceConnectionEnabled(gsConn));
   const customActive = plan === "custom" && subscriptionStatus === "active";
   const managedAccess = plan === "managed" || plan === "custom" || customActive || managedHybrid;
-  const agencyAccess = managedAccess || plan === "agency";
-  const growthAccess = agencyAccess || plan === "growth";
+  const growthAccess = managedAccess || plan === "growth";
   const base = {
     plan: plan || "starter",
     capabilities: planCaps,
@@ -9078,6 +9091,12 @@ function getWorkspacePlanFeatures(workspace = {}) {
     publishingReadiness: !!planCaps.publishing_readiness,
     basicIntegrations: !!planCaps.plugin,
     csvImportExport: !!planCaps.csv_import_export,
+    exportsEnabled: !!planCaps.exports_enabled,
+    exportFormats: Array.isArray(planCaps.export_formats) ? planCaps.export_formats : [],
+    personalProfilePublishing: !!planCaps.personal_profile_publishing,
+    byoApiCredentials: !!planCaps.byo_api_credentials,
+    companyPagePublishing: !!planCaps.company_page_publishing,
+    managedApiSetup: !!planCaps.managed_api_setup,
     pluginExports: !!planCaps.plugin_exports,
     agencyTools: !!planCaps.client_management,
     templates: !!planCaps.templates,
@@ -9104,16 +9123,12 @@ function getWorkspacePlanFeatures(workspace = {}) {
       basicIntegrations: true
     });
   }
-  if (agencyAccess) {
+  if (managedAccess) {
     Object.assign(base, {
       agencyTools: true,
       templates: true,
       advancedPermissions: true,
-      prioritySupport: true
-    });
-  }
-  if (managedAccess) {
-    Object.assign(base, {
+      prioritySupport: true,
       googleSheetsHybrid: true,
       googleDriveSetup: true,
       mondaySetup: true,
@@ -9133,6 +9148,266 @@ function getWorkspacePlanFeatures(workspace = {}) {
   }
   console.log("[tier] enabled features", base);
   return base;
+}
+
+function getActiveExportCapabilities() {
+  const features = ACTIVE_PLAN_FEATURES || getWorkspacePlanFeatures(WORKSPACE_RUNTIME_CONFIG?.active || {});
+  const caps = features.capabilities || {};
+  const formats = Array.isArray(features.exportFormats) && features.exportFormats.length
+    ? features.exportFormats
+    : Array.isArray(caps.export_formats)
+    ? caps.export_formats
+    : [];
+  return {
+    enabled: !!(features.exportsEnabled || caps.exports_enabled),
+    formats
+  };
+}
+
+function renderExportMenu(context, items = []) {
+  const exportCaps = getActiveExportCapabilities();
+  if (!exportCaps.enabled) return "";
+  const formats = exportCaps.formats.length ? exportCaps.formats : ["csv"];
+  const buttons = items.map((item) => {
+    const formatButtons = formats.map((format) => `
+      <button type="button" class="w-full px-3 py-2 rounded-lg hover:bg-[#181125] text-left text-xs text-gray-300 hover:text-white transition-all flex items-center gap-2" onclick="runWorkspaceExport('${escapeHtml(context)}', '${escapeHtml(item.type)}', '${escapeHtml(format)}')">
+        <i class="ph-bold ${format === "backup" ? "ph-archive" : format === "json" ? "ph-brackets-curly" : "ph-file-arrow-down"} text-[#c77dff]"></i>
+        ${escapeHtml(item.label)} ${escapeHtml(format.toUpperCase())}
+      </button>
+    `).join("");
+    return `<div class="py-1">${formatButtons}</div>`;
+  }).join("");
+  return `
+    <div class="ledger-dropdown-shell">
+      <button type="button" class="w-10 h-10 rounded-xl bg-[#1a1128] text-gray-400 hover:text-white border border-white/5 transition-colors flex items-center justify-center" title="Export">
+        <i class="ph-bold ph-download-simple text-lg"></i>
+      </button>
+      <div class="export-dropdown-panel hidden absolute top-full right-0 mt-2 w-64 bg-[#120c1d] border border-white/10 rounded-xl shadow-2xl z-[120]">
+        <div class="p-3 border-b border-white/5 bg-gradient-to-r from-[#1a1128] to-[#120c1d]">
+          <p class="text-[10px] uppercase font-bold text-gray-400 tracking-widest">Export</p>
+        </div>
+        <div class="p-2">${buttons}</div>
+      </div>
+    </div>
+  `;
+}
+
+function getCurrentLedgerExportPosts() {
+  let posts = Array.isArray(appState.posts) ? appState.posts.slice() : [];
+  if (ledgerFilters.pillar !== "all") posts = posts.filter(post => normalizePillarToken(getDisplayPostContentPillar(post)) === normalizePillarToken(ledgerFilters.pillar));
+  if (ledgerFilters.campaign !== "all") {
+    posts = posts.filter(post => {
+      if (String(post.campaignId || "") === ledgerFilters.campaign) return true;
+      const selectedCampaign = getAvailableCampaignRecords().find((campaign) => String(campaign.campaignId || "") === String(ledgerFilters.campaign || ""));
+      return normalizeCampaignName(post.campaignName || post.campaign || "") === normalizeCampaignName(selectedCampaign?.campaignName || "");
+    });
+  }
+  if (ledgerFilters.type !== "all") posts = posts.filter(post => derivePostFormatFromMedia(post).post_type === ledgerFilters.type);
+  if (ledgerFilters.status !== "all") posts = posts.filter(post => String(post.status || "") === ledgerFilters.status);
+  if (ledgerFilters.platform !== "all") posts = posts.filter(post => getPostTargetPlatforms(post).includes(String(ledgerFilters.platform || "").toLowerCase()));
+  return posts;
+}
+
+function rowsForPostsExport(posts = []) {
+  return posts.map((post) => ({
+    id: post.id || "",
+    title: getPostDisplayTitle(post),
+    caption: post.caption || post.description || post.text || "",
+    campaign: getCampaignName(post, ""),
+    pillar: getDisplayPostContentPillar(post),
+    status: post.status || "",
+    platforms: getPostTargetPlatforms(post).join("; "),
+    scheduled_at: post.scheduledAt || post.scheduled_at || post.publishDate || post.publish_date || "",
+    format: derivePostFormatFromMedia(post).post_type || "",
+    source_url: post.sourceUrl || post.source_url || post.url || ""
+  }));
+}
+
+function rowsForCampaignsExport(campaigns = getAvailableCampaignRecords()) {
+  return campaigns.map((campaign) => ({
+    campaign_id: campaign.campaignId || campaign.id || "",
+    campaign_name: campaign.campaignName || campaign.name || "",
+    status: campaign.status || "",
+    pillar: campaign.pillar || "",
+    goal: campaign.goal || "",
+    post_count: (appState.posts || []).filter((post) => normalizeCampaignName(getCampaignName(post, "")) === normalizeCampaignName(campaign.campaignName || campaign.name || "")).length
+  }));
+}
+
+function rowsForMediaExport(media = appState.media || appState.mediaAssets || []) {
+  return (Array.isArray(media) ? media : []).map((item) => ({
+    id: item.id || item.media_asset_id || "",
+    title: item.title || item.filename || item.name || "",
+    type: item.media_type || item.mediaType || item.type || "",
+    mime_type: item.mime_type || item.mimeType || "",
+    url: item.media_url || item.mediaUrl || item.url || "",
+    campaign: item.campaignName || item.campaign || "",
+    created_at: item.created_at || item.createdAt || ""
+  }));
+}
+
+function getWorkspaceExportRows(context, type) {
+  if (context === "calendar") {
+    const visible = getPostsForCurrentCalendarView();
+    if (type === "visible_month" || type === "filtered_posts") return rowsForPostsExport(visible);
+    if (type === "selected_campaign") return rowsForPostsExport(visible.filter((post) => getCampaignName(post, "")));
+  }
+  if (context === "ledger") {
+    const rows = getCurrentLedgerExportPosts();
+    if (type === "campaign") return rowsForPostsExport(rows.filter((post) => getCampaignName(post, "")));
+    if (type === "platform") return rowsForPostsExport(rows.filter((post) => getPostTargetPlatforms(post).length));
+    if (type === "status") return rowsForPostsExport(rows.filter((post) => post.status));
+    return rowsForPostsExport(rows);
+  }
+  if (context === "campaigns") return rowsForCampaignsExport();
+  if (context === "media") return rowsForMediaExport();
+  if (context === "newsletter") return rowsForPostsExport((appState.posts || []).filter((post) => /newsletter/i.test(String(post.type || post.post_type || post.generationMode || ""))));
+  return [];
+}
+
+function getPostsForCurrentCalendarView() {
+  const posts = Array.isArray(appState.posts) ? appState.posts.slice() : [];
+  const cursor = calendarCursor || new Date();
+  if (calendarMode === "day") {
+    const key = selectedCalendarDateKey || toDateKey(cursor);
+    return posts.filter((post) => getPlanningDateKeyFromValue(post.scheduledAt || post.scheduled_at || post.date || post.publishDate || post.publish_date) === key);
+  }
+  if (calendarMode === "week") {
+    const start = startOfWeek(cursor);
+    const keys = new Set(Array.from({ length: 7 }, (_, index) => toDateKey(addDays(start, index))));
+    return posts.filter((post) => keys.has(getPlanningDateKeyFromValue(post.scheduledAt || post.scheduled_at || post.date || post.publishDate || post.publish_date)));
+  }
+  const month = cursor.getMonth();
+  const year = cursor.getFullYear();
+  return posts.filter((post) => {
+    const key = getPlanningDateKeyFromValue(post.scheduledAt || post.scheduled_at || post.date || post.publishDate || post.publish_date);
+    if (!key) return false;
+    const date = new Date(key + "T00:00:00");
+    return date.getMonth() === month && date.getFullYear() === year;
+  });
+}
+
+function downloadWorkspaceExport(rows, filename, format) {
+  const normalizedFormat = String(format || "csv").toLowerCase();
+  if (!rows.length) {
+    showToast("Nothing to export", "No records match this export.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  if (normalizedFormat === "backup") {
+    const payload = {
+      exported_at: new Date().toISOString(),
+      workspace: WORKSPACE_RUNTIME_CONFIG?.active || {},
+      posts: appState.posts || [],
+      campaigns: appState.campaigns || [],
+      media: appState.media || appState.mediaAssets || [],
+      notes: appState.notes || [],
+      inspo: appState.inspo || [],
+      ai_drafts: appState.aiDrafts || []
+    };
+    downloadBlob(JSON.stringify(payload, null, 2), `${filename}.json`, "application/json");
+    return;
+  }
+  if (normalizedFormat === "json") {
+    downloadBlob(JSON.stringify(rows, null, 2), `${filename}.json`, "application/json");
+    return;
+  }
+  const headers = Array.from(rows.reduce((set, row) => {
+    Object.keys(row || {}).forEach((key) => set.add(key));
+    return set;
+  }, new Set()));
+  const csv = [headers.join(",")].concat(rows.map((row) => headers.map((header) => csvEscape(row[header])).join(","))).join("\n");
+  if (normalizedFormat === "xlsx") {
+    const tableRows = rows.map((row) => `<tr>${headers.map((header) => `<td>${escapeHtml(row[header] == null ? "" : String(row[header]))}</td>`).join("")}</tr>`).join("");
+    const table = `<table><thead><tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")}</tr></thead><tbody>${tableRows}</tbody></table>`;
+    downloadBlob(table, `${filename}.xlsx`, "application/vnd.ms-excel");
+    return;
+  }
+  downloadBlob(csv, `${filename}.csv`, "text/csv;charset=utf-8");
+}
+
+function csvEscape(value) {
+  const text = value == null ? "" : String(value);
+  return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function downloadBlob(content, filename, type) {
+  const blob = new Blob([content], { type });
+  const downloadUrl = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = downloadUrl;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  setTimeout(() => URL.revokeObjectURL(downloadUrl), 1500);
+}
+
+function runWorkspaceExport(context, type, format) {
+  const exportCaps = getActiveExportCapabilities();
+  if (!exportCaps.enabled) {
+    showToast("Exports locked", "Exports are available on Growth and Managed plans.", "ph-lock-key", "text-yellow-400");
+    return;
+  }
+  if (exportCaps.formats.length && !exportCaps.formats.includes(format)) {
+    showToast("Format unavailable", `${String(format).toUpperCase()} export is not included in this plan.`, "ph-lock-key", "text-yellow-400");
+    return;
+  }
+  const rows = getWorkspaceExportRows(context, type);
+  const filename = `stellarsync-${context}-${type}-${new Date().toISOString().replace(/[:.]/g, "-")}`;
+  downloadWorkspaceExport(rows, filename, format);
+  showToast("Export ready", `${rows.length} record${rows.length === 1 ? "" : "s"} exported.`, "ph-download-simple", "text-[#00ffaa]");
+}
+
+function renderWorkspaceExportActions() {
+  const calendarTarget = document.getElementById("calendar-export-actions");
+  if (calendarTarget) {
+    calendarTarget.innerHTML = renderExportMenu("calendar", [
+      { type: "filtered_posts", label: "Filtered posts" },
+      { type: "visible_month", label: "Visible month" },
+      { type: "selected_campaign", label: "Selected campaign" }
+    ]);
+  }
+  const ledgerTarget = document.getElementById("ledger-export-actions");
+  if (ledgerTarget) {
+    ledgerTarget.innerHTML = renderExportMenu("ledger", [
+      { type: "all_posts", label: "All posts" },
+      { type: "filtered_view", label: "Filtered view" },
+      { type: "campaign", label: "By campaign" },
+      { type: "platform", label: "By platform" },
+      { type: "status", label: "By status" }
+    ]);
+  }
+  const mediaTarget = document.getElementById("media-export-actions");
+  if (mediaTarget) {
+    mediaTarget.innerHTML = renderExportMenu("media", [
+      { type: "metadata", label: "Media metadata" },
+      { type: "inventory", label: "Media inventory" }
+    ]);
+  }
+}
+
+function handleSocialAuthReturn() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const successProvider = params.get("social_success") || params.get("connected") || "";
+    const socialError = params.get("social_error") || "";
+    if (socialError) {
+      showToast("Connection failed", socialError, "ph-warning", "text-yellow-400");
+      return;
+    }
+    if (!successProvider) return;
+    showToast("Account connected", `${toTitleCase(successProvider)} status is refreshing.`, "ph-plugs-connected", "text-[#00ffaa]");
+    refreshSocialImportContext().catch(function(err) {
+      console.warn("[social] refresh after callback failed", err);
+    });
+    params.delete("social_success");
+    params.delete("connected");
+    params.delete("social_error");
+    const clean = window.location.pathname + (params.toString() ? "?" + params.toString() : "") + window.location.hash;
+    if (window.history && window.history.replaceState) window.history.replaceState({}, document.title, clean);
+  } catch (err) {
+    console.warn("[social] callback return handling failed", err);
+  }
 }
 
 function getFeatureGateForView(viewName) {
@@ -10058,6 +10333,7 @@ function rerenderAll() {
   safeRender(renderPerformanceView, "renderPerformanceView");
   safeRender(renderAuditView, "renderAuditView");
   safeRender(renderAISemanticMemoryCards, "renderAISemanticMemoryCards");
+  safeRender(renderWorkspaceExportActions, "renderWorkspaceExportActions");
   safeRender(() => {
     if (!workspaceHubModal?.classList.contains("opacity-0")) renderWorkspaceHub();
   }, "renderWorkspaceHub");
@@ -12177,6 +12453,7 @@ function renderCalendar() {
     data: getAppStateCounts()
   });
   try {
+    safeRender(renderWorkspaceExportActions, "renderCalendar/exportActions");
     var monthNameEl = document.getElementById("calendar-month-name");
     var yearNameEl = document.getElementById("calendar-year-name");
     var grid = document.getElementById("calendar-grid");
@@ -14876,8 +15153,15 @@ function normalizeSocialConnectedAccount(account, platformHint = "") {
     appReviewNotes: sanitizedNotes,
     lastError: String(sanitizedAccount.lastError || sanitizedAccount.last_error || "").trim(),
     requiredScopes: Array.isArray(sanitizedAccount.requiredScopes) ? sanitizedAccount.requiredScopes.slice() : [],
-    scopesGranted: Array.isArray(sanitizedAccount.scopesGranted) ? sanitizedAccount.scopesGranted.slice() : [],
-    connectionStatusLabel: String(sanitizedAccount.connectionStatusLabel || "").trim() || (connected ? "Connected" : missingSetupKeys.length ? "Setup Required" : "Not connected"),
+	    scopesGranted: Array.isArray(sanitizedAccount.scopesGranted) ? sanitizedAccount.scopesGranted.slice() : [],
+    accountType: String(sanitizedAccount.accountType || sanitizedAccount.account_type || "member").trim(),
+    memberUrn: String(sanitizedAccount.memberUrn || sanitizedAccount.member_urn || "").trim(),
+    organizationUrn: String(sanitizedAccount.organizationUrn || sanitizedAccount.organization_urn || "").trim(),
+    organizationName: String(sanitizedAccount.organizationName || sanitizedAccount.organization_name || "").trim(),
+    companyPublishingStatus: String(sanitizedAccount.companyPublishingStatus || sanitizedAccount.linkedinCompanyPublishingStatus || "").trim(),
+    companyConnectionStatusLabel: String(sanitizedAccount.companyConnectionStatusLabel || "").trim(),
+    appSource: String(sanitizedAccount.appSource || sanitizedAccount.app_source || "").trim(),
+	    connectionStatusLabel: String(sanitizedAccount.connectionStatusLabel || "").trim() || (connected ? "Connected" : missingSetupKeys.length ? "Setup Required" : "Not connected"),
     hasClientId: !!sanitizedAccount.hasClientId,
     hasClientSecret: !!sanitizedAccount.hasClientSecret,
     hasRedirectUri: !!sanitizedAccount.hasRedirectUri,
@@ -15031,17 +15315,15 @@ function getMondayBoardId(workspace = WORKSPACE_RUNTIME_CONFIG?.active, connecti
 function isManagedHybridWorkspace(workspace = {}, connections = []) {
   const activeWorkspace = workspace || {};
   const list = Array.isArray(connections) ? connections : [];
-  const slug = String(activeWorkspace.slug || activeWorkspace.workspace_slug || "").trim().toLowerCase();
-  const plan = normalizeWorkspacePlan(activeWorkspace.plan_slug || activeWorkspace.plan || activeWorkspace.workspace_plan || activeWorkspace.settings_plan || activeWorkspace.subscription_tier || "");
+	  const plan = normalizeWorkspacePlan(activeWorkspace.plan_slug || activeWorkspace.plan || activeWorkspace.workspace_plan || activeWorkspace.settings_plan || activeWorkspace.subscription_tier || "");
   const backendType = String(activeWorkspace.backend_type || "").trim().toLowerCase();
   const workspaceUrl = String(activeWorkspace.apps_script_url || "").trim();
   const featureFlags = activeWorkspace.feature_flags && typeof activeWorkspace.feature_flags === "object" ? activeWorkspace.feature_flags : {};
   const gsConn = list.find((item) => item && item.provider === "google_sheets") || null;
   const connUrl = String(gsConn?.config?.apps_script_url || "").trim();
-  const connStatus = String(gsConn?.status || "").trim().toLowerCase();
-  return !!(
-    slug === "gpe" ||
-    plan === "managed" ||
+	  const connStatus = String(gsConn?.status || "").trim().toLowerCase();
+	  return !!(
+	    plan === "managed" ||
     plan === "admin_master" ||
     plan === "custom" ||
     activeWorkspace.managed_account === true ||
@@ -16061,13 +16343,32 @@ function closeConnectionSetupModal() {
 }
 
 function renderSocialConnectionCard(platform, account, planFeatures) {
+  const caps = planFeatures.capabilities || {};
+  const isLinkedIn = platform === "linkedin";
+  const canCompanyPublish = !!(planFeatures.companyPagePublishing || caps.company_page_publishing);
   const missingKeys = filterLegacyRedirectKeys(Array.isArray(account.missingSetupKeys) ? account.missingSetupKeys : []);
   const setupBlocked = missingKeys.length > 0;
-  const statusLabel = setupBlocked ? "Setup Required" : account.connected ? "Connected" : "Not Connected";
+  const statusLabel = setupBlocked ? "Setup Required" : account.connected ? (isLinkedIn ? "Connected as member" : "Connected") : "Not Connected";
   const accountLabel = account.accountLabel || account.displayName || account.username || "No account connected";
+  const defaultPublishSupport = isLinkedIn
+    ? account.connected
+      ? "Personal profile publishing where supported."
+      : "Connect LinkedIn for personal/member publishing."
+    : "Publishing preparation available";
   const publishSupport = setupBlocked
     ? "Publishing for this platform is not enabled yet. Request setup from StellarSync."
-    : account.publishSupportLabel || (account.publishSupported ? "Publishing enabled" : "Publishing preparation available");
+    : account.publishSupportLabel || (account.publishSupported ? defaultPublishSupport : defaultPublishSupport);
+  const linkedinNotice = isLinkedIn && account.connected && !canCompanyPublish
+    ? "LinkedIn connected for personal/member publishing. Company Page publishing requires Managed setup and LinkedIn Community Management approval."
+    : "";
+  const companyStatus = account.companyConnectionStatusLabel ||
+    (account.organizationName
+      ? `Connected to Page: ${account.organizationName}`
+      : account.companyPublishingStatus === "pending_approval"
+      ? "Company Page publishing pending platform approval"
+      : canCompanyPublish
+      ? "Company Page not selected"
+      : "Locked - Managed only");
   const canUseCsv = !!(planFeatures.csvImportExport || planFeatures.capabilities?.csv_import_export);
   const canUseLinkedInTools = platform === "linkedin" && !!(planFeatures.capabilities?.linkedin_import_tools || planFeatures.csvImportExport);
   const connectLoading = isConnectedAccountActionLoading(platform, "connect");
@@ -16090,11 +16391,17 @@ function renderSocialConnectionCard(platform, account, planFeatures) {
         </div>
         <span class="diagnostic-chip">${escapeHtml(account.connected ? "Connected" : setupBlocked ? "Setup Required" : "Ready")}</span>
       </div>
-      <div class="platform-meta-grid">
-        <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Account</div><div class="text-sm text-white wrap-safe">${escapeHtml(accountLabel)}</div></div>
-        <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Publish Support</div><div class="text-sm text-white wrap-safe">${escapeHtml(publishSupport)}</div></div>
-      </div>
-      ${setupBlocked ? `<div class="mt-4 rounded-xl border border-yellow-400/20 bg-yellow-900/20 p-3 text-xs text-yellow-200 wrap-safe">Publishing for this platform is not enabled yet. Request setup from StellarSync.</div>` : ""}
+	      <div class="platform-meta-grid">
+	        <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">${isLinkedIn ? "Personal / Member Connection" : "Account"}</div><div class="text-sm text-white wrap-safe">${escapeHtml(accountLabel)}</div></div>
+	        <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Publish Support</div><div class="text-sm text-white wrap-safe">${escapeHtml(publishSupport)}</div></div>
+	      </div>
+      ${isLinkedIn ? `<div class="mt-4 rounded-xl border ${canCompanyPublish ? "border-purple-500/20 bg-purple-950/20" : "border-white/5 bg-[#0f0a18]"} p-3">
+        <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Company / Page Publishing</div>
+        <div class="text-sm ${canCompanyPublish ? "text-purple-200" : "text-gray-400"} wrap-safe">${escapeHtml(companyStatus)}</div>
+        <div class="text-[11px] text-gray-500 mt-2 wrap-safe">${escapeHtml(canCompanyPublish ? "Managed setup can connect approved LinkedIn Organization/Page publishing when platform permissions exist." : "Company Page publishing is available through Managed setup where platform approval is available.")}</div>
+      </div>` : ""}
+      ${linkedinNotice ? `<div class="mt-4 rounded-xl border border-sky-400/20 bg-sky-950/20 p-3 text-xs text-sky-200 wrap-safe">${escapeHtml(linkedinNotice)}</div>` : ""}
+	      ${setupBlocked ? `<div class="mt-4 rounded-xl border border-yellow-400/20 bg-yellow-900/20 p-3 text-xs text-yellow-200 wrap-safe">Publishing for this platform is not enabled yet. Request setup from StellarSync.</div>` : ""}
       <div class="mt-4 flex flex-wrap gap-2">
         ${setupBlocked ? `<button type="button" onclick="openSupportModal('Integration setup')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Request Setup</button>` : `
           <button type="button" onclick="connectSocialAccount('${escapeHtml(platform)}')" data-platform="${escapeHtml(platform)}" data-action="connect" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors ${anyLoading ? "opacity-60" : ""}" ${connectLoading ? "disabled" : ""}>${connectLoading ? "Loading..." : account.connected ? "Reconnect" : "Connect"}</button>
@@ -16164,21 +16471,33 @@ function getConnectedAccountsMarkup(options = {}) {
     const connectLoading = isConnectedAccountActionLoading(platform, "connect");
     const disconnectLoading = isConnectedAccountActionLoading(platform, "disconnect");
     const testLoading = isConnectedAccountActionLoading(platform, "test");
-    const historyLoading = platform === "linkedin" && isConnectedAccountActionLoading(platform, "history");
-    const anyLoading = connectLoading || disconnectLoading || testLoading || historyLoading;
-    const statusTone = account.connected
+	    const historyLoading = platform === "linkedin" && isConnectedAccountActionLoading(platform, "history");
+	    const anyLoading = connectLoading || disconnectLoading || testLoading || historyLoading;
+    const caps = planFeatures.capabilities || {};
+    const isLinkedIn = platform === "linkedin";
+    const canCompanyPublish = !!(planFeatures.companyPagePublishing || caps.company_page_publishing);
+    const memberStatusLabel = account.connected ? "Connected as member" : "Not Connected";
+    const companyStatus = account.companyConnectionStatusLabel ||
+      (account.organizationName
+        ? `Connected to Page: ${account.organizationName}`
+        : account.companyPublishingStatus === "pending_approval"
+        ? "Company Page publishing pending platform approval"
+        : canCompanyPublish
+        ? "Company Page not selected"
+        : "Locked - Managed only");
+	    const statusTone = account.connected
       ? "text-emerald-300"
       : account.accessStatus === "error" || account.accessStatus === "expired"
       ? "text-yellow-300"
       : missingKeys.length
       ? "text-gray-300"
       : "text-sky-300";
-    const displayMessage = setupBlocked
-      ? (userCanManageMembers()
-          ? getSocialSetupMissingMessage(platform, missingKeys)
-          : "App setup required by StellarSync admin. Check with your workspace admin for LinkedIn publishing access.")
-      : "";
-    return `
+	    const displayMessage = setupBlocked
+	      ? (userCanManageMembers()
+	          ? getSocialSetupMissingMessage(platform, missingKeys)
+	          : "App setup required by StellarSync admin. Check with your workspace admin for LinkedIn publishing access.")
+	      : "";
+	    return `
       <div class="platform-card">
         <div class="flex items-start justify-between gap-3 mb-4">
           <div>
@@ -16187,14 +16506,26 @@ function getConnectedAccountsMarkup(options = {}) {
           </div>
           <span class="diagnostic-chip">${escapeHtml(account.connected ? "Connected" : missingKeys.length ? "Setup Required" : "Ready")}</span>
         </div>
-        <div class="platform-meta-grid">
-          <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Account</div><div class="text-sm text-white wrap-safe">${escapeHtml(accountLabel)}</div></div>
-          <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Permissions / Scopes</div><div class="text-sm text-white wrap-safe">${escapeHtml(permissions)}</div></div>
-          <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Token Status</div><div class="text-sm text-white wrap-safe">${escapeHtml(tokenStatus)}</div></div>
-          <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Publish Support</div><div class="text-sm text-white wrap-safe">${escapeHtml(publishSupport)}</div></div>
-          <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Token Expires / Last Sync</div><div class="text-sm text-white wrap-safe">${escapeHtml(lastSync)}</div></div>
-          <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Last Error</div><div class="text-sm text-white wrap-safe">${escapeHtml(lastError)}</div></div>
-        </div>
+	        <div class="platform-meta-grid">
+	          <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">${isLinkedIn ? "Personal / Member Connection" : "Account"}</div><div class="text-sm text-white wrap-safe">${escapeHtml(isLinkedIn ? memberStatusLabel : accountLabel)}</div></div>
+	          <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Permissions / Scopes</div><div class="text-sm text-white wrap-safe">${escapeHtml(permissions)}</div></div>
+	          <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Token Status</div><div class="text-sm text-white wrap-safe">${escapeHtml(tokenStatus)}</div></div>
+	          <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Publish Support</div><div class="text-sm text-white wrap-safe">${escapeHtml(publishSupport)}</div></div>
+	          <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Token Expires / Last Sync</div><div class="text-sm text-white wrap-safe">${escapeHtml(lastSync)}</div></div>
+	          <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Last Error</div><div class="text-sm text-white wrap-safe">${escapeHtml(lastError)}</div></div>
+	        </div>
+        ${isLinkedIn ? `<div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="rounded-xl border border-white/5 bg-[#0f0a18] p-3">
+            <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Personal / Member</div>
+            <div class="text-sm text-white wrap-safe">${escapeHtml(memberStatusLabel)}</div>
+            <div class="text-[11px] text-gray-500 mt-2 wrap-safe">Personal profile publishing where supported.</div>
+          </div>
+          <div class="rounded-xl border ${canCompanyPublish ? "border-purple-500/20 bg-purple-950/20" : "border-white/5 bg-[#0f0a18]"} p-3">
+            <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Company / Page</div>
+            <div class="text-sm ${canCompanyPublish ? "text-purple-200" : "text-gray-400"} wrap-safe">${escapeHtml(companyStatus)}</div>
+            <div class="text-[11px] text-gray-500 mt-2 wrap-safe">${escapeHtml(canCompanyPublish ? "Company/Page publishing is managed setup and depends on LinkedIn Community Management approval." : "Company Page publishing requires Managed setup and LinkedIn Community Management approval.")}</div>
+          </div>
+        </div>` : ""}
         <details class="mt-4 rounded-xl border border-white/5 bg-[#0f0a18] p-3" open>
           <summary class="cursor-pointer text-[10px] uppercase tracking-widest text-gray-400 font-bold">Advanced / Managed Tools</summary>
           <div class="mt-3 text-xs text-gray-400 space-y-1">
@@ -27618,10 +27949,10 @@ async function publishOneSocialQueue(id) {
 
 async function apiStartPlatformAuth(platform) {
   const loadingToastId = showLoadingToast("Starting social connection", `Requesting ${toTitleCase(platform)} connection...`);
-  try {
-    let result;
-    if (platform === "linkedin") result = await apiGet("startLinkedInAuth");
-    else if (platform === "facebook") result = await apiGet("startFacebookAuth");
+	try {
+	  let result;
+	  if (platform === "linkedin") throw new Error("LinkedIn OAuth uses Supabase Edge social-auth-start.");
+	  else if (platform === "facebook") result = await apiGet("startFacebookAuth");
     else if (platform === "instagram") result = await apiGet("startInstagramAuth");
     else if (platform === "threads") result = await apiGet("startThreadsAuth");
     else if (platform === "bluesky") result = await apiGet("startBlueskyAuth");
@@ -31992,6 +32323,7 @@ function initApp() {
   console.log("[boot] rerenderAll done");
   console.log("[boot] switchView calendar start");
   guardedCall(switchView, "switchView", "calendar");
+  guardedCall(handleSocialAuthReturn, "handleSocialAuthReturn");
 
   window.__BOOT_COMPLETED = true;
   console.log("[boot] initApp complete");

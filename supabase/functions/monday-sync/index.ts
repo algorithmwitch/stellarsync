@@ -1,7 +1,25 @@
 import { corsHeaders, getAuthUser, getEnv, getSupabaseServiceClient, json, readBody, requireWorkspaceMember, upsertWorkspaceConnection } from "../_shared/social.ts";
 
+async function getWorkspaceSettings(supabase: ReturnType<typeof getSupabaseServiceClient>, workspaceId: string) {
+  const { data, error } = await supabase.from("workspace_settings").select("default_pillars").eq("workspace_id", workspaceId).maybeSingle();
+  if (error) throw error;
+  return data || null;
+}
+
+function getNormalizedPillar(pillar: unknown, workspacePillars: Array<Record<string, unknown>>): string {
+  const raw = String(pillar || "").trim().toLowerCase();
+  if (!raw || !workspacePillars.length) return String(pillar || "").trim();
+  const exact = workspacePillars.find((p) => String(p.slug || "").toLowerCase() === raw || String(p.name || "").toLowerCase() === raw);
+  if (exact) return String(exact.name || exact.slug || raw);
+  const fuzzy = workspacePillars.find((p) => raw.includes(String(p.slug || "").toLowerCase()) || String(p.slug || "").toLowerCase().includes(raw) || raw.includes(String(p.name || "").toLowerCase()));
+  if (fuzzy) return String(fuzzy.name || fuzzy.slug || raw);
+  return String(pillar || "").trim();
+}
+
 type MondayColumn = { id: string; title: string; type: string; settings_str?: string };
 type MondayGroup = { id: string; title: string };
+
+let rawWorkspacePillars: Array<Record<string, unknown>> = [];
 type MondayGroupResolution = {
   groupId: string;
   groupTitle: string;
@@ -300,17 +318,17 @@ function isPillarColumn(column: MondayColumn) {
   return column.id === GPE_MONDAY_COLUMN_IDS.pillar || title === "pillar" || title.includes("pillar");
 }
 
-function normalizePillarStatusValue(column: MondayColumn, rawValue: unknown) {
+function normalizePillarStatusValue(column: MondayColumn, rawValue: unknown, workspacePillars: Array<Record<string, unknown>> = []) {
   const raw = String(rawValue || "").trim();
   console.log("[monday] pillar raw", raw);
+  const canonical = getNormalizedPillar(raw, workspacePillars);
+  console.log("[monday] pillar canonical", canonical);
   const boardLabels = parseMondayDropdownLabels(column);
   console.log("[monday] board pillar labels", boardLabels);
   const boardLabelsByKey = new Map(boardLabels.map((label) => [normalizeLabel(label), label]));
-  const fallback = normalizePillarLabel(raw);
-  const label = boardLabelsByKey.get(normalizeLabel(raw)) || boardLabelsByKey.get(normalizeLabel(fallback)) || fallback;
-  console.log("[monday] pillar normalized", fallback || "");
+  const label = boardLabelsByKey.get(normalizeLabel(canonical)) || boardLabelsByKey.get(normalizeLabel(raw)) || boardLabelsByKey.get(normalizeLabel(normalizePillarLabel(raw))) || null;
   if (!label || (boardLabels.length && !boardLabelsByKey.has(normalizeLabel(label)))) {
-    console.warn("[monday] pillar label skipped", { raw, normalized: fallback || "", board_labels: boardLabels });
+    console.warn("[monday] pillar label skipped", { raw, normalized: canonical || "", canonical, board_labels: boardLabels });
     return undefined;
   }
   console.log("[monday] pillar label used", label);
@@ -331,19 +349,33 @@ function normalizePlatformDropdownLabels(column: MondayColumn, rawValue: unknown
   const rawLabels = splitDropdownRawValues(rawValue);
   console.log("[monday] platform raw", rawLabels);
   const boardLabels = parseMondayDropdownLabels(column);
+  console.log("[monday] board labels from settings_str", boardLabels);
   const boardLabelsByKey = new Map(boardLabels.map((label) => [normalizeLabel(label), label]));
+  const HARDCODED_PLATFORM_LABELS: Record<string, string> = {
+    "instagram": "Instagram",
+    "linkedin": "Linkedin",
+    "threads": "Threads",
+    "tiktok": "TikTok",
+    "youtube": "YouTube",
+  };
+  const labelMap = new Map<string, string>();
+  for (const [key, label] of Object.entries(HARDCODED_PLATFORM_LABELS)) {
+    labelMap.set(key, label);
+  }
+  for (const [key, label] of boardLabelsByKey) {
+    labelMap.set(key, label);
+  }
   const normalized: string[] = [];
   const seen = new Set<string>();
   for (const rawLabel of rawLabels) {
-    const fallback = normalizePlatformLabel(rawLabel);
-    const boardLabel = boardLabelsByKey.get(normalizeLabel(rawLabel)) || boardLabelsByKey.get(normalizeLabel(fallback)) || "";
-    const label = boardLabel || fallback;
-    if (!label) continue;
-    if (!boardLabel && fallback !== rawLabel) console.log("[monday] dropdown label fallback", { raw: rawLabel, label });
+    const normalizedKey = normalizeLabel(rawLabel);
+    const label = labelMap.get(normalizedKey) || rawLabel;
+    if (!normalizedKey || !label) continue;
     const key = normalizeLabel(label);
     if (!key || seen.has(key)) continue;
     seen.add(key);
     normalized.push(label);
+    if (!boardLabelsByKey.has(normalizedKey)) console.log("[monday] dropdown label fallback", { raw: rawLabel, label });
   }
   console.log("[monday] platform normalized", normalized);
   console.log("[monday] dropdown labels used", normalized);
@@ -367,7 +399,7 @@ function mondayValueForColumn(column: MondayColumn, rawValue: unknown) {
     }
     return { hour: 13, minute: 30 };
   }
-  if ((type === "status" || type === "color") && isPillarColumn(column)) return normalizePillarStatusValue(column, rawValue);
+  if ((type === "status" || type === "color") && isPillarColumn(column)) return normalizePillarStatusValue(column, rawValue, rawWorkspacePillars);
   if (type === "status" || type === "color") return { label: String(rawValue) };
   if (type === "dropdown") {
     const labels = isPlatformColumn(column) ? normalizePlatformDropdownLabels(column, rawValue) : splitDropdownRawValues(rawValue);
@@ -390,7 +422,7 @@ function buildColumnValues(post: Record<string, unknown>, mapping: Record<string
     ["publishTime", post.publish_time || post.publishTime || post.queueTimeLabel || ""],
     ["platform", post.platform_targets || post.platforms || post.platform || ""],
     ["impressions", post.impressions || post.impression_count || post.views || 0],
-    ["pillar", post.pillar || post.content_pillar || post.contentPillar || ""],
+    ["pillar", getNormalizedPillar(post.pillar || post.content_pillar || post.contentPillar || "", rawWorkspacePillars)],
     ["campaignColor", post.campaign_name || post.campaignName || ""],
     ["postId", post.post_id || post.postId || post.id || ""],
   ];
@@ -520,12 +552,17 @@ async function backfillMondayBoard(
   const suppliedPosts = Array.isArray(body.posts) ? body.posts : [];
   let frontendPostsCount = suppliedPosts.length;
   let supabasePostsCount = 0;
-  let posts: Record<string, unknown>[] = [];
+  let allPosts: Record<string, unknown>[] = [];
   let sourceUsed = "supabase_posts";
+
+  const batchSize = Math.max(1, Math.min(100, Number(body.batch_size) || 10));
+  const cursor = Math.max(0, Number(body.cursor) || 0);
+  const dryRun = Boolean(body.dry_run);
+
   if (suppliedPosts.length) {
-    posts = suppliedPosts.map((post) => ({ ...post }));
+    allPosts = suppliedPosts.map((post) => ({ ...post }));
     sourceUsed = "frontend_posts";
-    console.log("[monday-backfill] using frontend posts", { count: posts.length, sample_post_ids: posts.slice(0, 5).map((post) => String(post.post_id || post.postId || post.id || "").trim()) });
+    console.log("[monday-backfill] using frontend posts", { count: allPosts.length, batchSize, cursor, sample_post_ids: allPosts.slice(cursor, cursor + 5).map((post) => String(post.post_id || post.postId || post.id || "").trim()) });
   } else {
     const { data, error } = await supabase
       .from("posts")
@@ -533,15 +570,19 @@ async function backfillMondayBoard(
       .eq("workspace_id", workspaceId)
       .order("updated_at", { ascending: true });
     if (error) throw error;
-    posts = (data || []) as Record<string, unknown>[];
-    supabasePostsCount = posts.length;
-    console.log("[monday-backfill] using supabase posts", { count: posts.length });
+    allPosts = (data || []) as Record<string, unknown>[];
+    supabasePostsCount = allPosts.length;
+    console.log("[monday-backfill] using supabase posts", { count: allPosts.length, batchSize, cursor });
   }
 
-  if (!posts.length) {
+  if (!allPosts.length) {
     return {
       ok: false,
       total_posts_seen: 0,
+      cursor: 0,
+      next_cursor: 0,
+      has_more: false,
+      batch_size: batchSize,
       frontend_posts_count: frontendPostsCount,
       supabase_posts_count: supabasePostsCount,
       created: 0,
@@ -555,8 +596,36 @@ async function backfillMondayBoard(
     };
   }
 
+  const posts = allPosts.slice(cursor, cursor + batchSize);
+  const processedThisBatch = posts.length;
+  const nextCursor = cursor + processedThisBatch;
+  const hasMore = nextCursor < allPosts.length;
+
+  console.log("[monday-backfill] batch start", { cursor, batchSize, total: allPosts.length, processing: posts.length, hasMore });
+
+  if (dryRun) {
+    return {
+      ok: true,
+      total_posts_seen: allPosts.length,
+      cursor,
+      next_cursor: nextCursor,
+      has_more: hasMore,
+      batch_size: batchSize,
+      processed_this_batch: processedThisBatch,
+      frontend_posts_count: frontendPostsCount,
+      supabase_posts_count: supabasePostsCount,
+      created: 0,
+      updated: 0,
+      skipped: 0,
+      failed: 0,
+      errors: [],
+      started_at: startedAt,
+      completed_at: new Date().toISOString(),
+    };
+  }
+
   const board = await fetchMondayBoard(token, boardId);
-  const boardItems = await fetchMondayBoardItems(token, boardId, Math.max(500, posts.length + 50));
+  const boardItems = await fetchMondayBoardItems(token, boardId, Math.max(500, allPosts.length + 50));
   const itemByPostId = new Map<string, Record<string, unknown>>();
   const itemById = new Map<string, Record<string, unknown>>();
   for (const item of boardItems || []) {
@@ -567,7 +636,7 @@ async function backfillMondayBoard(
     if (postId) itemByPostId.set(postId, item);
   }
 
-  const total = posts.length;
+  const total = allPosts.length;
   let created = 0;
   let updated = 0;
   let skipped = 0;
@@ -615,7 +684,7 @@ async function backfillMondayBoard(
         columnValues = { ...columnValues, ...preserveMondayOnlyColumns(existingCVs) };
       }
 
-      console.log("[monday-backfill] progress", { index: index + 1, total, postId, matched: !!itemId, title });
+      console.log("[monday-backfill] progress", { index: cursor + index + 1, total, postId, matched: !!itemId, title });
       if (itemId) {
         if (targetGroupId && previousGroupId && previousGroupId !== targetGroupId) {
           try {
@@ -670,7 +739,7 @@ async function backfillMondayBoard(
       failed += 1;
       const message = err instanceof Error ? err.message : String(err);
       errors.push({ post_id: postId, error: message });
-      console.log("[monday-backfill] progress", { index: index + 1, total, postId, failed: true, error: message });
+      console.log("[monday-backfill] progress", { index: cursor + index + 1, total, postId, failed: true, error: message });
       console.error("[monday] error full object", err);
     }
     await new Promise((resolve) => setTimeout(resolve, 120));
@@ -699,10 +768,17 @@ async function backfillMondayBoard(
     monday_sync_direction: String(body.monday_sync_direction || "").trim() || undefined,
   });
 
+  console.log("[monday-backfill] batch complete", { cursor, nextCursor, hasMore, processed_this_batch: processedThisBatch, created, updated, skipped, failed });
+
   return {
     ok: true,
     total,
     total_posts_seen: total,
+    cursor,
+    next_cursor: nextCursor,
+    has_more: hasMore,
+    batch_size: batchSize,
+    processed_this_batch: processedThisBatch,
     frontend_posts_count: frontendPostsCount,
     supabase_posts_count: supabasePostsCount,
     created,
@@ -746,6 +822,10 @@ Deno.serve(async (req) => {
     const supabase = getSupabaseServiceClient();
     await requireWorkspaceMember(supabase, workspaceId, user.id);
     const token = getEnv("MONDAY_API_TOKEN", true);
+
+    const wsSettings = await getWorkspaceSettings(supabase, workspaceId);
+    const rawPillars = wsSettings?.default_pillars;
+    rawWorkspacePillars = Array.isArray(rawPillars) ? rawPillars.filter((p: unknown) => typeof p === "object" && p !== null) as Array<Record<string, unknown>> : [];
 
     const { data: connection } = await supabase.from("workspace_connections").select("*").eq("workspace_id", workspaceId).eq("provider", "monday").maybeSingle();
 

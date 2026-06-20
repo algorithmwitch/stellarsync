@@ -4780,20 +4780,53 @@ function getAvailableContentPillars() {
   return Array.isArray(configured) && configured.length ? configured : ["authority", "community", "education", "promotion"];
 }
 
-function getAvailableCampaignRecords() {
-  const allowed = Array.isArray(appState?.settings?.campaigns) ? appState.settings.campaigns : [];
+function buildCanonicalCampaignRecords() {
+  const settingsCampaigns = Array.isArray(appState?.settings?.campaigns) ? appState.settings.campaigns : [];
   const sourceRecords = Array.isArray(appState?.campaigns) ? appState.campaigns : [];
-  if (!allowed.length) return [];
-  return allowed.map((campaignName, index) => {
-    const matched = sourceRecords.find((campaign) => normalizeLookupValue(campaign.campaignName || campaign.name || "") === normalizeLookupValue(campaignName));
-    return {
-      ...(matched || {}),
-      campaignId: matched?.campaignId || `CMP-${normalizeLookupValue(campaignName).replace(/[^a-z0-9]+/g, "").toUpperCase().slice(0, 8) || index}`,
+  const byKey = new Map();
+  const ordered = [];
+
+  function addCampaignRecord(campaign, index, fromSettings = false) {
+    const campaignName = normalizeCampaignDisplayName(campaign?.campaignName || campaign?.name || campaign || "");
+    if (!campaignName) return;
+    const key = normalizeLookupValue(campaignName);
+    if (!key) return;
+    const campaignId = String(campaign?.campaignId || campaign?.id || "").trim();
+    const sortOrder = Number(campaign?.sortOrder ?? index) || index;
+    const next = {
+      ...(fromSettings ? {} : campaign),
+      campaignId,
       campaignName,
-      sortOrder: Number(matched?.sortOrder ?? index) || index,
-      isArchived: Boolean(matched?.isArchived)
+      sortOrder,
+      isArchived: Boolean(campaign?.isArchived)
     };
-  }).filter((campaign) => !campaign.isArchived);
+    const existing = byKey.get(key);
+    if (!existing) {
+      byKey.set(key, next);
+      ordered.push(next);
+      return;
+    }
+    byKey.set(key, {
+      ...existing,
+      ...next,
+      campaignName: existing.campaignName || next.campaignName,
+      campaignId: existing.campaignId || next.campaignId,
+      sortOrder: Number.isFinite(Number(existing.sortOrder)) ? Number(existing.sortOrder) : sortOrder,
+      isArchived: Boolean(existing.isArchived && next.isArchived)
+    });
+    ordered[ordered.findIndex((item) => normalizeLookupValue(item.campaignName || "") === key)] = byKey.get(key);
+  }
+
+  settingsCampaigns.forEach((name, index) => addCampaignRecord({ campaignName: name, sortOrder: index }, index, true));
+  sourceRecords.forEach((campaign, index) => addCampaignRecord(campaign, index, false));
+
+  return ordered
+    .filter((campaign) => !campaign.isArchived)
+    .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0) || String(a.campaignName || "").localeCompare(String(b.campaignName || "")));
+}
+
+function getAvailableCampaignRecords() {
+  return buildCanonicalCampaignRecords();
 }
 
 function getCampaignById(campaignId, campaigns = getAvailableCampaignRecords()) {
@@ -6013,13 +6046,25 @@ function normalizeDisplayText(value) {
     .trim();
 }
 
+function normalizeCampaignDisplayName(value) {
+  return String(value || "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function normalizeCampaignName(value) {
-  const raw = normalizeDisplayText(value);
+  const raw = normalizeCampaignDisplayName(value);
   if (!raw) return "";
   const allowed = Array.isArray(appState?.settings?.campaigns) ? appState.settings.campaigns : [];
-  if (!allowed.length) return "";
   const found = allowed.find((name) => normalizeLookupValue(name) === normalizeLookupValue(raw));
-  return found || "";
+  return found || raw;
+}
+
+function splitExplicitCampaignValues(value) {
+  return String(value || "")
+  .split(/[|\n]/)
+    .map((item) => normalizeCampaignDisplayName(item))
+    .filter(Boolean);
 }
 
 function getDefaultSettings() {
@@ -8447,6 +8492,11 @@ function buildConstellationRows() {
   const allowedCampaignKeys = new Set(campaignRecords.map((campaign) => normalizeLookupValue(campaign.campaignName || "")));
   const hydratedPosts = [...(appState.posts || [])].map((post) => hydratePostCampaign(post, campaignRecords));
   const uncategorizedPosts = hydratedPosts.filter((post) => !allowedCampaignKeys.has(normalizeLookupValue(post.campaignName || "")));
+  console.log("[campaign-audit] constellation campaigns", campaignRecords.map((campaign) => ({
+    campaignId: String(campaign.campaignId || "").trim(),
+    campaignName: normalizeCampaignDisplayName(campaign.campaignName || ""),
+    sortOrder: Number(campaign.sortOrder || 0)
+  })));
   const campaigns = campaignRecords.concat([{
     campaignId: "",
     campaignName: "Uncategorized",
@@ -8509,10 +8559,7 @@ function normalizeCampaignLaneKey(value = "") {
 }
 
 function getConstellationCampaignLabelParts(value = "") {
-  return String(value || "")
-    .split(",")
-    .map((item) => normalizeDisplayText(item))
-    .filter(Boolean);
+  return splitExplicitCampaignValues(value);
 }
 
 function isInvalidComboCampaignName(value = "") {
@@ -8766,6 +8813,13 @@ function buildConstellationLaneDiagnostics() {
     const ids = items.map((item) => String(item.campaignId || "").trim()).filter(Boolean);
     return items.length > 1 && new Set(ids).size > 1;
   }).map(([normalizedName, items]) => ({ normalizedName, campaigns: items }));
+  console.log("[campaign-audit] duplicate candidates", sameNormalizedNameDifferentIds);
+  console.log("[campaign-audit] constellation campaigns", rows.map((campaign) => ({
+    campaignId: String(campaign.campaignId || "").trim(),
+    campaignName: normalizeCampaignDisplayName(campaign.campaignName || ""),
+    laneKey: String(campaign._constellationLaneKey || ""),
+    laneIndex: Number(campaign._constellationRowIndex || 0)
+  })));
   return {
     campaignCount: rows.length,
     campaignKeys: rows.map((campaign) => String(campaign._constellationLaneKey || "")),
@@ -11024,7 +11078,7 @@ function renderCampaignCleanupDiagnosticsCard() {
       <div class="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Campaign Cleanup Review</div>
-          <div class="text-sm text-gray-300 mt-1">Near-duplicate and comma-combined campaign names need review before Constellation stays clean.</div>
+          <div class="text-sm text-gray-300 mt-1">Near-duplicate and explicitly delimited campaign names need review before Constellation stays clean.</div>
         </div>
       </div>
       ${cleanup.nearDuplicates.map((item, index) => `
@@ -11060,7 +11114,7 @@ function renderCampaignCleanupDiagnosticsCard() {
           <div class="flex items-center justify-between gap-3 flex-wrap">
             <div>
               <div class="text-sm font-bold text-white">Invalid combo campaign</div>
-              <div class="text-[11px] text-gray-400 wrap-safe">Flagged value: ${escapeHtml(cleanup.invalidComboCampaigns[0].campaignName || "Algorithm Best Practices, Messaging,Offerings")}</div>
+              <div class="text-[11px] text-gray-400 wrap-safe">Flagged value: ${escapeHtml(cleanup.invalidComboCampaigns[0].campaignName || "Algorithm Best Practices | Messaging | Offerings")}</div>
             </div>
             <span class="diagnostic-chip">INVALID</span>
           </div>
@@ -11205,7 +11259,7 @@ function renderWorkspaceDiagnosticsPanel() {
     })),
     ...(cleanup.invalidComboCampaigns || []).length ? [{
       label: "Invalid combo campaign names",
-      detail: `${(cleanup.invalidComboCampaigns || []).length} posts need manual reassignment from comma-combined campaign names.`,
+      detail: `${(cleanup.invalidComboCampaigns || []).length} posts need manual reassignment from explicitly delimited campaign names.`,
       severity: "error"
     }] : []
   ];
@@ -13458,16 +13512,17 @@ async function refreshMediaFromRemote() {
 function getUniqueLedgerCampaignOptions() {
   const seen = new Set();
   return getAvailableCampaignRecords()
-    .filter(c => !c.isArchived)
-    .map(c => ({
-      value: String(c.campaignId || "").trim(),
-      label: String(c.campaignName || "").trim(),
-      color: getCampaignColor(c, c.pillar || "")
+    .filter((campaign) => !campaign.isArchived)
+    .map((campaign) => ({
+      value: String(campaign.campaignId || campaign.campaignName || "").trim(),
+      label: normalizeCampaignDisplayName(campaign.campaignName || ""),
+      color: getCampaignColor(campaign, campaign.pillar || ""),
+      key: normalizeLookupValue(campaign.campaignName || "")
     }))
-    .filter(item => {
+    .filter((item) => {
       if (!item.value || !item.label) return false;
-      if (seen.has(item.value)) return false;
-      seen.add(item.value);
+      if (seen.has(item.key)) return false;
+      seen.add(item.key);
       return true;
     })
     .sort((a, b) => a.label.localeCompare(b.label));
@@ -16655,6 +16710,12 @@ async function syncRemoteIfConfigured() {
 
     if (Array.isArray(campaigns)) {
       appState.campaigns = campaigns.map(campaign => normalizeRemoteCampaign(campaign));
+      console.log("[campaign-audit] normalized", appState.campaigns.slice(0, 10).map((campaign) => ({
+        campaignId: String(campaign.campaignId || "").trim(),
+        normalizedCampaignValue: normalizeCampaignDisplayName(campaign.campaignName || ""),
+        sourceRowId: String(campaign.row_number || "").trim(),
+        campaignValuesAfterParsing: splitExplicitCampaignValues(campaign.campaignName || "")
+      })));
     }
 
     if (Array.isArray(media)) {
@@ -16668,6 +16729,24 @@ async function syncRemoteIfConfigured() {
         title: post.title || "",
         displayTitle: post.displayTitle || getPostDisplayTitle(post),
         description: post.description || ""
+      })));
+      console.log("[campaign-audit] raw", (Array.isArray(posts) ? posts : []).slice(0, 10).map((post) => ({
+        sourcePostId: String(post?.postId || post?.post_id || post?.id || "").trim(),
+        sourceRowId: String(post?.row_number || post?.rowNumber || "").trim(),
+        rawCampaignValue: normalizeCampaignDisplayName(post?.campaignName || post?.campaign_name || post?.campaign || ""),
+        sourceCampaignId: String(post?.campaignId || post?.campaign_id || "").trim()
+      })));
+      console.log("[campaign-audit] normalized", appState.posts.slice(0, 10).map((post) => ({
+        sourcePostId: String(post.id || post.postId || "").trim(),
+        sourceRowId: String(post.row_number || post.rowNumber || "").trim(),
+        rawCampaignValue: normalizeCampaignDisplayName(post.campaign_name || post.campaignName || ""),
+        normalizedCampaignValue: normalizeCampaignDisplayName(post.campaignName || ""),
+        campaignValuesAfterParsing: splitExplicitCampaignValues(post.campaignName || post.campaign_name || "")
+      })));
+      console.log("[campaign-audit] fragments", appState.posts.filter((post) => splitExplicitCampaignValues(post.campaignName || post.campaign_name || "").length > 1).map((post) => ({
+        sourcePostId: String(post.id || post.postId || "").trim(),
+        sourceRowId: String(post.row_number || post.rowNumber || "").trim(),
+        campaignValuesAfterParsing: splitExplicitCampaignValues(post.campaignName || post.campaign_name || "")
       })));
     }
 
@@ -17312,7 +17391,7 @@ function renderDiagnosticsPanel() {
     { label: "Default internal time rows", severity: "warning", value: (diagnostics.defaultInternalTimeRows || []).length, detail: formatDiagnosticIds(diagnostics.defaultInternalTimeRows, "postId"), guidance: "Warnings are okay when time was intentionally left blank by the user." },
     { label: "Missing campaign IDs/names", severity: "error", value: (diagnostics.missingCampaignRows || []).length, detail: formatDetailedDiagnostics(diagnostics.missingCampaignRows, (item) => `${item.postId || "unknown"}: ${item.issue || "missing campaign_id or campaign_name"}`), guidance: "Assign campaign or mark uncategorized." },
     { label: "Near-duplicate campaign names", severity: "warning", value: (campaignCleanupDiagnostics.nearDuplicateCampaigns || []).length, detail: formatDetailedDiagnostics(campaignCleanupDiagnostics.nearDuplicateCampaigns, (item) => `${item.sourceCampaignName || "source"} → ${item.targetCampaignName || "target"}`), guidance: "Merge near-duplicate campaigns into one clean campaign." },
-    { label: "Invalid combo campaign names", severity: "error", value: (campaignCleanupDiagnostics.invalidComboCampaigns || []).length, detail: formatDetailedDiagnostics(campaignCleanupDiagnostics.invalidComboCampaigns, (item) => `${item.postId || "unknown"}: ${item.campaignName || "invalid_combo_campaign"}`), guidance: "Review affected posts and reassign them manually. Do not auto-split." },
+    { label: "Explicit-delimiter campaign names", severity: "error", value: (campaignCleanupDiagnostics.invalidComboCampaigns || []).length, detail: formatDetailedDiagnostics(campaignCleanupDiagnostics.invalidComboCampaigns, (item) => `${item.postId || "unknown"}: ${item.campaignName || "invalid_combo_campaign"}`), guidance: "Review affected posts and reassign them manually. Do not auto-split." },
     { label: "Campaign layout issues", severity: "warning", value: (diagnostics.campaignLayoutIssues || []).length, detail: formatDetailedDiagnostics(diagnostics.campaignLayoutIssues, (item) => `${item.campaignId || "unknown"}: ${item.issue || "layout issue"}`), guidance: "Warnings are okay unless the map is visibly cramped." },
     { label: "Carousel posts missing assets", severity: "error", value: (diagnostics.carouselMissingAssets || []).length, detail: formatDiagnosticIds(diagnostics.carouselMissingAssets, "postId"), guidance: "Errors need action." },
     { label: "Notes missing required fields", severity: "error", value: (diagnostics.noteFieldIssues || []).length, detail: formatDiagnosticIds(diagnostics.noteFieldIssues, "noteId"), guidance: "Errors need action." },
@@ -18489,7 +18568,7 @@ function normalizeRemoteSettings(settings) {
     pillars: normalizeList(settings?.pillars, defaults.pillars, (value) => normalizePillar(value)),
     statuses: normalizeList(settings?.statuses, defaults.statuses, (value) => String(value || "").trim().toLowerCase()),
     postTypes: normalizeList(settings?.postTypes || settings?.post_types, defaults.postTypes, (value) => String(value || "").trim().toLowerCase()),
-    campaigns: normalizeList(settings?.campaigns, [], (value) => normalizeDisplayText(value)),
+    campaigns: normalizeList(settings?.campaigns, [], (value) => normalizeCampaignDisplayName(value)),
     campaignColors: { ...(defaults.campaignColors || {}), ...(settings?.campaignColors || settings?.campaign_colors || {}) },
     months: Array.isArray(settings?.months) ? settings.months.map((value) => String(value || "").trim()).filter(Boolean) : defaults.months.slice(),
     queueLimit: settings?.queueLimit || settings?.queue_limit || defaults.queueLimit,

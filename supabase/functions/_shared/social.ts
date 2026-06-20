@@ -12,6 +12,55 @@ export type SocialProvider = (typeof socialProviders)[number];
 export type SocialMediaClassification = "empty" | "text" | "image" | "carousel" | "video" | "document" | "mixed";
 export type SocialValidationSeverity = "ok" | "warning" | "error";
 
+export const PLAN_CAPABILITIES: Record<string, Record<string, unknown>> = {
+  starter: {
+    max_workspaces: 1,
+    team_members: false,
+    csv_import_export: false,
+    advanced_reporting: false,
+    diagnostics: false,
+    personal_profile_publishing: true,
+    byo_api_credentials: true,
+    company_page_publishing: false,
+    managed_api_setup: false,
+    exports_enabled: false,
+    export_formats: [],
+  },
+  growth: {
+    max_workspaces: 3,
+    team_members: true,
+    csv_import_export: true,
+    advanced_reporting: true,
+    diagnostics: true,
+    media_library: true,
+    personal_profile_publishing: true,
+    byo_api_credentials: true,
+    company_page_publishing: false,
+    managed_api_setup: false,
+    exports_enabled: true,
+    export_formats: ["csv", "xlsx"],
+  },
+  managed: {
+    max_workspaces: "multiple/custom",
+    team_members: true,
+    csv_import_export: true,
+    advanced_reporting: true,
+    diagnostics: true,
+    media_library: true,
+    personal_profile_publishing: true,
+    byo_api_credentials: true,
+    company_page_publishing: true,
+    managed_api_setup: true,
+    google_sheets_setup: true,
+    monday_setup: true,
+    drive_setup: true,
+    implementation_support: true,
+    exports_enabled: true,
+    export_formats: ["csv", "xlsx", "json", "backup"],
+  },
+  admin_master: { internal_only: true, hidden: true, all_features: true, admin_workspaces: true },
+};
+
 export interface SocialValidationResult {
   valid: boolean;
   severity: SocialValidationSeverity;
@@ -86,10 +135,9 @@ export function getPublicWebappBaseUrl(required = false) {
 }
 
 export function getSocialCallbackUrl(provider: string) {
-  const base = getEnv("SUPABASE_URL", true).replace(/\/+$/, "");
-  const url = new URL(`${base}/functions/v1/social-auth-callback`);
-  url.searchParams.set("provider", normalizeProvider(provider));
-  return url.toString();
+  const base = (getPublicWebappBaseUrl() || "https://stellarsync.app").replace(/\/+$/, "");
+  const normalized = normalizeProvider(provider);
+  return `${base}/auth/${normalized}/callback`;
 }
 
 export function getRequiredSocialSecrets(provider: string) {
@@ -102,14 +150,112 @@ export function getRequiredSocialSecrets(provider: string) {
   return shared;
 }
 
+export function normalizePlanSlug(value: unknown) {
+  const plan = String(value || "").trim().toLowerCase().replace(/[-\s]/g, "_");
+  if (plan === "agency") return "growth";
+  if (plan === "pro") return "growth";
+  if (plan === "enterprise" || plan === "custom") return "managed";
+  if (plan === "admin_master") return "admin_master";
+  if (["starter", "growth", "managed"].includes(plan)) return plan;
+  return "starter";
+}
+
+export function capabilitiesForPlan(value: unknown) {
+  const plan = normalizePlanSlug(value);
+  const caps = { ...(PLAN_CAPABILITIES[plan] || PLAN_CAPABILITIES.starter) };
+  if (caps.all_features) Object.assign(caps, PLAN_CAPABILITIES.managed);
+  return caps;
+}
+
 export function getMissingSocialSecrets(provider: string) {
-  return getRequiredSocialSecrets(provider).filter((name) => !getEnv(name));
+  const required = getRequiredSocialSecrets(provider);
+  const missing = required.filter((name) => {
+    const raw = getEnv(name);
+    if (raw) return false;
+    if (name === "LINKEDIN_CLIENT_ID" && getEnv("LINKEDIN_APP_ID")) return false;
+    if (name === "LINKEDIN_CLIENT_SECRET" && getEnv("LINKEDIN_APP_SECRET")) return false;
+    return true;
+  });
+
+  // Log resolved secret presence (never values)
+  if (provider === "linkedin") {
+    const linkedinClientId = getEnv("LINKEDIN_CLIENT_ID") || getEnv("LINKEDIN_APP_ID") || "";
+    const linkedinClientSecret = getEnv("LINKEDIN_CLIENT_SECRET") || getEnv("LINKEDIN_APP_SECRET") || "";
+    console.log("[social-setup] linkedin env check", {
+      public_base_url: !!getEnv("PUBLIC_WEBAPP_BASE_URL"),
+      client_id: !!linkedinClientId,
+      client_secret: !!linkedinClientSecret,
+    });
+  }
+
+  return missing;
 }
 
 export function getSupabaseServiceClient() {
   const url = getEnv("SUPABASE_URL", true);
   const serviceRoleKey = getEnv("SUPABASE_SERVICE_ROLE_KEY", true);
   return createClient(url, serviceRoleKey, { auth: { persistSession: false } });
+}
+
+function pickSecretRef(config: Record<string, unknown>, names: string[]) {
+  for (const name of names) {
+    const direct = String(config[name] || "").trim();
+    if (direct) return direct;
+  }
+  return "";
+}
+
+export async function getWorkspaceSocialCredentials(
+  supabase: ReturnType<typeof createClient>,
+  workspaceId: string,
+  provider: string,
+) {
+  const p = normalizeProvider(provider);
+  const fallbackIdNames = p === "linkedin" ? ["LINKEDIN_CLIENT_ID", "LINKEDIN_APP_ID"] : getRequiredSocialSecrets(p).filter((key) => /CLIENT_ID|APP_ID|CLIENT_KEY/.test(key));
+  const fallbackSecretNames = p === "linkedin" ? ["LINKEDIN_CLIENT_SECRET", "LINKEDIN_APP_SECRET"] : getRequiredSocialSecrets(p).filter((key) => /CLIENT_SECRET|APP_SECRET|CLIENT_KEY|CLIENT_SECRET/.test(key));
+  let appSource = "stellar_hosted";
+  let clientId = "";
+  let clientSecret = "";
+  let credentialConfig: Record<string, unknown> = {};
+
+  const { data: credentialRows } = await supabase
+    .from("workspace_connections")
+    .select("provider,status,config")
+    .eq("workspace_id", workspaceId)
+    .in("provider", [`${p}_credentials`, `${p}_managed_credentials`, `${p}_client_credentials`]);
+  const row = (credentialRows || []).find((item) => {
+    const status = String(item.status || "").toLowerCase();
+    return status !== "disabled" && status !== "deleted";
+  });
+
+  if (row?.config && typeof row.config === "object") {
+    credentialConfig = row.config as Record<string, unknown>;
+    appSource = String(credentialConfig.app_source || credentialConfig.appSource || (String(row.provider || "").includes("client") ? "client_owned" : "managed_setup")).trim() || "managed_setup";
+    clientId = pickSecretRef(credentialConfig, ["client_id", "clientId", "app_id", "appId"]);
+    clientSecret = pickSecretRef(credentialConfig, ["client_secret", "clientSecret", "app_secret", "appSecret"]);
+    const clientIdEnv = pickSecretRef(credentialConfig, ["client_id_env", "clientIdEnv", "app_id_env", "appIdEnv"]);
+    const clientSecretEnv = pickSecretRef(credentialConfig, ["client_secret_env", "clientSecretEnv", "app_secret_env", "appSecretEnv"]);
+    if (!clientId && clientIdEnv) clientId = getEnv(clientIdEnv);
+    if (!clientSecret && clientSecretEnv) clientSecret = getEnv(clientSecretEnv);
+  }
+
+  if (!clientId) clientId = getEnvAny(fallbackIdNames);
+  if (!clientSecret) clientSecret = getEnvAny(fallbackSecretNames);
+
+  const missingSetupKeys = [
+    !clientId ? `${p.toUpperCase()}_CLIENT_ID` : "",
+    !clientSecret ? `${p.toUpperCase()}_CLIENT_SECRET` : "",
+  ].filter(Boolean);
+
+  return {
+    provider: p,
+    appSource,
+    clientId,
+    clientSecret,
+    hasWorkspaceCredentials: !!row,
+    missingSetupKeys,
+    credentialMode: appSource === "client_owned" ? "client_owned_app" : appSource === "managed_setup" ? "managed_setup" : "stellar_hosted_app",
+  };
 }
 
 export async function getAuthUser(req: Request) {

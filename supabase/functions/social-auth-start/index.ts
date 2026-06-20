@@ -1,7 +1,8 @@
-import { corsHeaders, getAuthUser, getEnv, getEnvAny, getMissingSocialSecrets, getPublicWebappBaseUrl, getSocialCallbackUrl, getSupabaseServiceClient, json, normalizeProvider, randomState, readBody, requireWorkspaceMember, safeRedirect } from "../_shared/social.ts";
+import { corsHeaders, getAuthUser, getEnv, getEnvAny, getMissingSocialSecrets, getPublicWebappBaseUrl, getSocialCallbackUrl, getSupabaseServiceClient, getWorkspaceSocialCredentials, json, normalizeProvider, randomState, readBody, requireWorkspaceMember, safeRedirect } from "../_shared/social.ts";
 
-function buildAuthUrl(provider: string, state: string) {
-  const missingSecrets = getMissingSocialSecrets(provider);
+async function buildAuthUrl(supabase: ReturnType<typeof getSupabaseServiceClient>, workspaceId: string, provider: string, state: string) {
+  const workspaceCredentials = await getWorkspaceSocialCredentials(supabase, workspaceId, provider);
+  const missingSecrets = workspaceCredentials.missingSetupKeys.length ? workspaceCredentials.missingSetupKeys : getMissingSocialSecrets(provider);
   if (missingSecrets.length) {
     const err = new Error(`Missing Supabase Secret: ${missingSecrets.join(", ")}`);
     (err as Error & { missingSetupKeys?: string[] }).missingSetupKeys = missingSecrets;
@@ -9,7 +10,7 @@ function buildAuthUrl(provider: string, state: string) {
   }
 
   if (provider === "linkedin") {
-    const clientId = getEnv("LINKEDIN_CLIENT_ID", true);
+    const clientId = workspaceCredentials.clientId || getEnv("LINKEDIN_CLIENT_ID", true);
     const redirectUri = getSocialCallbackUrl(provider);
     const params = new URLSearchParams({
       response_type: "code",
@@ -18,6 +19,7 @@ function buildAuthUrl(provider: string, state: string) {
       state,
       scope: "openid profile email w_member_social",
     });
+    console.log("[social-connect] using supabase edge", { provider, workspace_id: workspaceId, app_source: workspaceCredentials.appSource });
     return `https://www.linkedin.com/oauth/v2/authorization?${params.toString()}`;
   }
 
@@ -82,7 +84,7 @@ Deno.serve(async (req) => {
 
     const state = randomState();
     const redirectTo = safeRedirect(String(body.redirect_to || ""), `${getPublicWebappBaseUrl() || "https://stellarsync.app"}/app/`);
-    const authUrl = buildAuthUrl(provider, state);
+    const authUrl = await buildAuthUrl(supabase, workspaceId, provider, state);
 
     const { error } = await supabase.from("social_oauth_states").insert({
       workspace_id: workspaceId,

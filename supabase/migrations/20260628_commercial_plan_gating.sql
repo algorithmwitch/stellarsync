@@ -33,29 +33,3 @@ where plan_slug is null
    or subscription_tier is null
    or subscription_tier = ''
    or feature_flags is null;
-
-update public.workspaces
-set
-  managed_account = true,
-  feature_flags = coalesce(feature_flags, '{}'::jsonb) || jsonb_build_object(
-    'show_advanced_integrations', true,
-    'managed_integrations', true,
-    'google_sheets_enabled', true,
-    'monday_enabled', true,
-    'drive_setup_enabled', true
-  )
-where lower(coalesce(slug, '')) = 'gpe'
-   or lower(coalesce(backend_type, '')) in ('google_sheets_hybrid', 'managed', 'managed_hybrid');
-
-update public.workspace_settings
-set
-  managed_account = true,
-  feature_flags = coalesce(feature_flags, '{}'::jsonb) || jsonb_build_object(
-    'show_advanced_integrations', true,
-    'managed_integrations', true,
-    'google_sheets_enabled', true,
-    'monday_enabled', true,
-    'drive_setup_enabled', true
-  )
-where lower(coalesce(workspace_slug, '')) = 'gpe'
-   or lower(coalesce(backend_type, '')) in ('google_sheets_hybrid', 'managed', 'managed_hybrid');
