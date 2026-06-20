@@ -12316,15 +12316,13 @@ function renderCalendarPill(post, isWeekMode = false) {
     return `
       <button type="button" class="post-pill compact-month mt-1 text-left relative" onclick="event.stopPropagation();openCalendarPost(this)" title="${escapeHtml(buildDateDiagnosticTitle(post))}" style="background:${campaignColor}14;border:1px solid ${campaignColor}30;box-shadow:inset 2px 0 0 ${campaignColor};" ${renderPostIdentityDataAttributes(post)}>
         <span class="compact-month-icons">
-          ${carouselCoverUrl
-            ? `<img src="${escapeHtml(carouselCoverUrl)}" alt="${escapeHtml(getMediaDisplayTitle(carouselCover, null, "Carousel cover"))}" class="w-4 h-4 rounded object-cover shrink-0 border border-white/10" onerror="handleBrokenMediaPreview(this)">`
-            : `<span class="calendar-mobile-dot" style="background:${campaignColor};box-shadow:0 0 10px ${campaignColor}66;"></span>`}
+           ${carouselCoverUrl
+             ? `<img src="${escapeHtml(carouselCoverUrl)}" alt="${escapeHtml(getMediaDisplayTitle(carouselCover, null, "Carousel cover"))}" class="w-4 h-4 rounded object-cover shrink-0 border border-white/10" onerror="handleBrokenMediaPreview(this)">`
+             : pillarSymbol ? `<i class="ph ${pillarSymbol}"></i>` : ""}
           ${iconBlock}
           <span class="w-1.5 h-1.5 rounded-full ml-auto" style="background:${statusColor}"></span>
         </span>
-        <span class="compact-month-text">${escapeHtml(displayTitle)}</span>
-        ${pillarSymbol ? `<span class="text-[7px] text-gray-500 opacity-50 ml-0.5" title="${escapeHtml(formatContentPillarLabel(postPillar))}"><i class="${pillarSymbol}"></i></span>` : ""}
-        ${renderPillarCornerBadge(postPillar, { bottom: "4px", right: "4px", size: "16px", fontSize: "8px" })}
+        <span class=\"compact-month-text\">${escapeHtml(displayTitle)}</span>\n        ${pillarSymbol ? `<span class=\"text-[7px] text-gray-500 opacity-50 ml-0.5\" title=\"${escapeHtml(formatContentPillarLabel(postPillar))}\"><i class=\"ph ${pillarSymbol}\"></i></span>` : \"\"}\n        ${renderPillarCornerBadge(postPillar, { bottom: \"4px\", right: \"4px\", size: \"16px\", fontSize: \"8px\" })}
       </button>
     `;
   }
@@ -12332,15 +12330,15 @@ function renderCalendarPill(post, isWeekMode = false) {
   return `
     <button type="button" class="post-pill mt-1 text-left relative" onclick="event.stopPropagation();openCalendarPost(this)" title="${escapeHtml(buildDateDiagnosticTitle(post))}" style="background:${campaignColor}14;border:1px solid ${campaignColor}30;box-shadow:inset 3px 0 0 ${campaignColor};" ${renderPostIdentityDataAttributes(post)}>
       <div class="flex items-center gap-1.5 w-full">
-        ${carouselCoverUrl
-          ? `<img src="${escapeHtml(carouselCoverUrl)}" alt="${escapeHtml(getMediaDisplayTitle(carouselCover, null, "Carousel cover"))}" class="w-5 h-5 rounded object-cover shrink-0 border border-white/10" onerror="handleBrokenMediaPreview(this)">`
-          : `<span class="w-2 h-2 rounded-full shrink-0" style="background:${campaignColor};box-shadow:0 0 10px ${campaignColor}66;"></span>`}
+           ${carouselCoverUrl
+           ? `<img src="${escapeHtml(carouselCoverUrl)}" alt="${escapeHtml(getMediaDisplayTitle(carouselCover, null, "Carousel cover"))}" class="w-5 h-5 rounded object-cover shrink-0 border border-white/10" onerror="handleBrokenMediaPreview(this)">`
+           : pillarSymbol ? `<i class="ph ${pillarSymbol}"></i>` : ""}
         ${iconBlock}
         <div class="w-1.5 h-1.5 rounded-full ml-auto" style="background:${statusColor}"></div>
       </div>
       <span class="flex items-center gap-1 w-full">
         <span class="text-[9px] text-gray-300 wrap-safe flex-1 min-w-0 truncate">${escapeHtml(pillTitle)}</span>
-        ${pillarSymbol ? `<span class="text-[8px] text-gray-500 opacity-50 shrink-0" title="${escapeHtml(formatContentPillarLabel(postPillar))}"><i class="${pillarSymbol}"></i></span>` : ""}
+        ${pillarSymbol ? `<span class="text-[8px] text-gray-500 opacity-50 shrink-0" title="${escapeHtml(formatContentPillarLabel(postPillar))}"><i class="ph ${pillarSymbol}"></i></span>` : ""}
       </span>
       <span class="text-[8px] text-gray-500 wrap-safe w-full block mt-0.5">${escapeHtml(mediaTypeLabel)}</span>
       ${renderPillarCornerBadge(postPillar, { bottom: "6px", right: "6px", size: "18px", fontSize: "8px" })}
