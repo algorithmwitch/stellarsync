@@ -124,6 +124,7 @@ function normalizeRouteName_(route) {
   var value = String(route || "").trim();
   var normalized = value.toLowerCase().replace(/[\s-]+/g, "_");
   if (normalized === "readtab" || normalized === "read_tab") return "readTab";
+  if (normalized === "pullworkspacetabs" || normalized === "pull_workspace_tabs") return "pullWorkspaceTabs";
   if (normalized === "getposts" || normalized === "get_posts" || normalized === "posts") return "getPosts";
   if (normalized === "savepost" || normalized === "save_post" || normalized === "updatepost" || normalized === "update_post") return "savePost";
   if (normalized === "backfillpostids" || normalized === "backfill_post_ids" || normalized === "repairpostids" || normalized === "repair_post_ids") return "backfillPostIds";
@@ -302,6 +303,44 @@ function readTabRows_(payload, context) {
     rowCount: Array.isArray(rows) ? rows.length : 0,
     workspace_slug: context.workspace_slug || ""
   };
+}
+
+function pullWorkspaceTabs_(payload, context) {
+  payload = payload || {};
+  context = context || getCurrentWorkspaceRequestContext_();
+  var requestedTabs = Array.isArray(payload.tabs) ? payload.tabs : [];
+  var normalizedTabs = requestedTabs
+    .map(function(tab) { return String(tab || "").trim().toUpperCase(); })
+    .filter(Boolean);
+  if (!normalizedTabs.length) {
+    normalizedTabs = ["POSTS", "CAMPAIGNS", "MEDIA", "NOTES", "INSPO", "AI_DRAFTS", "SETTINGS", "BRAND_FRAMEWORK"];
+  }
+
+  var response = {
+    ok: true,
+    source: "google_sheets",
+    action: "pull_workspace_tabs",
+    tabs: normalizedTabs,
+    workspace_slug: context.workspace_slug || ""
+  };
+
+  normalizedTabs.forEach(function(tab) {
+    try {
+      response[tab] = readTabRows_({ tab: tab }, context);
+    } catch (err) {
+      response[tab] = {
+        ok: true,
+        source: "google_sheets",
+        tab: tab,
+        rows: [],
+        rowCount: 0,
+        workspace_slug: context.workspace_slug || "",
+        warning: sanitizeErrorMessage_(err && err.message || err || "Missing sheet")
+      };
+    }
+  });
+
+  return response;
 }
 
 function buildDiagnosticsResponse_(diagnostics, context, requestedRoute) {
@@ -1123,28 +1162,12 @@ const INSIGHT_METRIC_KEYS = [
 ];
 
 const SETTINGS_DEFAULTS = {
-  platforms: ["linkedin", "instagram", "both"],
-  pillars: ["Advocacy", "Community", "Wellness", "Leadership"],
+  platforms: ["linkedin", "instagram", "facebook"],
+  pillars: ["Educate", "Engage", "Inform", "Inspire"],
   statuses: ["draft", "scheduled", "published"],
-  postTypes: ["image", "carousel", "video", "article", "text", "poll"],
-  campaigns: [
-    "Alternate Realities",
-    "Job Posts",
-    "Community Shout Outs",
-    "Algorithm Best Practices",
-    "Offerings",
-    "Long-Form Content Loop",
-    "Messaging"
-  ],
-  campaignColors: {
-    "Alternate Realities": "#c77dff",
-    "Job Posts": "#00ffaa",
-    "Community Shout Outs": "#ffd700",
-    "Algorithm Best Practices": "#00f0ff",
-    "Offerings": "#b25fff",
-    "Long-Form Content Loop": "#f472b6",
-    "Messaging": "#fb923c"
-  },
+  postTypes: ["carousel", "single image", "video", "short video", "text post", "newsletter", "blog", "case study", "event promotion", "quote graphic"],
+  campaigns: [],
+  campaignColors: {},
   months: [],
   queueLimit: "",
   currentMonth: "",
@@ -1180,6 +1203,8 @@ function doGet(e) {
       const availableActions = [
         "read_tab",
         "readTab",
+        "pull_workspace_tabs",
+        "pullWorkspaceTabs",
         "getPosts",
         "get_posts",
         "posts",
@@ -1284,6 +1309,9 @@ function doGet(e) {
     }
     if (route === "readTab" || action === "read_tab") {
       return jsonResponse(readTabRows_(payloadOrParams_(e), context));
+    }
+    if (route === "pullWorkspaceTabs" || action === "pull_workspace_tabs") {
+      return jsonResponse(pullWorkspaceTabs_(payloadOrParams_(e), context));
     }
     if (route === "backfillPostIds") return jsonResponse(backfillPostIds());
     if (action === "getWorkspaceConfig") return jsonResponse({ ok: true, workspace: getWorkspaceServerConfig_(payloadOrParams_(e)) });
@@ -1401,6 +1429,9 @@ function doPost(e) {
     }
     if (route === "readTab" || action === "read_tab") {
       return jsonResponse(readTabRows_(payload, context));
+    }
+    if (route === "pullWorkspaceTabs" || action === "pull_workspace_tabs") {
+      return jsonResponse(pullWorkspaceTabs_(payload, context));
     }
 
     if (route === "backfillPostIds") {

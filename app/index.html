@@ -6384,12 +6384,12 @@ async function ensureSupabaseWorkspaceBeforeBoot() {
   activeWorkspace = await loadWorkspaceSettingsForWorkspace(activeWorkspace);
   console.log("[app-router] selected workspace slug", activeWorkspace.slug);
   if (!activeWorkspace.default_pillars || (Array.isArray(activeWorkspace.default_pillars) && !activeWorkspace.default_pillars.length)) {
-    console.log("[workspace-settings] default_pillars missing, falling back to GPE four pillars");
+    console.log("[workspace-settings] default_pillars missing, falling back to generic starter pillars");
     activeWorkspace.default_pillars = [
-      { name: "Advocacy", slug: "advocacy", icon: "megaphone-simple", color: "#ff6b6b", enabled: true },
-      { name: "Community", slug: "community", icon: "users-three", color: "#4ecdc4", enabled: true },
-      { name: "Wellness", slug: "wellness", icon: "heartbeat", color: "#45b7d1", enabled: true },
-      { name: "Leadership", slug: "leadership", icon: "crown", color: "#96ceb4", enabled: true }
+      { name: "Educate", slug: "educate", icon: "ph-book-open", color: "#0f766e", enabled: true },
+      { name: "Engage", slug: "engage", icon: "ph-chat-circle-text", color: "#2563eb", enabled: true },
+      { name: "Inform", slug: "inform", icon: "ph-newspaper", color: "#b45309", enabled: true },
+      { name: "Inspire", slug: "inspire", icon: "ph-sparkle", color: "#7c3aed", enabled: true }
     ];
   }
 
@@ -7040,14 +7040,16 @@ function getAvailableContentPillars() {
   var slugs = getWorkspacePillarSlugs();
   if (slugs.length) return slugs;
   console.log("[pillars] fallback default used");
-  return ["Advocacy", "Community", "Wellness", "Leadership"];
+  return ["Educate", "Engage", "Inform", "Inspire"];
 }
 
 function getAvailableCampaignRecords() {
-  const allowed = Array.isArray(appState?.settings?.campaigns) ? appState.settings.campaigns : [];
+  const allowed = Array.isArray(appState?.settings?.campaigns) ? appState.settings.campaigns.filter(Boolean) : [];
   const sourceRecords = Array.isArray(appState?.campaigns) ? appState.campaigns : [];
-  if (!allowed.length) return [];
-  return allowed.map((campaignName, index) => {
+  const orderedNames = allowed.length
+    ? allowed.slice()
+    : sourceRecords.map((campaign) => campaign?.campaignName || campaign?.campaign_name || campaign?.name || "").filter(Boolean);
+  return orderedNames.map((campaignName, index) => {
     const matched = sourceRecords.find((campaign) => normalizeLookupValue(campaign.campaignName || campaign.name || "") === normalizeLookupValue(campaignName));
     return {
       ...(matched || {}),
@@ -7141,19 +7143,19 @@ function getWorkspacePillarSlugs() {
 }
 
 var BOOTSTRAP_DEFAULT_PILLARS = [
-  { name: "Advocacy", slug: "advocacy", icon: "ph-megaphone", color: "#c77dff", enabled: true },
-  { name: "Community", slug: "community", icon: "ph-users-three", color: "#00ffaa", enabled: true },
-  { name: "Wellness", slug: "wellness", icon: "ph-heart", color: "#00f0ff", enabled: true },
-  { name: "Leadership", slug: "leadership", icon: "ph-crown", color: "#ffd700", enabled: true }
+  { name: "Educate", slug: "educate", icon: "ph-book-open", color: "#0f766e", enabled: true },
+  { name: "Engage", slug: "engage", icon: "ph-chat-circle-text", color: "#2563eb", enabled: true },
+  { name: "Inform", slug: "inform", icon: "ph-newspaper", color: "#b45309", enabled: true },
+  { name: "Inspire", slug: "inspire", icon: "ph-sparkle", color: "#7c3aed", enabled: true }
 ];
 
 function getDefaultPillarObject(slug) {
   var s = String(slug || "").trim().toLowerCase();
   var defaults = {
-    advocacy: { name: "Advocacy", slug: "advocacy", icon: "ph-megaphone", color: "#c77dff", enabled: true },
-    community: { name: "Community", slug: "community", icon: "ph-users-three", color: "#00ffaa", enabled: true },
-    wellness: { name: "Wellness", slug: "wellness", icon: "ph-heart", color: "#00f0ff", enabled: true },
-    leadership: { name: "Leadership", slug: "leadership", icon: "ph-crown", color: "#ffd700", enabled: true },
+    educate: { name: "Educate", slug: "educate", icon: "ph-book-open", color: "#0f766e", enabled: true },
+    engage: { name: "Engage", slug: "engage", icon: "ph-chat-circle-text", color: "#2563eb", enabled: true },
+    inform: { name: "Inform", slug: "inform", icon: "ph-newspaper", color: "#b45309", enabled: true },
+    inspire: { name: "Inspire", slug: "inspire", icon: "ph-sparkle", color: "#7c3aed", enabled: true },
     authority: { name: "Authority", slug: "authority", icon: "ph-megaphone", color: "#c77dff", enabled: true },
     distribution: { name: "Distribution", slug: "distribution", icon: "ph-users-three", color: "#00ffaa", enabled: true },
     identity: { name: "Identity", slug: "identity", icon: "ph-heart", color: "#00f0ff", enabled: true },
@@ -7530,6 +7532,93 @@ function extractPostsFromSheetPullResult(result) {
     if (flat.length > 0) return flat;
   }
   return [];
+}
+
+function extractSheetRowsFromPullResult(result, tab) {
+  if (!result || typeof result !== "object") return [];
+  var normalizedTab = String(tab || "").trim().toUpperCase();
+  if (!normalizedTab) return [];
+  var tabData = result[normalizedTab] || result[normalizedTab.toLowerCase()] || result[normalizedTab.replace(/_/g, "")];
+  if (tabData && typeof tabData === "object" && !Array.isArray(tabData)) {
+    var nested = [tabData.rows, tabData.items, tabData.records, tabData.data];
+    for (var i = 0; i < nested.length; i += 1) {
+      if (Array.isArray(nested[i])) return nested[i];
+    }
+  }
+  if (Array.isArray(tabData)) return tabData;
+  if (normalizedTab === "POSTS") return extractPostsFromSheetPullResult(result);
+  return [];
+}
+
+function mergeMediaAssetsPreservingExisting(currentAssets = [], incomingAssets = []) {
+  var merged = [];
+  var seenKeys = new Set();
+  var append = function(asset) {
+    var normalized = normalizeRemoteMedia(asset);
+    var key = String(
+      normalized.mediaAssetId ||
+      normalized.media_asset_id ||
+      normalized.assetId ||
+      normalized.asset_id ||
+      normalized.storagePath ||
+      normalized.storage_path ||
+      normalized.url ||
+      normalized.media_url ||
+      ""
+    ).trim();
+    if (!key || seenKeys.has(key)) return;
+    seenKeys.add(key);
+    merged.push(normalized);
+  };
+  (Array.isArray(currentAssets) ? currentAssets : []).forEach(append);
+  (Array.isArray(incomingAssets) ? incomingAssets : []).forEach(append);
+  return merged;
+}
+
+function shouldSkipEmptyOverwrite(existingItems = [], incomingItems = []) {
+  return Array.isArray(existingItems) && existingItems.length > 0 && Array.isArray(incomingItems) && incomingItems.length === 0;
+}
+
+function hydrateHybridSheetData(sheetData = {}) {
+  var campaigns = Array.isArray(sheetData.campaigns) ? sheetData.campaigns : [];
+  var normalizedCampaigns = campaigns.map(function(campaign) {
+    return normalizeRemoteCampaign(campaign);
+  }).filter(Boolean);
+  appState.campaigns = normalizedCampaigns;
+
+  var settings = sheetData.settings;
+  if (settings && typeof settings === "object" && !Array.isArray(settings)) {
+    appState.settings = normalizeRemoteSettings(settings);
+  }
+
+  var mediaRows = Array.isArray(sheetData.media) ? sheetData.media : [];
+  if (mediaRows.length > 0) {
+    var normalizedMedia = filterRenderableArtifacts(mediaRows.map(function(asset) {
+      return normalizeRemoteMedia(asset);
+    }), "media");
+    appState.media = mergeMediaAssetsPreservingExisting(appState.media || [], normalizedMedia);
+  }
+
+  if (Array.isArray(sheetData.notes)) {
+    appState.notes = filterRenderableArtifacts(sheetData.notes.map(function(item) {
+      return normalizeRemoteNote(item);
+    }), "note");
+  }
+  if (Array.isArray(sheetData.inspo)) {
+    appState.inspo = filterRenderableArtifacts(sheetData.inspo.map(function(item) {
+      return normalizeRemoteInspo(item);
+    }), "inspo");
+  }
+  if (Array.isArray(sheetData.aiDrafts)) {
+    appState.aiDrafts = filterRenderableArtifacts(sheetData.aiDrafts.map(function(item) {
+      return normalizeRemoteAIDraft(item);
+    }), "aiDraft");
+  }
+  if (Array.isArray(sheetData.brandFramework)) {
+    appState.brandFramework = sheetData.brandFramework.map(function(item) {
+      return normalizeRemoteBrandFrameworkItem(item);
+    });
+  }
 }
 
 function firstNonEmpty(...args) {
@@ -8451,67 +8540,44 @@ function fileToPreview(file) {
   };
 }
 
-const DEFAULT_STATE = {
+const GENERIC_STARTER_CAMPAIGN_DEFINITIONS = [
+  { campaignId: "starter-thought-leadership", campaignName: "Thought Leadership", goal: "Expertise and visibility", pillar: "educate", color: "#0f766e", status: "active" },
+  { campaignId: "starter-community-building", campaignName: "Community Building", goal: "Engagement and participation", pillar: "engage", color: "#2563eb", status: "active" },
+  { campaignId: "starter-programs-initiatives", campaignName: "Programs & Initiatives", goal: "Promote active work", pillar: "inform", color: "#b45309", status: "active" },
+  { campaignId: "starter-impact-stories", campaignName: "Impact Stories", goal: "Outcomes, testimonials, wins", pillar: "inspire", color: "#7c3aed", status: "active" },
+  { campaignId: "starter-events-announcements", campaignName: "Events & Announcements", goal: "Webinars, launches, updates", pillar: "inform", color: "#be123c", status: "active" },
+  { campaignId: "starter-resource-library", campaignName: "Resource Library", goal: "Guides, reports, downloads", pillar: "educate", color: "#4f46e5", status: "active" }
+];
+
+const GENERIC_STARTER_SETTINGS = {
+  platforms: ["linkedin", "instagram", "facebook"],
+  pillars: ["Educate", "Engage", "Inform", "Inspire"],
+  statuses: ["draft", "scheduled", "published"],
+  postTypes: ["carousel", "single image", "video", "short video", "text post", "newsletter", "blog", "case study", "event promotion", "quote graphic"],
+  campaigns: GENERIC_STARTER_CAMPAIGN_DEFINITIONS.map(function(campaign) { return campaign.campaignName; }),
+  campaignColors: GENERIC_STARTER_CAMPAIGN_DEFINITIONS.reduce(function(map, campaign) {
+    map[campaign.campaignName] = campaign.color;
+    return map;
+  }, {}),
+  goals: ["Visibility", "Engagement", "Participation", "Lead Generation", "Fundraising", "Recruitment", "Advocacy"],
+  months: [],
+  queueLimit: "",
+  currentMonth: "",
+  currentYear: "",
+  mediaFolderId: ""
+};
+
+const EMPTY_WORKSPACE_SETTINGS = {
+  ...GENERIC_STARTER_SETTINGS,
+  campaigns: [],
+  campaignColors: {}
+};
+
+const EMPTY_WORKSPACE_STATE = {
   posts: [],
   campaigns: [],
-  settings: {
-    platforms: ["linkedin", "instagram", "both"],
-    pillars: ["Advocacy", "Community", "Wellness", "Leadership"],
-    statuses: ["draft", "scheduled", "published"],
-    postTypes: ["image", "carousel", "video", "article", "text", "poll"],
-    campaigns: [
-      "Alternate Realities",
-      "Job Posts",
-      "Community Shout Outs",
-      "Algorithm Best Practices",
-      "Offerings",
-      "Long-Form Content Loop",
-      "Messaging"
-    ],
-    campaignColors: {
-      "Alternate Realities": "#c77dff",
-      "Job Posts": "#00ffaa",
-      "Community Shout Outs": "#ffd700",
-      "Algorithm Best Practices": "#00f0ff",
-      "Offerings": "#b25fff",
-      "Long-Form Content Loop": "#f472b6",
-      "Messaging": "#fb923c"
-    },
-    months: [],
-    queueLimit: "",
-    currentMonth: "",
-    currentYear: "",
-    mediaFolderId: ""
-  },
-  inspo: [
-  {
-    id: "inspo-001",
-    title: "The Future of Solar: 2024 Industry Report",
-    type: "article",
-    description: "New breakthroughs in perovskite solar cells promise 40% efficiency gains. Major energy companies are investing heavily...",
-    sourceLabel: "GreenTech Daily",
-    domainOrMeta: "greentech.com",
-    notes: "greentech.com"
-  },
-  {
-    id: "inspo-002",
-    title: "Tesla Solar Roof Process",
-    type: "video",
-    description: "Check out how fast the new V3 tiles can be installed.",
-    sourceLabel: "YouTube",
-    domainOrMeta: "youtube.com",
-    notes: "youtube.com"
-  },
-  {
-    id: "inspo-003",
-    title: "Viral Solar Hacks",
-    type: "trend",
-    description: "Have you tried any of these viral solar maintenance hacks?",
-    sourceLabel: "Social",
-    domainOrMeta: "#solarhacks",
-    notes: "#solarhacks"
-  }
-],
+  settings: EMPTY_WORKSPACE_SETTINGS,
+  inspo: [],
   notes: [],
   media: [],
   postMedia: [],
@@ -8519,6 +8585,8 @@ const DEFAULT_STATE = {
   aiDrafts: [],
   brandFramework: []
 };
+
+const DEFAULT_STATE = EMPTY_WORKSPACE_STATE;
 
 let appState = loadLocalState();
 let currentView = "calendar";
@@ -9394,38 +9462,30 @@ function normalizeDisplayText(value) {
 function normalizeCampaignName(value) {
   const raw = normalizeDisplayText(value);
   if (!raw) return "";
-  const allowed = Array.isArray(appState?.settings?.campaigns) ? appState.settings.campaigns : [];
-  if (!allowed.length) return "";
+  const configured = Array.isArray(appState?.settings?.campaigns) ? appState.settings.campaigns : [];
+  const hydrated = Array.isArray(appState?.campaigns)
+    ? appState.campaigns.map(function(campaign) {
+        return String(campaign?.campaignName || campaign?.campaign_name || campaign?.name || "").trim();
+      }).filter(Boolean)
+    : [];
+  const allowed = configured.length ? configured : hydrated;
+  if (!allowed.length) return raw;
   const found = allowed.find((name) => normalizeLookupValue(name) === normalizeLookupValue(raw));
-  return found || "";
+  return found || raw;
 }
 
 function getDefaultSettings() {
-  return JSON.parse(JSON.stringify(DEFAULT_STATE.settings));
+  return JSON.parse(JSON.stringify(GENERIC_STARTER_SETTINGS));
 }
 
 function getLocalBrandFrameworkDefaults() {
   return [
-    { frameworkKey: "core_identity", section: "Core Identity", ruleType: "principle", title: "Core Identity", content: "Digital communications as public infrastructure.", importance: 10, strictness: "high", semanticCategory: "identity", enabled: true, examples: "", sortOrder: 1 },
-    { frameworkKey: "system_philosophy", section: "System Philosophy", ruleType: "principle", title: "System Philosophy", content: "Interpret systems, map relations, and make structures legible.", importance: 10, strictness: "high", semanticCategory: "systems", enabled: true, examples: "", sortOrder: 2 },
-    { frameworkKey: "participation_architecture", section: "Participation Architecture", ruleType: "principle", title: "Participation Architecture", content: "Prefer participation architecture and community-led systems over broadcast-first messaging.", importance: 9, strictness: "high", semanticCategory: "participation", enabled: true, examples: "", sortOrder: 3 },
-    { frameworkKey: "orientation", section: "Orientation", ruleType: "principle", title: "Orientation", content: "Prefer orientation over motivation and recognition before explanation.", importance: 9, strictness: "high", semanticCategory: "orientation", enabled: true, examples: "", sortOrder: 4 },
-    { frameworkKey: "spatial_systems", section: "Spatial / Geographic Systems", ruleType: "principle", title: "Spatial / Geographic Systems", content: "Ground ideas in place, proximity, local infrastructure, and spatial systems.", importance: 8, strictness: "medium", semanticCategory: "spatial", enabled: true, examples: "", sortOrder: 5 },
-    { frameworkKey: "interpreter_of_systems", section: "Interpreter of Systems", ruleType: "principle", title: "Interpreter of Systems", content: "Translate systems, explain hidden structures, and connect moving parts without flattening nuance.", importance: 9, strictness: "high", semanticCategory: "translation", enabled: true, examples: "", sortOrder: 6 },
-    { frameworkKey: "classification_before_distribution", section: "Classification Before Distribution", ruleType: "rule", title: "Classification Before Distribution", content: "Clarify semantic structure before optimizing distribution.", importance: 10, strictness: "high", semanticCategory: "classification", enabled: true, examples: "", sortOrder: 7 },
-    { frameworkKey: "community_led_systems", section: "Community-Led Systems", ruleType: "principle", title: "Community-Led Systems", content: "Center community-led systems, local participation, and reciprocal infrastructure.", importance: 9, strictness: "high", semanticCategory: "community", enabled: true, examples: "", sortOrder: 8 },
-    { frameworkKey: "language_carries_structure", section: "Language Carries Structure", ruleType: "rule", title: "Language Carries Structure", content: "Language should carry orientation, classification, and legibility.", importance: 8, strictness: "high", semanticCategory: "language", enabled: true, examples: "", sortOrder: 9 },
-    { frameworkKey: "embedded_builder_perspective", section: "Embedded Builder Perspective", ruleType: "principle", title: "Embedded Builder Perspective", content: "Write from inside the work as an embedded builder and analyzer.", importance: 8, strictness: "high", semanticCategory: "perspective", enabled: true, examples: "", sortOrder: 10 },
-    { frameworkKey: "legibility", section: "Legibility", ruleType: "rule", title: "Legibility", content: "Prefer semantic clarity and public-interface legibility over vague abstraction.", importance: 8, strictness: "high", semanticCategory: "legibility", enabled: true, examples: "", sortOrder: 11 },
-    { frameworkKey: "platform_specific_strategy", section: "Platform-Specific Strategy", ruleType: "pattern", title: "Platform-Specific Strategy", content: "Adapt structure to each platform without losing the underlying system logic.", importance: 7, strictness: "medium", semanticCategory: "platform", enabled: true, examples: "", sortOrder: 12 },
-    { frameworkKey: "cta_philosophy", section: "CTA Philosophy", ruleType: "pattern", title: "CTA Philosophy", content: "CTA should invite participation, recognition, or practical next steps rather than hype.", importance: 7, strictness: "medium", semanticCategory: "cta", enabled: true, examples: "", sortOrder: 13 },
-    { frameworkKey: "hook_patterns", section: "Hook Patterns", ruleType: "pattern", title: "Hook Patterns", content: "Hooks should start from tension, classification, or an orienting observation.", importance: 8, strictness: "medium", semanticCategory: "hook", enabled: true, examples: "", sortOrder: 14 },
-    { frameworkKey: "emotional_entry_points", section: "Emotional Entry Points", ruleType: "pattern", title: "Emotional Entry Points", content: "Vary entry points across recognition, friction, proximity, surprise, and practical clarity.", importance: 7, strictness: "medium", semanticCategory: "emotion", enabled: true, examples: "", sortOrder: 15 },
-    { frameworkKey: "carousel_philosophy", section: "Carousel Philosophy", ruleType: "pattern", title: "Carousel Philosophy", content: "Do not flatten a carousel into one caption. Keep the sequence doing the structural work.", importance: 9, strictness: "high", semanticCategory: "carousel", enabled: true, examples: "", sortOrder: 16 },
-    { frameworkKey: "ai_anti_patterns", section: "AI Anti-Patterns", ruleType: "anti_pattern", title: "Avoid Generic Marketer Tone", content: "Avoid generic marketer language, guru tone, and generic inspiration framing.", importance: 10, strictness: "high", semanticCategory: "tone", enabled: true, examples: "", sortOrder: 17 },
-    { frameworkKey: "grammar_rules", section: "Grammar Rules", ruleType: "anti_pattern", title: "Grammar Rules", content: "Avoid quietly doing, still feeling, repetitive antithesis, and long flattened carousel captions.", importance: 8, strictness: "high", semanticCategory: "grammar", enabled: true, examples: "", sortOrder: 18 },
-    { frameworkKey: "preferred_vocabulary", section: "Preferred Vocabulary", ruleType: "vocabulary", title: "Preferred Vocabulary", content: "orientation, participation, legibility, infrastructure, recognition, proximity, systems, translation, classification, public interfaces, participation architecture, civic systems, semantic clarity, community-led, local systems, embedded analysis", importance: 7, strictness: "medium", semanticCategory: "vocabulary", enabled: true, examples: "", sortOrder: 19 },
-    { frameworkKey: "avoid_vocabulary", section: "Avoid Vocabulary", ruleType: "vocabulary", title: "Avoid Vocabulary", content: "generic inspiration, guru framing, detached institutional phrasing", importance: 7, strictness: "medium", semanticCategory: "vocabulary", enabled: true, examples: "", sortOrder: 20 }
+    { frameworkKey: "mission", section: "Core Identity", ruleType: "principle", title: "Mission", content: "[Describe your mission]", importance: 10, strictness: "high", semanticCategory: "identity", enabled: true, examples: "", sortOrder: 1 },
+    { frameworkKey: "audience", section: "Core Identity", ruleType: "principle", title: "Audience", content: "[Who are you trying to reach]", importance: 10, strictness: "high", semanticCategory: "audience", enabled: true, examples: "", sortOrder: 2 },
+    { frameworkKey: "voice", section: "Voice & Tone", ruleType: "principle", title: "Voice", content: "Clear, informed, approachable", importance: 9, strictness: "high", semanticCategory: "tone", enabled: true, examples: "", sortOrder: 3 },
+    { frameworkKey: "key_themes", section: "Messaging", ruleType: "pattern", title: "Key Themes", content: "- Theme 1\n- Theme 2\n- Theme 3", importance: 8, strictness: "medium", semanticCategory: "messaging", enabled: true, examples: "", sortOrder: 4 },
+    { frameworkKey: "primary_cta", section: "Conversion", ruleType: "pattern", title: "Primary CTA", content: "[Desired action]", importance: 8, strictness: "medium", semanticCategory: "cta", enabled: true, examples: "", sortOrder: 5 },
+    { frameworkKey: "success_metrics", section: "Measurement", ruleType: "rule", title: "Success Metrics", content: "- Reach\n- Engagement\n- Conversions", importance: 7, strictness: "medium", semanticCategory: "measurement", enabled: true, examples: "", sortOrder: 6 }
   ];
 }
 
@@ -19085,12 +19145,11 @@ function buildMediaVaultItems() {
 function handleBrokenMediaPreview(el) {
   if (!el) return;
   const parent = el.parentElement;
-  const label = el.getAttribute("alt") || "Media preview";
   const replacement = document.createElement("div");
   replacement.className = "w-full h-full min-h-[96px] flex flex-col items-center justify-center gap-2 bg-[#120c1d] text-gray-500 text-center p-3";
   replacement.innerHTML = `
     <i class="ph-bold ph-image-broken text-2xl text-gray-600"></i>
-    <span class="text-[10px] uppercase tracking-wider font-bold">${escapeHtml(label)} unavailable</span>
+    <span class="text-[10px] uppercase tracking-wider font-bold">Media preview unavailable</span>
   `;
   if (parent) parent.replaceChild(replacement, el);
 }
@@ -24304,9 +24363,10 @@ async function syncRemoteIfConfigured() {
     }
   }
 
-  // HYBRID/GPE PATH — posts first, then background data
+  // HYBRID/GPE PATH — sheet-backed first render, background mirror second
   window.__SHEET_POSTS_LOADED = false;
   console.log("[boot] hybrid mode detected");
+  console.log("[hybrid] source google_sheets");
 
   dismissToast(syncLoadingToastId);
   var staleErr2 = document.getElementById("sync-error-state");
@@ -24316,24 +24376,29 @@ async function syncRemoteIfConfigured() {
 
   var loadingEl = document.getElementById("boot-loading");
 
-  // Phase 1: Fetch posts from Sheets (pull route first, then direct fallback)
-  console.log("[posts] loading from sheets");
-  let postsData = [];
+  // Phase 1: Fetch posts and campaigns from Sheets first
+  console.log("[hybrid] pull tabs start");
+  let sheetHydration = null;
   let postsLoadError = null;
   try {
-    postsData = await loadSheetsPostsForHybrid();
+    sheetHydration = await loadSheetsWorkspaceDataForHybrid();
   } catch (err) {
     postsLoadError = err;
     console.log("[posts] sheets load error", err && err.message ? err.message : String(err));
   }
 
-  if (loadingEl) loadingEl.classList.add("hidden");
-  console.log("[boot] loading overlay hidden");
-
+  let postsData = Array.isArray(sheetHydration?.posts) ? sheetHydration.posts : [];
   if (postsData.length > 0 && !postsLoadError) {
+    hydrateHybridSheetData(sheetHydration || {});
     appState.posts = postsData.map(function(post, index) {
       return normalizeRemotePost(post, getAvailableCampaignRecords(), appState.media || [], index);
     });
+    console.log("[hybrid] tabs returned", sheetHydration?.tabsReturned || []);
+    console.log("[hybrid] posts count", appState.posts.length);
+    console.log("[hybrid] campaigns count", Array.isArray(appState.campaigns) ? appState.campaigns.length : 0);
+    console.log("[hybrid] media refs count", Array.isArray(appState.media) ? appState.media.length : 0);
+    console.log("[hybrid] notes count", Array.isArray(appState.notes) ? appState.notes.length : 0);
+    console.log("[hybrid] no seed defaults for existing workspace");
     console.log("[posts] appState.posts set count", appState.posts.length);
     console.log("[posts] render after sheets");
     window.__SHEET_POSTS_LOADED = true;
@@ -24342,8 +24407,22 @@ async function syncRemoteIfConfigured() {
     offlineMode = false;
     backendReachable = true;
     lastSyncError = "";
+    persistLocalState();
     rerenderAll();
+    console.log("[hybrid] render after sheet hydration");
+    if (loadingEl) loadingEl.classList.add("hidden");
+    console.log("[boot] loading overlay hidden");
     console.log("[boot] first render complete");
+    mirrorGoogleSheetPostsToSupabase(appState.posts).then(function(count) {
+      console.log("[mirror] background posts mirrored count", count);
+    }).catch(function(err) {
+      console.log("[mirror] background posts mirror failed", err?.message || err);
+    });
+    mirrorGoogleSheetCampaignsToSupabase(appState.campaigns || []).then(function(count) {
+      console.log("[mirror-campaigns] background mirrored count", count);
+    }).catch(function(err) {
+      console.log("[mirror-campaigns] background mirror failed", err?.message || err);
+    });
   } else if (postsLoadError) {
     // Show visible error overlay with retry
     offlineMode = true;
@@ -24399,10 +24478,17 @@ async function syncRemoteIfConfigured() {
 
     try { loadAIProviders().catch(function() {}); } catch (err) { /* silent */ }
 
-    appState.settings = normalizeRemoteSettings(settings);
+    if (settings && typeof settings === "object" && !Array.isArray(settings)) {
+      appState.settings = normalizeRemoteSettings(settings);
+    }
 
     if (Array.isArray(campaigns)) {
-      appState.campaigns = campaigns.map(function(c) { return normalizeRemoteCampaign(c); });
+      var normalizedBackgroundCampaigns = campaigns.map(function(c) { return normalizeRemoteCampaign(c); });
+      if (shouldSkipEmptyOverwrite(appState.campaigns, normalizedBackgroundCampaigns)) {
+        console.log("[hybrid] background supabase skipped empty overwrite", "campaigns");
+      } else {
+        appState.campaigns = normalizedBackgroundCampaigns;
+      }
     }
 
     if (Array.isArray(media)) {
@@ -24412,22 +24498,19 @@ async function syncRemoteIfConfigured() {
         try {
           loadSupabaseMediaAssets(activeCfg).then(function(supabaseMediaResult) {
             console.log("[media-backend] source", supabaseMediaResult.source);
+            console.log("[media] supabase assets loaded count", Array.isArray(supabaseMediaResult.assets) ? supabaseMediaResult.assets.length : 0);
             if (Array.isArray(supabaseMediaResult.assets) && supabaseMediaResult.assets.length > 0) {
-              var seenKeys = new Set();
-              filteredMedia.forEach(function(asset) {
-                var key = String(asset.asset_id || asset.assetId || asset.storage_path || asset.storagePath || asset.url || asset.media_url || "").trim();
-                if (key) seenKeys.add(key);
-              });
-              supabaseMediaResult.assets.forEach(function(asset) {
-                var key = String(asset.asset_id || asset.assetId || asset.storage_path || asset.storagePath || asset.url || asset.media_url || "").trim();
-                if (key && !seenKeys.has(key)) {
-                  seenKeys.add(key);
-                  filteredMedia.push(asset);
-                }
-              });
+              filteredMedia = mergeMediaAssetsPreservingExisting(filteredMedia, supabaseMediaResult.assets);
             }
+            if (!Array.isArray(appState.posts) || appState.posts.length === 0) {
+              console.log("[media] post associations pending posts");
+            }
+            console.log("[media] showing unlinked media count", filteredMedia.filter(function(asset) {
+              return !String(asset.linkedPostId || asset.linked_post_id || asset.postId || asset.post_id || "").trim();
+            }).length);
             console.log("[media-backend] merged media count", filteredMedia.length);
-            appState.media = filteredMedia;
+            appState.media = mergeMediaAssetsPreservingExisting(appState.media || [], filteredMedia);
+            console.log("[media] reconciled after posts");
             rerenderAll();
           }).catch(function(err) {
             console.log("[media-backend] load error", err?.message || err);
@@ -24436,24 +24519,48 @@ async function syncRemoteIfConfigured() {
           console.log("[media-backend] load error", err?.message || err);
         }
       } else {
-        appState.media = filteredMedia;
+        if (shouldSkipEmptyOverwrite(appState.media, filteredMedia)) {
+          console.log("[hybrid] background supabase skipped empty overwrite", "media");
+        } else {
+          appState.media = mergeMediaAssetsPreservingExisting(appState.media || [], filteredMedia);
+        }
       }
     }
 
     if (Array.isArray(inspo)) {
       var normInspo = inspo.map(function(item) { return normalizeRemoteInspo(item); });
-      appState.inspo = filterRenderableArtifacts(normInspo, "inspo");
+      var filteredInspo = filterRenderableArtifacts(normInspo, "inspo");
+      if (shouldSkipEmptyOverwrite(appState.inspo, filteredInspo)) {
+        console.log("[hybrid] background supabase skipped empty overwrite", "inspo");
+      } else {
+        appState.inspo = filteredInspo;
+      }
     }
     if (Array.isArray(notes)) {
       var normNotes = notes.map(function(item) { return normalizeRemoteNote(item); });
-      appState.notes = filterRenderableArtifacts(normNotes, "note");
+      var filteredNotes = filterRenderableArtifacts(normNotes, "note");
+      if (shouldSkipEmptyOverwrite(appState.notes, filteredNotes)) {
+        console.log("[hybrid] background supabase skipped empty overwrite", "notes");
+      } else {
+        appState.notes = filteredNotes;
+      }
     }
     if (Array.isArray(aiDrafts)) {
       var normDrafts = aiDrafts.map(function(item) { return normalizeRemoteAIDraft(item); });
-      appState.aiDrafts = filterRenderableArtifacts(normDrafts, "aiDraft");
+      var filteredDrafts = filterRenderableArtifacts(normDrafts, "aiDraft");
+      if (shouldSkipEmptyOverwrite(appState.aiDrafts, filteredDrafts)) {
+        console.log("[hybrid] background supabase skipped empty overwrite", "aiDrafts");
+      } else {
+        appState.aiDrafts = filteredDrafts;
+      }
     }
     if (Array.isArray(brandFramework)) {
-      appState.brandFramework = brandFramework.map(function(item) { return normalizeRemoteBrandFrameworkItem(item); });
+      var normalizedFramework = brandFramework.map(function(item) { return normalizeRemoteBrandFrameworkItem(item); });
+      if (shouldSkipEmptyOverwrite(appState.brandFramework, normalizedFramework)) {
+        console.log("[hybrid] background supabase skipped empty overwrite", "brandFramework");
+      } else {
+        appState.brandFramework = normalizedFramework;
+      }
     }
 
     if (!window.__SHEET_POSTS_LOADED && !calendarCursor) {
@@ -24601,21 +24708,35 @@ async function pullSheetsToSupabase() {
   var results = {};
   var totalCount = 0;
   var errorCount = 0;
+  var pullData = null;
+  try {
+    pullData = await pullWorkspaceTabsFromAppsScript(config, tables);
+  } catch (err) {
+    console.log("[sheet-mirror] full pull route failed", err?.message || err);
+  }
   for (var t = 0; t < tables.length; t++) {
     var tab = tables[t];
     var supabaseTable = tableMap[tab];
     try {
+      var pulledRows = pullData ? extractSheetRowsFromPullResult(pullData, tab) : null;
       if (tab === "MEDIA_ATTACHMENTS") {
-        var respAttachData = await readSheetTabFromAppsScript(config, tab);
-        if (!respAttachData.ok || !Array.isArray(respAttachData.rows)) { results[tab] = { ok: false, error: respAttachData.error || "Read failed" }; errorCount++; continue; }
-        var attachmentApply = await applyMediaAttachmentSheetRows(respAttachData.rows, workspaceId);
+        var attachmentRows = Array.isArray(pulledRows) ? pulledRows : [];
+        if (!attachmentRows.length && !pullData) {
+          var respAttachData = await readSheetTabFromAppsScript(config, tab);
+          if (!respAttachData.ok || !Array.isArray(respAttachData.rows)) { results[tab] = { ok: false, error: respAttachData.error || "Read failed" }; errorCount++; continue; }
+          attachmentRows = respAttachData.rows;
+        }
+        var attachmentApply = await applyMediaAttachmentSheetRows(attachmentRows, workspaceId);
         results[tab] = { ok: true, applied: attachmentApply.count || 0 };
         totalCount += attachmentApply.count || 0;
         continue;
       }
-      var respData = await readSheetTabFromAppsScript(config, tab);
-      if (!respData.ok || !Array.isArray(respData.rows)) { results[tab] = { ok: false, error: respData.error || "Read failed" }; errorCount++; continue; }
-      var rows = respData.rows;
+      var rows = Array.isArray(pulledRows) ? pulledRows : [];
+      if (!rows.length && !pullData) {
+        var respData = await readSheetTabFromAppsScript(config, tab);
+        if (!respData.ok || !Array.isArray(respData.rows)) { results[tab] = { ok: false, error: respData.error || "Read failed" }; errorCount++; continue; }
+        rows = respData.rows;
+      }
       var inserted = 0;
       var skipped = 0;
       for (var r = 0; r < rows.length; r++) {
@@ -24672,6 +24793,25 @@ async function readSheetTabFromAppsScript(config, tab) {
   });
   var data = await resp.json();
   if (!resp.ok) {
+    throw new Error((data && data.error) || ("Request failed: " + resp.status));
+  }
+  return data;
+}
+
+async function pullWorkspaceTabsFromAppsScript(config, tabs = []) {
+  if (!config || !config.appsScriptUrl || !config.sheetId) {
+    throw new Error("Sheet mirror not configured");
+  }
+  var requestedTabs = Array.isArray(tabs) ? tabs.map(function(tab) { return String(tab || "").trim().toUpperCase(); }).filter(Boolean) : [];
+  var payload = { action: "pull_workspace_tabs", sheet_id: config.sheetId, tabs: requestedTabs };
+  var resp = await fetch(config.appsScriptUrl, {
+    method: "POST",
+    mode: "cors",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify(payload)
+  });
+  var data = await resp.json();
+  if (!resp.ok || !data || data.ok !== true) {
     throw new Error((data && data.error) || ("Request failed: " + resp.status));
   }
   return data;
@@ -25080,6 +25220,54 @@ async function loadSheetsPostsForHybrid() {
     console.log("[posts] all sheet loaders failed");
     throw new Error("Google Sheets posts could not be loaded");
   }
+}
+
+async function loadSheetsWorkspaceDataForHybrid() {
+  var config = getSheetMirrorConfig();
+  var tabs = ["POSTS", "CAMPAIGNS", "MEDIA", "NOTES", "INSPO", "AI_DRAFTS", "SETTINGS", "BRAND_FRAMEWORK"];
+  var result = null;
+  if (!config.sheetId || !config.appsScriptUrl) {
+    throw new Error("Google Sheets backend is not configured. Set apps_script_url in workspace settings.");
+  }
+
+  console.log("[posts] boot using manual pull action");
+  try {
+    var pullPayload = { action: "pull_workspace_tabs", sheet_id: config.sheetId, tabs: tabs };
+    console.log("[posts] boot pull payload", pullPayload);
+    result = await pullWorkspaceTabsFromAppsScript(config, tabs);
+    console.log("[posts] boot pull result keys", Object.keys(result || {}));
+    var primaryPosts = filterBlankPostsForRender(extractPostsFromSheetPullResult(result));
+    console.log("[posts] boot pull posts count", primaryPosts.length);
+    console.log("[posts] boot pull loaded count", primaryPosts.length);
+    if (primaryPosts.length > 0) {
+      return {
+        tabsReturned: tabs.filter(function(tab) { return Object.prototype.hasOwnProperty.call(result || {}, tab); }),
+        posts: primaryPosts,
+        campaigns: extractSheetRowsFromPullResult(result, "CAMPAIGNS"),
+        media: extractSheetRowsFromPullResult(result, "MEDIA"),
+        notes: extractSheetRowsFromPullResult(result, "NOTES"),
+        inspo: extractSheetRowsFromPullResult(result, "INSPO"),
+        aiDrafts: extractSheetRowsFromPullResult(result, "AI_DRAFTS"),
+        settings: extractSheetRowsFromPullResult(result, "SETTINGS")[0] || {},
+        brandFramework: extractSheetRowsFromPullResult(result, "BRAND_FRAMEWORK")
+      };
+    }
+  } catch (err) {
+    console.log("[posts] boot pull failed", err && err.message ? err.message : String(err));
+  }
+
+  var fallbackPosts = await loadSheetsPostsForHybrid();
+  return {
+    tabsReturned: ["POSTS"],
+    posts: fallbackPosts,
+    campaigns: [],
+    media: [],
+    notes: [],
+    inspo: [],
+    aiDrafts: [],
+    settings: {},
+    brandFramework: []
+  };
 }
 
 async function apiGet(action, params = {}) {
@@ -26067,6 +26255,66 @@ async function mirrorGoogleSheetPostsToSupabase(posts = []) {
     if (err && err.details) console.log("[mirror] error details", err.details);
     if (err && err.hint) console.log("[mirror] error hint", err.hint);
     if (err && err.code) console.log("[mirror] error code", err.code);
+    return 0;
+  }
+}
+
+async function mirrorGoogleSheetCampaignsToSupabase(campaigns = []) {
+  console.log("[mirror-campaigns] start");
+  const backendMode = getActiveWorkspaceBackendMode();
+  if (backendMode.mode === "supabase_native") {
+    console.log("[mirror-campaigns] skip — supabase_native mode");
+    return 0;
+  }
+  if (!STELLARSYNC_SUPABASE_CLIENT) {
+    console.log("[mirror-campaigns] skip — no supabase client");
+    return 0;
+  }
+
+  var activeCfg = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active;
+  var wsId = String(activeCfg && activeCfg.id || "").trim();
+  var uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!wsId || !uuidPattern.test(wsId)) {
+    console.log("[mirror-campaigns] missing uuid workspace_id — skipping mirror");
+    return 0;
+  }
+
+  var rows = Array.isArray(campaigns) ? campaigns.map(function(campaign, index) {
+    var normalized = normalizeRemoteCampaign(campaign);
+    return {
+      campaign_id: normalized.campaignId || normalized.campaign_id || `CMP-${index + 1}`,
+      campaign_name: normalized.campaignName || normalized.campaign_name || normalized.name || "",
+      name: normalized.name || normalized.campaignName || normalized.campaign_name || "",
+      color: normalized.color || "",
+      goal: normalized.goal || "",
+      pillar: normalized.pillar || "",
+      status: normalized.status || "active",
+      start_date: normalized.start_date || normalized.startDate || "",
+      end_date: normalized.end_date || normalized.endDate || "",
+      sort_order: Number(normalized.sortOrder || index) || index,
+      is_archived: !!normalized.isArchived
+    };
+  }).filter(function(campaign) {
+    return !!String(campaign.campaign_name || campaign.name || "").trim();
+  }) : [];
+
+  try {
+    var result = await STELLARSYNC_SUPABASE_CLIENT
+      .from("workspace_settings")
+      .upsert({
+        workspace_id: wsId,
+        key: "campaigns",
+        value: rows,
+        updated_at: new Date().toISOString()
+      }, { onConflict: "workspace_id,key" });
+    if (result.error) throw result.error;
+    console.log("[mirror-campaigns] upsert success count", rows.length);
+    return rows.length;
+  } catch (err) {
+    console.log("[mirror-campaigns] upsert error", err?.message || err);
+    if (err && err.details) console.log("[mirror-campaigns] error details", err.details);
+    if (err && err.hint) console.log("[mirror-campaigns] error hint", err.hint);
+    if (err && err.code) console.log("[mirror-campaigns] error code", err.code);
     return 0;
   }
 }
@@ -28581,9 +28829,18 @@ function normalizeRemoteCampaign(campaign) {
   const pillar = getCanonicalPillarValue(pickRemoteValue(campaign?.pillar, campaign?.hubPillarLabel, campaign?.hub_pillar_label, ""), "");
   return {
     campaignId: String(pickRemoteValue(campaign?.campaignId, campaign?.campaign_id, campaign?.campaignID, campaign?.id, "")).trim(),
-    campaignName: String(pickRemoteValue(campaign?.campaignName, campaign?.campaign_name, campaign?.title, "")).trim(),
+    campaign_id: String(pickRemoteValue(campaign?.campaign_id, campaign?.campaignId, campaign?.campaignID, campaign?.id, "")).trim(),
+    campaignName: String(pickRemoteValue(campaign?.campaignName, campaign?.campaign_name, campaign?.name, campaign?.title, "")).trim(),
+    campaign_name: String(pickRemoteValue(campaign?.campaign_name, campaign?.campaignName, campaign?.name, campaign?.title, "")).trim(),
+    name: String(pickRemoteValue(campaign?.name, campaign?.campaignName, campaign?.campaign_name, campaign?.title, "")).trim(),
     pillar,
     color: String(pickRemoteValue(campaign?.color, getCampaignColor(campaign?.campaignName || campaign?.campaign_name || "", pillar), "#6b7280")).trim() || "#6b7280",
+    goal: String(pickRemoteValue(campaign?.goal, "")).trim(),
+    status: String(pickRemoteValue(campaign?.status, "active")).trim() || "active",
+    startDate: String(pickRemoteValue(campaign?.startDate, campaign?.start_date, "")).trim(),
+    start_date: String(pickRemoteValue(campaign?.start_date, campaign?.startDate, "")).trim(),
+    endDate: String(pickRemoteValue(campaign?.endDate, campaign?.end_date, "")).trim(),
+    end_date: String(pickRemoteValue(campaign?.end_date, campaign?.endDate, "")).trim(),
     x: Number(pickRemoteValue(campaign?.x, 0)) || 0,
     y: Number(pickRemoteValue(campaign?.y, 0)) || 0,
     iconShape: String(pickRemoteValue(campaign?.iconShape, campaign?.icon_shape, "")).trim().toLowerCase(),
@@ -29591,9 +29848,29 @@ function safeStorageSet(key, value) {
   }
 }
 
+function getLocalStateStorageKey() {
+  var slug = String(
+    (WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active && (WORKSPACE_RUNTIME_CONFIG.active.workspace_slug || WORKSPACE_RUNTIME_CONFIG.active.slug)) ||
+    getCurrentWorkspaceSlug() ||
+    (WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.default_workspace_slug) ||
+    "master"
+  ).trim().toLowerCase() || "master";
+  return `${APP_CONFIG.STORAGE_KEY}:${slug}`;
+}
+
+function shouldReadLegacyLocalStateKey() {
+  var slug = String(
+    (WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active && (WORKSPACE_RUNTIME_CONFIG.active.workspace_slug || WORKSPACE_RUNTIME_CONFIG.active.slug)) ||
+    getCurrentWorkspaceSlug() ||
+    (WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.default_workspace_slug) ||
+    "master"
+  ).trim().toLowerCase() || "master";
+  return slug === "master" || slug === "default";
+}
+
 function loadLocalState() {
   try {
-    const raw = safeStorageGet(APP_CONFIG.STORAGE_KEY);
+    const raw = safeStorageGet(getLocalStateStorageKey()) || (shouldReadLegacyLocalStateKey() ? safeStorageGet(APP_CONFIG.STORAGE_KEY) : "");
     if (!raw) return sanitizeAppStateArtifacts(structuredCloneState(DEFAULT_STATE));
 
     const parsed = JSON.parse(raw);
@@ -29629,7 +29906,7 @@ function sanitizeAppStateArtifacts(state) {
 }
 
 function persistLocalState() {
-  safeStorageSet(APP_CONFIG.STORAGE_KEY, JSON.stringify(appState));
+  safeStorageSet(getLocalStateStorageKey(), JSON.stringify(appState));
 }
 
 function loadShellLayout() {
