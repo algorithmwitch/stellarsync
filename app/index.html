@@ -2412,7 +2412,7 @@
                   <span class="flex items-center gap-3"><i class="ph-bold ph-arrow-u-up-left text-gray-400"></i> Workspace Login</span>
                   <i class="ph-bold ph-caret-right text-gray-500"></i>
                 </button>
-                <button type="button" id="dropdown-install-plugin-btn" class="workspace-menu-btn" data-plugin-action="openPluginInstallModal">
+                <button type="button" id="dropdown-install-plugin-btn" class="workspace-menu-btn" data-plugin-action="openPluginInstallModal" onclick="event.preventDefault();event.stopPropagation();console.log('[plugin-install] dropdown clicked');console.log('[plugin-install] prevented default navigation');toggleProfileMenu(false);openPluginInstallModal();console.log('[plugin-install] in-app modal opened');">
                   <span class="flex items-center gap-3"><i class="ph-bold ph-puzzle-piece text-[#c77dff]"></i> Install Plugin</span>
                   <i class="ph-bold ph-caret-right text-gray-500"></i>
                 </button>
@@ -15947,9 +15947,21 @@ function renderMondayBackfillResult(result) {
 
 async function confirmMondayBackfill() {
   console.log("[monday-backfill] confirmed");
-  document.getElementById("monday-backfill-loading").classList.remove("hidden");
-  document.getElementById("monday-backfill-result").classList.add("hidden");
-  document.getElementById("monday-backfill-footer").classList.add("hidden");
+  var loadingEl = document.getElementById("monday-backfill-loading");
+  var resultEl = document.getElementById("monday-backfill-result");
+  var footerEl = document.getElementById("monday-backfill-footer");
+  var confirmBtn = document.getElementById("confirm-monday-backfill-btn");
+  var cancelBtn = document.getElementById("cancel-monday-backfill-btn");
+  var bodyEl = document.getElementById("monday-backfill-body");
+  if (loadingEl) loadingEl.classList.remove("hidden");
+  if (resultEl) resultEl.classList.add("hidden");
+  if (footerEl) footerEl.classList.add("hidden");
+  var cancelled = false;
+  if (cancelBtn) {
+    cancelBtn.removeEventListener("click", closeMondayBackfillModal);
+    cancelBtn.textContent = "Stop Backfill";
+    cancelBtn.onclick = function() { console.log("[monday-backfill] cancelled"); cancelled = true; if (cancelBtn) cancelBtn.textContent = "Cancelling..."; if (cancelBtn) cancelBtn.disabled = true; };
+  }
   try {
     const boardId = getMondayBoardId(WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active, WORKSPACE_CONNECTIONS);
     if (!boardId) { showToast("No Monday board configured", "error"); closeMondayBackfillModal(); return; }
@@ -15961,56 +15973,145 @@ async function confirmMondayBackfill() {
     console.log("[monday-backfill] frontend posts count", payloadPosts.length);
     console.log("[monday-backfill] sample normalized posts", payloadPosts.slice(0, 3).map(function(p) { return { post_id: p.post_id, title: p.title, campaign_name: p.campaign_name }; }));
     console.log("[monday-backfill] payload", { board_id: boardId, postCount: payloadPosts.length });
-    const result = await callSupabaseEdgeFunction("monday-sync", {
-      action: "backfill_posts",
-      workspace_id: meta.workspace_id || meta.workspace_slug,
-      workspace_slug: meta.workspace_slug || getCurrentWorkspaceSlug() || "",
-      board_id: boardId,
-      backend_type: backendMode.mode || activeWorkspace.backend_type || "",
-      posts: payloadPosts
-    });
-    document.getElementById("monday-backfill-loading").classList.add("hidden");
-    if (result && result.ok && result.total_posts_seen === 0) {
-      result.ok = false;
-      result.error = "No posts were sent to Monday. Calendar/Ledger may be using a different source than Monday backfill.";
+    var batchSize = 10;
+    var cursor = 0;
+    var accumulated = { created: 0, updated: 0, skipped: 0, failed: 0, moved_groups: 0, groups_created: 0, group_move_failed: 0, errors: [], groups_found: 0, default_group_id: "", default_group_title: "", group_id: "", group_title: "", group_match_strategy: "" };
+    var lastBatchResult = null;
+    var hasMore = true;
+    if (loadingEl) {
+      loadingEl.innerHTML = '<div class="text-center py-4"><i class="ph-bold ph-circle-notch text-2xl text-[#c77dff] animate-spin block mx-auto mb-3"></i><div class="text-sm text-gray-400" id="monday-backfill-progress-text">Preparing posts...</div><div class="mt-3 w-full bg-[#181125] rounded-full h-2 overflow-hidden"><div id="monday-backfill-progress-bar" class="h-full bg-gradient-to-r from-[#9d4edd] to-[#c77dff] rounded-full transition-all duration-300" style="width:0%"></div></div></div>';
     }
-    renderMondayBackfillResult(result);
-    if (result?.ok) {
-      if (window.__currentModalPostData && result.monday_item_ids_by_post_id && typeof result.monday_item_ids_by_post_id === "object") {
-        const postId = String(window.__currentModalPostData.post_id || window.__currentModalPostData.postId || "").trim();
-        const itemId = result.monday_item_ids_by_post_id[postId];
-        if (itemId) setModalMondayFields(itemId, result.completed_at || new Date().toISOString());
+    function updateProgress(processed, total) {
+      var pct = total > 0 ? Math.round((processed / total) * 100) : 0;
+      var bar = document.getElementById("monday-backfill-progress-bar");
+      var text = document.getElementById("monday-backfill-progress-text");
+      if (bar) bar.style.width = Math.min(100, pct) + "%";
+      if (text) text.textContent = "Processed " + processed + " of " + total + " | Created: " + accumulated.created + " Updated: " + accumulated.updated;
+    }
+    while (hasMore && !cancelled) {
+      console.log("[monday-backfill] batch start", { cursor, batchSize });
+      var batchResult = await callSupabaseEdgeFunction("monday-sync", {
+        action: "backfill_posts",
+        workspace_id: meta.workspace_id || meta.workspace_slug,
+        workspace_slug: meta.workspace_slug || getCurrentWorkspaceSlug() || "",
+        board_id: boardId,
+        backend_type: backendMode.mode || activeWorkspace.backend_type || "",
+        posts: payloadPosts,
+        batch_size: batchSize,
+        cursor: cursor
+      });
+      console.log("[monday-backfill] batch complete", batchResult);
+      if (!batchResult || !batchResult.ok) {
+        throw new Error(batchResult?.error || "Backfill batch failed");
       }
+      lastBatchResult = batchResult;
+      accumulated.created += batchResult.created || 0;
+      accumulated.updated += batchResult.updated || 0;
+      accumulated.skipped += batchResult.skipped || 0;
+      accumulated.failed += batchResult.failed || 0;
+      accumulated.moved_groups += batchResult.moved_groups || 0;
+      accumulated.groups_created += batchResult.groups_created || 0;
+      accumulated.group_move_failed += batchResult.group_move_failed || 0;
+      if (batchResult.groups_found) accumulated.groups_found = batchResult.groups_found;
+      if (batchResult.default_group_id) accumulated.default_group_id = batchResult.default_group_id;
+      if (batchResult.default_group_title) accumulated.default_group_title = batchResult.default_group_title;
+      if (batchResult.group_id) accumulated.group_id = batchResult.group_id;
+      if (batchResult.group_title) accumulated.group_title = batchResult.group_title;
+      if (batchResult.group_match_strategy) accumulated.group_match_strategy = batchResult.group_match_strategy;
+      if (Array.isArray(batchResult.errors)) {
+        accumulated.errors = accumulated.errors.concat(batchResult.errors);
+      }
+      cursor = batchResult.next_cursor || (cursor + batchSize);
+      hasMore = batchResult.has_more === true;
+      updateProgress(cursor, batchResult.total_posts_seen || payloadPosts.length);
+      if (cancelled) {
+        console.log("[monday-backfill] cancelled mid-batch");
+        break;
+      }
+    }
+    if (loadingEl) loadingEl.classList.add("hidden");
+    if (resultEl) resultEl.classList.remove("hidden");
+    if (cancelBtn) { cancelBtn.textContent = "Cancel"; cancelBtn.disabled = false; cancelBtn.onclick = null; cancelBtn.addEventListener("click", closeMondayBackfillModal); }
+    if (cancelled) {
+      resultEl.innerHTML = '<div class="text-center py-4"><div class="w-12 h-12 mx-auto mb-3 rounded-2xl bg-[#231738] flex items-center justify-center"><i class="ph-bold ph-hand-waving text-yellow-400 text-xl"></i></div><div class="text-sm text-white font-bold">Backfill stopped</div><div class="text-xs text-gray-400 mt-2">Backfill stopped. You can run it again safely.</div></div>';
+      renderAccumulatedResultDetails(accumulated);
+      return;
+    }
+    var finalResult = {
+      ok: true,
+      total_posts_seen: payloadPosts.length,
+      created: accumulated.created,
+      updated: accumulated.updated,
+      skipped: accumulated.skipped,
+      failed: accumulated.failed,
+      moved_groups: accumulated.moved_groups,
+      groups_created: accumulated.groups_created,
+      group_move_failed: accumulated.group_move_failed,
+      errors: accumulated.errors.slice(0, 10),
+      completed_at: new Date().toISOString()
+    };
+    if (finalResult.total_posts_seen === 0) {
+      finalResult.ok = false;
+      finalResult.error = "No posts were sent to Monday. Calendar/Ledger may be using a different source than Monday backfill.";
+    }
+    renderMondayBackfillResult(finalResult);
+    if (finalResult.ok) {
       upsertLocalWorkspaceConnection("monday", {
-        status: result.failed ? "warning" : "connected",
-        last_sync_at: result.completed_at || new Date().toISOString(),
-        last_error: result.failed ? result.failed + " backfill item(s) failed" : "",
+        status: finalResult.failed ? "warning" : "connected",
+        last_sync_at: finalResult.completed_at || new Date().toISOString(),
+        last_error: finalResult.failed ? finalResult.failed + " backfill item(s) failed" : "",
         config: {
           board_id: boardId,
-          groups_found: result.groups_found,
-          default_group_id: result.default_group_id || "",
-          default_group_title: result.default_group_title || "",
-          group_id: result.group_id || "",
-          group_title: result.group_title || "",
-          group_match_strategy: result.group_match_strategy || "",
-          groups_created: result.groups_created || 0,
-          moved_groups: result.moved_groups || 0,
-          group_move_failed: result.group_move_failed || 0
+          groups_found: accumulated.groups_found || 0,
+          default_group_id: accumulated.default_group_id || "",
+          default_group_title: accumulated.default_group_title || "",
+          group_id: accumulated.group_id || "",
+          group_title: accumulated.group_title || "",
+          group_match_strategy: accumulated.group_match_strategy || "",
+          groups_created: accumulated.groups_created || 0,
+          moved_groups: accumulated.moved_groups || 0,
+          group_move_failed: accumulated.group_move_failed || 0
         }
       });
       refreshConnectionCards();
       await syncRemoteIfConfigured();
     }
   } catch (err) {
-    document.getElementById("monday-backfill-loading").classList.add("hidden");
-    renderMondayBackfillResult({ ok: false, error: err.message || String(err) });
+    if (loadingEl) loadingEl.classList.add("hidden");
+    if (resultEl) resultEl.classList.remove("hidden");
+    var errorResult = { ok: false, error: err.message || String(err) };
+    renderMondayBackfillResult(errorResult);
+    if (cancelBtn) { cancelBtn.textContent = "Cancel"; cancelBtn.disabled = false; cancelBtn.onclick = null; cancelBtn.addEventListener("click", closeMondayBackfillModal); }
   }
+  console.log("[monday-backfill] final summary", accumulated || {});
+}
+
+function renderAccumulatedResultDetails(acc) {
+  var resultEl = document.getElementById("monday-backfill-result");
+  if (!resultEl) return;
+  var html = '<div class="text-xs text-gray-400 mt-3 space-y-1 text-center">';
+  if (acc.created) html += '<div>Created: ' + acc.created + '</div>';
+  if (acc.updated) html += '<div>Updated: ' + acc.updated + '</div>';
+  if (acc.skipped) html += '<div>Skipped: ' + acc.skipped + '</div>';
+  if (acc.failed) html += '<div>Failed: ' + acc.failed + '</div>';
+  if (acc.moved_groups) html += '<div>Posts moved between groups: ' + acc.moved_groups + '</div>';
+  if (acc.groups_created) html += '<div>Groups created: ' + acc.groups_created + '</div>';
+  if (acc.group_move_failed) html += '<div>Group move failures: ' + acc.group_move_failed + '</div>';
+  if (Array.isArray(acc.errors) && acc.errors.length) {
+    html += '<div class="mt-2 text-left"><div class="text-[10px] uppercase tracking-widest text-yellow-400 font-bold mb-1">Errors (first ' + Math.min(10, acc.errors.length) + ')</div>';
+    acc.errors.slice(0, 10).forEach(function(e) { html += '<div class="text-[10px] text-yellow-300 leading-relaxed">' + (e.post_id || "?") + ': ' + (e.error || e.message || "Unknown") + '</div>'; });
+    html += '</div>';
+  }
+  html += '</div>';
+  resultEl.insertAdjacentHTML("beforeend", html);
 }
 
 async function backfillMondayBoard() {
   const boardId = getMondayBoardId(WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active, WORKSPACE_CONNECTIONS);
   if (!boardId) { showToast("No Monday board configured", "error"); return; }
   if (!canManageWorkspace()) { showToast("Backfill unavailable", "You do not have permission to run a board backfill.", "ph-warning", "text-yellow-400"); return; }
+  console.log("[monday-backfill] back to profile workspace");
+  closeProfileWorkspaceModal();
   openMondayBackfillModal();
 }
 
@@ -23541,9 +23642,22 @@ function setupPWAInstall() {
 
   const handleInstallAction = async () => {
     if (installContext.isStandalone) return;
+    if (deferredInstallPrompt) {
+      console.log("[install-app] browser prompt started");
+      deferredInstallPrompt.prompt();
+      const result = await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt = null;
+      setInstallButtonVisibility(false);
+      if (result.outcome === "accepted") {
+        console.log("[install-app] user accepted install");
+        return true;
+      } else {
+        console.log("[install-app] user dismissed install");
+        return false;
+      }
+    }
     console.log("[install-app] prompt unavailable");
     showToast("Install unavailable", "Install App is not available in this browser.", "ph-browser", "text-yellow-400");
-    openInstallHelperModal();
     return false;
   };
 
@@ -30545,7 +30659,7 @@ async function upsertWorkspaceSettings(workspaceId, payload) {
     throw existing.error;
   }
   var attempt = 0;
-  var maxAttempts = 2;
+  var maxAttempts = 6;
   var currentPayload = { ...payload };
   while (attempt < maxAttempts) {
     attempt++;
