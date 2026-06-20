@@ -2893,10 +2893,8 @@
           <button type="button" class="write-idea-chip" data-write-idea-chip="instagram">Instagram</button>
           <button type="button" class="write-idea-chip" data-write-idea-chip="notes">Notes</button>
           <button type="button" class="write-idea-chip" data-write-idea-chip="inspo">Inspo</button>
-          <button type="button" class="write-idea-chip" data-write-idea-chip="job-board-promo">Job board promo</button>
-          <button type="button" class="write-idea-chip" data-write-idea-chip="alternate-realities">Alternate realities</button>
-          <button type="button" class="write-idea-chip" data-write-idea-chip="local-infrastructure">Local infrastructure</button>
         </div>
+        <div class="flex flex-wrap gap-2 mt-3" id="write-idea-recommendation-chips"></div>
       </div>
 
       <div class="grid grid-cols-1 xl:grid-cols-[1.3fr_0.7fr] gap-5">
@@ -2949,8 +2947,6 @@
             <div id="write-idea-transformation-modes" class="flex flex-wrap gap-2">
               <button type="button" class="write-idea-chip" data-write-idea-transform="expand">Expand</button>
               <button type="button" class="write-idea-chip" data-write-idea-transform="rewrite">Rewrite</button>
-              <button type="button" class="write-idea-chip" data-write-idea-transform="adapt_platform">Adapt platform</button>
-              <button type="button" class="write-idea-chip" data-write-idea-transform="analyze_performance">Analyze performance</button>
               <button type="button" class="write-idea-chip" data-write-idea-transform="extract_hooks">Extract hooks</button>
               <button type="button" class="write-idea-chip" data-write-idea-transform="turn_into_carousel">Turn into carousel</button>
               <button type="button" class="write-idea-chip" data-write-idea-transform="turn_into_caption">Turn into caption</button>
@@ -5537,6 +5533,8 @@
       <button type="button" class="stellar-assistant-chip" data-assistant-action="review_week_calendar">Review this week’s calendar</button>
       <button type="button" class="stellar-assistant-chip" data-assistant-action="repurpose_top_post">Repurpose top post</button>
       <button type="button" class="stellar-assistant-chip" data-assistant-action="build_campaign_from_notes">Build campaign from notes</button>
+      <button type="button" class="stellar-assistant-chip" data-assistant-action="analyze_performance">Analyze performance</button>
+      <button type="button" class="stellar-assistant-chip" data-assistant-action="adapt_platform">Adapt platform</button>
     </div>
   </div>
   <div id="stellar-assistant-followups" class="px-4 pb-3 hidden">
@@ -11177,6 +11175,17 @@ function buildLocalAssistantResponse(action, message) {
   if (lower.includes("inspo") || lower.includes("notes") || lower.includes("repurpose")) {
     return "3 post angles:\n- What this saved idea makes visible\n- What people usually misunderstand about it\n- How your audience can apply it this week\n\nCarousel outline:\n1. Hook from the source idea\n2. Why it matters\n3. What gets missed\n4. The reframing\n5. CTA\n\nNewsletter angle:\nUse the saved idea as an opening example, then expand into the broader pattern.";
   }
+  if (lower.includes("analyze") || lower.includes("performance")) {
+    var apPosts = appState.posts || [];
+    var apScheduled = apPosts.filter(function(p) { return String(p.status || "").toLowerCase() === "scheduled"; }).length;
+    var apPublished = apPosts.filter(function(p) { return String(p.status || "").toLowerCase() === "published"; }).length;
+    var apDrafts = apPosts.filter(function(p) { return String(p.status || "").toLowerCase() === "draft"; }).length;
+    var apTop = apPosts.slice().sort(function(a, b) { return Math.max(getPostImpressions(b), getEngagementTotal(b)) - Math.max(getPostImpressions(a), getEngagementTotal(a)); })[0];
+    return ["Performance Overview:", "- Total posts: " + apPosts.length, "- Published: " + apPublished, "- Scheduled: " + apScheduled, "- Drafts: " + apDrafts].concat(apTop ? ["", "Top post: " + (getPostDisplayTitle(apTop) || "Untitled"), "Impressions: " + (getPostImpressions(apTop) || 0), "Engagement: " + (getEngagementTotal(apTop) || 0)] : ["", "No posts with metrics yet."]).join("\n");
+  }
+  if (lower.includes("adapt")) {
+    return "Platform adaptation analysis:\n\nTo adapt content for a different platform:\n1. Check character limits and format requirements\n2. Adjust tone and cadence for the platform audience\n3. Resize or reformat any media assets\n4. Update CTAs for platform-specific conventions\n5. Review publishing schedule for optimal timing\n\nSelect a post or draft to get specific adaptation recommendations.";
+  }
   return "Campaign concepts:\n\n1. Signal Systems\nAudience: people who need a clearer way to understand recurring patterns.\nCore message: make the hidden system visible.\nPost ideas: name the tension; show an example; ask the better question.\nNewsletter angle: a field note on what the signal changes.\nCarousel idea: problem, pattern, example, shift, CTA.\nSuggested platforms: LinkedIn, Instagram carousel, newsletter\n\n2. Community Proof\nAudience: people looking for practical examples, not abstractions.\nCore message: proof lives in repeatable community practice.\nPost ideas: case detail; lesson learned; checklist.\nNewsletter angle: what the example teaches beyond itself.\nCarousel idea: before, constraint, action, result, question.\nSuggested platforms: LinkedIn and newsletter\n\n3. Field Notes\nAudience: people following your process and decisions.\nCore message: share the thinking behind the work.\nPost ideas: observation; decision; next experiment.\nNewsletter angle: a reflective process note.\nCarousel idea: what I noticed, what changed, what I am testing.\nSuggested platforms: LinkedIn and Instagram";
 }
 
@@ -11190,7 +11199,9 @@ async function runAssistantQuickAction(action) {
     turn_inspo_into_posts: "Turn inspo into posts",
     review_week_calendar: "Review this week’s calendar",
     repurpose_top_post: "Repurpose top post",
-    build_campaign_from_notes: "Build campaign from notes"
+    build_campaign_from_notes: "Build campaign from notes",
+    analyze_performance: "Analyze performance",
+    adapt_platform: "Adapt platform"
   };
   renderAssistantMessage("user", labels[action] || action);
   const loading = setAssistantLoading("Building strategy from your workspace...");
@@ -12439,7 +12450,6 @@ function renderLedger() {
     const displayDescription = getDisplayExcerpt(post.description, post.ledgerExcerpt || "");
     const platformIconClass = getPostTargetPlatforms(post)[0] === "linkedin" ? "ledger-linkedin" : getPostTargetPlatforms(post)[0] === "youtube" ? "ledger-youtube" : getPostTargetPlatforms(post)[0] === "facebook" ? "ledger-facebook" : "";
     const campaignLabel = formatCampaignDisplayName(hydrated.campaignName || "Unassigned");
-    const pillarShape = renderPillarShape(pillarValue, "", getPillarTheme(pillarValue));
     const mediaKind = getPostMediaKind(hydrated);
     const publishingBadge = getPublishingBadge(hydrated);
     const mediaLabel = renderPostMediaTypeBadge(hydrated);
@@ -12455,7 +12465,7 @@ function renderLedger() {
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-3 mb-2 flex-wrap">
               <span class="badge ${badgeClass} text-[8px]">${escapeHtml(String(post.status || "draft").toUpperCase())}</span>
-              <span class="px-2 py-1 bg-[#120c1d] border border-white/5 rounded text-[9px] text-gray-300 font-medium pillar-inline-meta">${pillarShape}<span>${escapeHtml(pillarLabel)}</span></span>
+              <span class="px-2 py-1 bg-[#120c1d] border border-white/5 rounded text-[9px] text-gray-300 font-medium">${escapeHtml(pillarLabel)}</span>
               <span class="px-2 py-1 bg-[#120c1d] border border-white/5 rounded text-[9px] text-gray-300 font-medium campaign-inline-meta"><span class="campaign-color-dot" style="background:${escapeHtml(campaignColor)}"></span><span>${escapeHtml(campaignLabel)}</span></span>
               <span class="publishing-chip" style="color:${publishingBadge.color};border-color:${publishingBadge.color}33;">
                 <i class="ph-bold ${publishingBadge.icon}"></i>${escapeHtml(publishingBadge.label)}
@@ -12590,14 +12600,21 @@ function normalizeCampaignLaneKey(value = "") {
 }
 
 function getConstellationCampaignLabelParts(value = "") {
-  return String(value || "")
-    .split(",")
-    .map((item) => normalizeDisplayText(item))
-    .filter(Boolean);
+  const raw = String(value || "").trim();
+  if (!raw) return [];
+  if (/[|\n]/.test(raw)) {
+    return raw
+      .split(/[|\n]/)
+      .map((item) => normalizeDisplayText(item))
+      .filter(Boolean);
+  }
+  return [normalizeDisplayText(raw)];
 }
 
 function isInvalidComboCampaignName(value = "") {
-  return getConstellationCampaignLabelParts(value).length > 1;
+  const raw = String(value || "").trim();
+  if (!raw) return false;
+  return /[|\n]/.test(raw);
 }
 
 function hasMessagingLabel(value = "") {
@@ -15112,15 +15129,31 @@ async function disconnectConnectedAccount(platform) {
 async function testConnectedAccountStatus(platform) {
   setConnectedAccountActionLoading(platform, "test", true);
   try {
-    const result = await apiTestPlatformConnection(platform);
-    const updated = result?.account || null;
-    if (updated) {
-      connectedAccounts = (connectedAccounts || []).filter((item) => item.platform !== platform).concat(updated);
+    // Refresh from Edge Function for fresh secret resolution
+    if (STELLARSYNC_SUPABASE_CLIENT && SUPABASE_URL) {
+      var workspaceId = getWorkspaceRequestMetadata().workspace_id || "";
+      if (workspaceId) {
+        var edgeResult = await callSupabaseEdgeFunction("social-connection-status", { workspace_id: workspaceId });
+        if (edgeResult && Array.isArray(edgeResult.accounts)) {
+          connectedAccounts = edgeResult.accounts;
+          console.log("[social-setup] test status refreshed from edge function", { platform, accounts: edgeResult.accounts.length });
+        }
+      }
+    } else {
+      // Fallback: GPE Apps Script path
+      const result = await apiTestPlatformConnection(platform);
+      const updated = result?.account || null;
+      if (updated) {
+        connectedAccounts = (connectedAccounts || []).filter((item) => item.platform !== platform).concat(updated);
+      }
     }
+    // Clear any stale cached setup keys after refresh
+    var freshAccount = getConnectedAccount(platform) || {};
+    var freshMissing = Array.isArray(freshAccount.missingSetupKeys) ? freshAccount.missingSetupKeys : [];
+    console.log("[social-setup] test status result", { platform, connected: !!freshAccount.connected, missingSetupKeys: freshMissing });
     if (!workspaceHubModal?.classList.contains("opacity-0")) renderWorkspaceHub();
-    const status = updated?.connectionStatusLabel || updated?.accessStatus || "Unknown";
-    const detail = result?.error ? `${status}. ${result.error}` : status;
-    showToast("Test complete", `${toTitleCase(platform)}: ${detail}`, "ph-plugs-connected", updated?.connected ? "text-[#00ffaa]" : "text-yellow-400");
+    var statusLabel = freshAccount.connectionStatusLabel || freshAccount.accessStatus || "Unknown";
+    showToast("Test complete", toTitleCase(platform) + ": " + statusLabel, "ph-plugs-connected", freshAccount.connected ? "text-[#00ffaa]" : freshMissing.length ? "text-yellow-400" : "text-gray-400");
   } catch (err) {
     console.error(err);
     showToast("Test failed", err.message || "Could not verify platform status.", "ph-warning", "text-yellow-400");
@@ -18078,6 +18111,7 @@ function renderWriteIdeaScaffold() {
   renderWriteIdeaGuidance();
   renderWriteIdeaDraftList();
   renderWriteIdeaMemoryZone();
+  renderWriteIdeaRecommendationChips();
   document.querySelectorAll("[data-write-idea-source]").forEach((btn) => {
     btn.classList.toggle("active", writeIdeaState.sourceTypes.includes(btn.dataset.writeIdeaSource));
   });
@@ -26779,9 +26813,28 @@ async function apiGetSocialImportCapabilities() {
 }
 
 async function apiGetConnectedAccountsStatus() {
+  // Prefer Supabase Edge Function when available (checks Supabase secrets)
+  if (STELLARSYNC_SUPABASE_CLIENT && SUPABASE_URL) {
+    try {
+      const workspaceId = getWorkspaceRequestMetadata().workspace_id || "";
+      if (workspaceId) {
+        const result = await callSupabaseEdgeFunction("social-connection-status", { workspace_id: workspaceId });
+        var accounts = result && (result.accounts || result.data || result);
+        if (Array.isArray(accounts) && accounts.length) {
+          console.log("[social-setup] connected accounts from edge function", accounts.length);
+          return accounts;
+        }
+      }
+    } catch (edgeErr) {
+      console.warn("[social-setup] edge function fallback to gpe", edgeErr instanceof Error ? edgeErr.message : String(edgeErr));
+    }
+  }
+  // Fallback: GPE Apps Script path
   const result = await apiGet("getConnectedAccountsStatus");
   const accounts = result.accounts || result.data || result;
-  return Array.isArray(accounts) ? accounts : Object.values(accounts || {});
+  const parsed = Array.isArray(accounts) ? accounts : Object.values(accounts || {});
+  console.log("[social-setup] connected accounts from gpe", parsed.length);
+  return parsed;
 }
 
 async function apiGetConnectedAccounts() {
@@ -28233,11 +28286,8 @@ function populateAIGenerationModes() {
     "Instagram caption",
     "Carousel draft",
     "short video script",
-    "job board promo",
     "campaign recap",
-    "platform analysis",
-    "local infrastructure post",
-    "alternate realities / solarpunk history"
+    "platform analysis"
   ].filter((mode) => {
     if (postType === "carousel") return ["Carousel draft", "Instagram caption", "campaign recap"].includes(mode);
     if (postType === "video") return ["short video script", "Instagram caption", "platform analysis"].includes(mode);
@@ -30897,31 +30947,16 @@ function renderPerformanceMetrics(posts) {
   ].map(([label, value]) => `<div class="mini-card p-4"><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${escapeHtml(label)}</div><div class="text-2xl font-bold text-white mt-1">${escapeHtml(String(value))}</div></div>`).join("");
 }
 
-function buildSignalOverviewRecommendations(posts = appState.posts || []) {
-  const recs = [];
-  const scheduled = (posts || []).filter((post) => String(post.status || "").toLowerCase() === "scheduled");
-  const campaignCounts = countPostsBy(posts || [], (post) => getCampaignName(post, "Uncategorized"));
-  const pillarCounts = countPostsBy(posts || [], (post) => getPostContentPillar(post) || "Uncategorized");
-  const mediaLinkedIds = new Set((appState.media || []).map((asset) => String(asset.linkedPostId || asset.postId || "").trim()).filter(Boolean));
-  const upcomingWithoutMedia = scheduled.filter((post) => !mediaLinkedIds.has(String(post.id || post.postId || "").trim()) && !(post.carouselAssetIds || []).length);
-  const hasMetrics = (posts || []).some((post) => getPostImpressions(post) || getEngagementTotal(post));
-  const topPost = (posts || []).slice().sort((a, b) => Math.max(getPostImpressions(b), getEngagementTotal(b)) - Math.max(getPostImpressions(a), getEngagementTotal(a)))[0];
-  if (scheduled.length < 3) recs.push("Add 2–3 posts to this week’s calendar.");
-  if (campaignCounts.length > 1 && campaignCounts[0][1] - campaignCounts[campaignCounts.length - 1][1] > 1) recs.push("Balance upcoming posts across active campaigns.");
-  if (pillarCounts.length > 1 && pillarCounts[0][1] - pillarCounts[pillarCounts.length - 1][1] > 1) recs.push("Add a post for the least-used content pillar.");
-  if (upcomingWithoutMedia.length) recs.push("Attach media assets to upcoming posts.");
-  if ((appState.inspo || []).length && !(appState.aiDrafts || []).length) recs.push("Turn saved inspo into an AI draft.");
-  if (hasMetrics && topPost) recs.push("Repurpose your highest-performing post into a carousel or newsletter.");
-  if (!(posts || []).length && !(appState.inspo || []).length && !getAvailableCampaignRecords().length) recs.push("Start by adding a campaign, a post, and one inspo item.");
-  [
-    "Add 2–3 posts to this week’s calendar.",
-    "Balance upcoming posts across active campaigns.",
-    "Add a post for the least-used content pillar.",
-    "Turn saved inspo into an AI draft."
-  ].forEach((item) => {
-    if (recs.length < 3 && !recs.includes(item)) recs.push(item);
+function buildSignalOverviewRecommendations(posts) {
+  const cached = getCachedRecommendations();
+  if (!cached || !cached.length) return [];
+  return cached.slice(0, 5).map(function(rec) {
+    if (rec.source === "campaign") return "Create a post for the " + rec.label.replace("Create ", "").replace(" Post", "") + " campaign.";
+    if (rec.source === "pillar") return "Add a post for the " + rec.label.replace("Create ", "").replace(" Story", " pillar") + ".";
+    if (rec.source === "audit") return "Try a new content format — create a carousel post.";
+    if (rec.source === "calendar") return "Add 2–3 posts to this week\u2019s calendar.";
+    return rec.label;
   });
-  return recs.slice(0, 5);
 }
 
 function renderSignalOverviewRecommendations(posts = appState.posts || []) {
@@ -30934,6 +30969,120 @@ function renderSignalOverviewRecommendations(posts = appState.posts || []) {
       <div class="text-xs text-gray-300 leading-relaxed wrap-safe">${escapeHtml(item)}</div>
     </div>
   `).join("") || makeEmptyState("Recommendations unavailable", "Start by adding a campaign, a post, and one inspo item.", "ph-lightbulb");
+}
+
+// Shared recommendations engine — single source of truth for Write an Idea chips, Overview recommendations, and Stellar Assistant
+let __RECOMMENDATIONS_CACHE = null;
+let __RECOMMENDATIONS_CACHE_KEY = "";
+
+function invalidateRecommendationsCache() {
+  __RECOMMENDATIONS_CACHE = null;
+  __RECOMMENDATIONS_CACHE_KEY = "";
+}
+
+function buildWorkspaceRecommendations() {
+  const posts = appState.posts || [];
+  const campaigns = getAvailableCampaignRecords().filter((c) => !c.isArchived);
+  const recs = [];
+
+  // Priority 1: Active Campaigns (up to 3)
+  const campaignCounts = countPostsBy(posts, (post) => getCampaignName(post, "Uncategorized"));
+  const campaignMap = {};
+  campaignCounts.forEach(function(entry) { campaignMap[entry[0]] = entry[1]; });
+  campaigns.slice(0, 3).forEach(function(campaign) {
+    var name = campaign.campaignName || "";
+    if (!name) return;
+    recs.push({
+      priority: 1,
+      source: "campaign",
+      token: "create-" + normalizeLookupValue(name).replace(/[^a-z0-9]+/g, "-"),
+      label: "Create " + name + " Post",
+      prompt: "Create a post for the " + name + " campaign"
+    });
+  });
+
+  // Priority 2: Most-used Pillars (least-used pillar gets a recommendation)
+  const pillarCounts = countPostsBy(posts, (post) => getPostContentPillar(post) || "Uncategorized");
+  if (pillarCounts.length > 1) {
+    var leastPillar = pillarCounts[pillarCounts.length - 1];
+    if (leastPillar && leastPillar[0] !== "Uncategorized") {
+      var pillarLabel = formatContentPillarLabel(leastPillar[0]);
+      recs.push({
+        priority: 2,
+        source: "pillar",
+        token: "create-" + leastPillar[0] + "-story",
+        label: "Create " + pillarLabel + " Story",
+        prompt: "Create a " + pillarLabel.toLowerCase() + " story post"
+      });
+    }
+  } else if (getWorkspacePillarSlugs().length > 0) {
+    var firstPillarLabel = formatContentPillarLabel(getWorkspacePillarSlugs()[0]);
+    recs.push({
+      priority: 2,
+      source: "pillar",
+      token: "create-" + getWorkspacePillarSlugs()[0] + "-content",
+      label: "Create " + firstPillarLabel + " Content",
+      prompt: "Create " + firstPillarLabel.toLowerCase() + " content"
+    });
+  }
+
+  // Priority 3: Audit Gaps — missing content types
+  var hasCarousel = posts.some(function(post) { return String(post.postType || post.type || "").toLowerCase() === "carousel"; });
+  if (!hasCarousel) {
+    recs.push({
+      priority: 3,
+      source: "audit",
+      token: "create-carousel",
+      label: "Create Carousel Explainer",
+      prompt: "Create a carousel explainer post"
+    });
+  }
+
+  // Priority 4: Recent High-Performing Content
+  var topPost = posts.slice().sort(function(a, b) {
+    return Math.max(getPostImpressions(b), getEngagementTotal(b)) - Math.max(getPostImpressions(a), getEngagementTotal(a));
+  })[0];
+  if (topPost) {
+    recs.push({
+      priority: 4,
+      source: "performance",
+      token: "repurpose-top-post",
+      label: "Repurpose Top Post",
+      prompt: "Repurpose the highest-performing post: " + (getPostDisplayTitle(topPost) || "")
+    });
+  }
+
+  // Priority 5: Upcoming Calendar Needs
+  var scheduled = posts.filter(function(post) { return String(post.status || "").toLowerCase() === "scheduled"; });
+  if (scheduled.length < 3) {
+    recs.push({
+      priority: 5,
+      source: "calendar",
+      token: "add-calendar-posts",
+      label: "Add Posts to Calendar",
+      prompt: "Create 2-3 posts for the upcoming calendar week"
+    });
+  }
+
+  return recs;
+}
+
+function getCachedRecommendations(forceRefresh) {
+  if (forceRefresh) __RECOMMENDATIONS_CACHE = null;
+  if (__RECOMMENDATIONS_CACHE) return __RECOMMENDATIONS_CACHE;
+  __RECOMMENDATIONS_CACHE = buildWorkspaceRecommendations();
+  __RECOMMENDATIONS_CACHE_KEY = String((appState.posts || []).length) + "-" + String(getAvailableCampaignRecords().length);
+  return __RECOMMENDATIONS_CACHE;
+}
+
+function renderWriteIdeaRecommendationChips() {
+  var target = document.getElementById("write-idea-recommendation-chips");
+  if (!target) return;
+  var recs = getCachedRecommendations();
+  if (!recs || !recs.length) { target.innerHTML = ""; return; }
+  target.innerHTML = recs.map(function(rec) {
+    return '<button type="button" class="write-idea-chip" data-write-idea-chip="' + escapeHtml(rec.token) + '" data-rec-source="' + escapeHtml(rec.source) + '">' + escapeHtml(rec.label) + '</button>';
+  }).join("");
 }
 
 function renderPerformanceTopPosts(posts) {

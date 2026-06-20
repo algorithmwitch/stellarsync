@@ -2303,10 +2303,12 @@ function getPostsData_() {
   const sheet = getPostsSheet_();
   requireHeaders_(sheet, REQUIRED_POST_HEADERS);
   const lastRow = sheet.getLastRow();
-  if (lastRow < 2) return [];
   const lastColumn = sheet.getLastColumn();
+  console.log("[posts] sheet range", { lastRow: lastRow, lastColumn: lastColumn, dataRows: Math.max(0, lastRow - 1) });
+  if (lastRow < 2) return [];
   const headers = sheet.getRange(1, 1, 1, lastColumn).getValues()[0].map(normalizeHeader_);
-  return sheet.getRange(2, 1, lastRow - 1, lastColumn)
+  console.log("[posts] headers", headers);
+  const rawRows = sheet.getRange(2, 1, lastRow - 1, lastColumn)
     .getValues()
     .map(function(row, index) {
       const obj = { row_number: index + 2 };
@@ -2320,6 +2322,8 @@ function getPostsData_() {
         return key !== "row_number" && String(obj[key] || "").trim() !== "";
       });
     });
+  console.log("[posts] raw rows after empty filter", rawRows.length);
+  return rawRows;
 }
 
 function postHasMeaningfulIdBackfillContent_(row) {
@@ -4365,7 +4369,15 @@ function getPosts() {
     if (hasVisibleContent) return true;
     droppedRows.push({
       row_number: post && post.row_number || post && post.rowNumber || "",
-      reason: "blank_after_normalize"
+      reason: "blank_after_normalize",
+      title: post && post.title || "",
+      description: post && post.description || "",
+      campaignName: post && post.campaignName || "",
+      status: post && post.status || "",
+      platform: post && post.platform || "",
+      scheduledAt: post && post.scheduledAt || "",
+      publishDate: post && post.publishDate || "",
+      queueDateLabel: post && post.queueDateLabel || ""
     });
     return false;
   });
@@ -4377,17 +4389,29 @@ function getPosts() {
     return Number(pickFirstDefined_(b && b.row_number, b && b.rowNumber, 0)) - Number(pickFirstDefined_(a && a.row_number, a && a.rowNumber, 0));
   });
   console.log("[posts] normalized row count", filteredPosts.length);
-  console.log("[posts] last 5 posts", filteredPosts.slice(0, 5).map(function(post) {
+  console.log("[posts] last 10 posts", filteredPosts.slice(0, 10).map(function(post) {
     return {
       row_number: pickFirstDefined_(post && post.row_number, post && post.rowNumber, ""),
       post_id: pickFirstDefined_(post && post.postId, post && post.post_id, ""),
       title: pickFirstDefined_(post && post.title, post && post.description, ""),
       publish_date: pickFirstDefined_(post && post.publishDate, post && post.publish_date, ""),
       publish_time: pickFirstDefined_(post && post.publishTime, post && post.publish_time, ""),
-      scheduled_at: pickFirstDefined_(post && post.scheduledAt, post && post.scheduled_at, "")
+      scheduled_at: pickFirstDefined_(post && post.scheduledAt, post && post.scheduled_at, ""),
+      campaign_name: pickFirstDefined_(post && post.campaignName, ""),
+      status: pickFirstDefined_(post && post.status, ""),
+      platform: pickFirstDefined_(post && post.platform, "")
     };
   }));
-  console.log("[posts] dropped rows with reason", droppedRows);
+  console.log("[posts] dropped rows with reason", droppedRows.map(function(d) {
+    return {
+      row_number: d.row_number,
+      reason: d.reason,
+      title: d.title || "",
+      campaign_name: d.campaignName || "",
+      status: d.status || "",
+      platform: d.platform || ""
+    };
+  }));
   return filteredPosts;
 }
 
@@ -4850,8 +4874,10 @@ function getCampaignCleanupDiagnostics_(posts, campaigns) {
   var invalidComboCampaigns = [];
   posts.forEach(function(post) {
     var name = String(post.campaignName || "").trim();
-    if (!name || name.indexOf(",") === -1) return;
-    var labels = name.split(",").map(function(label) {
+    if (!name) return;
+    var explicitMulti = /[|\n]/.test(name);
+    if (!explicitMulti) return;
+    var labels = name.split(/[|\n]/).map(function(label) {
       return normalizeCampaignName_(label);
     }).filter(Boolean);
     if (!labels.length) return;
