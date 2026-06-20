@@ -7096,7 +7096,7 @@ function getAvailableCampaignRecords() {
     ? allowed.slice()
     : sourceRecords.map((campaign) => campaign?.campaignName || campaign?.campaign_name || campaign?.name || "").filter(Boolean);
   return orderedNames.map((campaignName, index) => {
-    const resolvedName = resolveCampaignName(campaignName, sourceRecords);
+    const resolvedName = resolveCanonicalCampaignName(campaignName, sourceRecords);
     const matched = sourceRecords.find((campaign) => normalizeLookupValue(campaign.campaignName || campaign.name || "") === normalizeLookupValue(resolvedName || campaignName));
     return {
       ...(matched || {}),
@@ -7108,6 +7108,21 @@ function getAvailableCampaignRecords() {
   }).filter((campaign) => !campaign.isArchived);
 }
 
+function logCampaignQASummary(source = "hybrid") {
+  const posts = Array.isArray(appState?.posts) ? appState.posts : [];
+  const campaignRecords = getAvailableCampaignRecords();
+  const rawNames = [...new Set(posts.map((post) => normalizeDisplayText(pickRemoteValue(post?.campaignName, post?.campaign_name, ""))).filter(Boolean))];
+  const resolvedNames = [...new Set(posts.map((post) => resolveCanonicalCampaignName(pickRemoteValue(post?.campaignName, post?.campaign_name, ""), campaignRecords)).filter(Boolean))];
+  const registryNames = [...new Set(campaignRecords.map((campaign) => normalizeDisplayText(campaign?.campaignName || "")).filter(Boolean))];
+  const suspiciousFragments = ["Girl", "Take Action"].filter((fragment) => rawNames.some((name) => normalizeLookupValue(name) === normalizeLookupValue(fragment)));
+  console.log("[campaign-qa] source", source);
+  console.log("[campaign-qa] sheet campaign records", registryNames);
+  console.log("[campaign-qa] unique raw post campaigns", rawNames);
+  console.log("[campaign-qa] unique resolved post campaigns", resolvedNames);
+  console.log("[campaign-qa] suspicious fragments found", suspiciousFragments);
+  return { source, registryNames, rawNames, resolvedNames, suspiciousFragments };
+}
+
 function getCampaignById(campaignId, campaigns = getAvailableCampaignRecords()) {
   const id = String(campaignId || "").trim();
   if (!id) return null;
@@ -7115,7 +7130,7 @@ function getCampaignById(campaignId, campaigns = getAvailableCampaignRecords()) 
 }
 
 function getCampaignByName(campaignName, campaigns = getAvailableCampaignRecords()) {
-  const resolvedName = resolveCampaignName(campaignName, campaigns);
+  const resolvedName = resolveCanonicalCampaignName(campaignName, campaigns);
   const name = normalizeLookupValue(resolvedName || "");
   if (!name) return null;
   return campaigns.find((campaign) => normalizeLookupValue(campaign.campaignName || campaign.name || "") === name) || null;
@@ -7141,7 +7156,7 @@ function getCampaignColorForPost(post) {
   if (!post) return "#c77dff";
   var directColor = post.campaignColor || post.campaign_color || post.color || "";
   if (directColor) { console.log("[calendar-color] post direct", { postId: post.post_id || post.id, color: directColor }); return directColor; }
-  var campaignName = post.campaignName || post.campaign_name || "";
+  var campaignName = resolveCanonicalCampaignName(post.campaignName || post.campaign_name || "", getAvailableCampaignRecords());
   var campaignId = post.campaignId || post.campaign_id || "";
   var campaign = (campaignId ? getCampaignById(campaignId) : null) || (campaignName ? getCampaignByName(campaignName) : null);
   if (campaign && campaign.color) { console.log("[calendar-color] campaign match", { campaignName: campaign.campaignName, color: campaign.color }); return campaign.color; }
@@ -7416,12 +7431,12 @@ function filterRenderableArtifacts(list, type) {
 function getCampaignName(item, fallback = "") {
   if (!item) return fallback;
   if (typeof item === "string") {
-    return resolveCampaignName(item, getAvailableCampaignRecords()) || String(item || "").trim() || fallback;
+    return resolveCanonicalCampaignName(item, getAvailableCampaignRecords()) || String(item || "").trim() || fallback;
   }
   const raw = String(
     item.campaignName || item.campaign_name || item.campaign || item.targetCampaign || item.sourceCampaign || fallback
   ).trim();
-  return resolveCampaignName(raw, getAvailableCampaignRecords()) || raw || fallback;
+  return resolveCanonicalCampaignName(raw, getAvailableCampaignRecords()) || raw || fallback;
 }
 
 function getMetricValue(item, aliases, fallback = 0) {
@@ -9644,10 +9659,10 @@ function normalizeCampaignName(value) {
       }).filter(Boolean)
     : [];
   const allowed = configured.length ? configured : hydrated;
-  return resolveCampaignName(raw, allowed);
+  return resolveCanonicalCampaignName(raw, allowed);
 }
 
-function resolveCampaignName(rawCampaignName, campaignRecords = [], options = {}) {
+function resolveCanonicalCampaignName(rawCampaignName, campaignRecords = [], options = {}) {
   const raw = normalizeDisplayText(rawCampaignName);
   console.log("[campaign-parse] raw", raw);
   if (!raw) return "";
@@ -9657,22 +9672,34 @@ function resolveCampaignName(rawCampaignName, campaignRecords = [], options = {}
       : campaign;
   }).filter(Boolean);
   const names = records.map((campaign) => String(campaign.campaignName || campaign.campaign_name || campaign.name || "").trim()).filter(Boolean);
+  console.log("[campaign-parse] canonical campaigns", names);
+  const rawLookup = normalizeLookupValue(raw);
   const girlTakeActionKey = normalizeLookupValue("Girl, Take Action");
-  if (normalizeLookupValue(raw) === girlTakeActionKey || names.some((name) => normalizeLookupValue(name) === girlTakeActionKey)) {
-    console.log("[campaign-parse] exact preserved", "Girl, Take Action");
+  if (raw === "Girl, Take Action") {
+    console.log("[campaign-parse] exact Girl, Take Action preserved", "Girl, Take Action");
     return "Girl, Take Action";
   }
   const exactMatch = names.find((name) => name === raw);
   if (exactMatch) {
     console.log("[campaign-parse] exact match", exactMatch);
+    if (normalizeLookupValue(exactMatch) === girlTakeActionKey) {
+      console.log("[campaign-parse] exact Girl, Take Action preserved", exactMatch);
+    }
     return exactMatch;
   }
-  const normalizedMatch = names.find((name) => normalizeLookupValue(name) === normalizeLookupValue(raw));
+  const normalizedMatch = names.find((name) => normalizeLookupValue(name) === rawLookup);
   if (normalizedMatch) {
     console.log("[campaign-parse] normalized match", normalizedMatch);
+    if (normalizeLookupValue(normalizedMatch) === girlTakeActionKey) {
+      console.log("[campaign-parse] exact Girl, Take Action preserved", normalizedMatch);
+    }
     return normalizedMatch;
   }
-  const explicitMulti = Boolean(options.explicitMulti) || Array.isArray(rawCampaignName) || /[|\n]/.test(String(rawCampaignName || ""));
+  if (rawLookup === girlTakeActionKey) {
+    console.log("[campaign-parse] removed overbroad girl take action fallback", raw);
+    return raw;
+  }
+  const explicitMulti = Boolean(options.allowMulti === true) && (Array.isArray(rawCampaignName) || /[|\n]/.test(String(rawCampaignName || "")));
   if (raw.indexOf(",") !== -1 && !explicitMulti) {
     console.log("[campaign-parse] comma preserved", raw);
     return raw;
@@ -9686,7 +9713,12 @@ function resolveCampaignName(rawCampaignName, campaignRecords = [], options = {}
     console.log("[campaign-parse] split explicit delimiter only", resolvedParts);
     return resolvedParts[0] || raw;
   }
+  console.log("[campaign-parse] unknown preserved", raw);
   return raw;
+}
+
+function resolveCampaignName(rawCampaignName, campaignRecords = [], options = {}) {
+  return resolveCanonicalCampaignName(rawCampaignName, campaignRecords, options);
 }
 
 function getDefaultSettings() {
@@ -12528,55 +12560,103 @@ function buildConstellationRows() {
   const campaignRecords = [...getAvailableCampaignRecords()]
     .filter(campaign => !campaign.isArchived)
     .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0));
-  const allowedCampaignKeys = new Set(campaignRecords.map((campaign) => normalizeLookupValue(campaign.campaignName || "")));
   const hydratedPosts = [...(appState.posts || [])].map((post) => hydratePostCampaign(post, campaignRecords));
-  const uncategorizedPosts = hydratedPosts.filter((post) => !allowedCampaignKeys.has(normalizeLookupValue(post.campaignName || "")));
-  const campaigns = campaignRecords.concat([{
+  campaignLaneMap = new Map();
+  const rowsByKey = new Map();
+  const rowOrder = [];
+  const campaignLookup = new Map(campaignRecords.map((campaign) => [normalizeLookupValue(campaign.campaignName || ""), campaign]));
+  function ensureRow(campaign, source = "registry") {
+    const campaignName = String(campaign?.campaignName || "").trim() || "Uncategorized";
+    const rowKey = normalizeLookupValue(campaignName) || "__uncategorized__";
+    if (rowsByKey.has(rowKey)) return rowsByKey.get(rowKey);
+    const row = {
+      ...campaign,
+      campaignName,
+      campaignId: String(campaign?.campaignId || "").trim(),
+      pillar: String(campaign?.pillar || "").trim(),
+      color: String(campaign?.color || "").trim() || "#6b7280",
+      sortOrder: Number(campaign?.sortOrder || 0) || 0,
+      isArchived: !!campaign?.isArchived,
+      posts: [],
+      _constellationSource: source,
+      _constellationLaneKey: getConstellationCampaignLaneKey(campaign || { campaignName }),
+      _constellationRowIndex: rowOrder.length,
+      _constellationLayout: getConstellationLayoutConfig({ ...campaign, posts: [], _constellationRowIndex: rowOrder.length }, rowOrder.length)
+    };
+    rowsByKey.set(rowKey, row);
+    rowOrder.push(rowKey);
+    console.log("[constellation-campaign] campaign node created", { campaignName: row.campaignName, source });
+    return row;
+  }
+
+  campaignRecords.forEach((campaign) => ensureRow(campaign, "registry"));
+  const uncategorizedRow = ensureRow({
     campaignId: "",
     campaignName: "Uncategorized",
     pillar: "",
     color: "#6b7280",
     sortOrder: Number.MAX_SAFE_INTEGER - 1,
-    isArchived: false,
-    _uncategorizedIndex: 0
-  }]);
+    isArchived: false
+  }, "uncategorized");
 
-  campaignLaneMap = new Map();
-  const mapped = campaigns.map((campaign, laneIndex) => {
-    const posts = ((String(campaign.campaignName || "").trim() === "Uncategorized")
-      ? uncategorizedPosts.slice()
-      : hydratedPosts
-        .filter((post) => {
-          return normalizeLookupValue(post.campaignName || "") === normalizeLookupValue(campaign.campaignName || "");
-        }))
-      .sort((a, b) => {
+  hydratedPosts.forEach((post) => {
+    const rawCampaign = normalizeDisplayText(pickRemoteValue(post?.campaignName, post?.campaign_name, ""));
+    const resolvedCampaign = resolveCanonicalCampaignName(rawCampaign, campaignRecords);
+    console.log("[constellation-campaign] raw campaign", rawCampaign || "");
+    console.log("[constellation-campaign] resolved campaign", resolvedCampaign || "Uncategorized");
+    if (!rawCampaign) {
+      uncategorizedRow.posts.push(post);
+      return;
+    }
+    const resolvedRecord = campaignLookup.get(normalizeLookupValue(resolvedCampaign || rawCampaign)) || null;
+    const targetName = String((resolvedRecord && resolvedRecord.campaignName) || resolvedCampaign || rawCampaign).trim();
+    if (!resolvedRecord && rawCampaign !== targetName) {
+      console.log("[constellation-campaign] skipped fragment node", { raw: rawCampaign, resolved: resolvedCampaign || "" });
+    }
+    const targetRow = resolvedRecord
+      ? ensureRow(resolvedRecord, "registry")
+      : ensureRow({
+          campaignId: `CMP-${normalizeLookupValue(targetName).replace(/[^a-z0-9]+/g, "").toUpperCase().slice(0, 8) || "UNKNOWN"}`,
+          campaignName: targetName,
+          pillar: "",
+          color: "#6b7280",
+          sortOrder: Number.MAX_SAFE_INTEGER - 2,
+          isArchived: false
+        }, "post");
+    targetRow.posts.push(post);
+  });
+
+  const mapped = rowOrder
+    .map((key) => rowsByKey.get(key))
+    .filter(Boolean)
+    .map((campaign, laneIndex) => {
+      const posts = (Array.isArray(campaign.posts) ? campaign.posts : []).sort((a, b) => {
         const aTime = parsePostDate(normalizePostCalendarDateKey(a) || a.date)?.getTime() || 0;
         const bTime = parsePostDate(normalizePostCalendarDateKey(b) || b.date)?.getTime() || 0;
         return aTime - bTime;
       });
-
-    const derivedPillar = normalizePillar(campaign.pillar || (appState.settings?.pillars || [])[0] || "authority");
-    const laneKey = getConstellationCampaignLaneKey(campaign) || `__uncategorized__${Number(campaign._uncategorizedIndex || 0)}`;
-    const rowIndex = laneIndex;
-    if (campaignLaneMap.has(laneKey)) {
-      console.warn("Constellation duplicate lane assignment key detected.", {
-        laneKey,
-        campaignId: campaign.campaignId || "",
-        campaignName: campaign.campaignName || "",
-        rowIndex
-      });
-    }
-    campaignLaneMap.set(laneKey, rowIndex);
-
-    return {
-      ...campaign,
-      pillar: derivedPillar,
-      posts,
-      _constellationLaneKey: laneKey,
-      _constellationRowIndex: rowIndex,
-      _constellationLayout: getConstellationLayoutConfig({ ...campaign, posts, _constellationRowIndex: rowIndex }, rowIndex)
-    };
-  });
+      const derivedPillar = normalizePillar(campaign.pillar || (appState.settings?.pillars || [])[0] || "authority");
+      const laneKey = getConstellationCampaignLaneKey(campaign) || `__uncategorized__${laneIndex}`;
+      const rowIndex = laneIndex;
+      if (campaignLaneMap.has(laneKey)) {
+        console.warn("Constellation duplicate lane assignment key detected.", {
+          laneKey,
+          campaignId: campaign.campaignId || "",
+          campaignName: campaign.campaignName || "",
+          rowIndex
+        });
+      }
+      campaignLaneMap.set(laneKey, rowIndex);
+      return {
+        ...campaign,
+        pillar: derivedPillar,
+        posts,
+        _constellationLaneKey: laneKey,
+        _constellationRowIndex: rowIndex,
+        _constellationLayout: getConstellationLayoutConfig({ ...campaign, posts, _constellationRowIndex: rowIndex }, rowIndex)
+      };
+    });
+  console.log("[constellation-campaign] final campaign nodes", mapped.map((campaign) => campaign.campaignName || "Uncategorized"));
   return mapped.map((campaign, index) => rebuildConstellationCampaignGeometry(campaign, index));
 }
 
@@ -12593,15 +12673,15 @@ function normalizeCampaignLaneKey(value = "") {
 }
 
 function getConstellationCampaignLabelParts(value = "") {
-  const raw = String(value || "").trim();
+  const raw = normalizeDisplayText(value);
   if (!raw) return [];
   if (/[|\n]/.test(raw)) {
     return raw
       .split(/[|\n]/)
-      .map((item) => normalizeDisplayText(item))
+      .map((item) => resolveCanonicalCampaignName(item, getAvailableCampaignRecords()))
       .filter(Boolean);
   }
-  return [normalizeDisplayText(raw)];
+  return [resolveCanonicalCampaignName(raw, getAvailableCampaignRecords())];
 }
 
 function isInvalidComboCampaignName(value = "") {
@@ -24774,6 +24854,7 @@ async function syncRemoteIfConfigured() {
       lastSyncError = "";
       persistLocalState();
       await maybeAutoPullMondayUpdatesForWorkspace();
+      logCampaignQASummary("supabase_native");
       console.log("[data]", getAppStateCounts());
       rerenderAll();
       updateLoadingToastSuccess(syncLoadingToastId, "Workspace loaded", "Supabase workspace data loaded.");
@@ -24824,6 +24905,7 @@ async function syncRemoteIfConfigured() {
     });
     console.log("[hybrid] phase 1 posts count", appState.posts.length);
     console.log("[hybrid] phase 1 campaigns count", Array.isArray(appState.campaigns) ? appState.campaigns.length : 0);
+    logCampaignQASummary("hybrid");
     console.log("[posts] appState.posts set count", appState.posts.length);
     console.log("[posts] render after sheets");
     window.__SHEET_POSTS_LOADED = true;
@@ -29072,7 +29154,7 @@ function normalizeRemoteSettings(settings) {
 
 function normalizeRemotePost(post, campaigns = [], mediaItems = [], index = 0) {
   const campaignId = String(pickRemoteValue(post?.campaignId, post?.campaign_id, post?.campaignID, "")).trim();
-  const incomingCampaignName = resolveCampaignName(pickRemoteValue(post?.campaignName, post?.campaign_name, ""), campaigns);
+  const incomingCampaignName = resolveCanonicalCampaignName(pickRemoteValue(post?.campaignName, post?.campaign_name, ""), campaigns);
   const matchedCampaign = getCampaignById(campaignId, campaigns) || getCampaignByName(incomingCampaignName, campaigns);
   const postId = getCanonicalPostId(post);
   const frontendId = ensureFrontendPostId(post, index);
@@ -29172,7 +29254,7 @@ function normalizeRemotePost(post, campaigns = [], mediaItems = [], index = 0) {
     archivedAt: String(pickRemoteValue(post?.archivedAt, post?.archived_at, "")).trim(),
     flowState: String(pickRemoteValue(post?.flowState, post?.flow_state, post?.status, "draft")).trim(),
     campaignId: String(campaignId || matchedCampaign?.campaignId || "").trim(),
-    campaignName: resolveCampaignName(pickRemoteValue(post?.campaignName, post?.campaign_name, matchedCampaign?.campaignName, ""), campaigns),
+    campaignName: resolveCanonicalCampaignName(pickRemoteValue(post?.campaignName, post?.campaign_name, matchedCampaign?.campaignName, ""), campaigns),
     impressions: normalizeMetricNumber(pickRemoteValue(post?.impressions, post?.impression_count, post?.impressionCount, post?.views, post?.view_count, post?.viewCount, post?.reach, 0)),
     impression_count: normalizeMetricNumber(pickRemoteValue(post?.impression_count, post?.impressionCount, post?.impressions, post?.views, post?.reach, 0)),
     views: normalizeMetricNumber(pickRemoteValue(post?.views, post?.view_count, post?.viewCount, post?.impressions, post?.reach, 0)),
@@ -29256,7 +29338,7 @@ function normalizeRemotePost(post, campaigns = [], mediaItems = [], index = 0) {
 
 function normalizeRemoteCampaign(campaign) {
   const pillar = getCanonicalPillarValue(pickRemoteValue(campaign?.pillar, campaign?.hubPillarLabel, campaign?.hub_pillar_label, ""), "");
-  const canonicalCampaignName = resolveCampaignName(pickRemoteValue(campaign?.campaignName, campaign?.campaign_name, campaign?.name, campaign?.title, ""), appState?.campaigns || []);
+  const canonicalCampaignName = resolveCanonicalCampaignName(pickRemoteValue(campaign?.campaignName, campaign?.campaign_name, campaign?.name, campaign?.title, ""), appState?.campaigns || []);
   return {
     campaignId: String(pickRemoteValue(campaign?.campaignId, campaign?.campaign_id, campaign?.campaignID, campaign?.id, "")).trim(),
     campaign_id: String(pickRemoteValue(campaign?.campaign_id, campaign?.campaignId, campaign?.campaignID, campaign?.id, "")).trim(),

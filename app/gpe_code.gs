@@ -3579,22 +3579,34 @@ function resolveCampaignName_(rawCampaignName, campaignRecords, options) {
       ? String(campaign || "").trim()
       : String(campaign && (campaign.campaignName || campaign.campaign_name || campaign.name) || "").trim();
   }).filter(Boolean);
+  console.log("[campaign-parse] canonical campaigns", names);
   var girlTakeActionKey = normalizeKey_("Girl, Take Action");
-  if (normalizeKey_(raw) === girlTakeActionKey || names.some(function(name) { return normalizeKey_(name) === girlTakeActionKey; })) {
-    console.log("[campaign-parse] exact preserved", "Girl, Take Action");
+  var rawKey = normalizeKey_(raw);
+  if (raw === "Girl, Take Action") {
+    console.log("[campaign-parse] exact Girl, Take Action preserved", "Girl, Take Action");
     return "Girl, Take Action";
   }
   var exactMatch = names.find(function(name) { return name === raw; });
   if (exactMatch) {
     console.log("[campaign-parse] exact match", exactMatch);
+    if (normalizeKey_(exactMatch) === girlTakeActionKey) {
+      console.log("[campaign-parse] exact Girl, Take Action preserved", exactMatch);
+    }
     return exactMatch;
   }
-  var normalizedMatch = names.find(function(name) { return normalizeKey_(name) === normalizeKey_(raw); });
+  var normalizedMatch = names.find(function(name) { return normalizeKey_(name) === rawKey; });
   if (normalizedMatch) {
     console.log("[campaign-parse] normalized match", normalizedMatch);
+    if (normalizeKey_(normalizedMatch) === girlTakeActionKey) {
+      console.log("[campaign-parse] exact Girl, Take Action preserved", normalizedMatch);
+    }
     return normalizedMatch;
   }
-  var explicitMulti = Boolean(options && options.explicitMulti) || Array.isArray(rawCampaignName) || /[|\n]/.test(String(rawCampaignName || ""));
+  if (rawKey === girlTakeActionKey) {
+    console.log("[campaign-parse] removed overbroad girl take action fallback", raw);
+    return raw;
+  }
+  var explicitMulti = Boolean(options && options.allowMulti) && (Array.isArray(rawCampaignName) || /[|\n]/.test(String(rawCampaignName || "")));
   if (raw.indexOf(",") !== -1 && !explicitMulti) {
     console.log("[campaign-parse] comma preserved", raw);
     return raw;
@@ -3606,6 +3618,7 @@ function resolveCampaignName_(rawCampaignName, campaignRecords, options) {
     console.log("[campaign-parse] split explicit delimiter only", parts);
     return parts[0] || raw;
   }
+  console.log("[campaign-parse] unknown preserved", raw);
   return raw;
 }
 
@@ -4225,6 +4238,7 @@ function getPosts() {
   const defaultPillar = settings.pillars[0] || "advocacy";
   const campaignMap = buildCampaignMap_();
   const campaignNameMap = buildCampaignNameMap_();
+  const campaignRecordsForResolver = Object.values(campaignMap).concat(Object.values(campaignNameMap));
   const mediaItems = getMedia();
   const rawRows = getPostsData_();
   console.log("[posts] sheet raw row count", rawRows.length);
@@ -4233,9 +4247,16 @@ function getPosts() {
     const row = normalizePostSchemaAliases_(rawRow);
     const title = derivePostTitle_(row);
     const rawCampaignId = normalizeScalar_(pickFirstDefined_(row.campaign_id, row.campaignID));
-    const rawCampaignName = normalizeCampaignName_(pickFirstDefined_(row.campaign_name, row.campaignName));
+    const rawCampaignName = String(pickFirstDefined_(row.campaign_name, row.campaignName)).trim();
+    const resolvedCampaignName = resolveCampaignName_(rawCampaignName, campaignRecordsForResolver, { allowMulti: /[|\n]/.test(String(rawCampaignName || "")) });
     const matchedCampaign = campaignMap[String(rawCampaignId || "")] || campaignNameMap[normalizeCampaignLookup_(rawCampaignName)] || null;
     const campaignId = rawCampaignId || (matchedCampaign && matchedCampaign.campaignId) || "";
+    console.log("[campaign-parse] resolved", {
+      raw: rawCampaignName,
+      resolved: resolvedCampaignName || rawCampaignName || "",
+      campaignId: campaignId || "",
+      postId: String(pickFirstDefined_(row.post_id, row.postId, row.id, row.row_number || "")).trim()
+    });
     const planning = normalizePlanningFields_(row, row);
     const scheduledAt = planning.scheduledAt;
     const hubPillarLabel = pillarDisplayLabel_(
@@ -4294,7 +4315,8 @@ function getPosts() {
       archivedAt: String(pickFirstDefined_(row.archived_at)).trim(),
       flowState: normalizeFlowState_("post", pickFirstDefined_(row.flow_state, row.status, "draft"), "draft"),
       campaignId: campaignId,
-      campaignName: normalizeCampaignName_(pickFirstDefined_(row.campaign_name, row.campaignName, matchedCampaign && matchedCampaign.campaignName)),
+      campaign_name: rawCampaignName,
+      campaignName: resolvedCampaignName || rawCampaignName || "",
       notes: String(row.notes || "").trim(),
       impressions: normalizeNumber_(row.impressions),
       reach: normalizeNumber_(row.reach),
