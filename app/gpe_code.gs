@@ -1194,6 +1194,39 @@ function doGet(e) {
   const route = normalizeRouteName_(action);
 
   try {
+    const deprecatedSocialActions = [
+      "startLinkedInAuth",
+      "startInstagramAuth",
+      "startThreadsAuth",
+      "startBlueskyAuth",
+      "startTikTokAuth",
+      "getSocialAuthUrl",
+      "handleSocialOAuthCallback",
+      "linkedinCallback",
+      "instagramCallback",
+      "threadsCallback",
+      "metaCallback",
+      "tiktokCallback",
+      "refreshSocialToken",
+      "disconnectSocialAccount",
+      "disconnectPlatform",
+      "disconnectBluesky",
+      "testPlatformConnection",
+      "testLinkedInHistoricalAccess",
+      "getLinkedInHistoricalAccessDiagnostics",
+      "testBlueskyConnection",
+      "testTikTokConnection",
+      "blueskyConnect",
+      "blueskySyncRecentPosts",
+      "prepareBlueskyPayload"
+    ];
+    if (deprecatedSocialActions.indexOf(action) !== -1 || deprecatedSocialActions.indexOf(route) !== -1) {
+      return jsonResponse({
+        ok: false,
+        error: "Social OAuth now uses Supabase Edge Functions."
+      });
+    }
+
     if (route === "linkedinCallback") return linkedinCallback(e);
     if (route === "instagramCallback") return instagramCallback(e);
     if (route === "threadsCallback") return threadsCallback(e);
@@ -1418,6 +1451,39 @@ function doPost(e) {
     action = getActionFromRequest_(e, body);
     var route = normalizeRouteName_(action);
     const payload = getPayloadFromRequest_(e, body);
+
+    const deprecatedSocialActions = [
+      "startLinkedInAuth",
+      "startInstagramAuth",
+      "startThreadsAuth",
+      "startBlueskyAuth",
+      "startTikTokAuth",
+      "getSocialAuthUrl",
+      "handleSocialOAuthCallback",
+      "linkedinCallback",
+      "instagramCallback",
+      "threadsCallback",
+      "metaCallback",
+      "tiktokCallback",
+      "refreshSocialToken",
+      "disconnectSocialAccount",
+      "disconnectPlatform",
+      "disconnectBluesky",
+      "testPlatformConnection",
+      "testLinkedInHistoricalAccess",
+      "getLinkedInHistoricalAccessDiagnostics",
+      "testBlueskyConnection",
+      "testTikTokConnection",
+      "blueskyConnect",
+      "blueskySyncRecentPosts",
+      "prepareBlueskyPayload"
+    ];
+    if (deprecatedSocialActions.indexOf(action) !== -1 || deprecatedSocialActions.indexOf(route) !== -1) {
+      return jsonResponse({
+        ok: false,
+        error: "Social OAuth now uses Supabase Edge Functions."
+      });
+    }
 
     if (route === "getWorkspaceConfig") {
       return jsonResponse({ ok: true, workspace: getWorkspaceServerConfig_(payload) });
