@@ -15346,6 +15346,8 @@ function renderWorkspaceConnectionCards(options = {}) {
           }
           actions += '<button type="button" onclick="testMondayConnection()" class="px-3 py-2 rounded-xl bg-[#00a86b] hover:bg-[#00cc77] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Test Monday Connection</button>';
           actions += '<button type="button" onclick="inspectMondayColumns()" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Inspect Monday Columns</button>';
+          actions += '<button type="button" onclick="syncAllPostsToMonday()" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-200 transition-colors">Sync Monday Board</button>';
+          actions += '<button type="button" onclick="pullAllMondayUpdates()" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-200 transition-colors">Pull Monday Updates</button>';
           if (showBackfill) actions += '<button type="button" onclick="backfillMondayBoard()" class="px-3 py-2 rounded-xl bg-[#0f0a18] hover:bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 transition-colors">Backfill Monday Board</button>';
           actions += '<button type="button" onclick="disconnectMondayBoard()" class="px-3 py-2 rounded-xl bg-[#30121b] hover:bg-[#3b1720] border border-red-400/20 text-[10px] uppercase tracking-wider font-bold text-red-200 transition-colors">Disconnect</button>';
         }
@@ -15391,6 +15393,8 @@ function renderWorkspaceConnectionCards(options = {}) {
         if (mondayBoardId) {
           actions += '<button type="button" onclick="testMondayConnection()" class="px-3 py-2 rounded-xl bg-[#00a86b] hover:bg-[#00cc77] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Test Monday Connection</button>';
           actions += '<button type="button" onclick="inspectMondayColumns()" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Inspect Monday Columns</button>';
+          actions += '<button type="button" onclick="syncAllPostsToMonday()" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-200 transition-colors">Sync Monday Board</button>';
+          actions += '<button type="button" onclick="pullAllMondayUpdates()" class="px-3 py-2 rounded-xl bg-[#181125] hover:bg-[#231738] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-200 transition-colors">Pull Monday Updates</button>';
           if (showBackfill) actions += '<button type="button" onclick="backfillMondayBoard()" class="px-3 py-2 rounded-xl bg-[#0f0a18] hover:bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 transition-colors">Backfill Monday Board</button>';
           actions += '<button type="button" onclick="disconnectMondayBoard()" class="px-3 py-2 rounded-xl bg-[#30121b] hover:bg-[#3b1720] border border-red-400/20 text-[10px] uppercase tracking-wider font-bold text-red-200 transition-colors">Disconnect</button>';
         }
@@ -15689,6 +15693,10 @@ function renderMondayBackfillResult(result) {
   html += '<div>Updated: ' + (result.updated || 0) + '</div>';
   html += '<div>Skipped: ' + (result.skipped || 0) + '</div>';
   html += '<div>Failed: ' + (result.failed || 0) + '</div>';
+  if (result.groups_created !== undefined) html += '<div>Groups created: ' + (result.groups_created || 0) + '</div>';
+  if (result.moved_groups !== undefined) html += '<div>Posts moved between groups: ' + (result.moved_groups || 0) + '</div>';
+  if (result.group_move_failed !== undefined) html += '<div>Group move failures: ' + (result.group_move_failed || 0) + '</div>';
+  if (result.group_title || result.group_match_strategy) html += '<div>Last group: ' + escapeHtml(result.group_title || result.group_id || "None") + ' (' + escapeHtml(result.group_match_strategy || "unknown") + ')</div>';
   html += '</div>';
   if (errors.length) {
     html += '<div class="mt-3 text-left"><div class="text-[10px] uppercase tracking-widest text-yellow-400 font-bold mb-1">Errors (first ' + errors.length + ')</div>';
@@ -15747,7 +15755,10 @@ async function confirmMondayBackfill() {
           default_group_title: result.default_group_title || "",
           group_id: result.group_id || "",
           group_title: result.group_title || "",
-          group_match_strategy: result.group_match_strategy || ""
+          group_match_strategy: result.group_match_strategy || "",
+          groups_created: result.groups_created || 0,
+          moved_groups: result.moved_groups || 0,
+          group_move_failed: result.group_move_failed || 0
         }
       });
       refreshConnectionCards();
@@ -15764,6 +15775,81 @@ async function backfillMondayBoard() {
   if (!boardId) { showToast("No Monday board configured", "error"); return; }
   if (!canManageWorkspace()) { showToast("Backfill unavailable", "You do not have permission to run a board backfill.", "ph-warning", "text-yellow-400"); return; }
   openMondayBackfillModal();
+}
+
+async function syncAllPostsToMonday() {
+  var loadingToastId = showLoadingToast("Syncing Monday board", "Pushing StellarSync posts to Monday...");
+  try {
+    const boardId = getMondayBoardId(WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active, WORKSPACE_CONNECTIONS);
+    if (!boardId) { updateLoadingToastError(loadingToastId, "Monday sync failed", "No Monday board configured."); return; }
+    const posts = getMondayBackfillFrontendPosts();
+    if (!posts.length) { updateLoadingToastError(loadingToastId, "Monday sync failed", "No posts are loaded to sync."); return; }
+    const meta = getWorkspaceRequestMetadata();
+    let synced = 0;
+    let failed = 0;
+    let lastResult = null;
+    for (const post of posts) {
+      try {
+        const result = await callSupabaseEdgeFunction("monday-sync", {
+          action: "sync_post",
+          workspace_id: meta.workspace_id || meta.workspace_slug,
+          workspace_slug: meta.workspace_slug || getCurrentWorkspaceSlug() || "",
+          board_id: boardId,
+          monday_item_id: post.monday_item_id || post.mondayItemId || "",
+          ...post,
+          monday_sync_enabled: true,
+          monday_sync_direction: "supabase_to_monday"
+        });
+        if (result && result.ok) {
+          synced += 1;
+          lastResult = result;
+          if (result.monday_item_id) {
+            post.monday_item_id = result.monday_item_id;
+            post.mondayItemId = result.monday_item_id;
+          }
+        } else {
+          failed += 1;
+        }
+      } catch (err) {
+        failed += 1;
+        console.warn("[monday] board sync post failed", { post_id: post.post_id || post.postId || post.id || "", error: err?.message || err });
+      }
+    }
+    upsertLocalWorkspaceConnection("monday", {
+      status: failed ? "warning" : "connected",
+      last_sync_at: new Date().toISOString(),
+      last_error: failed ? failed + " post(s) failed during Monday sync" : "",
+      config: {
+        board_id: boardId,
+        groups_found: lastResult?.groups_found,
+        group_id: lastResult?.group_id || "",
+        group_title: lastResult?.group_title || "",
+        group_match_strategy: lastResult?.group_match_strategy || ""
+      }
+    });
+    refreshConnectionCards();
+    await syncRemoteIfConfigured();
+    updateLoadingToastSuccess(loadingToastId, "Monday sync complete", "Synced: " + synced + "; Failed: " + failed);
+  } catch (err) {
+    updateLoadingToastError(loadingToastId, "Monday sync error", err?.message || String(err));
+  }
+}
+
+async function pullAllMondayUpdates() {
+  var loadingToastId = showLoadingToast("Pulling Monday updates", "Reconciling Monday fields into StellarSync...");
+  try {
+    const result = await maybeAutoPullMondayUpdatesForWorkspace({ force: true });
+    if (result && result.ok) {
+      refreshConnectionCards();
+      await syncRemoteIfConfigured();
+      updateLoadingToastSuccess(loadingToastId, "Monday pull complete", "Pulled: " + (result.pulled || 0) + "; Failed: " + (result.failed || 0) + "; Conflicts: " + (result.conflicts || 0));
+    } else {
+      const reason = result?.reason || result?.error || "No Monday updates were pulled.";
+      updateLoadingToastError(loadingToastId, "Monday pull skipped", reason);
+    }
+  } catch (err) {
+    updateLoadingToastError(loadingToastId, "Monday pull error", err?.message || String(err));
+  }
 }
 
 function setModalMondayFields(itemId, syncedAt) {
@@ -15860,14 +15946,13 @@ async function pullMondayUpdates() {
     });
     if (result.ok) {
       updateLoadingToastSuccess(loadingToastId, "Updates pulled from Monday", Object.keys(result.updates || {}).length + " field(s) retrieved");
-      if (result.updates && window.__currentModalPostData) {
+      if (result.updates && result.updates._conflict) {
+        showToast("Conflict detected", result.updates._conflict_message || "Post was modified after last sync.", "ph-warning", "text-yellow-400");
+      } else if (result.updates && window.__currentModalPostData) {
         for (var key in result.updates) {
           if (key === "_conflict" || key === "_conflict_message") continue;
           window.__currentModalPostData[key] = result.updates[key];
         }
-      }
-      if (result.updates && result.updates._conflict) {
-        showToast("Conflict detected", result.updates._conflict_message || "Post was modified after last sync.", "ph-warning", "text-yellow-400");
       }
       var diagnosticsEl = document.getElementById("modal-monday-diagnostics");
       if (diagnosticsEl) diagnosticsEl.textContent = JSON.stringify(result, null, 2);
@@ -28414,7 +28499,7 @@ async function maybeAutoPullMondayUpdatesForWorkspace(options = {}) {
     console.log("[monday-auto-sync] skipped reason", "disabled or missing board");
     return { ok: false, skipped: true, reason: "disabled_or_missing_board" };
   }
-  if (config.direction !== "bidirectional") {
+  if (config.direction !== "bidirectional" && !force) {
     console.log("[monday-auto-sync] skipped reason", `direction ${config.direction}`);
     return { ok: false, skipped: true, reason: "direction_not_bidirectional" };
   }
@@ -28440,6 +28525,7 @@ async function maybeAutoPullMondayUpdatesForWorkspace(options = {}) {
   const meta = getWorkspaceRequestMetadata();
   let pulled = 0;
   let failed = 0;
+  let conflicts = 0;
   for (const post of mondayPosts) {
     const postId = String(post?.post_id || post?.postId || post?.id || "").trim();
     const itemId = String(post?.monday_item_id || post?.mondayItemId || "").trim();
@@ -28454,6 +28540,11 @@ async function maybeAutoPullMondayUpdatesForWorkspace(options = {}) {
         last_synced_at: String(post.mondayLastSyncedAt || post.monday_last_synced_at || config.lastPulledAt || "")
       });
       if (result && result.ok && result.updates && typeof result.updates === "object") {
+        if (result.updates._conflict) {
+          conflicts += 1;
+          console.warn("[monday-auto-sync] conflict", { postId, message: result.updates._conflict_message || "" });
+          continue;
+        }
         const refreshed = findPostByAnyId(postId);
         if (refreshed) {
           Object.assign(refreshed, result.updates);
@@ -28481,9 +28572,9 @@ async function maybeAutoPullMondayUpdatesForWorkspace(options = {}) {
     active.monday_sync_direction = config.direction;
     storeActiveWorkspaceConfig(active);
     upsertLocalWorkspaceConnection("monday", {
-      status: failed > 0 ? "warning" : "connected",
+      status: failed > 0 || conflicts > 0 ? "warning" : "connected",
       last_sync_at: now,
-      last_error: failed > 0 ? `${failed} post(s) had pull issues` : "",
+      last_error: failed > 0 || conflicts > 0 ? `${failed} post(s) had pull issues; ${conflicts} conflict(s)` : "",
       config: {
         board_id: config.boardId,
         monday_sync_enabled: true,
@@ -28492,12 +28583,17 @@ async function maybeAutoPullMondayUpdatesForWorkspace(options = {}) {
       }
     });
     persistLocalState();
-    console.log("[monday-auto-sync] success", { pulled, failed });
-    return { ok: true, pulled, failed, monday_last_pulled_at: now };
+    console.log("[monday-auto-sync] success", { pulled, failed, conflicts });
+    return { ok: true, pulled, failed, conflicts, monday_last_pulled_at: now };
+  }
+
+  if (conflicts > 0) {
+    console.log("[monday-auto-sync] conflicts found", { conflicts, failed });
+    return { ok: true, pulled, failed, conflicts, reason: "conflicts_found" };
   }
 
   console.log("[monday-auto-sync] skipped reason", "no updates pulled");
-  return { ok: false, skipped: true, reason: "no_updates_pulled", failed };
+  return { ok: false, skipped: true, reason: "no_updates_pulled", failed, conflicts };
 }
 
 async function syncMirrorAttachmentsForPost(postId, post = null) {
@@ -30069,7 +30165,7 @@ async function savePWProfile() {
 
 var WORKSPACE_SETTINGS_COLUMNS_CACHE = null;
 var WORKSPACE_SETTINGS_OPTIONAL_FIELDS = ["brand_accent", "icon", "avatar_mode", "avatar_initials", "constellation_shape", "short_name", "media_prefix", "media_bucket", "brand_voice", "current_month", "current_year", "default_platforms", "default_pillars", "default_statuses", "default_post_types", "sheet_sync_enabled", "sheet_id", "google_sheet_id", "apps_script_url", "sheet_sync_direction", "sheet_last_pushed_at", "sheet_last_pulled_at", "monday_board_id", "monday_sync_enabled", "monday_sync_direction", "monday_last_pushed_at", "monday_last_pulled_at"];
-var WORKSPACE_SETTINGS_REQUIRE_CONFIRMED_FIELDS = ["brand_accent", "current_month", "default_pillars", "icon", "avatar_mode", "avatar_initials", "constellation_shape", "short_name", "media_prefix", "media_bucket"];
+var WORKSPACE_SETTINGS_REQUIRE_CONFIRMED_FIELDS = ["brand_accent", "current_month", "default_platforms", "default_pillars", "icon", "avatar_mode", "avatar_initials", "constellation_shape", "short_name", "media_prefix", "media_bucket"];
 
 async function getWorkspaceSettingsColumns() {
   if (WORKSPACE_SETTINGS_COLUMNS_CACHE) return WORKSPACE_SETTINGS_COLUMNS_CACHE;
