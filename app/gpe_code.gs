@@ -4257,8 +4257,8 @@ function getPosts() {
 
     return normalizePostRow_(Object.assign({}, row, {
       postId: postId,
-      title: title,
-      platform: (parsePlatformTargets_(pickFirstDefined_(row.platform_targets, row.platformTargets, row.platform))[0] || String(row.platform || "linkedin").trim() || "linkedin"),
+      platforms: parsePlatformTargets_(pickFirstDefined_(row.platform_targets, row.platformTargets, row.platform)),
+      platform: String(pickFirstDefined_(row.platform, "")).trim() || (parsePlatformTargets_(pickFirstDefined_(row.platform_targets, row.platformTargets, row.platform))[0] || "linkedin"),
       postType: String(pickFirstDefined_(row.post_type, row.postType, row.format, "text")).trim() || "text",
       pillar: canonicalPillar,
       scheduledAt: scheduledAt,
@@ -4366,20 +4366,21 @@ function getPosts() {
       post && post.platform,
       ""
     )).trim();
-    if (hasVisibleContent) return true;
-    droppedRows.push({
-      row_number: post && post.row_number || post && post.rowNumber || "",
-      reason: "blank_after_normalize",
-      title: post && post.title || "",
-      description: post && post.description || "",
-      campaignName: post && post.campaignName || "",
-      status: post && post.status || "",
-      platform: post && post.platform || "",
-      scheduledAt: post && post.scheduledAt || "",
-      publishDate: post && post.publishDate || "",
-      queueDateLabel: post && post.queueDateLabel || ""
-    });
-    return false;
+    if (!hasVisibleContent) {
+      droppedRows.push({
+        row_number: post && post.row_number || post && post.rowNumber || "",
+        reason: "blank_after_normalize",
+        title: post && post.title || "",
+        description: post && post.description || "",
+        campaignName: post && post.campaignName || "",
+        status: post && post.status || "",
+        platform: post && post.platform || "",
+        scheduledAt: post && post.scheduledAt || "",
+        publishDate: post && post.publishDate || "",
+        queueDateLabel: post && post.queueDateLabel || ""
+      });
+    }
+    return true;
   });
   filteredPosts.sort(function(a, b) {
     var bDate = parseSheetDate_(pickFirstDefined_(b && b.scheduledAt, b && b.publishDate, b && b.date, "")) || new Date(0);
@@ -4389,6 +4390,7 @@ function getPosts() {
     return Number(pickFirstDefined_(b && b.row_number, b && b.rowNumber, 0)) - Number(pickFirstDefined_(a && a.row_number, a && a.rowNumber, 0));
   });
   console.log("[posts] normalized row count", filteredPosts.length);
+  console.log("[posts] dropped blank-normalize rows count", droppedRows.length);
   console.log("[posts] last 10 posts", filteredPosts.slice(0, 10).map(function(post) {
     return {
       row_number: pickFirstDefined_(post && post.row_number, post && post.rowNumber, ""),
