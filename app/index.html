@@ -12673,6 +12673,7 @@ function buildConstellationRows() {
     .filter(campaign => !campaign.isArchived)
     .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0));
   const hydratedPosts = [...(appState.posts || [])].map((post) => hydratePostCampaign(post, campaignRecords));
+  const canonicalCampaignNames = getConstellationCanonicalCampaignNames(campaignRecords, hydratedPosts);
   campaignLaneMap = new Map();
   const rowsByKey = new Map();
   const rowOrder = [];
@@ -12697,11 +12698,45 @@ function buildConstellationRows() {
     };
     rowsByKey.set(rowKey, row);
     rowOrder.push(rowKey);
-    console.log("[constellation-campaign] campaign node created", { campaignName: row.campaignName, source });
+    console.log("[constellation-campaign] canonical", { source, campaignName: row.campaignName, rowKey });
     return row;
   }
 
-  campaignRecords.forEach((campaign) => ensureRow(campaign, "registry"));
+  campaignRecords.forEach((campaign) => {
+    const candidateName = getConstellationCampaignCandidateName(campaign?.campaignName || campaign?.campaign_name || campaign?.name || "");
+    console.log("[constellation-campaign] candidate", {
+      source: "registry",
+      campaignId: String(campaign?.campaignId || "").trim(),
+      campaignName: candidateName
+    });
+    const resolution = resolveConstellationCampaignCandidate(candidateName, canonicalCampaignNames);
+    console.log("[constellation-campaign] canonical", {
+      source: "registry",
+      campaignId: String(campaign?.campaignId || "").trim(),
+      candidateName,
+      canonicalName: resolution.canonicalName || candidateName,
+      reason: resolution.reason
+    });
+    if (resolution.reason === "fragment-remapped") {
+      console.log("[constellation-campaign] discarded fragment", {
+        source: "registry",
+        campaignId: String(campaign?.campaignId || "").trim(),
+        campaignName: candidateName,
+        canonicalName: resolution.canonicalName || candidateName,
+        reason: resolution.reason
+      });
+    }
+    if (!resolution.keep) {
+      console.log("[constellation-campaign] discarded fragment", {
+        source: "registry",
+        campaignId: String(campaign?.campaignId || "").trim(),
+        campaignName: candidateName,
+        reason: resolution.reason
+      });
+      return;
+    }
+    ensureRow({ ...campaign, campaignName: resolution.canonicalName || candidateName }, "registry");
+  });
   const uncategorizedRow = ensureRow({
     campaignId: "",
     campaignName: "Uncategorized",
@@ -12712,19 +12747,46 @@ function buildConstellationRows() {
   }, "uncategorized");
 
   hydratedPosts.forEach((post) => {
-    const rawCampaign = normalizeCampaignDisplayName(pickRemoteValue(post?.campaignName, post?.campaign_name, ""));
-    const resolvedCampaign = resolveCanonicalCampaignName(rawCampaign, campaignRecords);
-    console.log("[constellation-campaign] raw campaign", rawCampaign || "");
-    console.log("[constellation-campaign] resolved campaign", resolvedCampaign || "Uncategorized");
+    const rawCampaign = getConstellationCampaignCandidateName(pickRemoteValue(post?.campaignName, post?.campaign_name, ""));
+    const resolution = resolveConstellationCampaignCandidate(rawCampaign, canonicalCampaignNames);
+    console.log("[constellation-campaign] candidate", {
+      source: "post",
+      postId: String(post.id || post.postId || "").trim(),
+      rowNumber: String(post.sheetRow || post.rowNumber || post.row_number || "").trim(),
+      campaignName: rawCampaign
+    });
+    console.log("[constellation-campaign] canonical", {
+      source: "post",
+      postId: String(post.id || post.postId || "").trim(),
+      campaignName: rawCampaign,
+      canonicalName: resolution.canonicalName || rawCampaign,
+      reason: resolution.reason
+    });
     if (!rawCampaign) {
       uncategorizedRow.posts.push(post);
       return;
     }
-    const resolvedRecord = campaignLookup.get(normalizeLookupValue(resolvedCampaign || rawCampaign)) || null;
-    const targetName = String((resolvedRecord && resolvedRecord.campaignName) || resolvedCampaign || rawCampaign).trim();
-    if (!resolvedRecord && rawCampaign !== targetName) {
-      console.log("[constellation-campaign] skipped fragment node", { raw: rawCampaign, resolved: resolvedCampaign || "" });
+    const targetName = String(resolution.canonicalName || rawCampaign).trim();
+    if (resolution.reason === "fragment-remapped") {
+      console.log("[constellation-campaign] discarded fragment", {
+        source: "post",
+        postId: String(post.id || post.postId || "").trim(),
+        campaignName: rawCampaign,
+        canonicalName: targetName,
+        reason: resolution.reason
+      });
     }
+    if (!resolution.keep) {
+      console.log("[constellation-campaign] discarded fragment", {
+        source: "post",
+        postId: String(post.id || post.postId || "").trim(),
+        campaignName: rawCampaign,
+        canonicalName: targetName,
+        reason: resolution.reason
+      });
+      return;
+    }
+    const resolvedRecord = campaignLookup.get(normalizeLookupValue(targetName)) || null;
     const targetRow = resolvedRecord
       ? ensureRow(resolvedRecord, "registry")
       : ensureRow({
@@ -12734,7 +12796,7 @@ function buildConstellationRows() {
           color: "#6b7280",
           sortOrder: Number.MAX_SAFE_INTEGER - 2,
           isArchived: false
-        }, "post");
+      }, "post");
     targetRow.posts.push(post);
   });
 
@@ -12768,7 +12830,7 @@ function buildConstellationRows() {
         _constellationLayout: getConstellationLayoutConfig({ ...campaign, posts, _constellationRowIndex: rowIndex }, rowIndex)
       };
     });
-  console.log("[constellation-campaign] final campaign nodes", mapped.map((campaign) => campaign.campaignName || "Uncategorized"));
+  console.log("[constellation-campaign] final nodes", mapped.map((campaign) => campaign.campaignName || "Uncategorized"));
   return mapped.map((campaign, index) => rebuildConstellationCampaignGeometry(campaign, index));
 }
 
@@ -12792,6 +12854,56 @@ function getConstellationCampaignLabelParts(value = "") {
   const raw = normalizeCampaignDisplayName(value);
   if (!raw) return [];
   return [resolveCanonicalCampaignName(raw, getAvailableCampaignRecords())];
+}
+
+function getConstellationCampaignCandidateName(rawCampaignName = "") {
+  return normalizeCampaignDisplayName(rawCampaignName);
+}
+
+function getConstellationCanonicalCampaignNames(campaignRecords = getAvailableCampaignRecords(), posts = appState.posts || []) {
+  const canonicalNames = [];
+  const seen = new Set();
+  (Array.isArray(campaignRecords) ? campaignRecords : []).forEach((campaign) => {
+    const name = getConstellationCampaignCandidateName(campaign?.campaignName || campaign?.campaign_name || campaign?.name || "");
+    if (!name) return;
+    const key = normalizeLookupValue(name);
+    if (seen.has(key)) return;
+    seen.add(key);
+    canonicalNames.push(name);
+  });
+  (Array.isArray(posts) ? posts : []).forEach((post) => {
+    const rawValue = String(pickRemoteValue(post?.campaignName, post?.campaign_name, post?.campaign, "")).trim();
+    const hasExplicitDelimiter = /[|\n]/.test(rawValue);
+    const hasComma = rawValue.includes(",");
+    const name = hasExplicitDelimiter || hasComma ? getConstellationCampaignCandidateName(rawValue) : "";
+    if (!name) return;
+    const key = normalizeLookupValue(name);
+    if (seen.has(key)) return;
+    seen.add(key);
+    canonicalNames.push(name);
+  });
+  return canonicalNames;
+}
+
+function resolveConstellationCampaignCandidate(rawCampaignName = "", canonicalNames = []) {
+  const raw = getConstellationCampaignCandidateName(rawCampaignName);
+  if (!raw) return { keep: false, raw, canonicalName: "", reason: "empty" };
+  const canonicalList = Array.isArray(canonicalNames) ? canonicalNames : [];
+  const rawLookup = normalizeLookupValue(raw);
+  if (raw.includes(",") || /[|\n]/.test(raw)) {
+    return { keep: true, raw, canonicalName: raw, reason: "explicit-full" };
+  }
+  const exactMatch = canonicalList.find((name) => normalizeLookupValue(name) === rawLookup && normalizeCampaignDisplayName(name) === raw) || "";
+  if (exactMatch) return { keep: true, raw, canonicalName: exactMatch, reason: "exact" };
+  const fragmentTarget = canonicalList.find((name) => {
+    const canonical = normalizeCampaignDisplayName(name);
+    if (!canonical || normalizeLookupValue(canonical) === rawLookup) return false;
+    if (!canonical.includes(",")) return false;
+    const parts = canonical.split(",").map((item) => normalizeCampaignDisplayName(item)).filter(Boolean);
+    return parts.some((part) => normalizeLookupValue(part) === rawLookup);
+  }) || "";
+  if (fragmentTarget) return { keep: true, raw, canonicalName: fragmentTarget, reason: "fragment-remapped" };
+  return { keep: true, raw, canonicalName: raw, reason: "standalone" };
 }
 
 function isInvalidComboCampaignName(value = "") {
