@@ -3586,6 +3586,54 @@ function normalizeKey_(value) {
   return normalizeHeader_(value);
 }
 
+function logCampaignFinalSource_(detail) {
+  detail = detail || {};
+  console.log("[campaign-final-source]", {
+    finalCampaignName: detail.finalCampaignName || detail.finalName || "",
+    sourceFunction: detail.sourceFunction || "",
+    sourceSheet: detail.sourceSheet || "",
+    sourceRow: detail.sourceRow || "",
+    sourcePostId: detail.sourcePostId || "",
+    rawValue: detail.rawValue || "",
+    parsedParts: Array.isArray(detail.parsedParts) ? detail.parsedParts : [],
+    retainedReason: detail.retainedReason || ""
+  });
+}
+
+function discardCampaignNameFragments_(names, sourceFunction, sourceSheet) {
+  names = Array.isArray(names) ? names : [];
+  return names.filter(function(name) {
+    var raw = normalizeCampaignDisplayName_(name);
+    var key = normalizeKey_(raw);
+    if (!key) return false;
+    var parentNames = names.filter(function(other) {
+      var parent = normalizeCampaignDisplayName_(other);
+      if (parent === raw || parent.indexOf(",") === -1) return false;
+      return normalizeKey_(parent).indexOf(key) !== -1;
+    });
+    if (!parentNames.length) {
+      logCampaignFinalSource_({
+        finalCampaignName: raw,
+        sourceFunction: sourceFunction || "discardCampaignNameFragments_",
+        sourceSheet: sourceSheet || "",
+        rawValue: raw,
+        parsedParts: splitExplicitCampaignValues_(raw),
+        retainedReason: "retained"
+      });
+      return true;
+    }
+    logCampaignFinalSource_({
+      finalCampaignName: raw,
+      sourceFunction: sourceFunction || "discardCampaignNameFragments_",
+      sourceSheet: sourceSheet || "",
+      rawValue: raw,
+      parsedParts: splitExplicitCampaignValues_(raw),
+      retainedReason: "discarded fragment of " + parentNames.join(", ")
+    });
+    return false;
+  });
+}
+
 function getAllowedCampaignNames_() {
   if (getAllowedCampaignNames_._cache) return getAllowedCampaignNames_._cache.slice();
   var sheet = getSheet_("SETTINGS");
@@ -3598,6 +3646,7 @@ function getAllowedCampaignNames_() {
       var key = normalizeKey_(value);
       return key && list.findIndex(function(item) { return normalizeKey_(item) === key; }) === index;
     });
+  allowed = discardCampaignNameFragments_(allowed, "getAllowedCampaignNames_", "SETTINGS!L:L");
   getAllowedCampaignNames_._cache = allowed.slice();
   return allowed;
 }

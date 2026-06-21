@@ -1125,7 +1125,7 @@
         .calendar-today-cell { border-color: rgba(199,125,255,0.45) !important; box-shadow: inset 0 0 0 1px rgba(199,125,255,0.25); background: rgba(45, 27, 78, 0.45) !important; }
         .calendar-today-label { color: #ffffff !important; font-weight: 700 !important; }
         
-        .post-pill { padding: 0.4rem 0.55rem !important; border-radius: 0.6rem !important; border-left: none !important; font-size: 10px; font-weight: 500; display: flex; flex-direction: column; align-items: stretch; gap: 0.35rem; background: #221835 !important; min-width: 0; max-width: 100%; overflow: hidden; }
+        .post-pill { padding: 0.4rem 0.55rem !important; border-radius: 0.6rem !important; border: var(--calendar-campaign-border, 1px solid rgba(255,255,255,0.06)) !important; border-left: none !important; font-size: 10px; font-weight: 500; display: flex; flex-direction: column; align-items: stretch; gap: 0.35rem; background: var(--calendar-campaign-bg, #221835) !important; box-shadow: var(--calendar-campaign-stripe, none) !important; min-width: 0; max-width: 100%; overflow: hidden; }
         .post-pill span { min-width: 0; }
         .post-pill .calendar-pill-title { display: block; min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; word-break: normal; }
         .post-pill.edu { background: rgba(0, 240, 255, 0.08) !important; border: 1px solid rgba(0, 240, 255, 0.15) !important; }
@@ -2638,12 +2638,12 @@
       </div>
     </div>
 
- 	    <div class="flex gap-2 items-center overflow-visible">
- 	      <div id="ledger-export-actions"></div>
- 	      <button type="button" onclick="openLinkedInBulkImportModal()" class="w-10 h-10 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-gray-300 hover:text-white transition-all flex items-center justify-center" title="Import Posts">
- 	        <i class="ph-bold ph-download-simple text-lg"></i>
- 	      </button>
- 	      <div class="ledger-dropdown-shell">
+      <div class="flex gap-2 items-center overflow-visible">
+        <div id="ledger-export-actions"></div>
+        <button type="button" onclick="openLinkedInBulkImportModal()" class="w-10 h-10 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-gray-300 hover:text-white transition-all flex items-center justify-center" title="Import Posts">
+          <i class="ph-bold ph-download-simple text-lg"></i>
+        </button>
+        <div class="ledger-dropdown-shell">
         <button
           id="ledger-filter-toggle"
           type="button"
@@ -7150,11 +7150,24 @@ function getAvailableContentPillars() {
   return getFallbackWorkspacePillars().map(function(pillar) { return pillar.name || pillar.slug || ""; }).filter(Boolean);
 }
 
+function logCampaignFinalSource(detail = {}) {
+  console.log("[campaign-final-source]", {
+    finalCampaignName: detail.finalCampaignName || detail.finalName || "",
+    sourceFunction: detail.sourceFunction || "",
+    sourceSheet: detail.sourceSheet || "",
+    sourceRow: detail.sourceRow || "",
+    sourcePostId: detail.sourcePostId || "",
+    rawValue: detail.rawValue || "",
+    parsedParts: Array.isArray(detail.parsedParts) ? detail.parsedParts : [],
+    retainedReason: detail.retainedReason || ""
+  });
+}
+
 function buildCanonicalCampaignRecords() {
   const settingsCampaigns = Array.isArray(appState?.settings?.campaigns) ? appState.settings.campaigns : [];
   const sourceRecords = Array.isArray(appState?.campaigns) ? appState.campaigns : [];
   const sourceNames = sourceRecords.map((campaign) => String(campaign?.campaignName || campaign?.campaign_name || campaign?.name || "").trim()).filter(Boolean);
-  const orderedNames = settingsCampaigns.length ? settingsCampaigns.slice() : sourceNames;
+  const orderedNames = discardCampaignNameFragments(settingsCampaigns.length ? settingsCampaigns.slice() : sourceNames, sourceRecords, "buildCanonicalCampaignRecords");
   const seen = new Set();
   return orderedNames.map((campaignName, index) => {
     const displayName = normalizeCampaignDisplayName(campaignName);
@@ -7162,7 +7175,7 @@ function buildCanonicalCampaignRecords() {
     if (!displayName || seen.has(key)) return null;
     seen.add(key);
     const matched = sourceRecords.find((campaign) => normalizeLookupValue(campaign.campaignName || campaign.campaign_name || campaign.name || "") === key) || null;
-    return {
+    const finalRecord = {
       ...(matched || {}),
 	      campaignId: String(matched?.campaignId || matched?.campaign_id || matched?.campaignID || matched?.id || `CMP-${key.replace(/[^a-z0-9]+/g, "").toUpperCase().slice(0, 8) || index}`).trim(),
 	      campaignName: String(matched?.campaignName || matched?.campaign_name || matched?.name || displayName).trim(),
@@ -7175,6 +7188,17 @@ function buildCanonicalCampaignRecords() {
 	      sortOrder: Number(matched?.sortOrder ?? index) || index,
 	      isArchived: Boolean(matched?.isArchived)
 	    };
+    logCampaignFinalSource({
+      finalCampaignName: finalRecord.campaignName,
+      sourceFunction: "buildCanonicalCampaignRecords",
+      sourceSheet: matched ? "CAMPAIGNS/appState.campaigns" : "SETTINGS/appState.settings.campaigns",
+      sourceRow: matched?.row_number || matched?.rowNumber || "",
+      sourcePostId: "",
+      rawValue: campaignName,
+      parsedParts: splitExplicitCampaignValues(campaignName),
+      retainedReason: matched ? "matched source record" : "settings option"
+    });
+    return finalRecord;
   }).filter(Boolean);
 }
 
@@ -7628,6 +7652,8 @@ function getCanonicalPostId(post) {
 function getPostLookupId(post, index = 0) {
   const canonicalId = getCanonicalPostId(post);
   if (canonicalId) return canonicalId;
+  const directId = String(pickRemoteValue(post?.id, post?.frontendId, post?._frontendId, "")).trim();
+  if (directId) return directId;
   const slug = String(pickRemoteValue(post?.slug, post?.content_slug, "")).trim();
   if (slug) return `slug_${slug}`;
   const contentKey = String(pickRemoteValue(post?.content_key, post?.contentKey, "")).trim();
@@ -7636,8 +7662,14 @@ function getPostLookupId(post, index = 0) {
 }
 
 function getPostIdentityDataset(post, index = 0) {
+  const directPostId = String(pickRemoteValue(post?.id, post?.frontendId, post?._frontendId, "")).trim();
+  const canonicalPostId = getCanonicalPostId(post);
+  const lookupId = getPostLookupId(post, index) || "";
   return {
-    postId: getPostLookupId(post, index) || "",
+    id: directPostId,
+    postId: canonicalPostId || directPostId || lookupId,
+    postLookupId: lookupId,
+    postCanonicalId: canonicalPostId,
     slug: String(pickRemoteValue(post?.slug, post?.content_slug, "")).trim(),
     contentKey: String(pickRemoteValue(post?.contentKey, post?.content_key, "")).trim(),
     rowNumber: getRemotePostSheetRow(post),
@@ -7649,7 +7681,10 @@ function getPostIdentityDataset(post, index = 0) {
 function renderPostIdentityDataAttributes(post, index = 0) {
   const data = getPostIdentityDataset(post, index);
   return [
+    `data-id="${escapeHtml(data.id)}"`,
     `data-post-id="${escapeHtml(data.postId)}"`,
+    `data-post-lookup-id="${escapeHtml(data.postLookupId)}"`,
+    `data-post-canonical-id="${escapeHtml(data.postCanonicalId)}"`,
     `data-slug="${escapeHtml(data.slug)}"`,
     `data-content-key="${escapeHtml(data.contentKey)}"`,
     `data-row-number="${escapeHtml(data.rowNumber)}"`,
@@ -10154,6 +10189,18 @@ function resolveCanonicalCampaignName(rawCampaignName, campaignRecords = [], opt
   if (raw === "Girl, Take Action") {
     console.log("[campaign-parse] exact Girl, Take Action preserved", "Girl, Take Action");
     return "Girl, Take Action";
+  }
+  const fragmentParent = names.find(function(name) {
+    if (name === raw) return false;
+    if (name.indexOf(",") === -1) return false;
+    return normalizeLookupValue(name).indexOf(rawLookup) !== -1;
+  });
+  if (fragmentParent) {
+    var recordKeys = new Set(records.map(function(r) { return normalizeLookupValue(r.campaignName || r.campaign_name || r.name || ""); }));
+    if (!recordKeys.has(rawLookup)) {
+      console.log("[campaign-parse] remapped fragment", { raw: raw, parent: fragmentParent });
+      return fragmentParent;
+    }
   }
   const exactMatch = names.find((name) => name === raw);
   if (exactMatch) {
@@ -12917,7 +12964,7 @@ function renderCalendarCell(dateObj, inCurrentMonth = true, isWeekMode = false) 
   return `
     <div class="${cellClasses} ${compactMonth ? "cursor-pointer" : ""}" onclick="openCalendarDate('${escapeHtml(key)}', ${compactMonth ? "true" : "false"})">
       <span class="${dateLabelClass}">${isWeekMode ? `${dayLabel} ${dateObj.getDate()}` : dateObj.getDate()}</span>
-      ${postsToRender.map(post => renderCalendarPill(post, isWeekMode)).join("")}
+      ${postsToRender.map((post, postIndex) => renderCalendarPill(post, isWeekMode, postIndex)).join("")}
       ${overflowCount > 0 ? `<span class="calendar-overflow-pill">+${overflowCount}</span>` : ""}
     </div>
   `;
@@ -12967,10 +13014,10 @@ function renderMobileDayCalendar() {
     return;
   }
 
-  list.innerHTML = `<div class="calendar-day-shell">${posts.map((post) => {
+  list.innerHTML = `<div class="calendar-day-shell">${posts.map((post, postIndex) => {
     const postTypeDetail = getPostTypeDetailText(post);
     return `
-      <button type="button" class="mobile-day-post calendar-day-post-card relative pr-8 pb-6" onclick="openCalendarPost(this)" ${renderPostIdentityDataAttributes(post)}>
+      <button type="button" class="mobile-day-post calendar-day-post-card relative pr-8 pb-6" onclick="openCalendarPost(this)" ${renderPostIdentityDataAttributes(post, postIndex)}>
         <div class="flex items-start justify-between gap-3 mb-2">
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-1.5 mb-2">${renderPlatformIconsOnly(post)}</div>
@@ -12987,7 +13034,7 @@ function renderMobileDayCalendar() {
   }).join("")}</div>`;
 }
 
-function renderCalendarPill(post, isWeekMode = false) {
+function renderCalendarPill(post, isWeekMode = false, postIndex = 0) {
   const compactMonth = window.innerWidth <= 768 && calendarMode === "month" && !isWeekMode;
   const iconBlock = `<span class="flex items-center gap-1">${renderPlatformIconsOnly(post, { compact: true })}</span>`;
 
@@ -12996,6 +13043,8 @@ function renderCalendarPill(post, isWeekMode = false) {
     ? `${post.queueTimeLabel || ""} ${displayTitle}`.trim()
     : displayTitle;
   const hydrated = hydratePostCampaign(post);
+  const campaignColor = getCampaignColorForPost(hydrated);
+  const campaignPillStyle = `--calendar-campaign-bg:${campaignColor}14;--calendar-campaign-border:1px solid ${campaignColor}30;--calendar-campaign-stripe:inset ${compactMonth ? "2px" : "3px"} 0 0 ${campaignColor};background:${campaignColor}14;border:1px solid ${campaignColor}30;box-shadow:inset ${compactMonth ? "2px" : "3px"} 0 0 ${campaignColor};`;
   const mediaTypeLabel = renderPostMediaTypeBadge(hydrated);
   const carouselCover = derivePostFormatFromMedia(hydrated).isCarousel ? getCarouselCoverAsset(hydrated) : null;
   const carouselCoverUrl = carouselCover ? getMediaPreviewUrl(carouselCover) : "";
@@ -13010,7 +13059,7 @@ function renderCalendarPill(post, isWeekMode = false) {
   }
   if (compactMonth) {
     return `
-      <button type="button" class="post-pill compact-month mt-1 text-left relative pr-6 pb-4" onclick="event.stopPropagation();openCalendarPost(this)" title="${escapeHtml(buildDateDiagnosticTitle(post))}" ${renderPostIdentityDataAttributes(post)}>
+      <button type="button" class="post-pill compact-month mt-1 text-left relative pr-6 pb-4" onclick="event.stopPropagation();openCalendarPost(this)" title="${escapeHtml(buildDateDiagnosticTitle(post))}" style="${escapeHtml(campaignPillStyle)}" ${renderPostIdentityDataAttributes(post, postIndex)}>
         <span class="compact-month-icons">
           ${iconBlock}
         </span>
@@ -13022,7 +13071,7 @@ function renderCalendarPill(post, isWeekMode = false) {
   }
 
   return `
-    <button type="button" class="post-pill mt-1 text-left relative pr-6 pb-4" onclick="event.stopPropagation();openCalendarPost(this)" title="${escapeHtml(buildDateDiagnosticTitle(post))}" ${renderPostIdentityDataAttributes(post)}>
+    <button type="button" class="post-pill mt-1 text-left relative pr-6 pb-4" onclick="event.stopPropagation();openCalendarPost(this)" title="${escapeHtml(buildDateDiagnosticTitle(post))}" style="${escapeHtml(campaignPillStyle)}" ${renderPostIdentityDataAttributes(post, postIndex)}>
       <div class="flex items-center gap-1.5 w-full">
            ${carouselCoverUrl
            ? `<img src="${escapeHtml(carouselCoverUrl)}" alt="${escapeHtml(getMediaDisplayTitle(carouselCover, null, "Carousel cover"))}" class="w-5 h-5 rounded object-cover shrink-0 border border-white/10" onerror="handleBrokenMediaPreview(this)">`
@@ -13221,7 +13270,7 @@ function wireLedgerActions() {
 }
 
 function buildConstellationRows() {
-  const campaignRecords = [...getAvailableCampaignRecords()]
+  const campaignRecords = [...getCleanCampaignRecords()]
     .filter(campaign => !campaign.isArchived)
     .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0));
   const hydratedPosts = [...(appState.posts || [])].map((post) => hydratePostCampaign(post, campaignRecords));
@@ -13314,7 +13363,7 @@ function buildConstellationRows() {
       if (resolution.reason === "fragment") {
         const parentName = canonicalCampaignNames.find((name) => {
           if (!name.includes(",")) return false;
-          return name.split(",").map((p) => normalizeLookupValue(p.trim())).includes(normalizeLookupValue(rawCampaign));
+          return normalizeLookupValue(name).indexOf(normalizeLookupValue(rawCampaign)) !== -1;
         });
         if (parentName) {
           const parentRecord = campaignLookup.get(normalizeLookupValue(parentName)) || null;
@@ -13454,7 +13503,7 @@ function resolveConstellationCampaignCandidate(rawCampaignName = "", canonicalNa
   const isFragmentOf = canonicalList.some((other) => {
     if (other === raw) return false;
     if (!other.includes(",")) return false;
-    return other.split(",").map((p) => normalizeLookupValue(p.trim())).includes(rawLookup);
+    return normalizeLookupValue(other).indexOf(rawLookup) !== -1;
   });
   if (isFragmentOf && !sourceKeys.has(rawLookup)) {
     console.log("[campaign-final-source] discarded fragment", { name: raw, rawLookup });
@@ -13463,7 +13512,7 @@ function resolveConstellationCampaignCandidate(rawCampaignName = "", canonicalNa
   return { keep: true, raw, canonicalName: raw, reason: "standalone" };
 }
 
-function discardCampaignNameFragments(names = [], sourceRecords = []) {
+function discardCampaignNameFragments(names = [], sourceRecords = [], sourceFunction = "discardCampaignNameFragments") {
   const sourceKeys = new Set(
     sourceRecords.map((r) => normalizeLookupValue(r.campaignName || r.campaign_name || r.name || ""))
   );
@@ -13473,18 +13522,35 @@ function discardCampaignNameFragments(names = [], sourceRecords = []) {
     const isFragmentOf = names.some((other) => {
       if (other === name) return false;
       if (!other.includes(",")) return false;
-      const parts = other.split(",").map((p) => normalizeLookupValue(p.trim()));
-      return parts.includes(key);
+      return normalizeLookupValue(other).indexOf(key) !== -1;
     });
+    if (!isFragmentOf) return true;
     const isStandalone = sourceKeys.has(key);
-    if (isFragmentOf && !isStandalone) {
-      console.log("[campaign-final-source] discarded fragment", {
-        name, key, standalone: isStandalone,
-        parentNames: names.filter((n) => n !== name && n.includes(",") && normalizeLookupValue(n).includes(key))
+    const parentNames = names.filter((n) => n !== name && n.includes(",") && normalizeLookupValue(n).includes(key));
+    const parsedParts = splitExplicitCampaignValues(name);
+    if (isStandalone) {
+      logCampaignFinalSource({
+        finalCampaignName: name,
+        sourceFunction,
+        sourceSheet: "CAMPAIGNS/appState.campaigns",
+        sourceRow: "",
+        sourcePostId: "",
+        rawValue: name,
+        parsedParts,
+        retainedReason: "standalone fragment source record found; discarded because combined parent exists"
       });
-      return false;
     }
-    return true;
+    logCampaignFinalSource({
+      finalCampaignName: name,
+      sourceFunction,
+      sourceSheet: isStandalone ? "CAMPAIGNS/appState.campaigns" : "SETTINGS/appState.settings.campaigns",
+      sourceRow: "",
+      sourcePostId: "",
+      rawValue: name,
+      parsedParts,
+      retainedReason: "discarded fragment of " + parentNames.join(", ")
+    });
+    return false;
   });
 }
 
@@ -14844,14 +14910,12 @@ function renderModalExistingMediaPicker(selectedAssetId = "") {
     return;
   }
   const media = (appState.media || []).filter(asset => isRenderableArtifact(asset, "media"));
-  if (!media.length) {
-    target.innerHTML = `<div class="space-y-2">
-      <div class="text-[10px] text-gray-500 leading-tight p-3 rounded-xl bg-[#181125] border border-white/5 text-center">
-        <i class="ph-bold ph-image text-lg text-gray-600 block mb-1"></i>
-        No media in vault yet
-      </div>
-      <button type="button" onclick="openUploadStagingModal({ targetPostId: '${escapeHtml(currentEditingPostId || "")}', source: 'post-modal' })" class="w-full px-3 py-2 rounded-lg bg-[#231738] border border-white/10 text-[9px] uppercase tracking-widest font-bold text-white hover:bg-[#2d1b4e] flex items-center justify-center gap-1.5"><i class="ph-bold ph-upload-simple"></i> Upload Media</button>
-      <button type="button" onclick="switchView('media')" class="w-full px-3 py-2 rounded-lg bg-[#181125] border border-white/5 text-[9px] uppercase tracking-widest font-bold text-gray-400 hover:text-white flex items-center justify-center gap-1.5"><i class="ph-bold ph-folder-open"></i> Open Media Vault</button>
+  const currentPost = window.__currentModalPostData || {};
+  const hasAttachedMedia = currentModalCarouselAssets && currentModalCarouselAssets.length > 0;
+  if (!media.length && !hasAttachedMedia) {
+    target.innerHTML = `<div class="text-[10px] text-gray-500 leading-tight p-3 rounded-xl bg-[#181125] border border-white/5 text-center">
+      <i class="ph-bold ph-image text-lg text-gray-600 block mb-1"></i>
+      No media in vault yet
     </div>`;
     return;
   }
@@ -14859,9 +14923,9 @@ function renderModalExistingMediaPicker(selectedAssetId = "") {
   target.innerHTML = `
     <div class="flex items-center justify-between mb-2">
       <label class="block text-[9px] uppercase font-bold tracking-widest text-gray-500">Recent Media</label>
-      <button type="button" onclick="switchView('media')" class="text-[9px] uppercase tracking-widest font-bold text-purple-400 hover:text-white transition-colors">Open Vault</button>
+      <button type="button" onclick="openModalMediaVaultPanel()" class="text-[9px] uppercase tracking-widest font-bold text-purple-400 hover:text-white transition-colors">Open Vault</button>
     </div>
-    <div class="grid grid-cols-4 gap-1.5 mb-2">
+    <div class="grid grid-cols-4 gap-1.5 mb-2 max-h-32 overflow-y-auto">
       ${recent.map(asset => {
         const assetId = asset.assetId || asset.id || "";
         const thumbUrl = getMediaPreviewUrl(asset);
@@ -14869,12 +14933,11 @@ function renderModalExistingMediaPicker(selectedAssetId = "") {
         const isSelected = String(assetId) === String(selectedAssetId || "");
         return `<button type="button" onclick="selectModalMediaAsset('${escapeHtml(assetId)}')" class="relative aspect-square rounded-lg overflow-hidden border-2 ${isSelected ? 'border-purple-500' : 'border-white/5'} hover:border-purple-400/50 transition-colors bg-[#120c1d]" title="${escapeHtml(title)}">
           ${thumbUrl ? `<img src="${escapeHtml(thumbUrl)}" alt="${escapeHtml(title)}" class="w-full h-full object-cover" loading="lazy" onerror="handleBrokenMediaPreview(this)">` : `<div class="w-full h-full flex items-center justify-center text-gray-600"><i class="ph-bold ph-file text-lg"></i></div>`}
-          ${isSelected ? '<span class="absolute top-0.5 right-0.5 w-3 h-3 rounded-full bg-purple-500 border border-white/20 flex items-center justify-center"><i class="ph-bold ph-check text-[6px] text-white"></i></span>' : ''}
+          ${isSelected ? '<span class="absolute inset-0 flex items-center justify-center bg-purple-500/20 rounded-lg"><i class="ph-bold ph-check text-xl text-white"></i></span>' : ''}
         </button>`;
       }).join("")}
     </div>
     <div class="flex gap-2">
-      <button type="button" onclick="openUploadStagingModal({ targetPostId: '${escapeHtml(currentEditingPostId || "")}', source: 'post-modal' })" class="flex-1 px-3 py-2 rounded-lg bg-[#231738] border border-white/10 text-[9px] uppercase tracking-widest font-bold text-white hover:bg-[#2d1b4e] flex items-center justify-center gap-1.5"><i class="ph-bold ph-upload-simple"></i> Upload</button>
       <select id="modal-existing-media-select" class="form-input text-xs flex-1">
         <option value="">Select media...</option>
         ${media.map(asset => {
@@ -14882,9 +14945,83 @@ function renderModalExistingMediaPicker(selectedAssetId = "") {
           return `<option value="${escapeHtml(value)}" ${String(value) === String(selectedAssetId || "") ? "selected" : ""}>${escapeHtml(getMediaTitle(asset))}</option>`;
         }).join("")}
       </select>
-      <button type="button" onclick="selectExistingMediaForPost()" class="px-3 py-2 rounded-lg bg-[#181125] border border-white/5 text-[9px] uppercase tracking-widest font-bold text-gray-300 hover:text-white flex items-center justify-center gap-1"><i class="ph-bold ph-check"></i></button>
+      <button type="button" onclick="selectExistingMediaForPost()" class="px-3 py-2 rounded-lg bg-transparent border border-white/10 text-[9px] uppercase tracking-widest font-bold text-gray-300 hover:text-white flex items-center justify-center" title="Attach selected media to post"><i class="ph-bold ph-link"></i></button>
     </div>
   `;
+}
+
+function openModalMediaVaultPanel() {
+  const modal = document.getElementById("media-picker-drawer");
+  if (modal) {
+    modal.classList.remove("hidden");
+    modal.style.transform = "translateX(0)";
+    renderMediaPickerAssets("modal");
+    return;
+  }
+  const panel = document.createElement("div");
+  panel.id = "media-picker-drawer";
+  panel.className = "fixed inset-y-0 right-0 w-96 bg-[#0a0612] border-l border-white/10 shadow-2xl z-[100] transform translate-x-full transition-transform duration-200 flex flex-col";
+  panel.innerHTML = `
+    <div class="p-4 border-b border-white/5 flex items-center justify-between">
+      <h3 class="text-sm font-bold text-white">Media Vault</h3>
+      <button type="button" onclick="closeModalMediaVaultPanel()" class="text-gray-400 hover:text-white"><i class="ph-bold ph-x"></i></button>
+    </div>
+    <div id="modal-media-picker-assets" class="flex-1 overflow-y-auto p-4 grid grid-cols-3 gap-2"></div>
+    <div class="p-4 border-t border-white/5">
+      <button type="button" onclick="closeModalMediaVaultPanel()" class="w-full px-3 py-2 rounded-lg bg-[#181125] border border-white/5 text-[9px] uppercase tracking-widest font-bold text-gray-300 hover:text-white">Close</button>
+    </div>
+  `;
+  document.body.appendChild(panel);
+  setTimeout(() => panel.style.transform = "translateX(0)", 10);
+  renderMediaPickerAssets("modal");
+}
+
+function closeModalMediaVaultPanel() {
+  const modal = document.getElementById("media-picker-drawer");
+  if (modal) {
+    modal.style.transform = "translateX(100%)";
+    setTimeout(() => modal.remove(), 200);
+  }
+}
+
+function renderMediaPickerAssets(target = "modal") {
+  const container = target === "modal" ? document.getElementById("modal-media-picker-assets") : document.getElementById("media-picker-assets");
+  if (!container) return;
+  const media = (appState.media || []).filter(asset => isRenderableArtifact(asset, "media"));
+  if (!media.length) {
+    container.innerHTML = `<div class="text-center py-8 text-gray-500"><i class="ph-bold ph-image text-3xl mb-2 block"></i>No media in vault</div>`;
+    return;
+  }
+  container.innerHTML = `
+    <div class="grid grid-cols-3 gap-2 p-2">
+      ${media.map(asset => {
+        const assetId = asset.assetId || asset.id || "";
+        const thumbUrl = getMediaPreviewUrl(asset);
+        const title = getMediaTitle(asset);
+        const isSelected = currentModalCarouselAssets.some(a => String(a.assetId || a.id || "") === String(assetId));
+        return `<button type="button" onclick="attachMediaToCurrentPost('${escapeHtml(assetId)}')" class="relative aspect-square rounded-lg overflow-hidden border-2 ${isSelected ? 'border-purple-500' : 'border-white/5'} hover:border-purple-400/50 transition-colors bg-[#120c1d]" title="${escapeHtml(title)}">
+          ${thumbUrl ? `<img src="${escapeHtml(thumbUrl)}" alt="${escapeHtml(title)}" class="w-full h-full object-cover" loading="lazy" onerror="handleBrokenMediaPreview(this)">` : `<div class="w-full h-full flex items-center justify-center text-gray-600"><i class="ph-bold ph-file text-xl"></i></div>`}
+          ${isSelected ? '<span class="absolute inset-0 flex items-center justify-center bg-purple-500/20 rounded-lg"><i class="ph-bold ph-check text-lg text-white"></i></span>' : ''}
+        </button>`;
+      }).join("")}
+    </div>
+  `;
+}
+
+function attachMediaToCurrentPost(assetId) {
+  const asset = (appState.media || []).find(item => String(item.assetId || item.id || "") === String(assetId || ""));
+  if (!asset) {
+    showToast("Media not found", "Could not find the selected media asset.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  const normalized = normalizeRemoteMedia(asset);
+  if (!currentModalCarouselAssets.some(item => String(item.assetId || item.id || "") === String(normalized.assetId || normalized.id || ""))) {
+    currentModalCarouselAssets = [...currentModalCarouselAssets, normalized];
+  }
+  if (modalMediaStatus) modalMediaStatus.textContent = `${getMediaTitle(normalized)} attached`;
+  renderModalCarouselPreview();
+  renderModalExistingMediaPicker();
+  renderMediaPickerAssets();
 }
 
 function selectModalMediaAsset(assetId) {
@@ -22246,54 +22383,74 @@ function getPostModalElement() {
   return modal || document.getElementById("scheduling-modal") || document.querySelector("[data-post-modal], .post-modal");
 }
 
+function calendarClickDebug(label, detail = {}) {
+  if (!STELLARSYNC_DEBUG) return;
+  console.log("[calendar-click] " + label, detail);
+}
+
+function getPostIdentityCandidates(post, index = 0) {
+  if (!post) return [];
+  return [
+    post.id,
+    post.postId,
+    post.post_id,
+    getPostLookupId(post, index),
+    post.frontendId,
+    post._frontendId,
+    post.sheetRow ? `row_${post.sheetRow}` : "",
+    post.rowNumber ? `row_${post.rowNumber}` : "",
+    post.row_number ? `row_${post.row_number}` : "",
+    post.sheetRow,
+    post.rowNumber,
+    post.row_number,
+    post.slug,
+    post.slug ? `slug_${post.slug}` : "",
+    post.contentKey,
+    post.contentKey ? `content_key_${post.contentKey}` : "",
+    post.content_key,
+    post.content_key ? `content_key_${post.content_key}` : ""
+  ].map(value => String(value || "").trim()).filter(Boolean);
+}
+
 function findPostByAnyId(postId) {
   const target = String(postId || "").trim();
   if (!target) return null;
-  return (appState.posts || []).find(post => {
-    return [
-      post.id,
-      post.postId,
-      post.post_id,
-      post.frontendId,
-      post._frontendId,
-      post.sheetRow ? `row_${post.sheetRow}` : "",
-      post.rowNumber ? `row_${post.rowNumber}` : "",
-      post.row_number ? `row_${post.row_number}` : "",
-      post.sheetRow,
-      post.rowNumber,
-      post.row_number,
-      post.slug,
-      post.slug ? `slug_${post.slug}` : "",
-      post.contentKey,
-      post.contentKey ? `content_key_${post.contentKey}` : "",
-      post.content_key,
-      post.content_key ? `content_key_${post.content_key}` : ""
-    ]
-      .map(value => String(value || "").trim())
-      .includes(target);
-  }) || null;
+  return (appState.posts || []).find((post, index) => getPostIdentityCandidates(post, index).includes(target)) || null;
 }
 
 function findPostFromCalendarDataset(dataset = {}) {
   var postId = dataset.calendarPostId || dataset.postId || "";
+  var postLookupId = dataset.postLookupId || "";
+  var postCanonicalId = dataset.postCanonicalId || "";
+  var directId = dataset.id || "";
   var postTitle = dataset.postTitle || "";
   var postDateKey = dataset.postDate || "";
   var slug = dataset.slug || "";
   var contentKey = dataset.contentKey || "";
   var rowNumber = dataset.rowNumber || "";
-  var post = postId ? findPostByAnyId(postId) : null;
-  console.log("[calendar] resolved", { method: "id", ok: !!post, postId });
+  var candidates = [postCanonicalId, postId, directId, postLookupId].map(value => String(value || "").trim()).filter(Boolean);
+  var post = null;
+  var resolvedId = "";
+  candidates.some(function(candidate) {
+    post = findPostByAnyId(candidate);
+    if (post) resolvedId = candidate;
+    return !!post;
+  });
+  calendarClickDebug("resolved id", { method: "id", ok: !!post, resolvedId, candidates });
   if (!post && slug) {
     post = findPostByAnyId(`slug_${slug}`) || findPostByAnyId(slug);
-    console.log("[calendar] resolved", { method: "slug", ok: !!post, slug });
+    if (post) resolvedId = slug;
+    calendarClickDebug("resolved id", { method: "slug", ok: !!post, resolvedId, slug });
   }
   if (!post && contentKey) {
     post = findPostByAnyId(`content_key_${contentKey}`) || findPostByAnyId(contentKey);
-    console.log("[calendar] resolved", { method: "content_key", ok: !!post, contentKey });
+    if (post) resolvedId = contentKey;
+    calendarClickDebug("resolved id", { method: "content_key", ok: !!post, resolvedId, contentKey });
   }
   if (!post && rowNumber) {
     post = findPostByAnyId(`row_${rowNumber}`) || findPostByAnyId(rowNumber);
-    console.log("[calendar] resolved", { method: "rowNumber", ok: !!post, rowNumber });
+    if (post) resolvedId = `row_${rowNumber}`;
+    calendarClickDebug("resolved id", { method: "rowNumber", ok: !!post, resolvedId, rowNumber });
   }
   if (!post && postTitle && postDateKey) {
     post = (appState.posts || []).find(function(p) {
@@ -22301,22 +22458,28 @@ function findPostFromCalendarDataset(dataset = {}) {
       var dateMatch = normalizePostCalendarDateKey(p) === postDateKey;
       return titleMatch && dateMatch;
     }) || null;
-    console.log("[calendar] resolved", { method: "title+date", ok: !!post, title: postTitle, date: postDateKey });
+    if (post) resolvedId = `${postTitle}|${postDateKey}`;
+    calendarClickDebug("resolved id", { method: "title+date", ok: !!post, resolvedId, title: postTitle, date: postDateKey });
   }
+  calendarClickDebug("found post", { ok: !!post, resolvedId, postId: post?.id || post?.postId || post?.post_id || "" });
   return post;
 }
 
 function openCalendarPost(btn) {
-  console.log("[calendar] clicked", { source: "inline-handler" });
-  if (!btn) return;
+  if (!btn) {
+    calendarClickDebug("failed reason", { reason: "missing button" });
+    return;
+  }
+  calendarClickDebug("dataset", { ...btn.dataset });
   var postId = btn.dataset.postId || "";
   var postTitle = btn.dataset.postTitle || "";
   var postDateKey = btn.dataset.postDate || "";
   var post = findPostFromCalendarDataset(btn.dataset || {});
   if (post) {
-    console.log("[calendar] opened", { postId: post.id || post.post_id || post.postId || post.frontendId || "" });
     openPostObjectModal(post, "calendar");
+    calendarClickDebug("modal opened", { postId: post.id || post.post_id || post.postId || post.frontendId || "" });
   } else {
+    calendarClickDebug("failed reason", { reason: "post not found", postId: postId, title: postTitle, dateKey: postDateKey });
     console.error("[calendar] failed", { postId: postId, title: postTitle, dateKey: postDateKey });
   }
 }
@@ -22673,8 +22836,8 @@ function renderPostModalDeferredSections(matched, token) {
   }
   renderModalCarouselPreview();
   const mediaDownloadBtn = document.getElementById("modal-media-download-btn");
-  const hasMediaUrl = !!getCurrentPostMediaUrlForFallback(matched || {});
-  mediaDownloadBtn?.classList.toggle("hidden", !hasMediaUrl);
+  const hasAttachedMedia = !!(currentModalCarouselAssets && currentModalCarouselAssets.length) || !!currentModalAsset;
+  mediaDownloadBtn?.classList.toggle("hidden", !hasAttachedMedia);
   postModalPerfLog("media rendered", { postId: getPostModalCacheKey(matched) });
   requestAnimationFrame(() => {
     if (token !== postModalRenderToken) return;
@@ -24043,14 +24206,34 @@ function copyCurrentPostText() {
 
 function downloadCurrentPostMedia() {
   var post = window.__currentModalPostData || {};
-  var url = getCurrentPostMediaUrlForFallback(post);
-  if (!url) {
-    showToast("No media URL", "No downloadable media URL is attached to this post.", "ph-warning", "text-yellow-400");
+  var attached = [];
+  if (Array.isArray(currentModalCarouselAssets) && currentModalCarouselAssets.length) attached = currentModalCarouselAssets;
+  else if (currentModalAsset) attached = [currentModalAsset];
+  else attached = getAttachedMediaForPost(post || {});
+  if (!attached.length) {
+    showToast("No media", "No media is attached to this post.", "ph-warning", "text-yellow-400");
     return;
   }
-  var title = String(post.title || document.getElementById("modal-title")?.value || "stellarsync-media").replace(/[^a-z0-9_-]+/gi, "-").replace(/^-+|-+$/g, "").slice(0, 80) || "stellarsync-media";
-  downloadUrlWithBrowser(url, title);
-  showToast("Media opened", "If the browser cannot download directly, use Save As from the opened media tab.", "ph-download-simple", "text-[#00ffaa]");
+  var downloadable = attached.filter(function(asset) { return getMediaPreviewUrl(asset) || asset.storagePath || asset.storage_path; });
+  if (!downloadable.length) {
+    showToast("No media URL", "Attached media has no downloadable URL.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  if (downloadable.length === 1) {
+    var url = getMediaPreviewUrl(downloadable[0]) || downloadable[0].storagePath || downloadable[0].storage_path || "";
+    var title = String(post.title || document.getElementById("modal-title")?.value || "stellarsync-media").replace(/[^a-z0-9_-]+/gi, "-").replace(/^-+|-+$/g, "").slice(0, 80) || "stellarsync-media";
+    downloadUrlWithBrowser(url, title);
+    showToast("Media opened", "If the browser cannot download directly, use Save As from the opened media tab.", "ph-download-simple", "text-[#00ffaa]");
+    return;
+  }
+  downloadable.forEach(function(asset, index) {
+    var url = getMediaPreviewUrl(asset) || asset.storagePath || asset.storage_path || "";
+    if (!url) return;
+    var assetTitle = getMediaDisplayTitle(asset, post, "media") || "stellarsync-media";
+    var safeTitle = String(assetTitle + (index > 0 ? "-" + index : "")).replace(/[^a-z0-9_-]+/gi, "-").replace(/^-+|-+$/g, "").slice(0, 80) || "media-" + index;
+    downloadUrlWithBrowser(url, safeTitle);
+  });
+  showToast("Downloading media", `${downloadable.length} media items opened in new tabs. Use Save As to download each.`, "ph-download-simple", "text-[#00ffaa]");
 }
 
 function openCurrentPostPlatformComposer() {
