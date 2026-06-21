@@ -1,8 +1,14 @@
-# LinkedIn Post Export Helper
+# StellarSync Plugin
 
-This extension exports the LinkedIn posts that are already visible in your browser tab. It does not collect passwords, does not scrape via a server, and does not run background automation. It runs only on the active LinkedIn tab after you click export.
+This extension captures the current browser tab into StellarSync and keeps the existing LinkedIn exporter as one tab inside the plugin. It does not collect passwords, does not scrape via a server, and does not run background automation.
 
-## What it exports
+## Primary tabs
+
+- Save Inspo: captures the active page or social post URL, title, notes, tags, and platform/source, then opens StellarSync to save into Inspo.
+- Save Note: captures the active page or social post URL and note text, then opens StellarSync to save into Notes.
+- LinkedIn Exporter: exports LinkedIn posts that are already visible in the active LinkedIn tab for local JSON/CSV/TSV import.
+
+## What the LinkedIn Exporter exports
 
 - JSON in StellarSync-compatible format:
   - `source`
@@ -39,12 +45,10 @@ This extension exports the LinkedIn posts that are already visible in your brows
 1. Open `chrome://extensions`.
 2. Enable `Developer mode`.
 3. Click `Load unpacked`.
-4. Select the `stellarsync/linkedin-export-helper/` folder.
-5. Open your LinkedIn activity or profile page.
-6. Scroll until the posts you want are visible.
-7. Click the extension icon.
-8. Click `Show Diagnostics` if you want to confirm the helper is active in that tab.
-9. Click `Export Visible Posts`.
+4. Select the unzipped `linkedin-export-helper/` folder.
+5. Click the StellarSync Plugin icon.
+6. Use Save Inspo or Save Note for general pages and social links.
+7. For LinkedIn exports, open your LinkedIn activity or profile page, scroll until the posts you want are visible, open the LinkedIn Exporter tab, then click `Export Visible Posts`.
 
 ## StellarSync compatibility
 

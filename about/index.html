@@ -1987,6 +1987,8 @@ video {
     <script vid="307">
         
         const starsContainer = document.getElementById('stars-container');
+        const shouldRenderStars = !window.matchMedia || !window.matchMedia('(max-width: 767px)').matches;
+        if (starsContainer && shouldRenderStars) {
         for (let i = 0; i < 200; i++) {
             const star = document.createElement('div');
             star.className = 'star';
@@ -1999,6 +2001,7 @@ video {
             star.style.setProperty('--delay', `${Math.random() * 5}s`);
             star.style.setProperty('--opacity', `${0.1 + Math.random() * 0.4}`);
             starsContainer.appendChild(star);
+        }
         }
 
         

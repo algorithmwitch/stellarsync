@@ -1787,6 +1787,48 @@ video {
                     </div>
                 </div>
 
+                <div class="mt-12 glass-panel rounded-3xl border-white/5 p-8 space-y-6">
+                    <div>
+                        <p class="text-[10px] text-purple-300 font-bold uppercase tracking-widest mb-2">Brand OS</p>
+                        <h2 class="text-2xl font-extrabold text-white mb-2">Set your workspace voice.</h2>
+                        <p class="text-sm text-gray-500 leading-relaxed">These defaults keep the dashboard from starting blank. You can edit them later in Brand OS.</p>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="space-y-2">
+                            <label class="text-[11px] font-bold text-gray-500 uppercase tracking-wider ml-1">Brand Name</label>
+                            <input id="brand-name-input" type="text" class="w-full bg-[#181125] border border-white/5 rounded-xl py-3.5 px-4 text-white text-sm" placeholder="Your brand name" oninput="updateBrandOSFromInputs()">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[11px] font-bold text-gray-500 uppercase tracking-wider ml-1">Website</label>
+                            <input id="brand-website-input" type="url" class="w-full bg-[#181125] border border-white/5 rounded-xl py-3.5 px-4 text-white text-sm" placeholder="https://example.com" oninput="updateBrandOSFromInputs()">
+                        </div>
+                        <div class="space-y-2 md:col-span-2">
+                            <label class="text-[11px] font-bold text-gray-500 uppercase tracking-wider ml-1">Brand Voice</label>
+                            <input id="brand-voice-input" type="text" class="w-full bg-[#181125] border border-white/5 rounded-xl py-3.5 px-4 text-white text-sm" placeholder="Clear, useful, human, and confident" oninput="updateBrandOSFromInputs()">
+                        </div>
+                        <div class="space-y-2 md:col-span-2">
+                            <label class="text-[11px] font-bold text-gray-500 uppercase tracking-wider ml-1">Mission</label>
+                            <textarea id="brand-mission-input" class="w-full bg-[#181125] border border-white/5 rounded-xl py-3.5 px-4 text-white text-sm h-24 resize-none" placeholder="What does this workspace help your audience do?" oninput="updateBrandOSFromInputs()"></textarea>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[11px] font-bold text-gray-500 uppercase tracking-wider ml-1">Primary Color</label>
+                            <input id="brand-primary-color-input" type="color" value="#9d4edd" class="w-full h-12 bg-[#181125] border border-white/5 rounded-xl p-1" oninput="updateBrandOSFromInputs()">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[11px] font-bold text-gray-500 uppercase tracking-wider ml-1">Secondary Color</label>
+                            <input id="brand-secondary-color-input" type="color" value="#00f0ff" class="w-full h-12 bg-[#181125] border border-white/5 rounded-xl p-1" oninput="updateBrandOSFromInputs()">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[11px] font-bold text-gray-500 uppercase tracking-wider ml-1">Default Pillars</label>
+                            <input id="brand-default-pillars-input" type="text" class="w-full bg-[#181125] border border-white/5 rounded-xl py-3.5 px-4 text-white text-sm" placeholder="Education, Community, Impact" oninput="updateBrandOSFromInputs()">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[11px] font-bold text-gray-500 uppercase tracking-wider ml-1">Icon / Initials</label>
+                            <input id="brand-initials-input" type="text" maxlength="8" class="w-full bg-[#181125] border border-white/5 rounded-xl py-3.5 px-4 text-white text-sm uppercase" placeholder="SS" oninput="updateBrandOSFromInputs()">
+                        </div>
+                    </div>
+                </div>
+
                 <div class="mt-12 p-8 glass-panel rounded-3xl border-white/5" vid="223">
                     <h4 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-6" vid="224">Final Summary</h4>
                     <div class="grid grid-cols-2 gap-y-6 gap-x-12" vid="225">
@@ -1994,6 +2036,8 @@ video {
 
     <script vid="293">
         const starsContainer = document.getElementById('stars-container');
+        const shouldRenderStars = !window.matchMedia || !window.matchMedia('(max-width: 767px)').matches;
+        if (starsContainer && shouldRenderStars) {
         for (let i = 0; i < 150; i++) {
             const star = document.createElement('div');
             star.className = 'star';
@@ -2006,6 +2050,7 @@ video {
             star.style.setProperty('--delay', `${Math.random() * 5}s`);
             star.style.setProperty('--opacity', `${0.1 + Math.random() * 0.4}`);
             starsContainer.appendChild(star);
+        }
         }
 
         let currentStage = 1;
@@ -2078,7 +2123,17 @@ video {
             plan_slug: 'starter',
             subscription_tier: 'starter',
             managed_account: false,
-            feature_flags: {}
+            feature_flags: {},
+            brandOS: {
+                brand_name: '',
+                brand_voice: '',
+                mission: '',
+                website: '',
+                primary_color: '#9d4edd',
+                secondary_color: '#00f0ff',
+                default_pillars: [],
+                initials: ''
+            }
         };
 
         const SUPABASE_URL = "https://szdlvyzjeqkfxsoqltwg.supabase.co";
@@ -2107,6 +2162,7 @@ video {
 
             currentStage = stage;
             updateSummary();
+            if (stage === 4) applyBrandOSDefaults();
             if (stage === 3) renderConnectionAvailability();
             if (stage === 6) renderPaymentState();
         }
@@ -2120,6 +2176,7 @@ video {
             
             document.getElementById('workspace-name-preview').innerText = val || 'your-workspace';
             document.getElementById('slug-text-preview').innerText = finalSlug || 'url-slug';
+            applyBrandOSDefaults(false);
         }
 
         function updateOrgTypePreview(val) {
@@ -2174,6 +2231,7 @@ video {
             list.push(val);
             renderTags(type);
             updateConstellation();
+            if (type === 'pillar') applyBrandOSDefaults(false);
         }
 
         function renderTags(type) {
@@ -2196,6 +2254,46 @@ video {
             }
             renderTags(type);
             updateConstellation();
+            if (type === 'pillar') applyBrandOSDefaults(false);
+        }
+
+        function buildInitials(value) {
+            const words = String(value || '').trim().split(/\s+/).filter(Boolean);
+            return (words.length ? words.map(word => word[0]).join('') : 'SS').slice(0, 4).toUpperCase();
+        }
+
+        function getBrandPillarDefaults() {
+            const selected = formData.pillars.length ? formData.pillars : ['Education', 'Community', 'Impact'];
+            return selected.map(name => String(name || '').trim()).filter(Boolean);
+        }
+
+        function applyBrandOSDefaults(force = true) {
+            const brandName = document.getElementById('brand-name-input');
+            const brandVoice = document.getElementById('brand-voice-input');
+            const mission = document.getElementById('brand-mission-input');
+            const pillars = document.getElementById('brand-default-pillars-input');
+            const initials = document.getElementById('brand-initials-input');
+            const workspaceName = formData.orgName || formData.workspaceSlug || 'Your Workspace';
+            if (brandName && (force || !brandName.value.trim())) brandName.value = formData.brandOS.brand_name || formData.orgName || workspaceName;
+            if (brandVoice && (force || !brandVoice.value.trim())) brandVoice.value = formData.brandOS.brand_voice || 'Clear, useful, human, and confident';
+            if (mission && (force || !mission.value.trim())) mission.value = formData.brandOS.mission || `Help ${workspaceName} plan, create, and publish consistent content.`;
+            if (pillars && (force || !pillars.value.trim())) pillars.value = (formData.brandOS.default_pillars.length ? formData.brandOS.default_pillars : getBrandPillarDefaults()).join(', ');
+            if (initials && (force || !initials.value.trim())) initials.value = formData.brandOS.initials || buildInitials(workspaceName);
+            updateBrandOSFromInputs();
+        }
+
+        function updateBrandOSFromInputs() {
+            const pillarValue = document.getElementById('brand-default-pillars-input')?.value || '';
+            formData.brandOS = {
+                brand_name: document.getElementById('brand-name-input')?.value.trim() || formData.orgName || 'Your Workspace',
+                brand_voice: document.getElementById('brand-voice-input')?.value.trim() || 'Clear, useful, human, and confident',
+                mission: document.getElementById('brand-mission-input')?.value.trim() || `Help ${formData.orgName || 'this workspace'} plan, create, and publish consistent content.`,
+                website: document.getElementById('brand-website-input')?.value.trim() || '',
+                primary_color: document.getElementById('brand-primary-color-input')?.value || '#9d4edd',
+                secondary_color: document.getElementById('brand-secondary-color-input')?.value || '#00f0ff',
+                default_pillars: pillarValue.split(',').map(item => item.trim()).filter(Boolean),
+                initials: document.getElementById('brand-initials-input')?.value.trim().toUpperCase() || buildInitials(formData.orgName || formData.workspaceSlug)
+            };
         }
 
         function updateConstellation() {

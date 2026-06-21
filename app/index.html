@@ -163,7 +163,7 @@
 
   .stellar-assistant-button-label {
     position: absolute;
-    right: calc(100% + 0.75rem);
+    right: calc(100% + 1rem);
     top: 50%;
     transform: translateY(-50%);
     white-space: nowrap;
@@ -183,16 +183,18 @@
 
   .stellar-assistant-button:hover .stellar-assistant-button-label {
     opacity: 1;
-    transform: translate(-0.15rem, -50%);
+    transform: translateY(-50%);
   }
 
   .stellar-assistant-panel {
     position: fixed;
-    right: 1.5rem;
-    bottom: 6rem;
+    left: auto;
+    top: auto;
+    right: auto;
+    bottom: auto;
     z-index: 119;
     width: min(440px, calc(100vw - 2rem));
-    max-height: min(720px, calc(100vh - 7.5rem));
+    max-height: min(720px, calc(100dvh - 2rem));
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -201,6 +203,7 @@
     background: linear-gradient(180deg, rgba(24, 17, 37, 0.96), rgba(15, 10, 24, 0.96));
     box-shadow: 0 28px 80px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06);
     backdrop-filter: blur(20px);
+    will-change: left, top;
   }
 
   .stellar-assistant-panel.hidden {
@@ -976,6 +979,21 @@
     border-radius: 1rem;
     border: 1px solid rgba(255,255,255,0.06);
     background: rgba(24,17,37,0.92);
+    min-width: 0;
+  }
+  .calendar-status-dot {
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 999px;
+    display: inline-block;
+    flex: 0 0 auto;
+  }
+  .calendar-pillar-icon {
+    position: absolute;
+    right: 0.65rem;
+    bottom: 0.6rem;
+    color: #ffffff;
+    pointer-events: none;
   }
   .ph-megaphone,
   .ph-heart,
@@ -993,9 +1011,10 @@
   .post-pill.compact-month .compact-month-icons {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 0.18rem;
     width: 100%;
+    padding-right: 0.7rem;
   }
 
   .post-pill.compact-month .compact-month-text {
@@ -3801,7 +3820,7 @@
   <div id="stellarsync-plugin-install-card" class="modal-content w-full max-w-2xl max-h-[90vh] bg-[#120c1d] border border-white/10 rounded-2xl shadow-2xl overflow-hidden scale-95 transition-transform duration-300 flex flex-col">
     <div class="p-6 border-b border-white/10 flex justify-between items-center bg-gradient-to-r from-[#1a1128] to-[#120c1d] shrink-0">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-[#231738] flex items-center justify-center"><i class="ph-fill ph-puzzle-piece text-[#c77dff] text-xl"></i></div>
+        <div class="w-10 h-10 rounded-xl bg-[#231738] flex items-center justify-center"><i class="ph-fill ph-browser text-[#c77dff] text-xl"></i></div>
         <div>
           <h2 class="text-xl font-bold text-white tracking-tight">StellarSync Plugin</h2>
           <p class="text-xs text-gray-400 mt-0.5">Capture social posts and page links into Inspo, Notes, or the LinkedIn exporter workflow.</p>
@@ -3815,7 +3834,7 @@
           <div class="w-8 h-8 rounded-lg bg-[#231738] flex items-center justify-center"><i class="ph-fill ph-bookmarks text-[#c77dff]"></i></div>
           <div><div class="text-sm font-bold text-white">Browser Bar Capture</div><div class="text-[10px] text-gray-400">One-click capture from any page</div></div>
         </div>
-        <p class="text-xs text-gray-400 leading-relaxed">Browsers do not allow websites to auto-install bookmarklets or unpacked extensions. Drag this button to your bookmarks bar, or copy the code into a new bookmark URL field. When you find content to capture, click it to open the StellarSync Plugin save flow.</p>
+        <p class="text-xs text-gray-400 leading-relaxed">Drag this button to your bookmarks bar, or copy the code into a new bookmark URL field. When you find content to capture, click it to open the StellarSync Plugin save flow.</p>
         <div class="flex flex-wrap items-center gap-3">
           <a id="plugin-bookmarklet-link" href="#" draggable="true" class="px-5 py-3 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all shadow-lg shadow-purple-500/20 inline-flex items-center gap-2 cursor-grab active:cursor-grabbing select-none">
             <i class="ph-bold ph-puzzle-piece"></i> StellarSync Capture
@@ -3826,12 +3845,12 @@
       </div>
       <div class="platform-card space-y-3">
         <div class="flex items-center gap-3">
-          <div class="w-8 h-8 rounded-lg bg-[#231738] flex items-center justify-center"><i class="ph-fill ph-puzzle-piece text-[#c77dff]"></i></div>
+          <div class="w-8 h-8 rounded-lg bg-[#231738] flex items-center justify-center"><i class="ph-fill ph-download-simple text-[#c77dff]"></i></div>
           <div><div class="text-sm font-bold text-white">Chrome Extension Package</div><div class="text-[10px] text-gray-400">Manual install with Load Unpacked</div></div>
         </div>
-        <p class="text-xs text-gray-400 leading-relaxed">Download the extension ZIP, unzip it, then open <strong class="text-white">chrome://extensions</strong>, enable <strong class="text-white">Developer Mode</strong>, choose <strong class="text-white">Load unpacked</strong>, and select the unzipped folder. The ZIP appears wherever your browser saves downloads.</p>
+        <p class="text-xs text-gray-400 leading-relaxed">Click Download ZIP. If your browser shows a URL-bar download button, open it there, unzip the file, then load the folder manually from <strong class="text-white">chrome://extensions</strong>.</p>
         <div class="flex items-center gap-3">
-          <button type="button" data-plugin-action="downloadPluginExtensionPackage" class="px-4 py-2.5 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300 hover:text-white transition-colors inline-flex items-center gap-2"><i class="ph-bold ph-download"></i> Download ZIP</button>
+          <button type="button" data-plugin-action="downloadPluginExtensionPackage" class="px-4 py-2.5 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300 hover:text-white transition-colors inline-flex items-center gap-2"><i class="ph-bold ph-download-simple"></i> Download ZIP</button>
         </div>
       </div>
       <div class="platform-card space-y-3">
@@ -3849,6 +3868,7 @@
         </div>
         <ol class="text-xs text-gray-400 leading-relaxed space-y-2 list-decimal list-inside">
           <li>Drag the <strong class="text-white">StellarSync Capture</strong> button to your browser's bookmarks bar.</li>
+          <li>For the extension, click your browser's URL-bar download button if the ZIP does not appear immediately.</li>
           <li>Browse to any page (LinkedIn, news article, blog post, etc.)</li>
           <li>Select text on the page (optional), then click the bookmarklet.</li>
           <li>Choose where to save it: <strong class="text-white">Save Inspo</strong>, <strong class="text-white">Save Note</strong>, or <strong class="text-white">LinkedIn Exporter</strong>.</li>
@@ -4069,10 +4089,10 @@
   </div>
 </div>
 
-    
+
     <div id="scheduling-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm" vid="524">
         <div class="modal-content w-full max-w-2xl max-h-[90vh] flex flex-col" vid="525">
-            
+
             <div class="p-6 border-b border-white/5 flex justify-between items-center" vid="526">
                 <div class="flex items-center gap-3" vid="527">
                     <div class="w-10 h-10 rounded-xl bg-[#231738] flex items-center justify-center text-[#c77dff]" vid="528">
@@ -4196,9 +4216,10 @@
                     <div class="flex justify-between items-center mb-2">
                       <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500">Caption / Description</label>
                       <div class="flex gap-2">
-                        <button id="modal-ai-inline-toggle" type="button" class="text-[#c77dff] hover:text-white text-xs font-semibold flex items-center gap-1 transition-colors" title="AI Assist"><i class="ph-bold ph-sparkle"></i></button>
-                        <button class="text-gray-500 hover:text-white text-xs font-semibold flex items-center gap-1 transition-colors" onclick="aiGenerate('keywords')" title="Keywords"><i class="ph-bold ph-key"></i></button>
-                        <button class="text-gray-500 hover:text-white text-xs font-semibold flex items-center gap-1 transition-colors" onclick="aiGenerate('rewrite')" title="Rewrite"><i class="ph-bold ph-arrows-clockwise"></i></button>
+                        <button id="modal-ai-inline-toggle" type="button" class="text-[#c77dff] hover:text-white text-xs font-semibold flex items-center gap-1 transition-colors" title="Rewrite with AI" aria-label="Rewrite with AI"><i class="ph-bold ph-sparkle"></i></button>
+                        <button class="text-gray-500 hover:text-white text-xs font-semibold flex items-center gap-1 transition-colors" onclick="aiGenerate('keywords')" title="See keywords" aria-label="See keywords"><i class="ph-bold ph-key"></i></button>
+                        <button class="text-gray-500 hover:text-white text-xs font-semibold flex items-center gap-1 transition-colors" onclick="aiGenerate('rewrite')" title="Rewrite variation" aria-label="Rewrite variation"><i class="ph-bold ph-arrows-clockwise"></i></button>
+                        <button type="button" class="text-gray-500 hover:text-white text-xs font-semibold flex items-center gap-1 transition-colors" onclick="copyCurrentPostText()" title="Copy post text" aria-label="Copy post text"><i class="ph-bold ph-copy"></i></button>
                       </div>
                     </div>
                     <textarea id="modal-description" class="form-input flex-1 resize-none font-medium text-sm leading-relaxed" placeholder="Write your compelling copy here..."></textarea>
@@ -4212,6 +4233,7 @@
                       <p class="text-xs text-gray-400 mt-1">Upload multiple images, reorder them, and remove a single slide without deleting the whole post.</p>
                     </div>
                     <div class="flex items-center gap-2 flex-wrap justify-end">
+                      <button id="modal-media-download-btn" type="button" onclick="downloadCurrentPostMedia()" class="hidden px-2.5 py-1 rounded-lg bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 hover:text-white transition-colors" title="Download attached media" aria-label="Download attached media"><i class="ph-bold ph-download-simple"></i></button>
                       <button type="button" onclick="refreshAttachedMediaForModal()" class="px-2.5 py-1 rounded-lg bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 hover:text-white transition-colors" title="Reload attached media from server"><i class="ph-bold ph-arrow-clockwise"></i> Refresh</button>
                       <button type="button" onclick="repairMediaOrderForModal()" class="px-2.5 py-1 rounded-lg bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 hover:text-white transition-colors"><i class="ph-bold ph-wrench"></i> Repair order</button>
                       <span id="modal-carousel-count" class="px-2.5 py-1 rounded-full bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300">0 Slides</span>
@@ -4322,8 +4344,6 @@
 
             <div class="p-6 border-t border-white/5 flex items-center justify-between gap-4 flex-wrap" vid="587">
                 <div class="flex items-center gap-2 flex-wrap">
-                  <button type="button" onclick="copyCurrentPostText()" class="w-10 h-10 rounded-xl bg-[#181125] border border-white/5 text-gray-400 hover:text-white transition-colors inline-flex items-center justify-center" title="Copy post text" aria-label="Copy post text"><i class="ph-bold ph-copy"></i></button>
-                  <button type="button" onclick="downloadCurrentPostMedia()" class="w-10 h-10 rounded-xl bg-[#181125] border border-white/5 text-gray-400 hover:text-white transition-colors inline-flex items-center justify-center" title="Download attached media" aria-label="Download attached media"><i class="ph-bold ph-download-simple"></i></button>
                   <button type="button" onclick="openCurrentPostPlatformComposer()" class="w-10 h-10 rounded-xl bg-[#181125] border border-white/5 text-gray-400 hover:text-white transition-colors inline-flex items-center justify-center" title="Open platform/share composer" aria-label="Open platform/share composer"><i class="ph-bold ph-share-network"></i></button>
                 </div>
                 <div class="flex justify-end gap-4">
@@ -5603,6 +5623,19 @@ function resolveStellarSyncDebugFlag() {
 }
 
 const STELLARSYNC_DEBUG = resolveStellarSyncDebugFlag();
+const STELLARSYNC_IS_MOBILE = typeof window !== "undefined" && (
+  window.matchMedia?.("(max-width: 767px)")?.matches ||
+  /Android|iPhone|iPad|iPod|Mobile/i.test(window.navigator?.userAgent || "")
+);
+
+if (STELLARSYNC_IS_MOBILE && !STELLARSYNC_DEBUG) {
+  try {
+    console.log = function() {};
+    console.table = function() {};
+    console.groupCollapsed = function() {};
+    console.groupEnd = function() {};
+  } catch (_) {}
+}
 
 const SUPABASE_URL = "https://szdlvyzjeqkfxsoqltwg.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN6ZGx2eXpqZXFrZnhzb3FsdHdnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyOTE1NjcsImV4cCI6MjA5Njg2NzU2N30.9GT0oJqPcmrc9VSb-ZN0FtWy6i7SLTHBuzRQ9gvxnX0";
@@ -6846,21 +6879,38 @@ function withWorkspaceRequestMetadata(payload = {}) {
 
 // Client-safe mode: hides master-only/internal features.
 const CLIENT_SAFE_MODE = true;
+function workspaceAllowsDiagnostics(workspace = WORKSPACE_RUNTIME_CONFIG?.active || {}) {
+  const flags = workspace?.feature_flags && typeof workspace.feature_flags === "object" ? workspace.feature_flags : {};
+  return Boolean(
+    STELLARSYNC_DEBUG ||
+    flags.diagnostics === true ||
+    workspace?.diagnostics === true ||
+    workspace?.is_admin_workspace === true ||
+    workspace?.managed_account === true ||
+    normalizeWorkspacePlan(workspace?.plan_slug || workspace?.subscription_tier || workspace?.plan || "") === "managed"
+  );
+}
+
+function applyWorkspaceDiagnosticsVisibility() {
+  const visible = workspaceAllowsDiagnostics();
+  document.getElementById("diagnostics-open-btn")?.classList.toggle("hidden", !visible);
+  document.getElementById("settings-diagnostics-tab-btn")?.classList.toggle("hidden", !visible);
+  document.querySelectorAll('[data-workspace-action="diagnostics"], [data-workspace-open-tab="diagnostics"]').forEach(function(el) {
+    el.classList.toggle("hidden", !visible);
+  });
+}
+
 if (CLIENT_SAFE_MODE) {
   try {
-    document.getElementById("diagnostics-open-btn")?.classList.add("hidden");
     document.getElementById("repair-date-fields-btn")?.setAttribute("disabled", "disabled");
     document.getElementById("repair-date-fields-btn")?.classList.add("opacity-50", "cursor-not-allowed");
     document.getElementById("linkedin-rewrite-route-test-btn")?.setAttribute("disabled", "disabled");
     document.getElementById("linkedin-rewrite-dry-run-btn")?.setAttribute("disabled", "disabled");
     document.getElementById("linkedin-rewrite-apply-btn")?.setAttribute("disabled", "disabled");
-    document.getElementById("workspace-refresh-diagnostics-btn")?.setAttribute("disabled", "disabled");
     document.getElementById("check-constellation-lanes-btn")?.setAttribute("disabled", "disabled");
     document.getElementById("audit-flow-integrity-btn")?.setAttribute("disabled", "disabled");
-    document.getElementById("workspace-open-accounts-from-diagnostics-btn")?.setAttribute("disabled", "disabled");
     document.getElementById("open-creator-memory-dashboard-btn")?.setAttribute("disabled", "disabled");
-    document.getElementById("open-branding-diagnostics-btn")?.setAttribute("disabled", "disabled");
-    document.getElementById("settings-diagnostics-tab-btn")?.classList.add("hidden");
+    applyWorkspaceDiagnosticsVisibility();
     ["linkedin-rewrite-start-row-input", "linkedin-rewrite-end-row-input"].forEach(function(id) {
       var el = document.getElementById(id);
       if (el) { el.setAttribute("disabled", "disabled"); el.classList.add("opacity-50"); }
@@ -8406,6 +8456,57 @@ function renderPlatformChips(postOrPlatforms, options = {}) {
   `).join("");
 }
 
+function renderPlatformIconsOnly(postOrPlatforms, options = {}) {
+  const platforms = Array.isArray(postOrPlatforms) ? parsePlatformTargets(postOrPlatforms) : getPostTargetPlatforms(postOrPlatforms);
+  const iconMap = {
+    linkedin: "ph-linkedin-logo",
+    instagram: "ph-instagram-logo",
+    threads: "ph-at",
+    bluesky: "ph-butterfly",
+    tiktok: "ph-music-note",
+    youtube: "ph-youtube-logo",
+    facebook: "ph-facebook-logo",
+    newsletter: "ph-envelope-simple",
+    blog: "ph-article"
+  };
+  const sizeClass = options.compact ? "w-4 h-4 text-[10px]" : "w-6 h-6 text-xs";
+  return (platforms.length ? platforms : ["linkedin"]).map((platform) => `
+    <span class="${sizeClass} inline-flex items-center justify-center rounded-md bg-[#120c1d] border border-white/5 text-gray-300" title="${escapeHtml(toTitleCase(platform))}" aria-label="${escapeHtml(toTitleCase(platform))}">
+      <i class="ph-fill ${escapeHtml(iconMap[platform] || "ph-share-network")}"></i>
+    </span>
+  `).join("");
+}
+
+function getCalendarStatusDotColor(post) {
+  const status = String(post?.publishStatus || post?.publish_status || post?.status || "draft").trim().toLowerCase();
+  if (status === "published" || status === "live") return "#22c55e";
+  if (status === "scheduled" || status === "queued") return "#facc15";
+  return "#38bdf8";
+}
+
+function renderCalendarStatusDot(post) {
+  const color = getCalendarStatusDotColor(post);
+  const status = String(post?.publishStatus || post?.publish_status || post?.status || "draft").trim().toLowerCase() || "draft";
+  return `<span class="calendar-status-dot" style="background:${escapeHtml(color)};box-shadow:0 0 8px ${escapeHtml(color)}66;" title="${escapeHtml(toTitleCase(status))}" aria-label="${escapeHtml(toTitleCase(status))} status"></span>`;
+}
+
+function getPostTypeDetailText(post) {
+  const hydrated = hydratePostCampaign(post || {});
+  const mediaType = renderPostMediaTypeBadge(hydrated);
+  const explicit = String(hydrated.postType || hydrated.post_type || hydrated.contentType || hydrated.content_type || "").trim();
+  const label = mediaType || explicit;
+  return label ? toTitleCase(label.replace(/[_-]+/g, " ")) : "Text";
+}
+
+function renderCalendarPillarIcon(post, options = {}) {
+  const hydrated = hydratePostCampaign(post || {});
+  const pillarValue = getPostContentPillar(hydrated);
+  const pillarSymbol = getPillarSymbol(pillarValue);
+  if (!pillarSymbol) return "";
+  const size = options.compact ? "text-[10px]" : "text-[12px]";
+  return `<span class="calendar-pillar-icon ${size}" title="${escapeHtml(formatContentPillarLabel(pillarValue))}" aria-label="${escapeHtml(formatContentPillarLabel(pillarValue))} pillar"><i class="ph ${escapeHtml(pillarSymbol)}"></i></span>`;
+}
+
 function getSelectedModalPlatforms() {
   const targets = Array.from(document.querySelectorAll("#modal-platform-targets [data-platform-target]:checked"))
     .map((input) => normalizePlatformTarget(input.dataset.platformTarget))
@@ -8934,6 +9035,8 @@ let currentModalCarouselAssets = [];
 let currentCarouselDragIndex = null;
 let modalCarouselDetachSelectMode = false;
 let selectedCarouselDetachAssetIds = new Set();
+let postModalRenderToken = 0;
+const postModalMediaCache = new Map();
 window.mediaDetachSelectionMode = false;
 let pendingUploadFiles = [];
 let uploadStagingTarget = "vault";
@@ -11331,11 +11434,13 @@ function setupWorkspaceUI() {
     shellLayout.sidebarCollapsed = !shellLayout.sidebarCollapsed;
     persistShellLayout();
     applyShellLayout();
+    requestAnimationFrame(function() { positionAssistantPanelFromButton("sidebar-toggle"); });
     flushPanelToggle();
     panelTogglePending = function() {
       rerenderAll();
       requestAnimationFrame(function() {
         if (currentView === "constellation") fitConstellation({ preserveUserView: true });
+        positionAssistantPanelFromButton("sidebar-toggle-render");
       });
     };
     setTimeout(flushPanelToggle, 300);
@@ -11344,11 +11449,13 @@ function setupWorkspaceUI() {
     isSignalOverviewCollapsed = !isSignalOverviewCollapsed;
     safeStorageSet(RIGHT_PANEL_COLLAPSED_KEY, String(isSignalOverviewCollapsed));
     applyShellLayout();
+    requestAnimationFrame(function() { positionAssistantPanelFromButton("overview-toggle"); });
     flushPanelToggle();
     panelTogglePending = function() {
       rerenderAll();
       requestAnimationFrame(function() {
         if (currentView === "constellation") fitConstellation({ preserveUserView: true });
+        positionAssistantPanelFromButton("overview-toggle-render");
       });
     };
     setTimeout(flushPanelToggle, 300);
@@ -11360,6 +11467,10 @@ let stellarAssistantContext = {};
 let stellarAssistantLastOutput = "";
 let stellarAssistantLastAction = "";
 var stellarAssistantPrefs = loadAssistantPrefs();
+const ASSISTANT_PANEL_GAP = 16;
+const ASSISTANT_VIEWPORT_PADDING = 12;
+const ASSISTANT_ANCHOR_OFFSET = 24;
+const ASSISTANT_SUPPORTED_ANCHORS = ["bottom-right", "bottom-left", "top-right", "top-left", "right", "left"];
 
 function getAssistantPrefsKey() {
   var slug = String((WORKSPACE_RUNTIME_CONFIG?.active?.slug || WORKSPACE_RUNTIME_CONFIG?.active?.workspace_slug || "default")).trim();
@@ -11378,8 +11489,13 @@ function loadAssistantPrefs() {
 function saveAssistantPrefs() {
   try {
     localStorage.setItem(getAssistantPrefsKey(), JSON.stringify(stellarAssistantPrefs));
-    console.log("[assistant-ui] position saved");
+    if (STELLARSYNC_DEBUG) console.log("[assistant-ui] position saved");
   } catch (_) {}
+}
+
+function clampAssistantValue(value, min, max) {
+  if (max < min) return min;
+  return Math.max(min, Math.min(Number(value) || 0, max));
 }
 
 function constrainAssistantPoint(x, y) {
@@ -11387,24 +11503,133 @@ function constrainAssistantPoint(x, y) {
   const width = rect?.width || 60;
   const height = rect?.height || 60;
   return {
-    x: Math.max(8, Math.min(Number(x) || 0, window.innerWidth - width - 8)),
-    y: Math.max(8, Math.min(Number(y) || 0, window.innerHeight - height - 8))
+    x: clampAssistantValue(x, ASSISTANT_VIEWPORT_PADDING, window.innerWidth - width - ASSISTANT_VIEWPORT_PADDING),
+    y: clampAssistantValue(y, ASSISTANT_VIEWPORT_PADDING, window.innerHeight - height - ASSISTANT_VIEWPORT_PADDING)
   };
 }
 
-function positionAssistantPanelFromButton() {
-  if (!stellarAssistantButton || !stellarAssistantPanel || stellarAssistantPanel.classList.contains("hidden")) return;
+function serializeAssistantRect(rect) {
+  if (!rect) return null;
+  return {
+    left: Math.round(rect.left),
+    top: Math.round(rect.top),
+    right: Math.round(rect.right),
+    bottom: Math.round(rect.bottom),
+    width: Math.round(rect.width),
+    height: Math.round(rect.height)
+  };
+}
+
+function normalizeAssistantAnchor(anchor) {
+  const normalized = String(anchor || "").trim();
+  return ASSISTANT_SUPPORTED_ANCHORS.includes(normalized) ? normalized : "bottom-right";
+}
+
+function inferAssistantAnchorFromButton(buttonRect, preferred) {
+  if (ASSISTANT_SUPPORTED_ANCHORS.includes(preferred)) return preferred;
+  if (!buttonRect) return "bottom-right";
+  const centerX = buttonRect.left + buttonRect.width / 2;
+  const centerY = buttonRect.top + buttonRect.height / 2;
+  const rightSide = centerX >= window.innerWidth / 2;
+  if (centerY > window.innerHeight * 0.66) return rightSide ? "bottom-right" : "bottom-left";
+  if (centerY < window.innerHeight * 0.34) return rightSide ? "top-right" : "top-left";
+  return rightSide ? "right" : "left";
+}
+
+function getAssistantAnchor() {
+  const pos = stellarAssistantPrefs?.position || {};
+  const buttonRect = stellarAssistantButton?.getBoundingClientRect();
+  return inferAssistantAnchorFromButton(buttonRect, pos.corner);
+}
+
+function calculateAssistantPanelPoint(anchor, buttonRect, panelWidth, panelHeight) {
+  const gap = ASSISTANT_PANEL_GAP;
+  switch (anchor) {
+    case "bottom-left":
+      return { left: buttonRect.left, top: buttonRect.top - panelHeight - gap };
+    case "top-right":
+      return { left: buttonRect.right - panelWidth, top: buttonRect.bottom + gap };
+    case "top-left":
+      return { left: buttonRect.left, top: buttonRect.bottom + gap };
+    case "right":
+      return { left: buttonRect.left - panelWidth - gap, top: buttonRect.top + buttonRect.height / 2 - panelHeight / 2 };
+    case "left":
+      return { left: buttonRect.right + gap, top: buttonRect.top + buttonRect.height / 2 - panelHeight / 2 };
+    case "bottom-right":
+    default:
+      return { left: buttonRect.right - panelWidth, top: buttonRect.top - panelHeight - gap };
+  }
+}
+
+function assistantRectsOverlap(a, b) {
+  if (!a || !b) return false;
+  return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+}
+
+function positionAssistantButtonLabel(anchor = getAssistantAnchor()) {
+  const label = stellarAssistantButton?.querySelector(".stellar-assistant-button-label");
+  if (!label) return;
+  const side = String(anchor || "").includes("left") || anchor === "left" ? "right" : "left";
+  label.style.left = "";
+  label.style.right = "";
+  label.style.top = "50%";
+  label.style.bottom = "";
+  label.style.transform = "translateY(-50%)";
+  if (side === "right") label.style.left = "calc(100% + " + ASSISTANT_PANEL_GAP + "px)";
+  else label.style.right = "calc(100% + " + ASSISTANT_PANEL_GAP + "px)";
+}
+
+function positionAssistantPanelFromButton(reason = "position") {
+  if (!stellarAssistantButton) return;
   const buttonRect = stellarAssistantButton.getBoundingClientRect();
-  const panelWidth = Math.min(440, window.innerWidth - 16);
-  const panelHeight = Math.min(720, window.innerHeight - 24);
-  let left = Math.min(Math.max(8, buttonRect.right - panelWidth), window.innerWidth - panelWidth - 8);
-  let top = buttonRect.top - panelHeight - 12;
-  if (top < 8) top = Math.min(buttonRect.bottom + 12, window.innerHeight - panelHeight - 8);
-  stellarAssistantPanel.style.left = left + "px";
-  stellarAssistantPanel.style.top = Math.max(8, top) + "px";
+  let anchor = getAssistantAnchor();
+  positionAssistantButtonLabel(anchor);
+  if (!stellarAssistantPanel || stellarAssistantPanel.classList.contains("hidden")) return;
+  const viewportPadding = ASSISTANT_VIEWPORT_PADDING;
+  const availablePanelWidth = Math.max(160, window.innerWidth - viewportPadding * 2);
+  const panelWidth = Math.min(440, availablePanelWidth);
+  const maxPanelHeight = Math.min(720, Math.max(140, window.innerHeight - viewportPadding * 2));
+  stellarAssistantPanel.style.width = panelWidth + "px";
+  stellarAssistantPanel.style.maxHeight = maxPanelHeight + "px";
   stellarAssistantPanel.style.right = "auto";
   stellarAssistantPanel.style.bottom = "auto";
-  stellarAssistantPanel.style.maxHeight = Math.max(260, Math.min(panelHeight, window.innerHeight - 24)) + "px";
+  let panelRect = stellarAssistantPanel.getBoundingClientRect();
+  let panelHeight = Math.min(panelRect.height || maxPanelHeight, maxPanelHeight);
+  let point = calculateAssistantPanelPoint(anchor, buttonRect, panelWidth, panelHeight);
+  let left = clampAssistantValue(point.left, viewportPadding, window.innerWidth - panelWidth - viewportPadding);
+  let top = clampAssistantValue(point.top, viewportPadding, window.innerHeight - panelHeight - viewportPadding);
+  let projected = { left, top, right: left + panelWidth, bottom: top + panelHeight };
+  if (assistantRectsOverlap(projected, buttonRect)) {
+    const sideFallback = buttonRect.left > window.innerWidth - buttonRect.right ? "right" : "left";
+    anchor = sideFallback;
+    positionAssistantButtonLabel(anchor);
+    point = calculateAssistantPanelPoint(anchor, buttonRect, panelWidth, panelHeight);
+    left = clampAssistantValue(point.left, viewportPadding, window.innerWidth - panelWidth - viewportPadding);
+    top = clampAssistantValue(point.top, viewportPadding, window.innerHeight - panelHeight - viewportPadding);
+    projected = { left, top, right: left + panelWidth, bottom: top + panelHeight };
+  }
+  if (assistantRectsOverlap(projected, buttonRect)) {
+    const verticalFallback = buttonRect.top > window.innerHeight - buttonRect.bottom
+      ? { left: buttonRect.right - panelWidth, top: buttonRect.top - panelHeight - ASSISTANT_PANEL_GAP }
+      : { left: buttonRect.left, top: buttonRect.bottom + ASSISTANT_PANEL_GAP };
+    left = clampAssistantValue(verticalFallback.left, viewportPadding, window.innerWidth - panelWidth - viewportPadding);
+    top = clampAssistantValue(verticalFallback.top, viewportPadding, window.innerHeight - panelHeight - viewportPadding);
+  }
+  stellarAssistantPanel.style.left = left + "px";
+  stellarAssistantPanel.style.top = top + "px";
+  if (STELLARSYNC_DEBUG) {
+    console.log("[assistant-position] button rect", serializeAssistantRect(buttonRect));
+    console.log("[assistant-position] panel rect", serializeAssistantRect(stellarAssistantPanel.getBoundingClientRect()));
+    console.log("[assistant-position] anchor", anchor);
+    console.log("[assistant-position] applied style", {
+      reason,
+      left: Math.round(left),
+      top: Math.round(top),
+      width: Math.round(panelWidth),
+      maxHeight: Math.round(maxPanelHeight),
+      gap: ASSISTANT_PANEL_GAP
+    });
+  }
 }
 
 function applyAssistantPosition(pos = stellarAssistantPrefs.position || {}) {
@@ -11420,12 +11645,12 @@ function applyAssistantPosition(pos = stellarAssistantPrefs.position || {}) {
     stellarAssistantButton.style.top = point.y + "px";
     stellarAssistantButton.style.right = "auto";
     stellarAssistantButton.style.bottom = "auto";
-    positionAssistantPanelFromButton();
-    console.log("[assistant-ui] position applied", point);
+    positionAssistantPanelFromButton("apply-free");
+    if (STELLARSYNC_DEBUG) console.log("[assistant-ui] position applied", point);
     return;
   }
   setAssistantCorner(pos.corner || "bottom-right", { persist: false });
-  console.log("[assistant-ui] position applied", pos.corner || "bottom-right");
+  if (STELLARSYNC_DEBUG) console.log("[assistant-ui] position applied", pos.corner || "bottom-right");
 }
 
 function applyAssistantPrefs() {
@@ -11455,27 +11680,37 @@ function applyAssistantPrefs() {
 
 function setAssistantCorner(corner, options = {}) {
   if (!stellarAssistantButton) return;
+  const anchor = normalizeAssistantAnchor(corner);
   var b = stellarAssistantButton;
   b.style.left = "";
   b.style.top = "";
   b.style.right = "";
   b.style.bottom = "";
-  if (corner === "bottom-right") {
-    b.style.right = "1.5rem";
-    b.style.bottom = "1.5rem";
-  } else if (corner === "bottom-left") {
-    b.style.left = "1.5rem";
-    b.style.bottom = "1.5rem";
-  } else if (corner === "top-right") {
-    b.style.right = "1.5rem";
-    b.style.top = "1.5rem";
-  } else if (corner === "top-left") {
-    b.style.left = "1.5rem";
-    b.style.top = "1.5rem";
+  const offset = ASSISTANT_ANCHOR_OFFSET + "px";
+  if (anchor === "bottom-right") {
+    b.style.right = offset;
+    b.style.bottom = offset;
+  } else if (anchor === "bottom-left") {
+    b.style.left = offset;
+    b.style.bottom = offset;
+  } else if (anchor === "top-right") {
+    b.style.right = offset;
+    b.style.top = offset;
+  } else if (anchor === "top-left") {
+    b.style.left = offset;
+    b.style.top = offset;
+  } else if (anchor === "right") {
+    const rect = b.getBoundingClientRect();
+    b.style.right = offset;
+    b.style.top = clampAssistantValue(window.innerHeight / 2 - (rect.height || 60) / 2, ASSISTANT_VIEWPORT_PADDING, window.innerHeight - (rect.height || 60) - ASSISTANT_VIEWPORT_PADDING) + "px";
+  } else if (anchor === "left") {
+    const rect = b.getBoundingClientRect();
+    b.style.left = offset;
+    b.style.top = clampAssistantValue(window.innerHeight / 2 - (rect.height || 60) / 2, ASSISTANT_VIEWPORT_PADDING, window.innerHeight - (rect.height || 60) - ASSISTANT_VIEWPORT_PADDING) + "px";
   }
   stellarAssistantPrefs.position = stellarAssistantPrefs.position || {};
-  stellarAssistantPrefs.position.corner = corner;
-  positionAssistantPanelFromButton();
+  stellarAssistantPrefs.position.corner = anchor;
+  positionAssistantPanelFromButton("set-corner");
   if (options.persist !== false) saveAssistantPrefs();
 }
 
@@ -11539,7 +11774,7 @@ function toggleAssistant() {
 function toggleAssistantVisibility() {
   if (!stellarAssistantButton) return;
   if (stellarAssistantPrefs.visible === false) {
-    console.log("[assistant-ui] restore");
+    if (STELLARSYNC_DEBUG) console.log("[assistant-ui] restore");
     stellarAssistantPrefs.visible = true;
     stellarAssistantPrefs.minimized = false;
     saveAssistantPrefs();
@@ -11547,7 +11782,7 @@ function toggleAssistantVisibility() {
     openAssistantPanel();
     return;
   }
-  console.log("[assistant-ui] hide");
+  if (STELLARSYNC_DEBUG) console.log("[assistant-ui] hide");
   stellarAssistantPrefs.visible = false;
   saveAssistantPrefs();
   applyAssistantPrefs();
@@ -11559,22 +11794,25 @@ function openAssistantPanel(context = {}) {
   stellarAssistantPanel?.classList.remove("hidden");
   stellarAssistantButton?.classList.remove("hidden");
   saveAssistantPrefs();
-  positionAssistantPanelFromButton();
+  positionAssistantPanelFromButton("open");
+  requestAnimationFrame(function() { positionAssistantPanelFromButton("open-after-paint"); });
   ensureAssistantWelcome();
   setTimeout(() => stellarAssistantInput?.focus(), 40);
 }
 
 function closeAssistantPanel() {
   stellarAssistantPanel?.classList.add("hidden");
+  positionAssistantPanelFromButton("close");
 }
 
 function minimizeAssistantPanel() {
   if (!stellarAssistantPanel) return;
-  console.log("[assistant-ui] minimize");
+  if (STELLARSYNC_DEBUG) console.log("[assistant-ui] minimize");
   stellarAssistantPrefs.minimized = true;
   stellarAssistantPanel.classList.add("hidden");
   stellarAssistantButton?.classList.remove("hidden");
   saveAssistantPrefs();
+  positionAssistantPanelFromButton("minimize");
 }
 
 function renderAssistantMessage(role, content) {
@@ -11783,6 +12021,13 @@ async function runAssistantFollowup(action) {
 }
 
 function setupStellarAssistant() {
+  if (STELLARSYNC_IS_MOBILE && !STELLARSYNC_DEBUG) {
+    stellarAssistantPrefs.visible = false;
+    stellarAssistantPrefs.minimized = true;
+    if (stellarAssistantButton) stellarAssistantButton.classList.add("hidden");
+    if (stellarAssistantPanel) stellarAssistantPanel.classList.add("hidden");
+    document.getElementById("topbar-assistant-btn")?.classList.remove("hidden");
+  }
   document.getElementById("stellar-assistant-chips")?.addEventListener("click", (event) => {
     const button = event.target.closest("[data-assistant-action]");
     if (!button) return;
@@ -11814,7 +12059,7 @@ function setupStellarAssistant() {
         originY: rect.top,
         dragging: false
       };
-      console.log("[assistant-ui] drag start");
+      if (STELLARSYNC_DEBUG) console.log("[assistant-ui] drag start");
       try { (e.currentTarget || stellarAssistantButton).setPointerCapture(e.pointerId); } catch (_) {}
     };
     stellarAssistantButton.addEventListener("pointerdown", startAssistantDrag);
@@ -11834,7 +12079,8 @@ function setupStellarAssistant() {
       stellarAssistantButton.style.top = point.y + "px";
       stellarAssistantButton.style.right = "auto";
       stellarAssistantButton.style.bottom = "auto";
-      console.log("[assistant-ui] drag move", point);
+      positionAssistantPanelFromButton("drag");
+      if (STELLARSYNC_DEBUG) console.log("[assistant-ui] drag move", point);
     });
     window.addEventListener("pointerup", function(e) {
       if (!dragState || dragState.pointerId !== e.pointerId) return;
@@ -11854,7 +12100,7 @@ function setupStellarAssistant() {
       }
       saveAssistantPrefs();
       applyAssistantPosition(stellarAssistantPrefs.position);
-      console.log("[assistant-ui] drag end", stellarAssistantPrefs.position);
+      if (STELLARSYNC_DEBUG) console.log("[assistant-ui] drag end", stellarAssistantPrefs.position);
     });
     stellarAssistantButton.addEventListener("keydown", function(e) {
       if (e.key === "Enter" || e.key === " ") {
@@ -11869,6 +12115,11 @@ function setupStellarAssistant() {
   if (!window.__stellarAssistantResizeBound) {
     window.addEventListener("resize", function() {
       applyAssistantPosition(stellarAssistantPrefs.position || { corner: "bottom-right" });
+      requestAnimationFrame(function() { positionAssistantPanelFromButton("resize"); });
+    });
+    window.addEventListener("orientationchange", function() {
+      applyAssistantPosition(stellarAssistantPrefs.position || { corner: "bottom-right" });
+      requestAnimationFrame(function() { positionAssistantPanelFromButton("orientationchange"); });
     });
     window.__stellarAssistantResizeBound = true;
   }
@@ -12739,24 +12990,20 @@ function renderMobileDayCalendar() {
   }
 
   list.innerHTML = `<div class="calendar-day-shell">${posts.map((post) => {
-    const badge = getPublishingBadge(post);
-    const dayCampaignColor = getCampaignColorForPost(post);
-    const dayPillarValue = getPostContentPillar(post);
-    const dayPillarSymbol = getPillarSymbol(dayPillarValue);
+    const postTypeDetail = getPostTypeDetailText(post);
     return `
-      <button type="button" class="mobile-day-post calendar-day-post-card relative pr-6 pb-4" onclick="openCalendarPost(this)" style="border-left:3px solid ${dayCampaignColor};" ${renderPostIdentityDataAttributes(post)}>
+      <button type="button" class="mobile-day-post calendar-day-post-card relative pr-8 pb-6" onclick="openCalendarPost(this)" ${renderPostIdentityDataAttributes(post)}>
         <div class="flex items-start justify-between gap-3 mb-2">
           <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-1.5 mb-2">${renderPlatformIconsOnly(post)}</div>
             <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${escapeHtml(post.queueTimeLabel || "No time")}</div>
             <h4 class="text-white text-sm font-bold wrap-safe mt-1">${escapeHtml(getPostDisplayTitle(post, "Untitled post"))}</h4>
+            <div class="text-[10px] uppercase tracking-wider text-gray-500 mt-1">${escapeHtml(postTypeDetail)}</div>
           </div>
-          <span class="publishing-chip shrink-0" style="color:${badge.color};border-color:${badge.color}33;">
-            <i class="ph-bold ${badge.icon}"></i>${escapeHtml(badge.label)}
-          </span>
+          ${renderCalendarStatusDot(post)}
         </div>
-        <div class="flex flex-wrap gap-1 mb-2">${renderPlatformChips(post)}</div>
         <p class="text-xs text-gray-400 wrap-safe">${escapeHtml(getDisplayExcerpt(post.description, post.description || "No description"))}</p>
-        ${dayPillarSymbol ? `<span class="absolute bottom-2 right-2 text-white text-[11px] pointer-events-none" title="${escapeHtml(formatContentPillarLabel(dayPillarValue))}"><i class="ph ${escapeHtml(dayPillarSymbol)} text-white"></i></span>` : ""}
+        ${renderCalendarPillarIcon(post)}
       </button>
     `;
   }).join("")}</div>`;
@@ -12764,7 +13011,7 @@ function renderMobileDayCalendar() {
 
 function renderCalendarPill(post, isWeekMode = false) {
   const compactMonth = window.innerWidth <= 768 && calendarMode === "month" && !isWeekMode;
-  const iconBlock = `<span class="flex items-center gap-1">${renderPlatformChips(post, { compact: true })}</span>`;
+  const iconBlock = `<span class="flex items-center gap-1">${renderPlatformIconsOnly(post, { compact: true })}</span>`;
 
   const displayTitle = getPostDisplayTitle(post);
   const pillTitle = isWeekMode
@@ -12772,9 +13019,6 @@ function renderCalendarPill(post, isWeekMode = false) {
     : displayTitle;
   const hydrated = hydratePostCampaign(post);
   const campaignColor = getCampaignColorForPost(post);
-  const postPillar = getPostContentPillar(hydrated);
-  const pillarSymbol = getPillarSymbol(postPillar);
-  const pillarMarker = pillarSymbol ? `<span class="absolute bottom-2 right-2 text-white text-[11px] pointer-events-none" title="${escapeHtml(formatContentPillarLabel(postPillar))}"><i class="ph ${escapeHtml(pillarSymbol)} text-white"></i></span>` : "";
   const mediaTypeLabel = renderPostMediaTypeBadge(hydrated);
   const carouselCover = derivePostFormatFromMedia(hydrated).isCarousel ? getCarouselCoverAsset(hydrated) : null;
   const carouselCoverUrl = carouselCover ? getMediaPreviewUrl(carouselCover) : "";
@@ -12789,15 +13033,13 @@ function renderCalendarPill(post, isWeekMode = false) {
   }
   if (compactMonth) {
     return `
-      <button type="button" class="post-pill compact-month mt-1 text-left relative pr-6 pb-4" onclick="event.stopPropagation();openCalendarPost(this)" title="${escapeHtml(buildDateDiagnosticTitle(post))}" style="background:${campaignColor}14;border:1px solid ${campaignColor}30;box-shadow:inset 2px 0 0 ${campaignColor};" ${renderPostIdentityDataAttributes(post)}>
+      <button type="button" class="post-pill compact-month mt-1 text-left relative pr-6 pb-4" onclick="event.stopPropagation();openCalendarPost(this)" title="${escapeHtml(buildDateDiagnosticTitle(post))}" style="background:${campaignColor}14;border:1px solid ${campaignColor}30;" ${renderPostIdentityDataAttributes(post)}>
         <span class="compact-month-icons">
-           ${carouselCoverUrl
-             ? `<img src="${escapeHtml(carouselCoverUrl)}" alt="${escapeHtml(getMediaDisplayTitle(carouselCover, null, "Carousel cover"))}" class="w-4 h-4 rounded object-cover shrink-0 border border-white/10" onerror="handleBrokenMediaPreview(this)">`
-             : ""}
           ${iconBlock}
         </span>
+        <span class="absolute top-1.5 right-1.5">${renderCalendarStatusDot(post)}</span>
 	      <span class="compact-month-text calendar-pill-title">${escapeHtml(displayTitle)}</span>
-        ${pillarMarker}
+        ${renderCalendarPillarIcon(post, { compact: true })}
       </button>
     `;
   }
@@ -12814,7 +13056,8 @@ function renderCalendarPill(post, isWeekMode = false) {
 	        <span class="calendar-pill-title text-[9px] text-gray-300 flex-1 min-w-0">${escapeHtml(pillTitle)}</span>
       </span>
       <span class="text-[8px] text-gray-500 wrap-safe w-full block mt-0.5">${escapeHtml(mediaTypeLabel)}</span>
-      ${pillarMarker}
+      <span class="absolute top-2 right-2">${renderCalendarStatusDot(post)}</span>
+      ${renderCalendarPillarIcon(post)}
     </button>
   `;
 }
@@ -14800,7 +15043,7 @@ function openUploadStagingModal(target = "vault") {
   renderUploadAttachPostSelect();
   renderUploadStagingList();
   console.log("[media-upload] modal open centered");
-  console.log("[assistant-ui] modal minimize");
+  if (STELLARSYNC_DEBUG) console.log("[assistant-ui] modal minimize");
   minimizeAssistantPanel();
   if (uploadStagingModal) {
     uploadStagingModal.classList.remove("hidden", "opacity-0", "pointer-events-none");
@@ -16140,7 +16383,9 @@ async function openWorkspaceHub(tab = "settings") {
   window.__workspaceHubStats = window.__workspaceHubStats || window.__workspaceHubHealth;
   const requestedTab = String(tab || "settings").trim().toLowerCase() || "settings";
   const allowedTabs = ["settings", "accounts", "diagnostics", "providers"];
-  const nextTab = allowedTabs.includes(requestedTab) ? requestedTab : "settings";
+  const nextTab = requestedTab === "diagnostics" && !workspaceAllowsDiagnostics()
+    ? "settings"
+    : allowedTabs.includes(requestedTab) ? requestedTab : "settings";
   window.__workspaceHubHealth.openCount++;
   window.__workspaceHubHealth.lastTab = nextTab;
   window.__workspaceHubHealth.modalFound = !!workspaceHubModal;
@@ -21363,7 +21608,7 @@ function openMediaAssetModal(item, options = {}) {
   }
   item = { ...stateItem, linkedPost: item.linkedPost || stateItem.linkedPost || null };
   console.log("[modal] open media-viewer");
-  console.log("[assistant-ui] modal minimize");
+  if (STELLARSYNC_DEBUG) console.log("[assistant-ui] modal minimize");
   minimizeAssistantPanel();
   const wasHidden = mediaAssetModal.classList.contains("opacity-0") || mediaAssetModal.classList.contains("pointer-events-none");
   if (Array.isArray(options.items) && options.items.length) {
@@ -22343,7 +22588,79 @@ function buildScheduledAtFromPlanningFields(post) {
     return "";
   }
 }
-    
+function postModalPerfLog(step, detail = {}) {
+  if (!STELLARSYNC_DEBUG) return;
+  console.log("[post-modal-perf] " + step, detail);
+}
+
+function setModalDeferredPlaceholder(message = "Loading post details...") {
+  if (modalMediaStatus) modalMediaStatus.textContent = message;
+  const picker = document.getElementById("modal-existing-media-picker");
+  if (picker) picker.innerHTML = '<div class="text-[10px] text-gray-500 leading-tight">Media options loading...</div>';
+  const carousel = document.getElementById("modal-carousel-preview");
+  if (carousel) carousel.innerHTML = '<div class="col-span-full rounded-xl border border-white/5 bg-[#181125] px-4 py-3 text-xs text-gray-500">Media preview loading...</div>';
+  const readiness = document.getElementById("modal-publish-readiness");
+  if (readiness) readiness.innerHTML = '<div class="rounded-xl border border-white/5 bg-[#181125] px-4 py-3 text-xs text-gray-500">Publishing actions loading...</div>';
+  document.getElementById("modal-media-download-btn")?.classList.add("hidden");
+}
+
+function getPostModalCacheKey(post) {
+  return String(getCanonicalPostId(post || {}) || post?.id || post?.frontendId || post?._frontendId || "").trim();
+}
+
+function getPostModalMediaBundle(post) {
+  const key = getPostModalCacheKey(post);
+  if (key && postModalMediaCache.has(key)) return postModalMediaCache.get(key);
+  const linkedAsset = findLinkedAssetForPost(post);
+  const carouselAssets = Array.isArray(getPostAssets(post))
+    ? getPostAssets(post).map(asset => normalizeRemoteMedia(asset))
+    : [];
+  const bundle = { linkedAsset, carouselAssets };
+  if (key) {
+    if (postModalMediaCache.size > 80) postModalMediaCache.clear();
+    postModalMediaCache.set(key, bundle);
+  }
+  return bundle;
+}
+
+function renderPostModalDeferredSections(matched, token) {
+  if (token !== postModalRenderToken) return;
+  const mediaBundle = getPostModalMediaBundle(matched || {});
+  if (token !== postModalRenderToken) return;
+  const linkedAsset = mediaBundle.linkedAsset;
+  currentModalCarouselAssets = mediaBundle.carouselAssets || [];
+  currentModalAsset = linkedAsset || currentModalCarouselAssets[0] || null;
+  const modalDerived = derivePostFormatFromMedia({
+    ...matched,
+    carouselAssets: currentModalCarouselAssets,
+    carouselAssetIds: currentModalCarouselAssets.map((asset) => asset.assetId || asset.id).filter(Boolean)
+  });
+  if (postTypeSelect) postTypeSelect.value = modalDerived.postType || postTypeSelect.value || "text";
+  if (modalMediaStatus) {
+    modalMediaStatus.textContent = currentModalCarouselAssets.length
+      ? `${renderPostMediaTypeBadge({ ...matched, carouselAssets: currentModalCarouselAssets })} linked`
+      : linkedAsset
+        ? `${linkedAsset.title || linkedAsset.assetName || "Media"} linked`
+        : "No media linked";
+  }
+  renderModalExistingMediaPicker(currentModalAsset?.assetId || currentModalAsset?.id || "");
+  if (modalMediaUploadTrigger) {
+    modalMediaUploadTrigger.classList.toggle("hidden", !canManageMedia());
+    modalMediaUploadTrigger.disabled = !canManageMedia();
+  }
+  renderModalCarouselPreview();
+  const mediaDownloadBtn = document.getElementById("modal-media-download-btn");
+  const hasMediaUrl = !!getCurrentPostMediaUrlForFallback(matched || {});
+  mediaDownloadBtn?.classList.toggle("hidden", !hasMediaUrl);
+  postModalPerfLog("media rendered", { postId: getPostModalCacheKey(matched) });
+  requestAnimationFrame(() => {
+    if (token !== postModalRenderToken) return;
+    renderPublishingReadiness(matched);
+    postModalPerfLog("actions rendered", { postId: getPostModalCacheKey(matched) });
+    postModalPerfLog("complete", { postId: getPostModalCacheKey(matched) });
+  });
+}
+
 function openPostModal(
   title = "",
   platform = "linkedin",
@@ -22355,13 +22672,15 @@ function openPostModal(
   postId = null,
   postObject = null
 ) {
-  console.log("[modal] open post-modal");
-  console.log("[assistant-ui] modal minimize");
+  postModalPerfLog("open start", { postId: postId || postObject?.id || postObject?.postId || postObject?.post_id || "" });
+  if (STELLARSYNC_DEBUG) console.log("[modal] open post-modal");
+  if (STELLARSYNC_DEBUG) console.log("[assistant-ui] modal minimize");
   minimizeAssistantPanel();
   const modalEl = getPostModalElement();
-  console.log("[post-modal] open requested", postObject ? "openPostModal:object" : "openPostModal");
-  console.log("[post-modal] post id", postId || postObject?.id || postObject?.postId || postObject?.post_id || postObject?.frontendId || "");
-  console.log("[post-modal] modal element found", !!modalEl);
+  if (STELLARSYNC_DEBUG) console.log("[post-modal] open requested", postObject ? "openPostModal:object" : "openPostModal");
+  if (STELLARSYNC_DEBUG) console.log("[post-modal] post id", postId || postObject?.id || postObject?.postId || postObject?.post_id || postObject?.frontendId || "");
+  if (STELLARSYNC_DEBUG) console.log("[post-modal] modal element found", !!modalEl);
+  const renderToken = ++postModalRenderToken;
   currentEditingPostId = postId;
   currentModalAsset = null;
   currentModalCarouselAssets = [];
@@ -22420,30 +22739,7 @@ function openPostModal(
     campaignSelect.value = String(matched?.campaignId || getCampaignByName(matched?.campaignName, getAvailableCampaignRecords())?.campaignId || matched?.campaignName || "");
   }
   updateModalCampaignPreview();
-
-  const linkedAsset = findLinkedAssetForPost(matched);
-  currentModalCarouselAssets = Array.isArray(getPostAssets(matched))
-    ? getPostAssets(matched).map(asset => normalizeRemoteMedia(asset))
-    : [];
-
-  if (linkedAsset) {
-    currentModalAsset = linkedAsset;
-    if (modalMediaStatus) modalMediaStatus.textContent = `${linkedAsset.title} linked`;
-  } else {
-    if (modalMediaStatus) modalMediaStatus.textContent = "No media linked";
-  }
-  const modalDerived = derivePostFormatFromMedia({
-    ...matched,
-    carouselAssets: currentModalCarouselAssets,
-    carouselAssetIds: currentModalCarouselAssets.map((asset) => asset.assetId || asset.id).filter(Boolean)
-  });
-  if (postTypeSelect) postTypeSelect.value = modalDerived.postType || "text";
-  if (modalMediaStatus) modalMediaStatus.textContent = currentModalCarouselAssets.length ? `${renderPostMediaTypeBadge({ ...matched, carouselAssets: currentModalCarouselAssets })} linked` : "No media linked";
-  renderModalExistingMediaPicker(currentModalAsset?.assetId || currentModalAsset?.id || "");
-  if (modalMediaUploadTrigger) {
-    modalMediaUploadTrigger.classList.toggle("hidden", !canManageMedia());
-    modalMediaUploadTrigger.disabled = !canManageMedia();
-  }
+  setModalDeferredPlaceholder("Loading media...");
 
   if (matched?.createdFromNoteId) {
     setModalSourceContext("note", "Create Post from Note", "This draft was created from a note source.", matched.createdFromNoteId);
@@ -22459,8 +22755,6 @@ function openPostModal(
 
   if (modalAiOutput) modalAiOutput.textContent = "AI assist output will appear here.";
   modalAiInlineHelper?.classList.add("hidden");
-  renderModalCarouselPreview();
-  renderPublishingReadiness(matched);
   if (scheduleSocialEnabledInput) scheduleSocialEnabledInput.checked = false;
   if (socialScheduleStatusEl) socialScheduleStatusEl.textContent = "Creates one scheduled_social_posts row per selected platform when saved.";
 
@@ -22468,7 +22762,10 @@ function openPostModal(
 
   modalEl?.classList.add("active");
   document.body.style.overflow = "hidden";
-  console.log("[post-modal] render complete");
+  postModalPerfLog("shell rendered", { postId: getPostModalCacheKey(matched) });
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => renderPostModalDeferredSections(matched, renderToken));
+  });
 }
 
 function populateLedgerCampaignMenu() {
@@ -22571,7 +22868,8 @@ function formatTimeInputValue(date) {
 }
 
 function closeModal() {
-  console.log("[modal] close post-modal");
+  if (STELLARSYNC_DEBUG) console.log("[modal] close post-modal");
+  postModalRenderToken += 1;
   modal?.classList.remove("active");
   document.body.style.overflow = "";
   currentEditingPostId = null;
@@ -23140,6 +23438,7 @@ function switchView(viewName) {
   }
 
   renderContextualGuidancePanel();
+  requestAnimationFrame(function() { positionAssistantPanelFromButton("switch-view"); });
 
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
@@ -31450,6 +31749,11 @@ function fileToBase64(file) {
 function seedStars() {
   const starsContainer = document.getElementById("stars-container");
   if (!starsContainer) return;
+  if (STELLARSYNC_IS_MOBILE) {
+    starsContainer.innerHTML = "";
+    starsContainer.dataset.seeded = "mobile-skipped";
+    return;
+  }
   if (starsContainer.childElementCount > 0) {
     starsContainer.dataset.seeded = "true";
     return;
@@ -32551,7 +32855,7 @@ function initApp() {
 
   guardedCall(setupWorkspaceUI, "setupWorkspaceUI");
   console.log("[boot] setupWorkspaceUI done");
-  guardedCall(auditClickableOverlays, "auditClickableOverlays");
+  if (STELLARSYNC_DEBUG) guardedCall(auditClickableOverlays, "auditClickableOverlays");
   guardedCall(setupCalendarControls, "setupCalendarControls");
   guardedCall(setupLedgerControls, "setupLedgerControls");
   guardedCall(setupMediaFilters, "setupMediaFilters");
@@ -33398,7 +33702,7 @@ function openPluginInstallModal() {
   }
   if (!isDesktop && body) {
     console.log("[plugin-install] desktop required");
-    body.innerHTML = '<div class="text-center py-8"><div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[#231738] flex items-center justify-center"><i class="ph-fill ph-devices text-[#c77dff] text-3xl"></i></div><h3 class="text-lg font-bold text-white tracking-tight mb-3">Desktop Install Required</h3><p class="text-sm text-gray-400 max-w-md mx-auto leading-relaxed mb-6">Browsers only let you add bookmarklets or unpacked extensions from a desktop browser. Open StellarSync on desktop, then drag the capture button into your bookmarks bar or download the extension ZIP and load it from chrome://extensions.</p><div class="flex flex-wrap items-center justify-center gap-3"><button type="button" data-plugin-action="copyPluginBookmarkletCode" class="px-4 py-2.5 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300 hover:text-white transition-colors inline-flex items-center gap-2"><i class="ph-bold ph-copy"></i> Copy Bookmarklet Code</button><button type="button" data-plugin-action="downloadPluginExtensionPackage" class="px-4 py-2.5 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300 hover:text-white transition-colors inline-flex items-center gap-2"><i class="ph-bold ph-download"></i> Download ZIP</button><button type="button" data-plugin-action="closePluginInstallModal" class="px-4 py-2.5 rounded-xl bg-[#231738] border border-white/5 text-xs font-bold text-white hover:opacity-90 transition-colors inline-flex items-center gap-2"><i class="ph-bold ph-x"></i> Close</button></div></div>';
+    body.innerHTML = '<div class="text-center py-8"><div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[#231738] flex items-center justify-center"><i class="ph-fill ph-desktop text-[#c77dff] text-3xl"></i></div><h3 class="text-lg font-bold text-white tracking-tight mb-3">Install from Desktop</h3><p class="text-sm text-gray-400 max-w-md mx-auto leading-relaxed mb-6">Open StellarSync on desktop for the easiest setup. You can copy the bookmarklet code, or download the extension ZIP and use your browser URL-bar download button before loading it manually from chrome://extensions.</p><div class="flex flex-wrap items-center justify-center gap-3"><button type="button" data-plugin-action="copyPluginBookmarkletCode" class="px-4 py-2.5 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300 hover:text-white transition-colors inline-flex items-center gap-2"><i class="ph-bold ph-copy"></i> Copy Bookmarklet Code</button><button type="button" data-plugin-action="downloadPluginExtensionPackage" class="px-4 py-2.5 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300 hover:text-white transition-colors inline-flex items-center gap-2"><i class="ph-bold ph-download-simple"></i> Download ZIP</button><button type="button" data-plugin-action="closePluginInstallModal" class="px-4 py-2.5 rounded-xl bg-[#231738] border border-white/5 text-xs font-bold text-white hover:opacity-90 transition-colors inline-flex items-center gap-2"><i class="ph-bold ph-x"></i> Close</button></div></div>';
     console.log("[plugin-install] instructions shown");
   }
   modal.classList.remove("opacity-0", "pointer-events-none");
@@ -33484,7 +33788,7 @@ function downloadPluginExtensionPackage() {
     document.body.appendChild(anchor);
     anchor.click();
     document.body.removeChild(anchor);
-    showPluginMessage("Extension ZIP download started. Unzip it, open chrome://extensions, enable Developer Mode, then choose Load unpacked.", "success");
+    showPluginMessage("Extension ZIP download started. Click your browser URL-bar download button if needed, unzip it, then load the folder from chrome://extensions.", "success");
   } catch (err) {
     showPluginMessage("Download failed. Open /app/linkedin-export-helper/stellarsync-plugin.zip directly, then load the unzipped folder in chrome://extensions.", "error");
   }
@@ -34115,6 +34419,8 @@ function renderWorkspaceBranding() {
       badgeEl.innerHTML = "";
     }
   }
+  applyWorkspaceDiagnosticsVisibility();
+  requestAnimationFrame(function() { positionAssistantPanelFromButton("workspace-branding"); });
 }
 
 async function bootAppWithWorkspaceRouter() {

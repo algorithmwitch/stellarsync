@@ -57,6 +57,21 @@
             border-color: rgba(199, 125, 255, 0.3);
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 20px rgba(168, 85, 247, 0.1);
         }
+        .pricing-card {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+        .pricing-card ul {
+            flex: 1;
+        }
+        .pricing-cta {
+            min-height: 46px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1.1;
+        }
 
         .glow-btn {
             background: var(--gradient-primary);
@@ -1395,7 +1410,7 @@ video {
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch" vid="50">
                 
                 
-                <div class="glass-card p-10 rounded-3xl flex flex-col reveal" vid="51">
+                <div class="pricing-card glass-card p-10 rounded-3xl flex flex-col reveal" vid="51">
                     <div class="mb-8" vid="52">
                         <h3 class="text-xl font-bold text-white mb-2" vid="53">Starter</h3>
                         <div class="flex items-baseline gap-1" vid="54">
@@ -1415,11 +1430,11 @@ video {
                         <li class="flex items-center gap-3 text-sm text-gray-500"><i class="ph-bold ph-lock text-gray-600"></i> No Company Page publishing</li>
                         <li class="flex items-center gap-3 text-sm text-gray-300" vid="64"><i class="ph-bold ph-check text-purple-500" vid="65"></i> Email support</li>
                     </ul>
-                    <a href="/onboarding/?plan=starter" class="block text-center w-full py-4 rounded-2xl border border-white/10 bg-white/5 text-white font-bold hover:bg-white/10 transition-all text-sm uppercase tracking-widest" vid="68">Start Starter</a>
+                    <a href="/onboarding/?plan=starter" class="pricing-cta block text-center w-full py-4 rounded-2xl border border-white/10 bg-white/5 text-white font-bold hover:bg-white/10 transition-all text-sm uppercase tracking-widest" vid="68">Start Starter</a>
                 </div>
 
                 
-                <div class="glass-card p-10 rounded-3xl flex flex-col reveal" style="transition-delay: 100ms;" vid="69">
+                <div class="pricing-card glass-card p-10 rounded-3xl flex flex-col reveal" style="transition-delay: 100ms;" vid="69">
                     <div class="mb-8" vid="70">
                         <h3 class="text-xl font-bold text-white mb-2" vid="71">Growth</h3>
                         <div class="flex items-baseline gap-1" vid="72">
@@ -1439,11 +1454,11 @@ video {
                         <li class="flex items-center gap-3 text-sm text-gray-300"><i class="ph-bold ph-check text-purple-500"></i> Personal profile publishing and BYO APIs where supported</li>
                         <li class="flex items-center gap-3 text-sm text-gray-500"><i class="ph-bold ph-lock text-gray-600"></i> No Company Page publishing</li>
                     </ul>
-                    <a href="/onboarding/?plan=growth" class="block text-center glow-btn w-full py-4 rounded-2xl text-white font-bold text-sm uppercase tracking-widest" vid="89">Start Growth</a>
+                    <a href="/onboarding/?plan=growth" class="pricing-cta block text-center glow-btn w-full py-4 rounded-2xl text-white font-bold text-sm uppercase tracking-widest" vid="89">Start Growth</a>
                 </div>
 
                 
-                <div class="glass-card p-10 rounded-3xl border-purple-500/50 shadow-[0_0_40px_rgba(157,78,221,0.2)] relative flex flex-col reveal" style="transition-delay: 200ms;" vid="112">
+                <div class="pricing-card glass-card p-10 rounded-3xl border-purple-500/50 shadow-[0_0_40px_rgba(157,78,221,0.2)] relative flex flex-col reveal" style="transition-delay: 200ms;" vid="112">
                     <div class="mb-8" vid="113">
                         <h3 class="text-xl font-bold text-white mb-2" vid="114">Managed</h3>
                         <div class="flex items-baseline gap-1" vid="115">
@@ -1463,7 +1478,7 @@ video {
                         <li class="flex items-center gap-3 text-sm text-gray-300" vid="125"><i class="ph-bold ph-check text-purple-500" vid="126"></i> Workflow design and migration support</li>
                         <li class="flex items-center gap-3 text-sm text-gray-300" vid="127"><i class="ph-bold ph-check text-purple-500" vid="128"></i> Team training, strategic consulting, and ongoing system administration</li>
                     </ul>
-                    <a href="/contact/?topic=managed" class="block text-center w-full py-4 rounded-2xl border border-white/10 bg-white/5 text-white font-bold hover:bg-white/10 transition-all text-sm uppercase tracking-widest" vid="129">Request Setup</a>
+                    <a href="/contact/?topic=managed" class="pricing-cta block text-center w-full py-4 rounded-2xl border border-white/10 bg-white/5 text-white font-bold hover:bg-white/10 transition-all text-sm uppercase tracking-widest" vid="129">Request Setup</a>
                 </div>
             </div>
             <p class="mt-8 text-center text-xs text-gray-500 max-w-3xl mx-auto" vid="129a">Payment information is collected during setup for Starter and Growth. Cancel before the <a href="/legal/#terms-free-trial" class="text-purple-400 hover:text-white underline underline-offset-2">3-day trial</a> ends to avoid billing. Managed plans use a setup request instead of self-serve checkout and include implementation support unless otherwise specified. Review <a href="/legal/#terms-subscription-plans" class="text-purple-400 hover:text-white underline underline-offset-2">Subscription Plans</a>.</p>
@@ -1747,6 +1762,8 @@ video {
     <script vid="399">
         
         const starsContainer = document.getElementById('stars-container');
+        const shouldRenderStars = !window.matchMedia || !window.matchMedia('(max-width: 767px)').matches;
+        if (starsContainer && shouldRenderStars) {
         for (let i = 0; i < 200; i++) {
             const star = document.createElement('div');
             star.className = 'star';
@@ -1759,6 +1776,7 @@ video {
             star.style.setProperty('--delay', `${Math.random() * 5}s`);
             star.style.setProperty('--opacity', `${0.1 + Math.random() * 0.4}`);
             starsContainer.appendChild(star);
+        }
         }
 
         
