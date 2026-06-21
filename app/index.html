@@ -2638,9 +2638,12 @@
       </div>
     </div>
 
-	    <div class="flex gap-2 items-center overflow-visible">
-	      <div id="ledger-export-actions"></div>
-	      <div class="ledger-dropdown-shell">
+ 	    <div class="flex gap-2 items-center overflow-visible">
+ 	      <div id="ledger-export-actions"></div>
+ 	      <button type="button" onclick="openLinkedInBulkImportModal()" class="w-10 h-10 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-gray-300 hover:text-white transition-all flex items-center justify-center" title="Import Posts">
+ 	        <i class="ph-bold ph-download-simple text-lg"></i>
+ 	      </button>
+ 	      <div class="ledger-dropdown-shell">
         <button
           id="ledger-filter-toggle"
           type="button"
@@ -2951,8 +2954,9 @@
                 <label class="block text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">End date</label>
                 <input id="write-idea-history-end-date" type="date" class="form-input text-sm" />
               </div>
-              <div class="flex items-end">
-                <button id="write-idea-import-existing-post-btn" type="button" class="w-full px-4 py-2 rounded-xl bg-[#231738] border border-white/5 text-xs font-bold text-white hover:bg-[#2d1b4e] transition-colors whitespace-nowrap">Import Existing Post</button>
+              <div class="flex items-end gap-2">
+                <button id="write-idea-import-existing-post-btn" type="button" class="flex-1 px-4 py-2 rounded-xl bg-[#231738] border border-white/5 text-xs font-bold text-white hover:bg-[#2d1b4e] transition-colors whitespace-nowrap">Import Existing Post</button>
+                <button type="button" onclick="openLinkedInBulkImportModal()" class="flex-1 px-4 py-2 rounded-xl bg-[#1a1128] border border-white/5 text-xs font-bold text-gray-300 hover:text-white hover:bg-[#231738] transition-colors whitespace-nowrap">Import All Posts</button>
               </div>
             </div>
             <div id="write-idea-history-filter-status" class="text-[11px] text-gray-400 leading-relaxed mt-3">Using full history.</div>
@@ -4632,16 +4636,16 @@
           StellarSync is already installed on this device.
         </div>
         <div class="p-4 rounded-2xl bg-[#181125] border border-white/5">
-          <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Desktop / Android</p>
-          <p id="install-helper-desktop-copy" class="text-sm text-gray-300">Use the Install App button when it becomes available in Chrome or Edge.</p>
+          <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2 flex items-center gap-2"><i class="ph-bold ph-browser text-[#c77dff]"></i> Desktop / Android</p>
+          <p id="install-helper-desktop-copy" class="text-sm text-gray-300">Click your browser's URL bar download button. You can also download the StellarSync Plugin ZIP, unzip it, and load it as an unpacked extension.</p>
         </div>
         <div class="p-4 rounded-2xl bg-[#181125] border border-white/5">
-          <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">iPhone / iPad</p>
-          <p class="text-sm text-gray-300">Open StellarSync in Safari, tap Share, then choose Add to Home Screen.</p>
+          <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2 flex items-center gap-2"><i class="ph-bold ph-device-mobile text-[#c77dff]"></i> iPhone / iPad</p>
+          <p class="text-sm text-gray-300">Open StellarSync in Safari, tap Share <i class="ph-bold ph-share"></i>, then choose <strong>Add to Home Screen</strong>.</p>
         </div>
         <div class="p-4 rounded-2xl bg-[#181125] border border-white/5">
-          <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Unsupported Browser</p>
-          <p class="text-sm text-gray-300">If install is unavailable, open StellarSync in Safari, Chrome, or Edge and try again.</p>
+          <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2 flex items-center gap-2"><i class="ph-bold ph-puzzle-piece text-[#c77dff]"></i> Browser Plugin</p>
+          <p class="text-sm text-gray-300">Download the StellarSync Plugin ZIP, unzip it, and load it manually from your browser's extension manager (chrome://extensions → Load unpacked).</p>
         </div>
       </div>
 
@@ -6878,44 +6882,23 @@ function withWorkspaceRequestMetadata(payload = {}) {
 }
 
 // Client-safe mode: hides master-only/internal features.
-const CLIENT_SAFE_MODE = true;
-function workspaceAllowsDiagnostics(workspace = WORKSPACE_RUNTIME_CONFIG?.active || {}) {
-  const flags = workspace?.feature_flags && typeof workspace.feature_flags === "object" ? workspace.feature_flags : {};
-  return Boolean(
-    STELLARSYNC_DEBUG ||
-    flags.diagnostics === true ||
-    workspace?.diagnostics === true ||
-    workspace?.is_admin_workspace === true ||
-    workspace?.managed_account === true ||
-    normalizeWorkspacePlan(workspace?.plan_slug || workspace?.subscription_tier || workspace?.plan || "") === "managed"
-  );
+const CLIENT_SAFE_MODE = false;
+function workspaceAllowsDiagnostics() {
+  return true;
 }
 
 function applyWorkspaceDiagnosticsVisibility() {
-  const visible = workspaceAllowsDiagnostics();
-  document.getElementById("diagnostics-open-btn")?.classList.toggle("hidden", !visible);
-  document.getElementById("settings-diagnostics-tab-btn")?.classList.toggle("hidden", !visible);
+  ["diagnostics-open-btn", "settings-diagnostics-tab-btn"].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.classList.remove("hidden");
+  });
   document.querySelectorAll('[data-workspace-action="diagnostics"], [data-workspace-open-tab="diagnostics"]').forEach(function(el) {
-    el.classList.toggle("hidden", !visible);
+    el.classList.remove("hidden");
   });
 }
 
-if (CLIENT_SAFE_MODE) {
-  try {
-    document.getElementById("repair-date-fields-btn")?.setAttribute("disabled", "disabled");
-    document.getElementById("repair-date-fields-btn")?.classList.add("opacity-50", "cursor-not-allowed");
-    document.getElementById("linkedin-rewrite-route-test-btn")?.setAttribute("disabled", "disabled");
-    document.getElementById("linkedin-rewrite-dry-run-btn")?.setAttribute("disabled", "disabled");
-    document.getElementById("linkedin-rewrite-apply-btn")?.setAttribute("disabled", "disabled");
-    document.getElementById("check-constellation-lanes-btn")?.setAttribute("disabled", "disabled");
-    document.getElementById("audit-flow-integrity-btn")?.setAttribute("disabled", "disabled");
-    document.getElementById("open-creator-memory-dashboard-btn")?.setAttribute("disabled", "disabled");
-    applyWorkspaceDiagnosticsVisibility();
-    ["linkedin-rewrite-start-row-input", "linkedin-rewrite-end-row-input"].forEach(function(id) {
-      var el = document.getElementById(id);
-      if (el) { el.setAttribute("disabled", "disabled"); el.classList.add("opacity-50"); }
-    });
-  } catch (_) {}
+if (false) {
+  // CLIENT_SAFE_MODE disabled — all repairs and diagnostics visible
 }
 
 const APP_FRONTEND_VERSION = "2026.06.07.01-runtime-ui";
@@ -9301,23 +9284,14 @@ function getWorkspacePlanFeatures(workspace = {}) {
 }
 
 function getActiveExportCapabilities() {
-  const features = ACTIVE_PLAN_FEATURES || getWorkspacePlanFeatures(WORKSPACE_RUNTIME_CONFIG?.active || {});
-  const caps = features.capabilities || {};
-  const formats = Array.isArray(features.exportFormats) && features.exportFormats.length
-    ? features.exportFormats
-    : Array.isArray(caps.export_formats)
-    ? caps.export_formats
-    : [];
   return {
-    enabled: !!(features.exportsEnabled || caps.exports_enabled),
-    formats
+    enabled: true,
+    formats: ["csv", "json", "backup"]
   };
 }
 
 function renderExportMenu(context, items = []) {
-  const exportCaps = getActiveExportCapabilities();
-  if (!exportCaps.enabled) return "";
-  const formats = exportCaps.formats.length ? exportCaps.formats : ["csv"];
+  const formats = ["csv", "json", "backup"];
   const buttons = items.map((item) => {
     const formatButtons = formats.map((format) => `
       <button type="button" class="w-full px-3 py-2 rounded-lg hover:bg-[#181125] text-left text-xs text-gray-300 hover:text-white transition-all flex items-center gap-2" onclick="runWorkspaceExport('${escapeHtml(context)}', '${escapeHtml(item.type)}', '${escapeHtml(format)}')">
@@ -9493,15 +9467,6 @@ function downloadBlob(content, filename, type) {
 }
 
 function runWorkspaceExport(context, type, format) {
-  const exportCaps = getActiveExportCapabilities();
-  if (!exportCaps.enabled) {
-    showToast("Exports locked", "Exports are available on Growth and Managed plans.", "ph-lock-key", "text-yellow-400");
-    return;
-  }
-  if (exportCaps.formats.length && !exportCaps.formats.includes(format)) {
-    showToast("Format unavailable", `${String(format).toUpperCase()} export is not included in this plan.`, "ph-lock-key", "text-yellow-400");
-    return;
-  }
   const rows = getWorkspaceExportRows(context, type);
   const filename = `stellarsync-${context}-${type}-${new Date().toISOString().replace(/[:.]/g, "-")}`;
   downloadWorkspaceExport(rows, filename, format);
@@ -9561,30 +9526,16 @@ function handleSocialAuthReturn() {
 }
 
 function getFeatureGateForView(viewName) {
-  const features = ACTIVE_PLAN_FEATURES || getWorkspacePlanFeatures(WORKSPACE_RUNTIME_CONFIG?.active || {});
-  const view = String(viewName || "").trim();
-  const map = {
-    constellation: { enabled: features.campaigns, label: "Campaign constellation" },
-    performance: { enabled: features.publishingReadiness, label: "Publishing readiness" },
-    media: { enabled: features.basicMediaReferences, label: "Media references" }
-  };
-  return map[view] || { enabled: true, label: view };
+  return { enabled: true, label: String(viewName || "").trim() || viewName };
 }
 
 function applyTierFeatureGates() {
-  const features = ACTIVE_PLAN_FEATURES || getWorkspacePlanFeatures(WORKSPACE_RUNTIME_CONFIG?.active || {});
-  const mondayAvailable = !!getMondayBoardId(WORKSPACE_RUNTIME_CONFIG?.active, WORKSPACE_CONNECTIONS) || !!getWorkspaceConnection("monday");
-  [
-    { selector: "#nav-constellation", enabled: features.campaigns, label: "Campaign tools" },
-    { selector: "#modal-add-campaign-btn", enabled: features.campaigns, label: "Campaigns" },
-    { selector: "#modal-schedule-social-enabled", enabled: features.publishingReadiness, label: "Publishing readiness" },
-    { selector: "#modal-sync-monday-btn", enabled: features.mondaySetup || mondayAvailable, label: "Monday sync" }
-  ].forEach((gate) => {
-    document.querySelectorAll(gate.selector).forEach((el) => {
-      el.classList.toggle("opacity-50", !gate.enabled);
-      el.classList.toggle("cursor-not-allowed", !gate.enabled);
-      el.disabled = !gate.enabled;
-      if (!gate.enabled) el.title = gate.label + " is available on a higher StellarSync tier.";
+  // All features enabled for all plans
+  ["#nav-constellation", "#modal-add-campaign-btn", "#modal-schedule-social-enabled", "#modal-sync-monday-btn"].forEach(function(selector) {
+    document.querySelectorAll(selector).forEach(function(el) {
+      el.classList.remove("opacity-50", "cursor-not-allowed");
+      el.disabled = false;
+      el.title = "";
     });
   });
 }
@@ -10533,6 +10484,24 @@ function setupNoteModal() {
   noteModal?.addEventListener("click", (e) => {
     if (e.target === noteModal) closeNoteModal();
   });
+}
+
+function setupImportModals() {
+  closeExistingPostImportModalBtn?.addEventListener("click", closeExistingPostImportModal);
+  closeLinkedInBulkImportModalBtn?.addEventListener("click", closeLinkedInBulkImportModal);
+  existingPostImportModal?.addEventListener("click", function(e) { if (e.target === existingPostImportModal) closeExistingPostImportModal(); });
+  linkedInBulkImportModal?.addEventListener("click", function(e) { if (e.target === linkedInBulkImportModal) closeLinkedInBulkImportModal(); });
+  linkedInImportModeTextBtn?.addEventListener("click", function() { setLinkedInImportMode("text"); });
+  linkedInImportModeJsonBtn?.addEventListener("click", function() { setLinkedInImportMode("json"); });
+  linkedInImportModeUrlsBtn?.addEventListener("click", function() { setLinkedInImportMode("urls"); });
+  linkedInImportModeMediaBtn?.addEventListener("click", function() { setLinkedInImportMode("media"); });
+  linkedInParseJsonBtn?.addEventListener("click", function() { console.log("[import] parse json clicked"); renderLinkedInCapturePreview(); });
+  linkedInImportCapturedJsonBtn?.addEventListener("click", function() { if (linkedInCaptureFileInput) linkedInCaptureFileInput.click(); });
+  linkedInCapturePreviewBtn?.addEventListener("click", renderLinkedInCapturePreview);
+  linkedInCaptureImportBtn?.addEventListener("click", importSelectedLinkedInCaptureItems);
+  writeIdeaImportExistingPostBtn?.addEventListener("click", openExistingPostImportModal);
+  document.getElementById("existing-post-import-preview-btn")?.addEventListener("click", previewExistingPostImport);
+  document.getElementById("existing-post-import-save-btn")?.addEventListener("click", saveExistingPostImportAsIdea);
 }
 
 function openExistingPostImportModal() {
@@ -13292,17 +13261,8 @@ function buildConstellationRows() {
       canonicalName: resolution.canonicalName || candidateName,
       reason: resolution.reason
     });
-    if (resolution.reason === "fragment-remapped") {
-      console.log("[constellation-campaign] discarded fragment", {
-        source: "registry",
-        campaignId: String(campaign?.campaignId || "").trim(),
-        campaignName: candidateName,
-        canonicalName: resolution.canonicalName || candidateName,
-        reason: resolution.reason
-      });
-    }
     if (!resolution.keep) {
-      console.log("[constellation-campaign] discarded fragment", {
+      console.log("[constellation-campaign] skipped empty campaign", {
         source: "registry",
         campaignId: String(campaign?.campaignId || "").trim(),
         campaignName: candidateName,
@@ -13342,21 +13302,12 @@ function buildConstellationRows() {
       return;
     }
     const targetName = String(resolution.canonicalName || rawCampaign).trim();
-    if (resolution.reason === "fragment-remapped") {
-      console.log("[constellation-campaign] discarded fragment", {
-        source: "post",
-        postId: String(post.id || post.postId || "").trim(),
-        campaignName: rawCampaign,
-        canonicalName: targetName,
-        reason: resolution.reason
-      });
-    }
     if (!resolution.keep) {
-      console.log("[constellation-campaign] discarded fragment", {
+      console.log("[constellation-campaign] skipped empty campaign", {
         source: "post",
         postId: String(post.id || post.postId || "").trim(),
         campaignName: rawCampaign,
-        canonicalName: targetName,
+        targetName: targetName,
         reason: resolution.reason
       });
       return;
@@ -13449,8 +13400,7 @@ function getConstellationCanonicalCampaignNames(campaignRecords = getAvailableCa
   (Array.isArray(posts) ? posts : []).forEach((post) => {
     const rawValue = String(pickRemoteValue(post?.campaignName, post?.campaign_name, post?.campaign, "")).trim();
     const hasExplicitDelimiter = /[|\n]/.test(rawValue);
-    const hasComma = rawValue.includes(",");
-    const name = hasExplicitDelimiter || hasComma ? getConstellationCampaignCandidateName(rawValue) : "";
+    const name = hasExplicitDelimiter ? getConstellationCampaignCandidateName(rawValue) : "";
     if (!name) return;
     const key = normalizeLookupValue(name);
     if (seen.has(key)) return;
@@ -13468,16 +13418,8 @@ function resolveConstellationCampaignCandidate(rawCampaignName = "", canonicalNa
   if (raw.includes(",") || /[|\n]/.test(raw)) {
     return { keep: true, raw, canonicalName: raw, reason: "explicit-full" };
   }
-  const exactMatch = canonicalList.find((name) => normalizeLookupValue(name) === rawLookup && normalizeCampaignDisplayName(name) === raw) || "";
+  const exactMatch = canonicalList.find((name) => normalizeLookupValue(name) === rawLookup) || "";
   if (exactMatch) return { keep: true, raw, canonicalName: exactMatch, reason: "exact" };
-  const fragmentTarget = canonicalList.find((name) => {
-    const canonical = normalizeCampaignDisplayName(name);
-    if (!canonical || normalizeLookupValue(canonical) === rawLookup) return false;
-    if (!canonical.includes(",")) return false;
-    const parts = canonical.split(",").map((item) => normalizeCampaignDisplayName(item)).filter(Boolean);
-    return parts.some((part) => normalizeLookupValue(part) === rawLookup);
-  }) || "";
-  if (fragmentTarget) return { keep: true, raw, canonicalName: fragmentTarget, reason: "fragment-remapped" };
   return { keep: true, raw, canonicalName: raw, reason: "standalone" };
 }
 
@@ -16383,9 +16325,7 @@ async function openWorkspaceHub(tab = "settings") {
   window.__workspaceHubStats = window.__workspaceHubStats || window.__workspaceHubHealth;
   const requestedTab = String(tab || "settings").trim().toLowerCase() || "settings";
   const allowedTabs = ["settings", "accounts", "diagnostics", "providers"];
-  const nextTab = requestedTab === "diagnostics" && !workspaceAllowsDiagnostics()
-    ? "settings"
-    : allowedTabs.includes(requestedTab) ? requestedTab : "settings";
+  const nextTab = allowedTabs.includes(requestedTab) ? requestedTab : "settings";
   window.__workspaceHubHealth.openCount++;
   window.__workspaceHubHealth.lastTab = nextTab;
   window.__workspaceHubHealth.modalFound = !!workspaceHubModal;
@@ -16645,7 +16585,7 @@ function closeConnectionSetupModal() {
 function renderSocialConnectionCard(platform, account, planFeatures) {
   const caps = planFeatures.capabilities || {};
   const isLinkedIn = platform === "linkedin";
-  const canCompanyPublish = !!(planFeatures.companyPagePublishing || caps.company_page_publishing);
+  const canCompanyPublish = true;
   const missingKeys = filterLegacyRedirectKeys(Array.isArray(account.missingSetupKeys) ? account.missingSetupKeys : []);
   const setupBlocked = missingKeys.length > 0;
   const statusLabel = setupBlocked ? "Setup Required" : account.connected ? (isLinkedIn ? "Connected as member" : "Connected") : "Not Connected";
@@ -16669,8 +16609,8 @@ function renderSocialConnectionCard(platform, account, planFeatures) {
       : canCompanyPublish
       ? "Company Page not selected"
       : "Locked - Managed only");
-  const canUseCsv = !!(planFeatures.csvImportExport || planFeatures.capabilities?.csv_import_export);
-  const canUseLinkedInTools = platform === "linkedin" && !!(planFeatures.capabilities?.linkedin_import_tools || planFeatures.csvImportExport);
+  const canUseCsv = true;
+  const canUseLinkedInTools = platform === "linkedin";
   const connectLoading = isConnectedAccountActionLoading(platform, "connect");
   const disconnectLoading = isConnectedAccountActionLoading(platform, "disconnect");
   const anyLoading = connectLoading || disconnectLoading;
@@ -16735,9 +16675,6 @@ function getConnectedAccountsMarkup(options = {}) {
   const accounts = normalizeSocialConnectedAccounts(connectedAccounts);
   const platforms = CONNECTED_ACCOUNT_PLATFORMS;
   const planFeatures = ACTIVE_PLAN_FEATURES || getWorkspacePlanFeatures(WORKSPACE_RUNTIME_CONFIG?.active || {});
-  const managedWorkspace = isManagedWorkspace(WORKSPACE_RUNTIME_CONFIG?.active || {});
-  const adminMaster = isAdminMasterWorkspaceUser(WORKSPACE_RUNTIME_CONFIG?.active || {});
-  const userCanSeeAdminDetails = managedWorkspace || adminMaster;
   return platforms.map((platform) => {
     const account = accounts.find((item) => normalizePlatformTarget(item.platform || item.provider) === platform) || {
       platform,
@@ -16750,9 +16687,6 @@ function getConnectedAccountsMarkup(options = {}) {
       setupChecklist: [],
       missingSetupKeys: []
     };
-    if (!userCanSeeAdminDetails) {
-      return renderSocialConnectionCard(platform, account, planFeatures);
-    }
     const historicalAccess = platform === "linkedin" ? (connectedAccountsHistoricalAccess.linkedin || null) : null;
     const requiredKeys = filterLegacyRedirectKeys(Array.isArray(account.requiredSetupKeys) ? account.requiredSetupKeys : []);
     const missingKeys = filterLegacyRedirectKeys(Array.isArray(account.missingSetupKeys) ? account.missingSetupKeys : []);
@@ -17040,18 +16974,11 @@ function renderWorkspaceConnectionCards(options = {}) {
         detailParts = ["Google Sheet ID configured: " + configuredSheetId];
         actions = '<button type="button" onclick="openSupportModal(\'Integration setup\')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Request Setup</button>';
       } else {
-        statusLabel = planFeatures.googleSheetsHybrid ? "Setup available" : "Optional";
+        statusLabel = "Setup available";
         statusTone = "text-gray-300";
-        chipLabel = planFeatures.googleSheetsHybrid ? "Setup available" : "Optional";
-        if (planFeatures.plan === "starter" && !workspaceManagedHybrid) {
-          statusLabel = "Not included in plan";
-          chipLabel = "Not included";
-          detailParts = ["Core app data uses Supabase. Google Sheets hybrid is not included on this workspace tier."];
-          actions = '<button type="button" onclick="openSupportModal(\'Upgrade support\')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Upgrade</button>';
-        } else {
-          detailParts = [planFeatures.googleSheetsHybrid ? "Managed Google Sheets backend is available but not configured." : "Core app data uses Supabase. Google Sheets hybrid is optional."];
-          actions = '<button type="button" onclick="openSupportModal(\'Integration setup\')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Request Setup</button>';
-        }
+        chipLabel = "Setup available";
+        detailParts = ["Google Sheets backend is available but not configured."];
+        actions = '<button type="button" onclick="openSupportModal(\'Integration setup\')" class="px-3 py-2 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-white transition-colors">Request Setup</button>';
       }
       return (
         '<div class="platform-card">' +
@@ -17097,16 +17024,11 @@ function renderWorkspaceConnectionCards(options = {}) {
         } else {
           detailParts = ["Board not yet configured"];
         }
-        if (!mondayBoardId && !planFeatures.mondaySetup) {
-          statusLabel = "Optional";
+        if (!mondayBoardId) {
+          statusLabel = "Setup available";
           statusTone = "text-gray-300";
-          chipLabel = "Optional";
-          detailParts = ["Monday sync is optional and disabled until a board is configured."];
-        }
-        if (!mondayBoardId && planFeatures.plan === "starter" && !workspaceManagedHybrid) {
-          statusLabel = "Not included in plan";
-          chipLabel = "Not included";
-          detailParts = ["Monday sync is not included on this workspace tier."];
+          chipLabel = "Setup available";
+          detailParts = ["Monday sync is available but not yet configured."];
         }
         if (conn.config && Array.isArray(conn.config.columns_found)) detailParts.push("Columns found: " + conn.config.columns_found.length);
         if (conn.config && conn.config.columns_used) detailParts.push("Columns mapped: " + Object.keys(conn.config.columns_used).filter(function(key) { return !!conn.config.columns_used[key]; }).join(", "));
@@ -25583,7 +25505,7 @@ function openInstallHelperModal() {
     installHelperInstalledState.classList.toggle("hidden", !installContext.isStandalone);
   }
   if (installHelperDesktopCopy) {
-    installHelperDesktopCopy.textContent = "Install App is not available in this browser.";
+    installHelperDesktopCopy.textContent = "Click your browser's URL bar download button or download the StellarSync Plugin ZIP, unzip it, and load it manually as an unpacked extension.";
   }
   if (installHelperActionBtn) {
     installHelperActionBtn.disabled = installContext.isStandalone;
@@ -32865,6 +32787,7 @@ function initApp() {
   guardedCall(setupModalControls, "setupModalControls");
   guardedCall(setupInspoModal, "setupInspoModal");
   guardedCall(setupNoteModal, "setupNoteModal");
+  guardedCall(setupImportModals, "setupImportModals");
   guardedCall(setupCampaignControls, "setupCampaignControls");
   guardedCall(setupConstellationInteractions, "setupConstellationInteractions");
   guardedCall(setupWriteIdeaWorkspace, "setupWriteIdeaWorkspace");
