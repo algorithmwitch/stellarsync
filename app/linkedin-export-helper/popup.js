@@ -29,8 +29,22 @@ const EXPORT_COLUMNS = [
 const CONTENT_SCRIPT_FILE = "content.js";
 const LINKEDIN_READY_SOURCE = "stellarsync-linkedin-export-helper";
 const HELPER_VERSION = "0.1.1";
+const STELLARSYNC_APP_URL = "https://stellarsync.app/app/";
+const PLATFORM_OPTIONS = [
+  ["external", "Page / Web"],
+  ["linkedin", "LinkedIn"],
+  ["instagram", "Instagram"],
+  ["threads", "Threads"],
+  ["facebook", "Facebook"],
+  ["tiktok", "TikTok"],
+  ["youtube", "YouTube"],
+  ["bluesky", "Bluesky"],
+  ["x", "X / Twitter"],
+  ["pinterest", "Pinterest"]
+];
 
 let latestPayload = null;
+let activeTabCapture = null;
 
 function $(id) {
   return document.getElementById(id);
@@ -47,6 +61,86 @@ function setDiagnostics(value) {
 function setButtonsEnabled(enabled) {
   ["copy-tsv-btn", "download-json-btn", "download-csv-btn", "download-tsv-btn", "download-media-manifest-btn", "import-media-btn"].forEach(function(id) {
     $(id).disabled = !enabled;
+  });
+}
+
+function detectPlatform(url) {
+  var value = String(url || "").toLowerCase();
+  if (value.indexOf("linkedin.com") >= 0) return "linkedin";
+  if (value.indexOf("instagram.com") >= 0) return "instagram";
+  if (value.indexOf("threads.net") >= 0) return "threads";
+  if (value.indexOf("facebook.com") >= 0) return "facebook";
+  if (value.indexOf("tiktok.com") >= 0) return "tiktok";
+  if (value.indexOf("youtube.com") >= 0 || value.indexOf("youtu.be") >= 0) return "youtube";
+  if (value.indexOf("bsky.app") >= 0) return "bluesky";
+  if (value.indexOf("twitter.com") >= 0 || value.indexOf("x.com") >= 0) return "x";
+  if (value.indexOf("pinterest.com") >= 0) return "pinterest";
+  return "external";
+}
+
+function fillPlatformSelect(select, value) {
+  if (!select) return;
+  select.innerHTML = PLATFORM_OPTIONS.map(function(option) {
+    return '<option value="' + option[0] + '">' + option[1] + '</option>';
+  }).join("");
+  select.value = value || "external";
+}
+
+function sourceTypeForPlatform(platform, url) {
+  return platform && platform !== "external" ? "social_post" : /^https?:\/\//i.test(String(url || "")) ? "page_link" : "manual";
+}
+
+async function refreshActiveTabCapture() {
+  try {
+    var tab = await getActiveTab();
+    var platform = detectPlatform(tab.url);
+    activeTabCapture = {
+      url: tab.url || "",
+      title: tab.title || "",
+      platform: platform,
+      sourceType: sourceTypeForPlatform(platform, tab.url),
+      time: new Date().toISOString()
+    };
+    $("inspo-title").value = activeTabCapture.title;
+    $("note-title").value = activeTabCapture.title;
+    fillPlatformSelect($("inspo-platform"), platform);
+    fillPlatformSelect($("note-platform"), platform);
+    $("inspo-source-preview").textContent = (activeTabCapture.title || "Untitled page") + "\n" + (activeTabCapture.url || "No URL");
+    $("note-source-preview").textContent = (activeTabCapture.title || "Untitled page") + "\n" + (activeTabCapture.url || "No URL");
+  } catch (error) {
+    activeTabCapture = null;
+    fillPlatformSelect($("inspo-platform"), "external");
+    fillPlatformSelect($("note-platform"), "external");
+    $("inspo-source-preview").textContent = error && error.message ? error.message : "Could not read current tab.";
+    $("note-source-preview").textContent = error && error.message ? error.message : "Could not read current tab.";
+  }
+}
+
+function openStellarSyncCapture(targetTab) {
+  var base = activeTabCapture || {};
+  var platformSelect = targetTab === "note" ? $("note-platform") : $("inspo-platform");
+  var platform = platformSelect && platformSelect.value ? platformSelect.value : base.platform || "external";
+  var payload = {
+    v: 2,
+    targetTab: targetTab,
+    url: base.url || "",
+    title: targetTab === "note" ? $("note-title").value || base.title || "" : $("inspo-title").value || base.title || "",
+    text: targetTab === "note" ? $("note-body").value || "" : $("inspo-notes").value || "",
+    tags: targetTab === "note" ? "" : $("inspo-tags").value || "",
+    platform: platform,
+    sourceType: sourceTypeForPlatform(platform, base.url || ""),
+    time: new Date().toISOString()
+  };
+  var url = STELLARSYNC_APP_URL + "?plugin_capture=" + encodeURIComponent(JSON.stringify(payload));
+  chrome.tabs.create({ url: url });
+}
+
+function switchPopupTab(tabName) {
+  document.querySelectorAll(".tab").forEach(function(tab) {
+    tab.classList.toggle("active", tab.dataset.tab === tabName);
+  });
+  document.querySelectorAll(".panel").forEach(function(panel) {
+    panel.classList.toggle("active", panel.dataset.panel === tabName);
   });
 }
 
@@ -426,3 +520,11 @@ $("download-csv-btn").addEventListener("click", downloadCsv);
 $("download-tsv-btn").addEventListener("click", downloadTsv);
 $("download-media-manifest-btn").addEventListener("click", downloadMediaManifest);
 $("import-media-btn").addEventListener("click", importMediaToStellarSync);
+$("save-inspo-btn").addEventListener("click", function() { openStellarSyncCapture("inspo"); });
+$("save-note-btn").addEventListener("click", function() { openStellarSyncCapture("note"); });
+$("refresh-tab-btn").addEventListener("click", refreshActiveTabCapture);
+$("refresh-note-tab-btn").addEventListener("click", refreshActiveTabCapture);
+document.querySelectorAll(".tab").forEach(function(tab) {
+  tab.addEventListener("click", function() { switchPopupTab(tab.dataset.tab); });
+});
+refreshActiveTabCapture();

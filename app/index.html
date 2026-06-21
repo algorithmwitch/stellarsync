@@ -52,7 +52,7 @@
   }
 
   main {
-    overflow: hidden !important;
+	                overflow: visible !important;
     min-height: 0 !important;
   }
 
@@ -1099,14 +1099,16 @@
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
 
-        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.75rem !important; border: none !important; background: transparent !important; }
-        .cal-cell { background: #160f24 !important; border: 1px solid rgba(255,255,255,0.02) !important; border-radius: 0.75rem !important; min-height: 90px; padding: 0.75rem !important; display: flex; flex-direction: column; gap: 6px; transition: background-color 0.2s; }
+        .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); width: 100%; min-width: 0; gap: 0.75rem !important; border: none !important; background: transparent !important; }
+        .cal-cell { background: #160f24 !important; border: 1px solid rgba(255,255,255,0.02) !important; border-radius: 0.75rem !important; min-height: 90px; min-width: 0; max-width: 100%; padding: 0.75rem !important; display: flex; flex-direction: column; gap: 6px; transition: background-color 0.2s; overflow: visible; }
         .cal-cell:hover { background: #1a122a !important; }
         .cal-cell.empty { background: rgba(22, 15, 36, 0.3) !important; border-color: transparent !important; }
         .calendar-today-cell { border-color: rgba(199,125,255,0.45) !important; box-shadow: inset 0 0 0 1px rgba(199,125,255,0.25); background: rgba(45, 27, 78, 0.45) !important; }
         .calendar-today-label { color: #ffffff !important; font-weight: 700 !important; }
         
         .post-pill { padding: 0.4rem 0.55rem !important; border-radius: 0.6rem !important; border-left: none !important; font-size: 10px; font-weight: 500; display: flex; flex-direction: column; align-items: stretch; gap: 0.35rem; background: #221835 !important; min-width: 0; max-width: 100%; overflow: hidden; }
+        .post-pill span { min-width: 0; }
+        .post-pill .calendar-pill-title { display: block; min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; word-break: normal; }
         .post-pill.edu { background: rgba(0, 240, 255, 0.08) !important; border: 1px solid rgba(0, 240, 255, 0.15) !important; }
         .post-pill.promo { background: rgba(178, 95, 255, 0.08) !important; border: 1px solid rgba(178, 95, 255, 0.15) !important; }
         .post-pill.engage { background: rgba(255, 215, 0, 0.08) !important; border: 1px solid rgba(255, 215, 0, 0.15) !important; }
@@ -3642,13 +3644,13 @@
         <div class="rounded-2xl border border-cyan-400/15 bg-cyan-400/5 p-4 space-y-4">
           <div class="flex items-start justify-between gap-3 flex-wrap">
             <div>
-              <div class="text-[10px] uppercase tracking-widest text-cyan-200 font-bold">Use the StellarSync LinkedIn Export Helper</div>
+              <div class="text-[10px] uppercase tracking-widest text-cyan-200 font-bold">Use the StellarSync Plugin</div>
               <div class="text-xs text-cyan-50/90 mt-1">Use the packaged Chrome extension if you want a clearer export workflow than pasting console code manually.</div>
             </div>
             <div class="text-[11px] text-cyan-100/80">Local helper path: <code>stellarsync/linkedin-export-helper/</code></div>
           </div>
           <div class="flex flex-wrap gap-2">
-            <a id="modal-linkedin-download-helper-zip-btn" href="./linkedin-export-helper/stellarsync-linkedin-export-helper.zip" download="stellarsync-linkedin-export-helper.zip" class="px-4 py-2 rounded-xl bg-[#231738] border border-white/5 text-xs font-bold text-white hover:bg-[#2d1b4e] transition-colors">Download LinkedIn Export Helper ZIP</a>
+            <a id="modal-linkedin-download-helper-zip-btn" href="./linkedin-export-helper/stellarsync-plugin.zip" download="stellarsync-plugin.zip" class="px-4 py-2 rounded-xl bg-[#231738] border border-white/5 text-xs font-bold text-white hover:bg-[#2d1b4e] transition-colors">Download StellarSync Plugin ZIP</a>
             <a id="modal-linkedin-open-helper-readme-btn" href="./linkedin-export-helper/README.md" target="_blank" rel="noopener noreferrer" class="px-4 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-white hover:bg-[#231738] transition-colors">Open README</a>
             <button id="modal-linkedin-copy-helper-install-btn" type="button" class="px-4 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-white hover:bg-[#231738] transition-colors">Copy Install Steps</button>
             <button id="modal-linkedin-copy-helper-json-format-btn" type="button" class="px-4 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-white hover:bg-[#231738] transition-colors">Copy Supported JSON Format</button>
@@ -3682,7 +3684,7 @@
             <div class="text-xs text-gray-300">Use this when you already have a capture JSON file or want to paste raw capture JSON directly.</div>
             <div class="flex flex-wrap gap-2">
               <button id="modal-linkedin-parse-json-btn" type="button" class="px-4 py-2 rounded-xl bg-[#231738] border border-white/5 text-xs font-bold text-white hover:bg-[#2d1b4e] transition-colors">Parse JSON</button>
-              <button id="modal-linkedin-import-captured-json-btn" type="button" class="px-4 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-white hover:bg-[#231738] transition-colors">Upload JSON from Export Helper</button>
+              <button id="modal-linkedin-import-captured-json-btn" type="button" class="px-4 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-white hover:bg-[#231738] transition-colors">Upload JSON from StellarSync Plugin</button>
               <button id="modal-linkedin-import-export-btn" type="button" class="px-4 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-white hover:bg-[#231738] transition-colors" disabled>Import this export</button>
               <button id="modal-linkedin-test-backend-route-btn" type="button" class="px-4 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-white hover:bg-[#231738] transition-colors">Test Backend Import Route</button>
             </div>
@@ -3727,12 +3729,12 @@
         </div>
         <div id="linkedin-import-mode-media-panel" class="hidden p-4 rounded-2xl bg-[#0f0a18] border border-white/5 space-y-3">
           <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Path C · Import Media Manifest</div>
-          <div class="text-xs text-gray-300">Paste a media manifest JSON from the LinkedIn Export Helper to upload historic media assets to Google Drive and link them to imported posts.</div>
+          <div class="text-xs text-gray-300">Paste a media manifest JSON from the StellarSync Plugin LinkedIn Exporter tab to upload historic media assets to Google Drive and link them to imported posts.</div>
           <div class="flex flex-wrap gap-2">
             <button id="modal-linkedin-import-media-manifest-btn" type="button" class="px-4 py-2 rounded-xl bg-[#231738] border border-white/5 text-xs font-bold text-white hover:bg-[#2d1b4e] transition-colors">Parse &amp; Import Media Manifest</button>
             <button id="modal-linkedin-paste-media-manifest-btn" type="button" class="px-4 py-2 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-white hover:bg-[#231738] transition-colors">Paste Media Manifest</button>
           </div>
-          <textarea id="modal-linkedin-media-manifest-input" class="form-input resize-none h-32 text-sm font-mono" placeholder="Paste media manifest JSON here. Download it from the LinkedIn Export Helper popup (Download Media Manifest button)."></textarea>
+          <textarea id="modal-linkedin-media-manifest-input" class="form-input resize-none h-32 text-sm font-mono" placeholder="Paste media manifest JSON here. Download it from the StellarSync Plugin LinkedIn Exporter tab."></textarea>
           <div id="modal-linkedin-media-manifest-status" class="text-xs text-gray-400">No media manifest loaded yet.</div>
         </div>
         <div id="linkedin-import-mode-helper" class="text-[11px] text-gray-400 border border-white/5 bg-[#120c1d] rounded-xl px-3 py-3">
@@ -3745,9 +3747,9 @@
           </div>
           <div class="space-y-3">
             <div id="linkedin-import-json-upload-shell">
-              <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2">Upload JSON exported from StellarSync LinkedIn Export Helper</label>
+              <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2">Upload JSON exported from StellarSync Plugin</label>
               <input id="modal-linkedin-capture-file" type="file" accept="application/json,.json" class="form-input text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-[#231738] file:px-3 file:py-2 file:text-xs file:font-bold file:text-white">
-              <div class="text-[11px] text-gray-400 mt-2">Paste JSON from Export Helper here or upload the downloaded file, then click Parse JSON.</div>
+              <div class="text-[11px] text-gray-400 mt-2">Paste JSON from the StellarSync Plugin LinkedIn Exporter tab here or upload the downloaded file, then click Parse JSON.</div>
             </div>
             <div>
               <label id="linkedin-import-url-label" class="block text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2">Optional LinkedIn URL</label>
@@ -3765,7 +3767,7 @@
         </div>
         <div id="modal-linkedin-export-detected" class="hidden rounded-2xl border border-white/10 bg-[#0f0a18] p-4 space-y-3">
           <div class="flex items-center justify-between gap-3 flex-wrap">
-            <div class="text-sm font-bold text-white">Export Helper Detection</div>
+            <div class="text-sm font-bold text-white">StellarSync Plugin Detection</div>
             <span class="diagnostic-chip">Preview Before Import</span>
           </div>
           <div id="modal-linkedin-export-detected-grid" class="grid grid-cols-1 md:grid-cols-5 gap-3"></div>
@@ -3802,7 +3804,7 @@
         <div class="w-10 h-10 rounded-xl bg-[#231738] flex items-center justify-center"><i class="ph-fill ph-puzzle-piece text-[#c77dff] text-xl"></i></div>
         <div>
           <h2 class="text-xl font-bold text-white tracking-tight">StellarSync Plugin</h2>
-          <p class="text-xs text-gray-400 mt-0.5">Use the StellarSync Plugin to capture LinkedIn posts, save ideas to Inspo, save notes, or start AI drafts.</p>
+          <p class="text-xs text-gray-400 mt-0.5">Capture social posts and page links into Inspo, Notes, or the LinkedIn exporter workflow.</p>
         </div>
       </div>
       <button id="close-plugin-install-modal-btn" type="button" data-plugin-action="closePluginInstallModal" class="text-gray-500 hover:text-white p-2 rounded-xl hover:bg-white/5 transition-colors"><i class="ph-bold ph-x text-xl"></i></button>
@@ -3811,13 +3813,13 @@
       <div class="platform-card space-y-4">
         <div class="flex items-center gap-3">
           <div class="w-8 h-8 rounded-lg bg-[#231738] flex items-center justify-center"><i class="ph-fill ph-bookmarks text-[#c77dff]"></i></div>
-          <div><div class="text-sm font-bold text-white">Bookmarklet</div><div class="text-[10px] text-gray-400">One-click capture from any page</div></div>
+          <div><div class="text-sm font-bold text-white">Browser Bar Capture</div><div class="text-[10px] text-gray-400">One-click capture from any page</div></div>
         </div>
-        <p class="text-xs text-gray-400 leading-relaxed">Drag the button below to your bookmarks bar. When you find content you want to capture, click the bookmarklet to save it directly to StellarSync.</p>
+        <p class="text-xs text-gray-400 leading-relaxed">Browsers do not allow websites to auto-install bookmarklets or unpacked extensions. Drag this button to your bookmarks bar, or copy the code into a new bookmark URL field. When you find content to capture, click it to open the StellarSync Plugin save flow.</p>
         <div class="flex flex-wrap items-center gap-3">
-          <button id="plugin-bookmarklet-link" type="button" draggable="true" data-plugin-action="copyPluginBookmarkletCode" class="px-5 py-3 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all shadow-lg shadow-purple-500/20 inline-flex items-center gap-2 cursor-grab active:cursor-grabbing select-none">
+          <a id="plugin-bookmarklet-link" href="#" draggable="true" class="px-5 py-3 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all shadow-lg shadow-purple-500/20 inline-flex items-center gap-2 cursor-grab active:cursor-grabbing select-none">
             <i class="ph-bold ph-puzzle-piece"></i> StellarSync Capture
-          </button>
+          </a>
           <button id="plugin-copy-bookmarklet-btn" type="button" data-plugin-action="copyPluginBookmarkletCode" class="px-4 py-3 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300 hover:text-white transition-colors">Copy Code</button>
         </div>
         <div id="plugin-bookmarklet-copy-success" class="text-xs text-emerald-400 hidden">Bookmarklet code copied! Paste it into a new bookmark URL field.</div>
@@ -3825,11 +3827,11 @@
       <div class="platform-card space-y-3">
         <div class="flex items-center gap-3">
           <div class="w-8 h-8 rounded-lg bg-[#231738] flex items-center justify-center"><i class="ph-fill ph-puzzle-piece text-[#c77dff]"></i></div>
-          <div><div class="text-sm font-bold text-white">Browser Extension</div><div class="text-[10px] text-gray-400">Full-featured capture (coming soon)</div></div>
+          <div><div class="text-sm font-bold text-white">Chrome Extension Package</div><div class="text-[10px] text-gray-400">Manual install with Load Unpacked</div></div>
         </div>
-        <p class="text-xs text-gray-400 leading-relaxed">A full browser extension with automatic LinkedIn post detection, media capture, and bulk import capabilities is in development.</p>
+        <p class="text-xs text-gray-400 leading-relaxed">Download the extension ZIP, unzip it, then open <strong class="text-white">chrome://extensions</strong>, enable <strong class="text-white">Developer Mode</strong>, choose <strong class="text-white">Load unpacked</strong>, and select the unzipped folder. The ZIP appears wherever your browser saves downloads.</p>
         <div class="flex items-center gap-3">
-          <button type="button" data-plugin-action="downloadPluginBookmarkletFile" class="px-4 py-2.5 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300 hover:text-white transition-colors inline-flex items-center gap-2"><i class="ph-bold ph-download"></i> Download Plugin</button>
+          <button type="button" data-plugin-action="downloadPluginExtensionPackage" class="px-4 py-2.5 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300 hover:text-white transition-colors inline-flex items-center gap-2"><i class="ph-bold ph-download"></i> Download ZIP</button>
         </div>
       </div>
       <div class="platform-card space-y-3">
@@ -3849,7 +3851,7 @@
           <li>Drag the <strong class="text-white">StellarSync Capture</strong> button to your browser's bookmarks bar.</li>
           <li>Browse to any page (LinkedIn, news article, blog post, etc.)</li>
           <li>Select text on the page (optional), then click the bookmarklet.</li>
-          <li>Choose where to save it: <strong class="text-white">Inspo</strong>, <strong class="text-white">Notes</strong>, <strong class="text-white">AI Draft</strong>, or use the <strong class="text-white">LinkedIn Exporter</strong> tab.</li>
+          <li>Choose where to save it: <strong class="text-white">Save Inspo</strong>, <strong class="text-white">Save Note</strong>, or <strong class="text-white">LinkedIn Exporter</strong>.</li>
           <li>The captured content appears immediately in your workspace.</li>
         </ol>
         <div class="mt-2 px-3 py-2 rounded-lg bg-[#181125] border border-white/5 text-[10px] text-gray-500 leading-relaxed">
@@ -3862,22 +3864,21 @@
 
 <!-- Plugin Capture Modal (3 views) -->
 <div id="plugin-capture-view-modal" class="fixed inset-0 z-[171] flex items-center justify-center bg-black/70 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
-  <div id="plugin-capture-view-card" class="modal-content w-full max-w-xl max-h-[90vh] bg-[#120c1d] border border-white/10 rounded-2xl shadow-2xl overflow-hidden scale-95 transition-transform duration-300 flex flex-col">
+  <div id="plugin-capture-view-card" class="modal-content w-full max-w-2xl max-h-[90vh] bg-[#120c1d] border border-white/10 rounded-2xl shadow-2xl overflow-hidden scale-95 transition-transform duration-300 flex flex-col">
     <div class="p-6 border-b border-white/10 flex justify-between items-center bg-gradient-to-r from-[#1a1128] to-[#120c1d] shrink-0">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 rounded-xl bg-[#231738] flex items-center justify-center"><i class="ph-fill ph-arrow-square-in text-[#c77dff] text-xl"></i></div>
         <div>
-          <h2 id="plugin-capture-title" class="text-xl font-bold text-white tracking-tight">Capture Content</h2>
+          <h2 id="plugin-capture-title" class="text-xl font-bold text-white tracking-tight">StellarSync Plugin</h2>
           <p class="text-xs text-gray-400 mt-0.5">From <span id="plugin-capture-source-label" class="text-gray-300">the web</span></p>
         </div>
       </div>
       <button id="close-plugin-capture-modal-btn" type="button" data-plugin-action="closePluginCaptureModal" class="text-gray-500 hover:text-white p-2 rounded-xl hover:bg-white/5 transition-colors"><i class="ph-bold ph-x text-xl"></i></button>
     </div>
     <div class="flex border-b border-white/10 shrink-0">
+      <button type="button" class="plugin-capture-tab flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center bg-[#2d1b4e] text-white border-b-2 border-[#c77dff]" data-pc-tab="inspo" data-plugin-action="switchPluginCaptureTab">Save Inspo</button>
+      <button type="button" class="plugin-capture-tab flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center bg-[#181125] text-gray-400 border-b-2 border-transparent" data-pc-tab="note" data-plugin-action="switchPluginCaptureTab">Save Note</button>
       <button type="button" class="plugin-capture-tab flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center bg-[#181125] text-gray-400 border-b-2 border-transparent" data-pc-tab="linkedin" data-plugin-action="switchPluginCaptureTab">LinkedIn Exporter</button>
-      <button type="button" class="plugin-capture-tab flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center bg-[#2d1b4e] text-white border-b-2 border-[#c77dff]" data-pc-tab="inspo" data-plugin-action="switchPluginCaptureTab">Save to Inspo</button>
-      <button type="button" class="plugin-capture-tab flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center bg-[#181125] text-gray-400 border-b-2 border-transparent" data-pc-tab="note" data-plugin-action="switchPluginCaptureTab">Save to Notes</button>
-      <button type="button" class="plugin-capture-tab flex-1 px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-center bg-[#181125] text-gray-400 border-b-2 border-transparent" data-pc-tab="draft" data-plugin-action="switchPluginCaptureTab">AI Draft Source</button>
     </div>
     <div class="p-6 overflow-y-auto custom-scrollbar space-y-4">
       <!-- Capture metadata bar (always visible) -->
@@ -3886,10 +3887,19 @@
         <div><span class="text-gray-500">Page:</span> <span id="pc-capture-title-display" class="text-white">—</span></div>
         <div><span class="text-gray-500">Time:</span> <span id="pc-capture-time-display" class="text-gray-300">—</span></div>
       </div>
+      <div id="pc-social-preview-card" class="hidden rounded-2xl bg-[#181125] border border-white/5 p-4 flex items-start gap-3">
+        <div class="w-10 h-10 rounded-xl bg-[#231738] flex items-center justify-center shrink-0"><i id="pc-social-preview-icon" class="ph-bold ph-link text-[#c77dff]"></i></div>
+        <div class="min-w-0 flex-1">
+          <div id="pc-social-preview-platform" class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Source</div>
+          <div id="pc-social-preview-title" class="text-sm font-bold text-white truncate">Captured page</div>
+          <div id="pc-social-preview-url" class="text-[11px] text-gray-500 truncate mt-0.5"></div>
+          <p id="pc-social-preview-text" class="text-xs text-gray-400 wrap-safe mt-2 hidden"></p>
+        </div>
+      </div>
       <!-- LinkedIn Exporter Tab -->
       <section data-pc-panel="linkedin" class="hidden space-y-4">
         <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">LinkedIn Post URL</div><input id="pc-linkedin-url" type="url" placeholder="https://www.linkedin.com/posts/..." class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"></div>
-        <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Pasted LinkedIn Text / JSON</div><textarea id="pc-linkedin-input" rows="4" placeholder="Paste copied LinkedIn post text, or paste JSON from the LinkedIn Export Helper..." class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 resize-y"></textarea></div>
+        <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Pasted LinkedIn Text / JSON</div><textarea id="pc-linkedin-input" rows="4" placeholder="Paste copied LinkedIn post text, or paste JSON from the StellarSync Plugin LinkedIn Exporter tab..." class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 resize-y"></textarea></div>
         <div class="flex gap-2">
           <button type="button" data-plugin-action="parseLinkedInExporterInput" class="px-4 py-2.5 rounded-xl bg-[#231738] border border-white/5 text-xs font-bold text-white hover:bg-[#2d1b4e] transition-colors"><i class="ph-bold ph-magnifying-glass mr-1"></i> Parse</button>
           <button type="button" data-plugin-action="importLinkedInExporterInput" class="px-4 py-2.5 rounded-xl bg-[#1a1128] border border-white/5 text-xs font-bold text-white hover:bg-[#231738] transition-colors"><i class="ph-bold ph-upload mr-1"></i> Import</button>
@@ -3907,6 +3917,10 @@
           <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Tags</div><input id="pc-inspo-tags" type="text" placeholder="comma, separated" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"></div>
         </div>
         <div class="grid grid-cols-2 gap-3">
+          <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Platform / Source</div><select id="pc-inspo-platform" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white focus:outline-none focus:border-purple-500/50"><option value="external">Page / Web</option><option value="linkedin">LinkedIn</option><option value="instagram">Instagram</option><option value="threads">Threads</option><option value="facebook">Facebook</option><option value="tiktok">TikTok</option><option value="youtube">YouTube</option><option value="bluesky">Bluesky</option><option value="x">X / Twitter</option><option value="pinterest">Pinterest</option></select></div>
+          <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Source Type</div><input id="pc-inspo-source-type" type="text" placeholder="social_post, article, page" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
           <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Campaign</div><input id="pc-inspo-campaign" type="text" placeholder="Optional" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"></div>
           <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Pillar</div><input id="pc-inspo-pillar" type="text" placeholder="Optional" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"></div>
         </div>
@@ -3920,17 +3934,11 @@
           <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Tags</div><input id="pc-note-tags" type="text" placeholder="comma, separated" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"></div>
           <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Pillar</div><input id="pc-note-pillar" type="text" placeholder="Optional" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"></div>
         </div>
-        <button type="button" class="pc-save-btn w-full px-4 py-3 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all" data-plugin-action="savePluginCaptureToNotes"><i class="ph-bold ph-note-pencil mr-1"></i> Save to Notes</button>
-      </section>
-      <!-- AI Draft Tab -->
-      <section data-pc-panel="draft" class="hidden space-y-4">
-        <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Source Text</div><textarea id="pc-draft-source" rows="5" placeholder="Paste source text from the page..." class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 resize-y"></textarea></div>
-        <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Prompt / Context</div><textarea id="pc-draft-prompt" rows="3" placeholder="What kind of draft do you want? e.g. 'Turn this into a LinkedIn post'" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 resize-y"></textarea></div>
         <div class="grid grid-cols-2 gap-3">
-          <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Generation Mode</div><select id="pc-draft-mode" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white focus:outline-none focus:border-purple-500/50"><option value="rewrite">Rewrite</option><option value="expand">Expand</option><option value="summarize">Summarize</option><option value="repurpose">Repurpose for LinkedIn</option></select></div>
-          <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Tags</div><input id="pc-draft-tags" type="text" placeholder="comma, separated" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"></div>
+          <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Platform / Source</div><select id="pc-note-platform" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white focus:outline-none focus:border-purple-500/50"><option value="external">Page / Web</option><option value="linkedin">LinkedIn</option><option value="instagram">Instagram</option><option value="threads">Threads</option><option value="facebook">Facebook</option><option value="tiktok">TikTok</option><option value="youtube">YouTube</option><option value="bluesky">Bluesky</option><option value="x">X / Twitter</option><option value="pinterest">Pinterest</option></select></div>
+          <div><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Campaign</div><input id="pc-note-campaign" type="text" placeholder="Optional" class="w-full px-3 py-2.5 rounded-xl bg-[#0a0612] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"></div>
         </div>
-        <button type="button" class="pc-save-btn w-full px-4 py-3 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all" data-plugin-action="savePluginCaptureToAIDraft"><i class="ph-bold ph-robot mr-1"></i> Save as AI Draft</button>
+        <button type="button" class="pc-save-btn w-full px-4 py-3 rounded-xl bg-gradient-to-r from-[#9d4edd] to-[#c77dff] text-white text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all" data-plugin-action="savePluginCaptureToNotes"><i class="ph-bold ph-note-pencil mr-1"></i> Save to Notes</button>
       </section>
       <div id="pc-save-result" class="text-xs text-gray-400 hidden"></div>
     </div>
@@ -4312,11 +4320,18 @@
               </details>
             </div>
 
-            <div class="p-6 border-t border-white/5 flex justify-end gap-4" vid="587">
+            <div class="p-6 border-t border-white/5 flex items-center justify-between gap-4 flex-wrap" vid="587">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <button type="button" onclick="copyCurrentPostText()" class="w-10 h-10 rounded-xl bg-[#181125] border border-white/5 text-gray-400 hover:text-white transition-colors inline-flex items-center justify-center" title="Copy post text" aria-label="Copy post text"><i class="ph-bold ph-copy"></i></button>
+                  <button type="button" onclick="downloadCurrentPostMedia()" class="w-10 h-10 rounded-xl bg-[#181125] border border-white/5 text-gray-400 hover:text-white transition-colors inline-flex items-center justify-center" title="Download attached media" aria-label="Download attached media"><i class="ph-bold ph-download-simple"></i></button>
+                  <button type="button" onclick="openCurrentPostPlatformComposer()" class="w-10 h-10 rounded-xl bg-[#181125] border border-white/5 text-gray-400 hover:text-white transition-colors inline-flex items-center justify-center" title="Open platform/share composer" aria-label="Open platform/share composer"><i class="ph-bold ph-share-network"></i></button>
+                </div>
+                <div class="flex justify-end gap-4">
                 <button onclick="closeModal()" class="px-6 py-2.5 rounded-xl text-xs font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-colors border border-transparent" vid="588">Cancel</button>
                     <button id="save-post-btn" type="button" class="px-6 py-2.5 bg-gradient-to-r from-[#9d4edd] to-[#c77dff] hover:opacity-90 text-white text-xs uppercase tracking-wider font-bold rounded-xl shadow-[0_0_20px_rgba(157,78,221,0.2)] transition-all flex items-center gap-2">
                       <i class="ph-bold ph-check text-sm"></i> Save Post
                     </button>
+                </div>
             </div>
         </div>
     </div>
@@ -5577,6 +5592,17 @@ const APP_CONFIG = {
   STORAGE_KEY: "stellarsync_local_state_v5",
   SHELL_LAYOUT_KEY: "stellarsync_shell_layout_v2"
 };
+
+function resolveStellarSyncDebugFlag() {
+  try {
+    return new URLSearchParams(window.location.search).has("debug") ||
+      window.localStorage?.getItem("stellarsync_debug") === "1";
+  } catch (_) {
+    return false;
+  }
+}
+
+const STELLARSYNC_DEBUG = resolveStellarSyncDebugFlag();
 
 const SUPABASE_URL = "https://szdlvyzjeqkfxsoqltwg.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN6ZGx2eXpqZXFrZnhzb3FsdHdnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyOTE1NjcsImV4cCI6MjA5Njg2NzU2N30.9GT0oJqPcmrc9VSb-ZN0FtWy6i7SLTHBuzRQ9gvxnX0";
@@ -7005,8 +7031,7 @@ function clonePillarDefinitions(pillars = []) {
 function isGPEHybridWorkspace(workspace = WORKSPACE_RUNTIME_CONFIG?.active || {}) {
   var activeWorkspace = workspace || {};
   var slug = String(activeWorkspace.workspace_slug || activeWorkspace.slug || getCurrentWorkspaceSlug() || "").trim().toLowerCase();
-  var backendType = String(activeWorkspace.backend_type || "").trim().toLowerCase();
-  return slug === "gpe" || backendType === "google_sheets_hybrid" || backendType === "managed_hybrid";
+  return ["gpe", "girl-plus-environment", "girlplusenvironment"].includes(slug);
 }
 
 function getFallbackWorkspacePillars(workspace = WORKSPACE_RUNTIME_CONFIG?.active || {}) {
@@ -7106,13 +7131,17 @@ function buildCanonicalCampaignRecords() {
     const matched = sourceRecords.find((campaign) => normalizeLookupValue(campaign.campaignName || campaign.campaign_name || campaign.name || "") === key) || null;
     return {
       ...(matched || {}),
-      campaignId: String(matched?.campaignId || matched?.campaign_id || matched?.campaignID || matched?.id || `CMP-${key.replace(/[^a-z0-9]+/g, "").toUpperCase().slice(0, 8) || index}`).trim(),
-      campaignName: String(matched?.campaignName || matched?.campaign_name || matched?.name || displayName).trim(),
-      campaign_name: String(matched?.campaign_name || matched?.campaignName || matched?.name || displayName).trim(),
-      name: String(matched?.name || matched?.campaignName || matched?.campaign_name || displayName).trim(),
-      sortOrder: Number(matched?.sortOrder ?? index) || index,
-      isArchived: Boolean(matched?.isArchived)
-    };
+	      campaignId: String(matched?.campaignId || matched?.campaign_id || matched?.campaignID || matched?.id || `CMP-${key.replace(/[^a-z0-9]+/g, "").toUpperCase().slice(0, 8) || index}`).trim(),
+	      campaignName: String(matched?.campaignName || matched?.campaign_name || matched?.name || displayName).trim(),
+	      campaign_name: String(matched?.campaign_name || matched?.campaignName || matched?.name || displayName).trim(),
+	      name: String(matched?.name || matched?.campaignName || matched?.campaign_name || displayName).trim(),
+	      color: String(matched?.color || matched?.campaignColor || matched?.campaign_color || matched?.hexColor || matched?.hex_color || "").trim(),
+	      campaignColor: String(matched?.campaignColor || matched?.campaign_color || matched?.color || matched?.hexColor || matched?.hex_color || "").trim(),
+	      campaign_color: String(matched?.campaign_color || matched?.campaignColor || matched?.color || matched?.hex_color || matched?.hexColor || "").trim(),
+	      pillar: String(matched?.pillar || matched?.contentPillar || matched?.content_pillar || "").trim(),
+	      sortOrder: Number(matched?.sortOrder ?? index) || index,
+	      isArchived: Boolean(matched?.isArchived)
+	    };
   }).filter(Boolean);
 }
 
@@ -7167,15 +7196,25 @@ function getCampaignColor(item, pillar = "") {
 function getCampaignColorForPost(post) {
   if (!post) return "#c77dff";
   var directColor = post.campaignColor || post.campaign_color || post.color || "";
-  if (directColor) { console.log("[calendar-color] post direct", { postId: post.post_id || post.id, color: directColor }); return directColor; }
+  if (directColor) {
+    if (STELLARSYNC_DEBUG) console.log("[calendar-color] post direct", { postId: post.post_id || post.id, color: directColor });
+    return directColor;
+  }
   var campaignName = resolveCanonicalCampaignName(post.campaignName || post.campaign_name || "", getAvailableCampaignRecords());
   var campaignId = post.campaignId || post.campaign_id || "";
   var campaign = (campaignId ? getCampaignById(campaignId) : null) || (campaignName ? getCampaignByName(campaignName) : null);
-  if (campaign && campaign.color) { console.log("[calendar-color] campaign match", { campaignName: campaign.campaignName, color: campaign.color }); return campaign.color; }
+	  var campaignColor = campaign ? getCampaignColor(campaign, campaign.pillar || getPostContentPillar(post)) : "";
+	  if (campaignColor && campaignColor !== "#c77dff") {
+	    if (STELLARSYNC_DEBUG) console.log("[calendar-color] campaign match", { campaignName: campaign.campaignName, color: campaignColor });
+	    return campaignColor;
+	  }
   var settingsColors = appState?.settings?.campaignColors || {};
-  if (campaignName && settingsColors[campaignName]) { console.log("[calendar-color] campaign match", { campaignName, color: settingsColors[campaignName] }); return settingsColors[campaignName]; }
+  if (campaignName && settingsColors[campaignName]) {
+    if (STELLARSYNC_DEBUG) console.log("[calendar-color] campaign match", { campaignName, color: settingsColors[campaignName] });
+    return settingsColors[campaignName];
+  }
   var fallback = getCampaignColor(post, getPostContentPillar(post));
-  console.log("[calendar-color] fallback", { color: fallback });
+  if (STELLARSYNC_DEBUG) console.log("[calendar-color] fallback", { color: fallback });
   return fallback;
 }
 
@@ -7205,8 +7244,13 @@ function getWorkspacePillars() {
 
 function getWorkspacePillarBySlug(slug) {
   var s = String(slug || "").trim().toLowerCase();
+  var token = normalizePillarToken(s);
   var pillars = getWorkspacePillars();
-  return pillars.find(function(p) { return String(p.slug || "").toLowerCase() === s; }) || null;
+  return pillars.find(function(p) {
+    var pSlug = String(p.slug || "").trim().toLowerCase();
+    var pName = String(p.name || "").trim().toLowerCase();
+    return pSlug === s || pSlug === token || normalizePillarToken(pName) === token;
+  }) || null;
 }
 
 function getWorkspacePillarNames() {
@@ -7247,9 +7291,12 @@ function getDefaultPillarObject(slug) {
 
 function getPillarSymbol(pillar) {
   var p = getWorkspacePillarBySlug(pillar);
-  if (p && p.icon) { console.log("[pillar-symbol] resolved from workspace", { pillar, symbol: p.icon }); return p.icon; }
+  if (p && p.icon) {
+    if (STELLARSYNC_DEBUG) console.log("[pillar-symbol] resolved from workspace", { pillar, symbol: p.icon });
+    return p.icon;
+  }
   var d = getDefaultPillarObject(pillar);
-  console.log("[pillar-symbol] resolved", { pillar, symbol: d.icon });
+  if (STELLARSYNC_DEBUG) console.log("[pillar-symbol] resolved", { pillar, symbol: d.icon });
   return d.icon;
 }
 
@@ -10304,34 +10351,42 @@ function toggleSidePanel(name) {
 }
 
 function rerenderAll() {
-  safeRender(() => {
-    console.table((appState.posts || []).map((p) => ({
-      title: p.title,
-      scheduledAt: p.scheduledAt,
-      date: p.date,
-      calendarKey: normalizePostCalendarDateKey(p)
-    })));
-  }, "rerenderAll/console");
+  if (STELLARSYNC_DEBUG) {
+    safeRender(() => {
+      console.table((appState.posts || []).map((p) => ({
+        title: p.title,
+        scheduledAt: p.scheduledAt,
+        date: p.date,
+        calendarKey: normalizePostCalendarDateKey(p)
+      })));
+    }, "rerenderAll/console");
+  }
+  const activeView = String(currentView || "calendar").trim() || "calendar";
   safeRender(() => updateHeaderForView(currentView), "updateHeaderForView");
   safeRender(populateCampaignDropdown, "populateCampaignDropdown");
   safeRender(setBackendActionAvailability, "setBackendActionAvailability");
   safeRender(updateAppStatusBanner, "updateAppStatusBanner");
+  safeRender(() => ensureBrandOSDefaults(WORKSPACE_RUNTIME_CONFIG?.active || {}), "ensureBrandOSDefaults");
   safeRender(renderOverviewPanel, "renderOverviewPanel");
   safeRender(renderContextualGuidancePanel, "renderContextualGuidancePanel");
   safeRender(renderSemanticMemoryPanel, "renderSemanticMemoryPanel");
   safeRender(renderModalPillarButtons, "renderModalPillarButtons");
-  safeRender(renderCalendar, "renderCalendar");
-  safeRender(renderLedgerFilterMenus, "renderLedgerFilterMenus");
-  safeRender(updateLedgerFilterLabels, "updateLedgerFilterLabels");
-  safeRender(renderLedger, "renderLedger");
+  if (activeView === "calendar") {
+    safeRender(renderCalendar, "renderCalendar");
+  }
+  if (activeView === "ledger") {
+    safeRender(renderLedgerFilterMenus, "renderLedgerFilterMenus");
+    safeRender(updateLedgerFilterLabels, "updateLedgerFilterLabels");
+    safeRender(renderLedger, "renderLedger");
+  }
   safeRender(() => renderQueue(getScheduledQueue()), "renderQueue");
-  safeRender(renderMedia, "renderMedia");
-  safeRender(renderInspo, "renderInspo");
-  safeRender(renderNotes, "renderNotes");
-  safeRender(renderWriteIdeaScaffold, "renderWriteIdeaScaffold");
-  safeRender(renderConstellation, "renderConstellation");
-  safeRender(renderPerformanceView, "renderPerformanceView");
-  safeRender(renderAuditView, "renderAuditView");
+  if (activeView === "media") safeRender(renderMedia, "renderMedia");
+  if (activeView === "inspo") safeRender(renderInspo, "renderInspo");
+  if (activeView === "notes") safeRender(renderNotes, "renderNotes");
+  if (activeView === "write-idea") safeRender(renderWriteIdeaScaffold, "renderWriteIdeaScaffold");
+  if (activeView === "constellation") safeRender(renderConstellation, "renderConstellation");
+  if (activeView === "performance") safeRender(renderPerformanceView, "renderPerformanceView");
+  if (activeView === "audit") safeRender(renderAuditView, "renderAuditView");
   safeRender(renderAISemanticMemoryCards, "renderAISemanticMemoryCards");
   safeRender(renderWorkspaceExportActions, "renderWorkspaceExportActions");
   safeRender(() => {
@@ -10445,8 +10500,8 @@ function setLinkedInImportMode(mode = "text") {
       urlLabel: "Optional LinkedIn URL found on the page"
     },
     json: {
-      helper: "Upload JSON exported from the StellarSync LinkedIn Export Helper or paste JSON from Export Helper directly. StellarSync cannot inspect another browser tab directly from this page.",
-      label: "Paste JSON from Export Helper",
+      helper: "Upload JSON exported from the StellarSync Plugin or paste JSON from the LinkedIn Exporter tab directly. StellarSync cannot inspect another browser tab directly from this page.",
+      label: "Paste JSON from StellarSync Plugin",
       placeholder: "Paste the downloaded browser-capture JSON here.",
       urlLabel: "Optional LinkedIn URL for context"
     },
@@ -10457,7 +10512,7 @@ function setLinkedInImportMode(mode = "text") {
       urlLabel: "LinkedIn URL or profile/activity page URL"
     },
     media: {
-      helper: "Paste a media manifest JSON from the LinkedIn Export Helper to upload historic media assets to Google Drive.",
+      helper: "Paste a media manifest JSON from the StellarSync Plugin LinkedIn Exporter tab to upload historic media assets to Google Drive.",
       label: "Paste Media Manifest JSON",
       placeholder: "Paste media manifest JSON here.",
       urlLabel: "Optional LinkedIn URL"
@@ -12741,7 +12796,7 @@ function renderCalendarPill(post, isWeekMode = false) {
              : ""}
           ${iconBlock}
         </span>
-        <span class="compact-month-text">${escapeHtml(displayTitle)}</span>
+	      <span class="compact-month-text calendar-pill-title">${escapeHtml(displayTitle)}</span>
         ${pillarMarker}
       </button>
     `;
@@ -12756,7 +12811,7 @@ function renderCalendarPill(post, isWeekMode = false) {
         ${iconBlock}
       </div>
       <span class="flex items-center gap-1 w-full">
-        <span class="text-[9px] text-gray-300 wrap-safe flex-1 min-w-0 truncate">${escapeHtml(pillTitle)}</span>
+	        <span class="calendar-pill-title text-[9px] text-gray-300 flex-1 min-w-0">${escapeHtml(pillTitle)}</span>
       </span>
       <span class="text-[8px] text-gray-500 wrap-safe w-full block mt-0.5">${escapeHtml(mediaTypeLabel)}</span>
       ${pillarMarker}
@@ -23001,6 +23056,7 @@ function hideView(viewEl) {
 }
 
 function logActiveViewDisplay(viewName, viewEl) {
+  if (!STELLARSYNC_DEBUG) return;
   if (!viewEl) return;
   const computed = typeof getComputedStyle === "function" ? getComputedStyle(viewEl) : null;
   console.log("[view]", viewName, {
@@ -23016,7 +23072,7 @@ function logActiveViewDisplay(viewName, viewEl) {
 }
 
 function switchView(viewName) {
-  console.log(`[boot] switchView ${viewName || "calendar"} start`);
+  if (STELLARSYNC_DEBUG) console.log(`[boot] switchView ${viewName || "calendar"} start`);
   if (String(viewName || "").trim() === "social") {
     if (typeof setLedgerSubView === "function") setLedgerSubView("social_queue", { deferLoad: true });
     viewName = "ledger";
@@ -23600,6 +23656,124 @@ async function copyTextToClipboardWithToast(text, successTitle, successMessage, 
     console.error(err);
     showToast(failureTitle, failureMessage, "ph-warning", "text-yellow-400");
   }
+}
+
+function getCurrentPostTextForFallback() {
+  var modalText = document.getElementById("modal-description")?.value || "";
+  var post = window.__currentModalPostData || {};
+  return String(modalText || post.description || post.caption || post.body || post.copy || "").trim();
+}
+
+function getCurrentPostSourceUrlForFallback(post = window.__currentModalPostData || {}) {
+  return String(
+    post.publishedUrl || post.published_url ||
+    post.sourceUrl || post.source_url ||
+    document.getElementById("modal-source-url")?.value ||
+    ""
+  ).trim();
+}
+
+function getCurrentPostMediaUrlForFallback(post = window.__currentModalPostData || {}) {
+  var attached = [];
+  if (Array.isArray(currentModalCarouselAssets) && currentModalCarouselAssets.length) attached = currentModalCarouselAssets;
+  else if (currentModalAsset) attached = [currentModalAsset];
+  else attached = getAttachedMediaForPost(post || {});
+  var firstAsset = attached.find(function(asset) { return getMediaPreviewUrl(asset); });
+  return getMediaPreviewUrl(firstAsset || {}) || String(post.mediaUrl || post.media_url || "").trim();
+}
+
+function downloadUrlWithBrowser(url, filename) {
+  if (!url) return false;
+  var anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename || "";
+  anchor.target = "_blank";
+  anchor.rel = "noopener";
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  return true;
+}
+
+function getPlatformComposerUrl(platform, text, sourceUrl) {
+  var p = String(platform || "").toLowerCase();
+  var encodedText = encodeURIComponent(text || "");
+  var encodedUrl = encodeURIComponent(sourceUrl || "");
+  if (p === "linkedin") return sourceUrl ? "https://www.linkedin.com/sharing/share-offsite/?url=" + encodedUrl : "https://www.linkedin.com/feed/";
+  if (p === "x" || p === "twitter") return "https://twitter.com/intent/tweet?text=" + encodedText + (sourceUrl ? "&url=" + encodedUrl : "");
+  if (p === "facebook") return sourceUrl ? "https://www.facebook.com/sharer/sharer.php?u=" + encodedUrl : "https://www.facebook.com/";
+  if (p === "bluesky") return "https://bsky.app/intent/compose?text=" + encodeURIComponent([text, sourceUrl].filter(Boolean).join("\n"));
+  if (p === "threads") return "https://www.threads.net/";
+  if (p === "instagram") return "https://www.instagram.com/";
+  if (p === "tiktok") return "https://www.tiktok.com/upload";
+  if (p === "youtube") return "https://studio.youtube.com/";
+  return sourceUrl || "";
+}
+
+function copyCurrentPostText() {
+  var text = getCurrentPostTextForFallback();
+  if (!text) {
+    showToast("Nothing to copy", "Add post copy before using the fallback copy action.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  copyTextToClipboardWithToast(text, "Copied", "Post text copied.", "Copy failed", "Could not copy post text.");
+}
+
+function downloadCurrentPostMedia() {
+  var post = window.__currentModalPostData || {};
+  var url = getCurrentPostMediaUrlForFallback(post);
+  if (!url) {
+    showToast("No media URL", "No downloadable media URL is attached to this post.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  var title = String(post.title || document.getElementById("modal-title")?.value || "stellarsync-media").replace(/[^a-z0-9_-]+/gi, "-").replace(/^-+|-+$/g, "").slice(0, 80) || "stellarsync-media";
+  downloadUrlWithBrowser(url, title);
+  showToast("Media opened", "If the browser cannot download directly, use Save As from the opened media tab.", "ph-download-simple", "text-[#00ffaa]");
+}
+
+function openCurrentPostPlatformComposer() {
+  var post = window.__currentModalPostData || {};
+  var text = getCurrentPostTextForFallback();
+  var sourceUrl = getCurrentPostSourceUrlForFallback(post);
+  var platform = (getPostTargetPlatforms(post)[0] || document.getElementById("modal-platform")?.value || "linkedin").toLowerCase();
+  var composerUrl = getPlatformComposerUrl(platform, text, sourceUrl);
+  if (!composerUrl) {
+    showToast("Composer unavailable", "This platform does not expose a reliable web composer link for prefilled content.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  if (text) copyTextToClipboardWithToast(text, "Copied", "Post text copied before opening the platform.", "Copy failed", "Platform opened, but copy failed.");
+  window.open(composerUrl, "_blank", "noopener");
+}
+
+function copySocialQueueCaption(encodedCaption) {
+  var caption = decodeURIComponent(String(encodedCaption || ""));
+  if (!caption) {
+    showToast("Nothing to copy", "This queue item has no caption.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  copyTextToClipboardWithToast(caption, "Copied", "Queue caption copied.", "Copy failed", "Could not copy queue caption.");
+}
+
+function downloadSocialQueueMedia(encodedUrl) {
+  var url = decodeURIComponent(String(encodedUrl || ""));
+  if (!url) {
+    showToast("No media URL", "This queue item has no downloadable media URL.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  downloadUrlWithBrowser(url, "stellarsync-queue-media");
+  showToast("Media opened", "If the browser cannot download directly, use Save As from the opened media tab.", "ph-download-simple", "text-[#00ffaa]");
+}
+
+function openSocialQueueComposer(platform, encodedCaption, encodedSourceUrl) {
+  var caption = decodeURIComponent(String(encodedCaption || ""));
+  var sourceUrl = decodeURIComponent(String(encodedSourceUrl || ""));
+  if (caption) copyTextToClipboardWithToast(caption, "Copied", "Queue caption copied before opening the platform.", "Copy failed", "Platform opened, but copy failed.");
+  var url = getPlatformComposerUrl(platform, caption, sourceUrl);
+  if (!url) {
+    showToast("Composer unavailable", "This platform does not expose a reliable web composer link for prefilled content.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  window.open(url, "_blank", "noopener");
 }
 
 function setLinkedInRewriteApplyEnabled(enabled) {
@@ -24895,7 +25069,7 @@ async function importLinkedInMediaManifest() {
   }
   var manifestItems = Array.isArray(parsed.items) ? parsed.items : (parsed.media_manifest && parsed.media_manifest.items) ? parsed.media_manifest.items : [];
   if (!manifestItems.length) {
-    showToast("No media items", "The manifest contains no media items. Download a new media manifest from the LinkedIn Export Helper.", "ph-warning", "text-yellow-400");
+    showToast("No media items", "The manifest contains no media items. Download a new media manifest from the StellarSync Plugin LinkedIn Exporter tab.", "ph-warning", "text-yellow-400");
     return;
   }
   var totalMediaCount = manifestItems.reduce(function(sum, item) {
@@ -25661,6 +25835,9 @@ async function syncRemoteIfConfigured() {
 function getSheetMirrorConfig() {
   var active = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active || {};
   var status = getGoogleSheetsConnectionStatus(active, active, WORKSPACE_CONNECTIONS);
+  // UI should expose one user-facing identifier: Google Sheet ID.
+  // Internally we still resolve both google_sheet_id and sheet_id because older
+  // workspace_settings rows and Apps Script payloads may use either key.
   var sheetId = String(status.sheetId || "").trim();
   var appsScriptUrl = String(status.appsScriptUrl || "").trim();
   var backendMode = getActiveWorkspaceBackendMode();
@@ -26144,8 +26321,9 @@ function renderSheetMirrorCard() {
     statusColor = "text-yellow-400";
     statusIcon = "ph-warning";
   }
-  var lastPush = config.lastPushedAt ? new Date(config.lastPushedAt).toLocaleString() : "Never";
-  var lastPull = config.lastPulledAt ? new Date(config.lastPulledAt).toLocaleString() : "Never";
+	  var lastPush = config.lastPushedAt ? new Date(config.lastPushedAt).toLocaleString() : "Never";
+	  var lastPull = config.lastPulledAt ? new Date(config.lastPulledAt).toLocaleString() : "Never";
+	  var sheetIdLine = config.sheetId ? '<div class="text-[10px] text-gray-500 mb-3 wrap-safe">Google Sheet ID: <span class="text-gray-300">' + escapeHtml(config.sheetId) + '</span></div>' : "";
   var direction = config.syncDirection === "supabase_to_sheet" ? "Supabase → Sheet" :
                   config.syncDirection === "sheet_to_supabase" ? "Sheet → Supabase" : "Bidirectional";
   var actionHtml = "";
@@ -26166,9 +26344,10 @@ function renderSheetMirrorCard() {
     '<div class="w-10 h-10 rounded-xl bg-[#0a2016] flex items-center justify-center"><i class="ph-bold ' + statusIcon + ' ' + statusColor + ' text-lg"></i></div>' +
     '<div><div class="text-sm font-bold text-white">' + (isLegacySource ? "Google Sheets Source" : "Google Sheets Mirror") + '</div>' +
     '<div class="text-[10px] uppercase tracking-widest font-semibold ' + statusColor + '">' + statusText + '</div></div></div>' +
-    '<div class="flex items-center gap-1 text-[10px] text-gray-500 font-medium"><i class="ph-bold ph-arrows-left-right"></i> ' + direction + '</div></div>' +
-    '<div class="flex items-center justify-between gap-2 mb-4"><div class="text-[10px] text-gray-500">Last push: ' + lastPush + '</div><div class="text-[10px] text-gray-500">Last pull: ' + lastPull + '</div></div>' +
-    '<div class="flex flex-wrap gap-2">' +
+	    '<div class="flex items-center gap-1 text-[10px] text-gray-500 font-medium"><i class="ph-bold ph-arrows-left-right"></i> ' + direction + '</div></div>' +
+	    '<div class="flex items-center justify-between gap-2 mb-4"><div class="text-[10px] text-gray-500">Last push: ' + lastPush + '</div><div class="text-[10px] text-gray-500">Last pull: ' + lastPull + '</div></div>' +
+	    sheetIdLine +
+	    '<div class="flex flex-wrap gap-2">' +
     actionHtml +
     '<button type="button" onclick="refreshSettingsSheetMirrorCard()" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 hover:text-white transition-colors flex items-center gap-1.5"><i class="ph-bold ph-arrow-clockwise"></i> Refresh mirror status</button>' +
     '<button type="button" onclick="openSupportModal(\'Integration setup\')" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 hover:text-white transition-colors flex items-center gap-1.5"><i class="ph-bold ph-plugs-connected"></i> Reconnect</button>' +
@@ -27801,8 +27980,14 @@ async function loadSocialQueue(direction) {
       var statusBadge = getSocialStatusBadge(item.status);
       var platformLabel = toTitleCase(item.provider || item.platform || "");
       var scheduledAt = item.scheduled_at || item.scheduledFor || "";
-      var caption = (item.caption || "").substring(0, 80);
-      if ((item.caption || "").length > 80) caption += "...";
+	      var caption = (item.caption || "").substring(0, 80);
+	      if ((item.caption || "").length > 80) caption += "...";
+	      var fullCaption = String(item.caption || "");
+	      var mediaUrl = String(item.media_url || item.mediaUrl || item.media_url_signed || item.mediaUrlSigned || "").trim();
+	      var sourceUrl = String(item.source_url || item.sourceUrl || item.post_url || item.postUrl || "").trim();
+	      var encodedCaption = encodeURIComponent(fullCaption);
+	      var encodedMediaUrl = encodeURIComponent(mediaUrl);
+	      var encodedSourceUrl = encodeURIComponent(sourceUrl);
       var errors = item.validation_errors && item.validation_errors.errors ? item.validation_errors.errors.join(", ") : "";
       var warnings = item.validation_errors && item.validation_errors.warnings ? item.validation_errors.warnings.join(", ") : "";
       var validation = item.validation_errors && item.validation_errors.validation ? item.validation_errors.validation : null;
@@ -27823,9 +28008,12 @@ async function loadSocialQueue(direction) {
             (warnings ? '<div class="text-[10px] text-yellow-400 mt-1">' + escapeHtml(warnings) + '</div>' : "") +
           '</div>' +
         '</div>' +
-        '<div class="flex items-center gap-2 shrink-0">' +
-          (scheduledAt ? '<span class="text-[10px] text-gray-500">' + formatDate(scheduledAt) + '</span>' : "") +
-          (item.status === "queued" || item.status === "ready" || item.status === "needs_connection" || item.status === "invalid_media" || item.status === "draft_queue"
+	        '<div class="flex items-center gap-2 shrink-0">' +
+	          (scheduledAt ? '<span class="text-[10px] text-gray-500">' + formatDate(scheduledAt) + '</span>' : "") +
+	          '<button type="button" onclick="copySocialQueueCaption(\'' + escapeHtml(encodedCaption) + '\')" class="w-8 h-8 rounded-lg bg-[#181125] border border-white/5 text-[10px] text-gray-300 hover:text-white" title="Copy caption"><i class="ph-bold ph-copy"></i></button>' +
+	          '<button type="button" onclick="downloadSocialQueueMedia(\'' + escapeHtml(encodedMediaUrl) + '\')" class="w-8 h-8 rounded-lg bg-[#181125] border border-white/5 text-[10px] text-gray-300 hover:text-white" title="Download media"><i class="ph-bold ph-download-simple"></i></button>' +
+	          '<button type="button" onclick="openSocialQueueComposer(\'' + escapeHtml(item.provider || item.platform || "") + '\',\'' + escapeHtml(encodedCaption) + '\',\'' + escapeHtml(encodedSourceUrl) + '\')" class="w-8 h-8 rounded-lg bg-[#181125] border border-white/5 text-[10px] text-gray-300 hover:text-white" title="Open platform composer"><i class="ph-bold ph-share-network"></i></button>' +
+	          (item.status === "queued" || item.status === "ready" || item.status === "needs_connection" || item.status === "invalid_media" || item.status === "draft_queue"
             ? '<button type="button" onclick="cancelSocialQueueItem(\'' + item.id + '\')" class="px-3 py-1.5 rounded-lg bg-[#30121b] border border-red-400/20 text-[10px] font-bold text-red-200 hover:opacity-80"><i class="ph-bold ph-x"></i> Cancel</button>'
             : "") +
           '<button type="button" onclick="revalidateSocialQueueItem(\'' + item.id + '\')" class="px-3 py-1.5 rounded-lg bg-[#181125] border border-white/5 text-[10px] font-bold text-gray-300 hover:text-white"><i class="ph-bold ph-check-circle"></i> Revalidate</button>' +
@@ -29143,9 +29331,75 @@ function renderAIDraftList() {
   `).join("");
 }
 
+function buildWorkspaceBrandOSDefaults(workspace = WORKSPACE_RUNTIME_CONFIG?.active || {}) {
+  var workspaceName = String(workspace.display_name || workspace.name || workspace.workspace_slug || workspace.slug || "this workspace").trim() || "this workspace";
+  var slug = String(workspace.workspace_slug || workspace.slug || getCurrentWorkspaceSlug() || "workspace").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "workspace";
+  var pillars = clonePillarDefinitions(workspace.default_pillars || appState?.settings?.default_pillars || []);
+  if (!pillars.length) pillars = getFallbackWorkspacePillars(workspace);
+  var now = new Date().toISOString();
+  return [
+    {
+      frameworkKey: slug + "-voice",
+      section: "Core Identity",
+      title: "Workspace Voice",
+      ruleType: "principle",
+      content: workspaceName + " should sound clear, specific, and useful. Replace placeholder language with concrete audience, offer, and proof points for this workspace.",
+      examples: "Use this row as a starting point, then edit it with real positioning, vocabulary, and proof.",
+      importance: 90,
+      sortOrder: 10,
+      strictness: "medium",
+      semanticCategory: "voice",
+      enabled: true,
+      createdAt: now
+    },
+    {
+      frameworkKey: slug + "-audience",
+      section: "Audience",
+      title: "Audience Promise",
+      ruleType: "principle",
+      content: "Describe who this workspace serves, what they need, and what a useful post should help them understand or do next.",
+      examples: "Edit with audience language from onboarding, sales notes, or recent high-performing posts.",
+      importance: 85,
+      sortOrder: 20,
+      strictness: "medium",
+      semanticCategory: "audience",
+      enabled: true,
+      createdAt: now
+    },
+    {
+      frameworkKey: slug + "-pillar-usage",
+      section: "Pillar Strategy",
+      title: "Use Workspace Pillars",
+      ruleType: "taxonomy",
+      content: "Classify posts using this workspace's pillar set: " + pillars.map(function(p) { return p.name || p.slug; }).filter(Boolean).join(", ") + ". Keep pillar labels workspace-specific.",
+      examples: "Pillar colors and icons should come from Brand OS/default pillars, not another workspace.",
+      importance: 80,
+      sortOrder: 30,
+      strictness: "high",
+      semanticCategory: "taxonomy",
+      enabled: true,
+      createdAt: now
+    }
+  ];
+}
+
+function ensureBrandOSDefaults(workspace = WORKSPACE_RUNTIME_CONFIG?.active || {}) {
+  if (!appState) return;
+  if (!Array.isArray(appState.brandFramework)) appState.brandFramework = [];
+  if (!Array.isArray(appState.settings?.default_pillars) || !appState.settings.default_pillars.length) {
+    appState.settings = appState.settings || {};
+    appState.settings.default_pillars = getFallbackWorkspacePillars(workspace);
+  }
+  if (!appState.brandFramework.length) {
+    appState.brandFramework = buildWorkspaceBrandOSDefaults(workspace);
+    console.log("[brand-os] workspace defaults applied", { workspace: workspace.workspace_slug || workspace.slug || "workspace" });
+  }
+}
+
 function renderBrandFrameworkEditor() {
   console.log("[brand-os] render panel");
   if (!brandFrameworkSectionList || !brandFrameworkEditor || !brandFrameworkDiagnostics) return;
+  ensureBrandOSDefaults();
   var items = (appState.brandFramework || []).slice().sort(function(a, b) { return (a.sortOrder || 0) - (b.sortOrder || 0); });
   var sections = [];
   if (items.length) sections = sections.concat([...new Set(items.map(function(item) { return item.section; }).filter(Boolean))]);
@@ -33118,7 +33372,7 @@ async function createNewWorkspace(name, slug, plan) {
 
 function generatePluginBookmarkletCode() {
   var origin = window.location.origin || "https://stellarsync.app";
-  return "javascript:(function(){var d=document,u=location.href,t=d.title,s=window.getSelection?window.getSelection().toString():'';var p={url:u,title:t,text:s,time:new Date().toISOString(),v:1};var json=encodeURIComponent(JSON.stringify(p));window.location.href='" + origin + "/app/?plugin_capture='+json;})();";
+  return "javascript:(function(){var d=document,u=location.href,t=d.title,s=window.getSelection?window.getSelection().toString():'';function p(u){u=String(u||'').toLowerCase();if(u.indexOf('linkedin.com')>-1)return'linkedin';if(u.indexOf('instagram.com')>-1)return'instagram';if(u.indexOf('threads.net')>-1)return'threads';if(u.indexOf('facebook.com')>-1)return'facebook';if(u.indexOf('tiktok.com')>-1)return'tiktok';if(u.indexOf('youtube.com')>-1||u.indexOf('youtu.be')>-1)return'youtube';if(u.indexOf('bsky.app')>-1)return'bluesky';if(u.indexOf('twitter.com')>-1||u.indexOf('x.com')>-1)return'x';if(u.indexOf('pinterest.com')>-1)return'pinterest';return'external'}var data={url:u,title:t,text:s,platform:p(u),targetTab:'inspo',time:new Date().toISOString(),v:2};var json=encodeURIComponent(JSON.stringify(data));window.location.href='" + origin + "/app/?plugin_capture='+json;})();";
 }
 
 function getPluginCaptureModal() { return document.getElementById("plugin-capture-view-modal"); }
@@ -33134,6 +33388,7 @@ function openPluginInstallModal() {
   var link = document.getElementById("plugin-bookmarklet-link");
   if (link) {
     link.dataset.bookmarkletCode = bookmarkletCode;
+    link.href = bookmarkletCode;
     link.setAttribute("aria-label", "Copy StellarSync Capture bookmarklet");
   }
   var isDesktop = window.innerWidth >= 1024;
@@ -33143,7 +33398,7 @@ function openPluginInstallModal() {
   }
   if (!isDesktop && body) {
     console.log("[plugin-install] desktop required");
-    body.innerHTML = '<div class="text-center py-8"><div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[#231738] flex items-center justify-center"><i class="ph-fill ph-devices text-[#c77dff] text-3xl"></i></div><h3 class="text-lg font-bold text-white tracking-tight mb-3">Desktop Install Required</h3><p class="text-sm text-gray-400 max-w-md mx-auto leading-relaxed mb-6">To install the StellarSync Plugin bookmarklet, open StellarSync on a desktop browser and drag the install button into your bookmarks bar.</p><div class="flex flex-wrap items-center justify-center gap-3"><button type="button" data-plugin-action="copyPluginBookmarkletCode" class="px-4 py-2.5 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300 hover:text-white transition-colors inline-flex items-center gap-2"><i class="ph-bold ph-copy"></i> Copy Bookmarklet Code</button><button type="button" data-plugin-action="showPluginInstallInstructions" class="px-4 py-2.5 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300 hover:text-white transition-colors inline-flex items-center gap-2"><i class="ph-bold ph-question"></i> View Instructions</button><button type="button" data-plugin-action="closePluginInstallModal" class="px-4 py-2.5 rounded-xl bg-[#231738] border border-white/5 text-xs font-bold text-white hover:opacity-90 transition-colors inline-flex items-center gap-2"><i class="ph-bold ph-x"></i> Close</button></div></div>';
+    body.innerHTML = '<div class="text-center py-8"><div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[#231738] flex items-center justify-center"><i class="ph-fill ph-devices text-[#c77dff] text-3xl"></i></div><h3 class="text-lg font-bold text-white tracking-tight mb-3">Desktop Install Required</h3><p class="text-sm text-gray-400 max-w-md mx-auto leading-relaxed mb-6">Browsers only let you add bookmarklets or unpacked extensions from a desktop browser. Open StellarSync on desktop, then drag the capture button into your bookmarks bar or download the extension ZIP and load it from chrome://extensions.</p><div class="flex flex-wrap items-center justify-center gap-3"><button type="button" data-plugin-action="copyPluginBookmarkletCode" class="px-4 py-2.5 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300 hover:text-white transition-colors inline-flex items-center gap-2"><i class="ph-bold ph-copy"></i> Copy Bookmarklet Code</button><button type="button" data-plugin-action="downloadPluginExtensionPackage" class="px-4 py-2.5 rounded-xl bg-[#181125] border border-white/5 text-xs font-bold text-gray-300 hover:text-white transition-colors inline-flex items-center gap-2"><i class="ph-bold ph-download"></i> Download ZIP</button><button type="button" data-plugin-action="closePluginInstallModal" class="px-4 py-2.5 rounded-xl bg-[#231738] border border-white/5 text-xs font-bold text-white hover:opacity-90 transition-colors inline-flex items-center gap-2"><i class="ph-bold ph-x"></i> Close</button></div></div>';
     console.log("[plugin-install] instructions shown");
   }
   modal.classList.remove("opacity-0", "pointer-events-none");
@@ -33220,9 +33475,72 @@ function downloadPluginBookmarkletFile() {
   showPluginMessage("Bookmarklet code copied. Add a browser bookmark and paste this code into the URL field.", "success");
 }
 
+function downloadPluginExtensionPackage() {
+  try {
+    var anchor = document.createElement("a");
+    anchor.href = "./linkedin-export-helper/stellarsync-plugin.zip";
+    anchor.download = "stellarsync-plugin.zip";
+    anchor.rel = "noopener";
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    showPluginMessage("Extension ZIP download started. Unzip it, open chrome://extensions, enable Developer Mode, then choose Load unpacked.", "success");
+  } catch (err) {
+    showPluginMessage("Download failed. Open /app/linkedin-export-helper/stellarsync-plugin.zip directly, then load the unzipped folder in chrome://extensions.", "error");
+  }
+}
+
 function openPluginCaptureForm() {
   closePluginInstallModal();
-  openPluginCaptureModal({ platform: "manual" });
+  openPluginCaptureModal({ platform: "external", targetTab: "inspo" });
+}
+
+function getPluginSourcePlatform(data, url) {
+  var explicit = String((data && data.platform) || "").trim().toLowerCase();
+  if (explicit && explicit !== "manual") return explicit;
+  if (typeof detectSourcePlatform === "function") {
+    var detected = detectSourcePlatform(url || "");
+    if (detected && detected !== "external") return detected;
+  }
+  return "external";
+}
+
+function getPluginSourceType(platform, url) {
+  var social = ["linkedin", "instagram", "threads", "facebook", "tiktok", "youtube", "bluesky", "x", "pinterest"];
+  if (social.indexOf(String(platform || "").toLowerCase()) >= 0) return "social_post";
+  return /^https?:\/\//i.test(String(url || "")) ? "page_link" : "manual";
+}
+
+function setPluginSelectValue(id, value) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  var normalized = String(value || "external").toLowerCase();
+  var hasOption = Array.from(el.options || []).some(function(option) { return option.value === normalized; });
+  el.value = hasOption ? normalized : "external";
+}
+
+function updatePluginCapturePreview(data) {
+  var card = document.getElementById("pc-social-preview-card");
+  if (!card) return;
+  var url = String((data && data.url) || "").trim();
+  var title = String((data && data.title) || "").trim();
+  var text = String((data && data.text) || "").trim();
+  var platform = getPluginSourcePlatform(data || {}, url);
+  var iconMap = { linkedin: "ph-linkedin-logo", instagram: "ph-instagram-logo", threads: "ph-at", facebook: "ph-facebook-logo", tiktok: "ph-music-note", youtube: "ph-youtube-logo", bluesky: "ph-butterfly", x: "ph-x-logo", pinterest: "ph-pinterest-logo", external: "ph-link" };
+  var platformEl = document.getElementById("pc-social-preview-platform");
+  var titleEl = document.getElementById("pc-social-preview-title");
+  var urlEl = document.getElementById("pc-social-preview-url");
+  var textEl = document.getElementById("pc-social-preview-text");
+  var iconEl = document.getElementById("pc-social-preview-icon");
+  if (platformEl) platformEl.textContent = (platform || "external").replace(/^\w/, function(c) { return c.toUpperCase(); });
+  if (titleEl) titleEl.textContent = title || "Captured page";
+  if (urlEl) urlEl.textContent = url || "Manual capture";
+  if (textEl) {
+    textEl.textContent = text.slice(0, 220);
+    textEl.classList.toggle("hidden", !text);
+  }
+  if (iconEl) iconEl.className = "ph-bold " + (iconMap[platform] || iconMap.external) + " text-[#c77dff]";
+  card.classList.remove("hidden");
 }
 
 function openPluginCaptureModal(data) {
@@ -33234,6 +33552,8 @@ function openPluginCaptureModal(data) {
   var text = data && data.text ? data.text : "";
   var time = data && data.time ? data.time : new Date().toISOString();
   var platform = data && data.platform ? data.platform : "";
+  platform = getPluginSourcePlatform(data || {}, url);
+  var sourceType = getPluginSourceType(platform, url);
   var author = data && data.author ? data.author : "";
   var setText = function(id, value) { var el = document.getElementById(id); if (el) el.textContent = value; };
   var setValue = function(id, value) { var el = document.getElementById(id); if (el) el.value = value; };
@@ -33244,9 +33564,11 @@ function openPluginCaptureModal(data) {
   setValue("pc-inspo-title", title || "");
   setValue("pc-inspo-notes", text || "");
   setValue("pc-inspo-author", author || "");
+  setPluginSelectValue("pc-inspo-platform", platform);
+  setValue("pc-inspo-source-type", sourceType);
   setValue("pc-note-title", title || "");
   setValue("pc-note-body", text || "");
-  setValue("pc-draft-source", text || "");
+  setPluginSelectValue("pc-note-platform", platform);
   setValue("pc-linkedin-url", url || "");
   setValue("pc-linkedin-input", text || "");
   setText("pc-linkedin-diagnostics", "Paste LinkedIn text or JSON, then click Parse.");
@@ -33254,8 +33576,9 @@ function openPluginCaptureModal(data) {
   if (linkedinPreview) linkedinPreview.innerHTML = "";
   var saveResult = document.getElementById("pc-save-result");
   if (saveResult) saveResult.className = "text-xs text-gray-400 hidden";
-  window.__pluginCaptureData = data || {};
-  switchPluginCaptureTab("inspo");
+  window.__pluginCaptureData = Object.assign({}, data || {}, { platform: platform, sourceType: sourceType });
+  updatePluginCapturePreview(window.__pluginCaptureData);
+  switchPluginCaptureTab(data && data.targetTab === "note" ? "note" : data && data.targetTab === "linkedin" ? "linkedin" : "inspo");
   modal.classList.remove("opacity-0", "pointer-events-none");
   if (card) { card.classList.remove("scale-95"); card.classList.add("scale-100"); }
 }
@@ -33268,7 +33591,7 @@ function closePluginCaptureModal() {
 }
 
 function switchPluginCaptureTab(tab) {
-  var allowed = ["linkedin", "inspo", "note", "draft"];
+  var allowed = ["inspo", "note", "linkedin"];
   if (allowed.indexOf(tab) === -1) return;
   console.log("[plugin] tab " + tab);
   document.querySelectorAll(".plugin-capture-tab").forEach(function(btn) {
@@ -33302,15 +33625,20 @@ async function handlePluginCaptureSave(type) {
         type: "article",
         url: url,
         notes: document.getElementById("pc-inspo-notes").value || data.text || "",
-        sourceLabel: data.platform || "external",
+        summary: document.getElementById("pc-inspo-notes").value || data.text || "",
+        body: document.getElementById("pc-inspo-notes").value || data.text || "",
+        sourceLabel: document.getElementById("pc-inspo-platform").value || data.platform || "external",
         sourceUrl: url,
-        sourcePlatform: data.platform || "",
+        sourceType: document.getElementById("pc-inspo-source-type").value || data.sourceType || getPluginSourceType(data.platform, url),
+        sourcePlatform: document.getElementById("pc-inspo-platform").value || data.platform || "",
         author: document.getElementById("pc-inspo-author").value || data.author || "",
         tags: String(document.getElementById("pc-inspo-tags").value || "").split(",").map(function(v) { return v.trim(); }).filter(Boolean),
         campaign: document.getElementById("pc-inspo-campaign").value || "",
+        campaignName: document.getElementById("pc-inspo-campaign").value || "",
         pillar: document.getElementById("pc-inspo-pillar").value || "",
         inspo_id: "inspo_" + crypto.randomUUID(),
-        provenance: { source_platform: data.platform || "linkedin", source_url: url, captured_at: new Date().toISOString(), captured_via: "stellarsync_plugin", original_author: data.author || "" }
+        metadata: { tags: String(document.getElementById("pc-inspo-tags").value || "").split(",").map(function(v) { return v.trim(); }).filter(Boolean), source_platform: document.getElementById("pc-inspo-platform").value || data.platform || "external", captured_via: "stellarsync_plugin", original_author: data.author || "" },
+        provenance: { source_platform: document.getElementById("pc-inspo-platform").value || data.platform || "external", source_url: url, captured_at: new Date().toISOString(), captured_via: "stellarsync_plugin", original_author: data.author || "" }
       };
       console.log("[plugin-ui] save payload", { type: "inspo", workspace_id: workspaceId, payload: inspo });
       var inspoResult = await apiSaveInspo(inspo);
@@ -33320,37 +33648,24 @@ async function handlePluginCaptureSave(type) {
       var note = {
         title: document.getElementById("pc-note-title").value || data.title || "Captured note",
         body: document.getElementById("pc-note-body").value || data.text || "",
+        summary: (document.getElementById("pc-note-body").value || data.text || "").slice(0, 220),
         sourceUrl: url,
-        sourceType: data.platform || "linkedin",
+        sourceType: document.getElementById("pc-note-platform").value || data.platform || "external",
+        campaignName: document.getElementById("pc-note-campaign").value || "",
         pillar: document.getElementById("pc-note-pillar").value || "",
         tags: String(document.getElementById("pc-note-tags").value || "").split(",").map(function(v) { return v.trim(); }).filter(Boolean),
         note_id: "note_" + crypto.randomUUID(),
-        provenance: { source_platform: data.platform || "linkedin", source_url: url, captured_at: new Date().toISOString(), captured_via: "stellarsync_plugin" }
+        metadata: { tags: String(document.getElementById("pc-note-tags").value || "").split(",").map(function(v) { return v.trim(); }).filter(Boolean), source_platform: document.getElementById("pc-note-platform").value || data.platform || "external", captured_via: "stellarsync_plugin" },
+        provenance: { source_platform: document.getElementById("pc-note-platform").value || data.platform || "external", source_url: url, captured_at: new Date().toISOString(), captured_via: "stellarsync_plugin" }
       };
       console.log("[plugin-ui] save payload", { type: "note", workspace_id: workspaceId, payload: note });
       var noteResult = await apiSaveNote(note);
       console.log("[plugin-ui] save result", { type: "note", ok: true, result: noteResult || null });
       showPluginMessage("Saved to Notes.", "success");
-    } else if (type === "draft") {
-      var draftPayload = {
-        title: document.getElementById("pc-note-title").value || data.title || "AI Draft from capture",
-        draft_text: document.getElementById("pc-draft-source").value || data.text || "",
-        prompt: document.getElementById("pc-draft-prompt").value || "Turn this into a LinkedIn post",
-        generation_mode: document.getElementById("pc-draft-mode").value || "rewrite",
-        source_url: url,
-        source_type: data.platform || "linkedin",
-        tags: String(document.getElementById("pc-draft-tags").value || "").split(",").map(function(v) { return v.trim(); }).filter(Boolean),
-        ai_draft_id: "draft_" + crypto.randomUUID(),
-        provenance: { source_platform: data.platform || "linkedin", source_url: url, captured_at: new Date().toISOString(), captured_via: "stellarsync_plugin" }
-      };
-      console.log("[plugin-ui] save payload", { type: "ai_draft", workspace_id: workspaceId, payload: draftPayload });
-      var draftResult = await apiSaveAIDraft(draftPayload);
-      console.log("[plugin-ui] save result", { type: "ai_draft", ok: true, result: draftResult || null });
-      showPluginMessage("Saved to AI Drafts.", "success");
     }
   } catch (err) {
     console.log("[plugin-ui] save result", { type, ok: false, error: err?.message || String(err) });
-    showPluginMessage("Save failed: " + (err.message || String(err)), "error");
+    showPluginMessage("Save failed. " + (err.message || String(err)), "error");
   }
 }
 
@@ -33428,6 +33743,7 @@ function handlePluginUIAction(action, button) {
   }
   if (action === "copyPluginBookmarkletCode") return copyPluginBookmarkletCode();
   if (action === "downloadPluginBookmarkletFile") return downloadPluginBookmarkletFile();
+  if (action === "downloadPluginExtensionPackage") return downloadPluginExtensionPackage();
   if (action === "showPluginInstallInstructions") return showPluginInstallInstructions();
   if (action === "closePluginInstallModal") return closePluginInstallModal();
   if (action === "closePluginCaptureModal") return closePluginCaptureModal();
@@ -33435,7 +33751,6 @@ function handlePluginUIAction(action, button) {
   if (action === "openPluginCaptureForm") return openPluginCaptureForm();
   if (action === "savePluginCaptureToInspo") return handlePluginCaptureSave("inspo");
   if (action === "savePluginCaptureToNotes") return handlePluginCaptureSave("note");
-  if (action === "savePluginCaptureToAIDraft") return handlePluginCaptureSave("draft");
   if (action === "parseLinkedInExporterInput") return parsePluginLinkedInCapture();
   if (action === "importLinkedInExporterInput") return importPluginLinkedInCapture();
   if (action === "openLinkedInBulkImportModal") {
@@ -33863,10 +34178,17 @@ window.handlePluginCaptureSave = handlePluginCaptureSave;
 window.openPluginInbox = openPluginInbox;
 window.closePluginInbox = closePluginInbox;
 window.copyPluginBookmarkletCode = copyPluginBookmarkletCode;
+window.downloadPluginExtensionPackage = downloadPluginExtensionPackage;
 window.openItemFromInbox = openItemFromInbox;
 window.showPluginInstallInstructions = showPluginInstallInstructions;
 window.parsePluginLinkedInCapture = parsePluginLinkedInCapture;
 window.importPluginLinkedInCapture = importPluginLinkedInCapture;
+window.copyCurrentPostText = copyCurrentPostText;
+window.downloadCurrentPostMedia = downloadCurrentPostMedia;
+window.openCurrentPostPlatformComposer = openCurrentPostPlatformComposer;
+window.copySocialQueueCaption = copySocialQueueCaption;
+window.downloadSocialQueueMedia = downloadSocialQueueMedia;
+window.openSocialQueueComposer = openSocialQueueComposer;
 window.openMondayBackfillModal = openMondayBackfillModal;
 window.closeMondayBackfillModal = closeMondayBackfillModal;
 window.confirmMondayBackfill = confirmMondayBackfill;
