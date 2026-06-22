@@ -7338,11 +7338,46 @@ function logCampaignFinalSource(detail = {}) {
   });
 }
 
+function getResolvedPostCampaignNames(posts = [], campaignRecords = []) {
+  const resolved = [];
+  const seen = new Set();
+  (Array.isArray(posts) ? posts : []).forEach((post) => {
+    const rawName = normalizeCampaignDisplayName(pickRemoteValue(post?.campaignName, post?.campaign_name, post?.campaign, ""));
+    if (!rawName) return;
+    const canonicalName = normalizeCampaignDisplayName(resolveCanonicalCampaignName(rawName, campaignRecords) || rawName);
+    const key = normalizeLookupValue(canonicalName);
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    resolved.push(canonicalName);
+  });
+  return resolved;
+}
+
 function buildCanonicalCampaignRecords() {
-  const settingsCampaigns = Array.isArray(appState?.settings?.campaigns) ? appState.settings.campaigns : [];
-  const sourceRecords = Array.isArray(appState?.campaigns) ? appState.campaigns : [];
+  const state = getAppStateRef() || {};
+  const sourceRecords = Array.isArray(state?.campaigns) ? state.campaigns : [];
+  const settingsCampaigns = Array.isArray(state?.settings?.campaigns) ? state.settings.campaigns : [];
   const sourceNames = sourceRecords.map((campaign) => String(campaign?.campaignName || campaign?.campaign_name || campaign?.name || "").trim()).filter(Boolean);
-  const orderedNames = discardCampaignNameFragments(settingsCampaigns.length ? settingsCampaigns.slice() : sourceNames, sourceRecords, "buildCanonicalCampaignRecords");
+  const resolvedPostNames = getResolvedPostCampaignNames(Array.isArray(state?.posts) ? state.posts : [], sourceRecords);
+  const candidateNames = sourceRecords.length ? sourceNames.concat(resolvedPostNames) : (settingsCampaigns.length ? settingsCampaigns.slice() : resolvedPostNames);
+  const fragmentSourceRecords = sourceRecords.concat(resolvedPostNames.map((campaignName) => ({
+    campaignName,
+    campaign_name: campaignName,
+    name: campaignName
+  })));
+  const orderedNames = discardCampaignNameFragments(candidateNames, fragmentSourceRecords, "buildCanonicalCampaignRecords");
+  const orderedKeySet = new Set(orderedNames.map((name) => normalizeLookupValue(name)));
+  if (STELLARSYNC_DEBUG && sourceRecords.length && settingsCampaigns.length) {
+    settingsCampaigns.forEach((campaignName) => {
+      const key = normalizeLookupValue(campaignName);
+      if (key && !orderedKeySet.has(key)) {
+        console.log("[constellation-campaign] dropped stale registry campaign", {
+          campaignName: String(campaignName || "").trim(),
+          source: "SETTINGS/appState.settings.campaigns"
+        });
+      }
+    });
+  }
   const seen = new Set();
   return orderedNames.map((campaignName, index) => {
     const displayName = normalizeCampaignDisplayName(campaignName);
@@ -7352,26 +7387,26 @@ function buildCanonicalCampaignRecords() {
     const matched = sourceRecords.find((campaign) => normalizeLookupValue(campaign.campaignName || campaign.campaign_name || campaign.name || "") === key) || null;
     const finalRecord = {
       ...(matched || {}),
-	      campaignId: String(matched?.campaignId || matched?.campaign_id || matched?.campaignID || matched?.id || `CMP-${key.replace(/[^a-z0-9]+/g, "").toUpperCase().slice(0, 8) || index}`).trim(),
-	      campaignName: String(matched?.campaignName || matched?.campaign_name || matched?.name || displayName).trim(),
-	      campaign_name: String(matched?.campaign_name || matched?.campaignName || matched?.name || displayName).trim(),
-	      name: String(matched?.name || matched?.campaignName || matched?.campaign_name || displayName).trim(),
-	      color: String(matched?.color || matched?.campaignColor || matched?.campaign_color || matched?.hexColor || matched?.hex_color || "").trim(),
-	      campaignColor: String(matched?.campaignColor || matched?.campaign_color || matched?.color || matched?.hexColor || matched?.hex_color || "").trim(),
-	      campaign_color: String(matched?.campaign_color || matched?.campaignColor || matched?.color || matched?.hex_color || matched?.hexColor || "").trim(),
-	      pillar: String(matched?.pillar || matched?.contentPillar || matched?.content_pillar || "").trim(),
-	      sortOrder: Number(matched?.sortOrder ?? index) || index,
-	      isArchived: Boolean(matched?.isArchived)
-	    };
+      campaignId: String(matched?.campaignId || matched?.campaign_id || matched?.campaignID || matched?.id || `CMP-${key.replace(/[^a-z0-9]+/g, "").toUpperCase().slice(0, 8) || index}`).trim(),
+      campaignName: String(matched?.campaignName || matched?.campaign_name || matched?.name || displayName).trim(),
+      campaign_name: String(matched?.campaign_name || matched?.campaignName || matched?.name || displayName).trim(),
+      name: String(matched?.name || matched?.campaignName || matched?.campaign_name || displayName).trim(),
+      color: String(matched?.color || matched?.campaignColor || matched?.campaign_color || matched?.hexColor || matched?.hex_color || "").trim(),
+      campaignColor: String(matched?.campaignColor || matched?.campaign_color || matched?.color || matched?.hexColor || matched?.hex_color || "").trim(),
+      campaign_color: String(matched?.campaign_color || matched?.campaignColor || matched?.color || matched?.hex_color || matched?.hexColor || "").trim(),
+      pillar: String(matched?.pillar || matched?.contentPillar || matched?.content_pillar || "").trim(),
+      sortOrder: Number(matched?.sortOrder ?? index) || index,
+      isArchived: Boolean(matched?.isArchived)
+    };
     logCampaignFinalSource({
       finalCampaignName: finalRecord.campaignName,
       sourceFunction: "buildCanonicalCampaignRecords",
-      sourceSheet: matched ? "CAMPAIGNS/appState.campaigns" : "SETTINGS/appState.settings.campaigns",
+      sourceSheet: matched ? "CAMPAIGNS/appState.campaigns" : (sourceRecords.length ? "POSTS/resolved campaign name" : "SETTINGS/appState.settings.campaigns"),
       sourceRow: matched?.row_number || matched?.rowNumber || "",
       sourcePostId: "",
       rawValue: campaignName,
       parsedParts: splitExplicitCampaignValues(campaignName),
-      retainedReason: matched ? "matched source record" : "settings option"
+      retainedReason: matched ? "matched source record" : (sourceRecords.length ? "resolved post campaign" : "settings option")
     });
     return finalRecord;
   }).filter(Boolean);
@@ -7392,7 +7427,8 @@ function getCleanCampaignRecords() {
 }
 
 function logCampaignQASummary(source = "hybrid") {
-  const posts = Array.isArray(appState?.posts) ? appState.posts : [];
+  const state = getAppStateRef() || {};
+  const posts = Array.isArray(state?.posts) ? state.posts : [];
   const campaignRecords = getAvailableCampaignRecords();
   const rawNames = [...new Set(posts.map((post) => normalizeCampaignDisplayName(pickRemoteValue(post?.campaignName, post?.campaign_name, ""))).filter(Boolean))];
   const resolvedNames = [...new Set(posts.map((post) => resolveCanonicalCampaignName(pickRemoteValue(post?.campaignName, post?.campaign_name, ""), campaignRecords)).filter(Boolean))];
@@ -7420,11 +7456,13 @@ function getCampaignByName(campaignName, campaigns = getAvailableCampaignRecords
 }
 
 function getCampaignContentPillar(campaign) {
-  return getCanonicalPillarValue(campaign?.pillar || campaign?.hubPillarLabel || campaign?.contentPillar, (appState?.settings?.pillars || getWorkspacePillarSlugs() || [])[0] || "advocacy");
+  const state = getAppStateRef() || {};
+  return getCanonicalPillarValue(campaign?.pillar || campaign?.hubPillarLabel || campaign?.contentPillar, (state?.settings?.pillars || getWorkspacePillarSlugs() || [])[0] || "advocacy");
 }
 
 function getPostContentPillar(post) {
-  return getCanonicalPillarValue(post?.pillar || post?.contentPillar || post?.hubPillarLabel || post?.campaignPillar, (appState?.settings?.pillars || getWorkspacePillarSlugs() || [])[0] || "advocacy");
+  const state = getAppStateRef() || {};
+  return getCanonicalPillarValue(post?.pillar || post?.contentPillar || post?.hubPillarLabel || post?.campaignPillar, (state?.settings?.pillars || getWorkspacePillarSlugs() || [])[0] || "advocacy");
 }
 
 function getDisplayPostContentPillar(post) {
@@ -7460,9 +7498,9 @@ function getCampaignColorForPost(post) {
   return fallback;
 }
 
-function getWorkspacePillars() {
-  if (typeof appState !== "undefined" && appState) {
-    var bop = appState?.brandOS?.default_pillars;
+function getWorkspacePillars(workspace = WORKSPACE_RUNTIME_CONFIG?.active || {}, state = getAppStateRef()) {
+  if (state && typeof state === "object") {
+    var bop = state?.brandOS?.default_pillars;
     if (Array.isArray(bop) && bop.length && typeof bop[0] === "object") return bop;
     if (Array.isArray(bop) && bop.length) {
       return bop.map(function(p) {
@@ -7470,7 +7508,7 @@ function getWorkspacePillars() {
         return getDefaultPillarObject(s);
       }).filter(Boolean);
     }
-    var wp = appState?.settings?.default_pillars;
+    var wp = state?.settings?.default_pillars;
     if (Array.isArray(wp) && wp.length && typeof wp[0] === "object") return wp;
     if (Array.isArray(wp) && wp.length) {
       return wp.map(function(p) {
@@ -7480,7 +7518,7 @@ function getWorkspacePillars() {
     }
   }
   if (typeof WORKSPACE_RUNTIME_CONFIG !== "undefined" && WORKSPACE_RUNTIME_CONFIG) {
-    var wp2 = WORKSPACE_RUNTIME_CONFIG?.active?.default_pillars;
+    var wp2 = workspace?.default_pillars || WORKSPACE_RUNTIME_CONFIG?.active?.default_pillars;
     if (Array.isArray(wp2) && wp2.length && typeof wp2[0] === "object") return wp2;
     if (Array.isArray(wp2) && wp2.length) {
       return wp2.map(function(p) {
@@ -7489,13 +7527,13 @@ function getWorkspacePillars() {
       }).filter(Boolean);
     }
   }
-  return getFallbackWorkspacePillars();
+  return getFallbackWorkspacePillars(workspace);
 }
 
-function getWorkspacePillarBySlug(slug) {
+function getWorkspacePillarBySlug(slug, workspace = WORKSPACE_RUNTIME_CONFIG?.active || {}, state = getAppStateRef()) {
   var s = String(slug || "").trim().toLowerCase();
   var token = normalizePillarToken(s);
-  var pillars = getWorkspacePillars();
+  var pillars = getWorkspacePillars(workspace, state);
   return pillars.find(function(p) {
     var pSlug = String(p.slug || "").trim().toLowerCase();
     var pName = String(p.name || "").trim().toLowerCase();
@@ -7503,12 +7541,12 @@ function getWorkspacePillarBySlug(slug) {
   }) || null;
 }
 
-function getWorkspacePillarNames() {
-  return getWorkspacePillars().map(function(p) { return p.name || ""; }).filter(Boolean);
+function getWorkspacePillarNames(workspace = WORKSPACE_RUNTIME_CONFIG?.active || {}, state = getAppStateRef()) {
+  return getWorkspacePillars(workspace, state).map(function(p) { return p.name || ""; }).filter(Boolean);
 }
 
-function getWorkspacePillarSlugs() {
-  return getWorkspacePillars().map(function(p) { return p.slug || ""; }).filter(Boolean);
+function getWorkspacePillarSlugs(workspace = WORKSPACE_RUNTIME_CONFIG?.active || {}, state = getAppStateRef()) {
+  return getWorkspacePillars(workspace, state).map(function(p) { return p.slug || ""; }).filter(Boolean);
 }
 
 var BOOTSTRAP_DEFAULT_PILLARS = [
@@ -8274,7 +8312,8 @@ function resolveHybridWorkspacePillars(sheetData = {}) {
   return canonical;
 }
 
-function hydrateHybridSheetData(sheetData = {}) {
+function hydrateHybridSheetData(sheetData = {}, options = {}) {
+  const preserveCampaignRegistry = !!options.preserveCampaignRegistry;
   if (Array.isArray(sheetData.campaigns)) {
     var campaigns = sheetData.campaigns;
     var normalizedCampaigns = campaigns.map(function(campaign) {
@@ -8298,6 +8337,11 @@ function hydrateHybridSheetData(sheetData = {}) {
   brandOS.default_pillars = clonePillarDefinitions(hybridPillars);
   brandOS.pillars = settings.pillars.slice();
   if (settings && typeof settings === "object") {
+    const existingSettings = appState.settings && typeof appState.settings === "object" ? appState.settings : {};
+    if (preserveCampaignRegistry) {
+      settings.campaigns = Array.isArray(existingSettings.campaigns) ? existingSettings.campaigns.slice() : settings.campaigns;
+      settings.campaignColors = { ...(existingSettings.campaignColors || {}), ...(settings.campaignColors || {}) };
+    }
     appState.settings = normalizeRemoteSettings({
       ...(appState.settings || {}),
       ...settings,
@@ -9567,6 +9611,7 @@ const EMPTY_WORKSPACE_STATE = {
 const DEFAULT_STATE = EMPTY_WORKSPACE_STATE;
 
 let appState = loadLocalState();
+__APP_STATE_REF = appState;
 let currentView = "calendar";
 let currentEditingPostId = null;
 let currentModalAsset = null;
@@ -10662,6 +10707,11 @@ const brandFrameworkSectionList = document.getElementById("brand-framework-secti
 const brandFrameworkEditor = document.getElementById("brand-framework-editor");
 
 let currentInspoType = "article";
+var __APP_STATE_REF = null;
+
+function getAppStateRef() {
+  return __APP_STATE_REF || null;
+}
 
 const PILLAR_FALLBACK_COLORS = ["#00f0ff", "#b25fff", "#ffd700", "#00ffaa", "#fb7185", "#38bdf8"];
 
@@ -10697,9 +10747,10 @@ function splitExplicitCampaignValues(value) {
 function normalizeCampaignName(value) {
   const raw = normalizeCampaignDisplayName(value);
   if (!raw) return "";
-  const configured = Array.isArray(appState?.settings?.campaigns) ? appState.settings.campaigns : [];
-  const hydrated = Array.isArray(appState?.campaigns)
-    ? appState.campaigns.map(function(campaign) {
+  const state = getAppStateRef();
+  const configured = Array.isArray(state?.settings?.campaigns) ? state.settings.campaigns : [];
+  const hydrated = Array.isArray(state?.campaigns)
+    ? state.campaigns.map(function(campaign) {
         return String(campaign?.campaignName || campaign?.campaign_name || campaign?.name || "").trim();
       }).filter(Boolean)
     : [];
@@ -13836,6 +13887,7 @@ function buildConstellationRows() {
   const rowsByKey = new Map();
   const rowOrder = [];
   const campaignLookup = new Map(campaignRecords.map((campaign) => [normalizeLookupValue(campaign.campaignName || ""), campaign]));
+  let uncategorizedRow = null;
   function ensureRow(campaign, source = "registry") {
     const campaignName = String(campaign?.campaignName || "").trim() || "Uncategorized";
     const rowKey = normalizeLookupValue(campaignName) || "__uncategorized__";
@@ -13858,6 +13910,18 @@ function buildConstellationRows() {
     rowOrder.push(rowKey);
     console.log("[constellation-campaign] canonical", { source, campaignName: row.campaignName, rowKey });
     return row;
+  }
+  function ensureUncategorizedRow() {
+    if (uncategorizedRow) return uncategorizedRow;
+    uncategorizedRow = ensureRow({
+      campaignId: "",
+      campaignName: "Uncategorized",
+      pillar: "",
+      color: "#6b7280",
+      sortOrder: Number.MAX_SAFE_INTEGER - 1,
+      isArchived: false
+    }, "uncategorized");
+    return uncategorizedRow;
   }
 
   campaignRecords.forEach((campaign) => {
@@ -13890,15 +13954,6 @@ function buildConstellationRows() {
     }
     ensureRow({ ...campaign, campaignName: resolution.canonicalName || candidateName }, "registry");
   });
-  const uncategorizedRow = ensureRow({
-    campaignId: "",
-    campaignName: "Uncategorized",
-    pillar: "",
-    color: "#6b7280",
-    sortOrder: Number.MAX_SAFE_INTEGER - 1,
-    isArchived: false
-  }, "uncategorized");
-
   hydratedPosts.forEach((post) => {
     const rawCampaign = getConstellationCampaignCandidateName(pickRemoteValue(post?.campaignName, post?.campaign_name, ""));
     const resolution = resolveConstellationCampaignCandidate(rawCampaign, canonicalCampaignNames, campaignRecords);
@@ -13916,7 +13971,7 @@ function buildConstellationRows() {
       reason: resolution.reason
     });
     if (!rawCampaign) {
-      uncategorizedRow.posts.push(post);
+      ensureUncategorizedRow().posts.push(post);
       return;
     }
     const targetName = String(resolution.canonicalName || rawCampaign).trim();
@@ -14029,8 +14084,11 @@ function buildConstellationRows() {
       _constellationLayout: getConstellationLayoutConfig({ ...campaign, posts, _constellationRowIndex: laneIndex }, laneIndex)
     };
   });
-  console.log("[constellation-campaign] final nodes", finalMapped.map((campaign) => campaign.campaignName || "Uncategorized"));
-  return finalMapped.map((campaign, index) => rebuildConstellationCampaignGeometry(campaign, index));
+  const filteredFinalMapped = finalMapped.filter((campaign) => {
+    return String(campaign.campaignName || "").trim() !== "Uncategorized" || (campaign.posts || []).length > 0;
+  });
+  console.log("[constellation-campaign] final nodes", filteredFinalMapped.map((campaign) => campaign.campaignName || "Uncategorized"));
+  return filteredFinalMapped.map((campaign, index) => rebuildConstellationCampaignGeometry(campaign, index));
 }
 
 function normalizeCampaignLaneKey(value = "") {
@@ -26966,6 +27024,16 @@ async function syncRemoteIfConfigured() {
     apiGetConnectedAccounts()
   ]).then(function(results) {
     var backgroundSheetHydration = results[0].status === "fulfilled" ? results[0].value : {};
+    var previousPostCount = Array.isArray(appState.posts) ? appState.posts.length : 0;
+    var incomingPostCount = Array.isArray(backgroundSheetHydration?.posts) ? backgroundSheetHydration.posts.length : 0;
+    var overwriteAllowed = !(previousPostCount > 0 && incomingPostCount === 0);
+    var overwriteReason = overwriteAllowed ? "incoming posts available" : "preserving existing state because incoming posts are empty";
+    console.log("[hybrid-refresh]", {
+      previous_post_count: previousPostCount,
+      incoming_post_count: incomingPostCount,
+      overwrite_allowed: overwriteAllowed,
+      reason: overwriteReason
+    });
     var settings = backgroundSheetHydration?.settings || {};
     var notes = backgroundSheetHydration?.notes || [];
     var inspo = backgroundSheetHydration?.inspo || [];
@@ -26983,7 +27051,7 @@ async function syncRemoteIfConfigured() {
     try { loadAIProviders().catch(function() {}); } catch (err) { /* silent */ }
 
     if (backgroundSheetHydration && typeof backgroundSheetHydration === "object") {
-      hydrateHybridSheetData(backgroundSheetHydration);
+      hydrateHybridSheetData(backgroundSheetHydration, { preserveCampaignRegistry: !overwriteAllowed });
     } else if (settings && typeof settings === "object" && !Array.isArray(settings)) {
       appState.settings = normalizeRemoteSettings(settings);
     }
@@ -31238,9 +31306,16 @@ function normalizeRemoteSettings(settings) {
           ? getDefaultPillarObject(pillar.slug || pillar.name || "")
           : getDefaultPillarObject(pillar);
       }).filter(Boolean)
-    : normalizeList(settings?.pillars, defaults.pillars, (value) => normalizePillar(value)).map(function(pillar) {
-        return getDefaultPillarObject(pillar);
+    : normalizeList(settings?.pillars, defaults.pillars, (value) => {
+        return String(typeof value === "object" && value !== null ? value.slug || value.name || "" : value || "").trim().toLowerCase();
+      }).map(function(pillar) {
+        return getDefaultPillarObject(normalizePillarToken(pillar));
       }).filter(Boolean);
+  const normalizedPillars = normalizeList(settings?.pillars, defaults.pillars, (value) => {
+    return String(typeof value === "object" && value !== null ? value.slug || value.name || "" : value || "").trim().toLowerCase();
+  }).map(function(pillar) {
+    return normalizePillarToken(pillar);
+  }).filter(Boolean);
 
   return {
     brand_name: String(settings?.brand_name || settings?.brandName || settings?.display_name || settings?.displayName || "").trim(),
@@ -31254,7 +31329,7 @@ function normalizeRemoteSettings(settings) {
     icon: String(settings?.icon || settings?.avatar_icon || settings?.avatarIcon || "").trim(),
     avatar_initials: String(settings?.avatar_initials || settings?.avatarInitials || "").trim(),
     platforms: normalizeList(settings?.platforms, defaults.platforms, (value) => String(value || "").trim().toLowerCase()),
-    pillars: normalizeList(settings?.pillars, defaults.pillars, (value) => normalizePillar(value)),
+    pillars: normalizedPillars,
     default_pillars: normalizedDefaultPillars.length ? normalizedDefaultPillars : getFallbackWorkspacePillars(),
     statuses: normalizeList(settings?.statuses, defaults.statuses, (value) => String(value || "").trim().toLowerCase()),
     postTypes: normalizeList(settings?.postTypes || settings?.post_types, defaults.postTypes, (value) => String(value || "").trim().toLowerCase()),
@@ -31483,7 +31558,8 @@ function normalizeRemotePost(post, campaigns = [], mediaItems = [], index = 0) {
 
 function normalizeRemoteCampaign(campaign) {
   const pillar = getCanonicalPillarValue(pickRemoteValue(campaign?.pillar, campaign?.hubPillarLabel, campaign?.hub_pillar_label, ""), "");
-  const canonicalCampaignName = resolveCanonicalCampaignName(pickRemoteValue(campaign?.campaignName, campaign?.campaign_name, campaign?.name, campaign?.title, ""), appState?.campaigns || []);
+  const state = getAppStateRef() || {};
+  const canonicalCampaignName = resolveCanonicalCampaignName(pickRemoteValue(campaign?.campaignName, campaign?.campaign_name, campaign?.name, campaign?.title, ""), state?.campaigns || []);
   return {
     campaignId: String(pickRemoteValue(campaign?.campaignId, campaign?.campaign_id, campaign?.campaignID, campaign?.id, "")).trim(),
     campaign_id: String(pickRemoteValue(campaign?.campaign_id, campaign?.campaignId, campaign?.campaignID, campaign?.id, "")).trim(),
