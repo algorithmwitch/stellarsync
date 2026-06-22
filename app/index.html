@@ -7766,6 +7766,7 @@ function renderPostIdentityDataAttributes(post, index = 0) {
   const data = getPostIdentityDataset(post, index);
   return [
     `data-id="${escapeHtml(data.id)}"`,
+    `data-calendar-post-id="${escapeHtml(data.postId || data.postLookupId || data.id)}"`,
     `data-post-id="${escapeHtml(data.postId)}"`,
     `data-post-lookup-id="${escapeHtml(data.postLookupId)}"`,
     `data-post-canonical-id="${escapeHtml(data.postCanonicalId)}"`,
@@ -11217,12 +11218,15 @@ function setupWorkspaceUI() {
       openWorkspaceHub(nextTab);
     }
   });
-  profileMenuTrigger?.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    if (STELLARSYNC_DEBUG) console.log("[profile-menu] trigger click", { open: !profileMenu?.classList.contains("hidden") });
-    toggleProfileMenu();
-  });
+  if (profileMenuTrigger && profileMenuTrigger.dataset.profileMenuBound !== "true") {
+    profileMenuTrigger.dataset.profileMenuBound = "true";
+    profileMenuTrigger.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (STELLARSYNC_DEBUG) console.log("[profile-menu] trigger click", { open: !profileMenu?.classList.contains("active") });
+      toggleProfileMenu();
+    });
+  }
   profileMenu?.addEventListener("click", (event) => {
     const button = event.target.closest("[data-workspace-action]");
     if (!button) return;
@@ -33266,8 +33270,10 @@ function bootMinimalApp() {
     });
     // Bind profile menu trigger
     var profile = document.getElementById("avatar-menu-btn") || document.getElementById("profile-menu-trigger");
-    if (profile) {
+    if (profile && profile.dataset.profileMenuBound !== "true") {
+      profile.dataset.profileMenuBound = "true";
       profile.addEventListener("click", function(ev) {
+        ev.preventDefault();
         ev.stopPropagation();
         if (typeof toggleProfileMenu === "function") toggleProfileMenu();
       });
