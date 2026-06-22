@@ -6773,7 +6773,10 @@ async function callAppsScript(action, payloadOrParams = {}, method = "GET") {
     options.headers = { "Content-Type": "text/plain;charset=utf-8" };
     options.body = JSON.stringify({ action, route: action, payload, ...payload });
   }
-  const response = await fetch(url, options);
+  const controller = new AbortController();
+  const fetchTimeout = setTimeout(() => controller.abort(), 30000);
+  options.signal = controller.signal;
+  const response = await fetch(url, options).finally(() => clearTimeout(fetchTimeout));
   const rawText = await response.text().catch(() => "");
   const preview = String(rawText || "").slice(0, 160);
   if (STELLARSYNC_DEBUG) {
@@ -17654,19 +17657,22 @@ async function connectSocialAccount(platform) {
       }
       const meta = getWorkspaceRequestMetadata();
       const activeWorkspaceId = meta.workspace_id || "";
+      const sessionResult = await STELLARSYNC_SUPABASE_CLIENT.auth.getSession();
+      const token = sessionResult?.data?.session?.access_token || "";
+      if (!token) {
+        console.warn("[linkedin-auth] missing Supabase session token");
+        showToast("Please sign in again", "Please sign in again to connect LinkedIn", "ph-warning", "text-yellow-400");
+        return { ok: false, error: "Not signed in" };
+      }
 
-      const response = await STELLARSYNC_SUPABASE_CLIENT.functions.invoke("social-auth-start", {
-        body: {
-          provider: normalizedPlatform,
-          workspace_id: activeWorkspaceId,
-          redirect_to: window.location.href
-        }
+      const data = await callSupabaseEdgeFunction("social-auth-start", {
+        provider: normalizedPlatform,
+        workspace_id: activeWorkspaceId,
+        redirect_to: window.location.href
       });
 
-      console.log("[social-connect] auth start response", response);
-
-      const data = response.data;
-      const error = response.error || (data && data.error);
+      console.log("[social-connect] auth start response", data);
+      const error = data && data.error;
 
       if (data && data.missingSetupKeys && data.missingSetupKeys.length > 0) {
         console.log("[social-connect] missing supabase secrets", data.missingSetupKeys);
@@ -17691,7 +17697,10 @@ async function connectSocialAccount(platform) {
     } catch (err) {
       console.error(err);
       console.log("[social-connect] blocked apps script fallback");
-      showToast("Connect failed", "Connection status unavailable. Try again or contact StellarSync support.", "ph-warning", "text-yellow-400");
+      const message = err && /sign in again/i.test(err.message || "")
+        ? "Please sign in again to connect LinkedIn"
+        : "Connection status unavailable. Try again or contact StellarSync support.";
+      showToast("Connect failed", message, "ph-warning", "text-yellow-400");
     } finally {
       setConnectedAccountActionLoading(platform, "connect", false);
     }
@@ -17771,7 +17780,10 @@ async function testConnectedAccountStatus(platform) {
       }
       var workspaceId = getWorkspaceRequestMetadata().workspace_id || "";
       if (workspaceId) {
-        var edgeResult = await callSupabaseEdgeFunction("social-connection-status", { workspace_id: workspaceId });
+        var edgeResult = await callSupabaseEdgeFunction("social-connection-status", {
+          workspace_id: workspaceId,
+          provider: normalizePlatformTarget(platform || "linkedin")
+        });
         if (edgeResult && Array.isArray(edgeResult.accounts)) {
           setSocialConnectedAccounts(edgeResult.accounts);
           console.log("[social-setup] test status refreshed from edge function", { platform, accounts: edgeResult.accounts.length });
@@ -24886,8 +24898,9 @@ function setupSaveHandler() {
 
             console.log("[post-save] step: media relation sync...");
             const canonicalId = getCanonicalPostId(savedPost) || result?.post?.post_id || result?.postId || result?.savedPostId || payload.post_id || payload.postId || "";
-            await withTimeout(syncSelectedMediaForSavedPost(canonicalId), 15000, 'syncSelectedMediaForSavedPost timed out');
-            console.log("[post-save] step: media sync completed");
+            withTimeout(syncSelectedMediaForSavedPost(canonicalId), 15000, 'syncSelectedMediaForSavedPost timed out')
+                .then(() => console.log("[post-save] step: media sync completed"))
+                .catch(mediaErr => console.warn("[post-save] media sync failed (non-blocking)", mediaErr?.message || mediaErr));
 
             upsertSavedPostIntoAppState(result, payload);
 
@@ -24896,9 +24909,9 @@ function setupSaveHandler() {
 
             const backendLabel = backendMode.mode === "supabase_native" ? "Supabase" : "Google Sheets";
             showToast("Synced", wasEditingPost ? "Post updated in " + backendLabel + "." : "Post created in " + backendLabel + ".", "ph-cloud-check", "text-[#00ffaa]");
-            console.log("[post-save] step: success toast shown");
+            console.log("[post-save] success");
         } catch (err) {
-            console.error("[post-save] remote save failed", {
+            console.error("[post-save] failed", {
                 action: err?.action || "savePost",
                 message: err?.message || "Unknown error"
             });
@@ -24912,7 +24925,7 @@ function setupSaveHandler() {
             showPostSaveErrorBanner(err, payload);
             closeModal();
             showToast("Saved locally", detail || "Backend sync failed; local draft changes are preserved.", "ph-warning", "text-yellow-400");
-            console.log("[post-save] step: local fallback toast shown");
+            console.log("[post-save] failed");
         } finally {
             savePostInFlight = false;
             saveButton.disabled = false;
@@ -28774,7 +28787,11 @@ async function callSupabaseEdgeFunction(functionName, payload = {}) {
   if (!STELLARSYNC_SUPABASE_CLIENT || !SUPABASE_URL) throw new Error("Supabase is not configured.");
   const sessionResult = await STELLARSYNC_SUPABASE_CLIENT.auth.getSession();
   const token = sessionResult?.data?.session?.access_token || "";
-  if (!token) throw new Error("Supabase session is missing.");
+  if (!token) {
+    const isSocialConnectionFunction = ["social-auth-start", "social-auth-callback", "social-connection-status"].includes(functionName);
+    console.warn(isSocialConnectionFunction ? "[linkedin-auth] missing Supabase session token" : "[supabase-auth] missing Supabase session token");
+    throw new Error(isSocialConnectionFunction ? "Please sign in again to connect LinkedIn" : "Please sign in again.");
+  }
   const response = await fetch(`${SUPABASE_URL}/functions/v1/${functionName}`, {
     method: "POST",
     headers: {
@@ -30002,7 +30019,17 @@ async function apiGetConnectedAccountsStatus(platform) {
   try {
     const workspaceId = getWorkspaceRequestMetadata().workspace_id || "";
     if (!workspaceId) return [];
-    const result = await callSupabaseEdgeFunction("social-connection-status", { workspace_id: workspaceId });
+    const sessionResult = await STELLARSYNC_SUPABASE_CLIENT.auth.getSession();
+    const token = sessionResult?.data?.session?.access_token || "";
+    if (!token) {
+      console.warn("[linkedin-auth] missing Supabase session token");
+      showToast("Please sign in again", "Please sign in again to connect LinkedIn", "ph-warning", "text-yellow-400");
+      return [];
+    }
+    const result = await callSupabaseEdgeFunction("social-connection-status", {
+      workspace_id: workspaceId,
+      provider: normalizePlatformTarget(platform || "linkedin")
+    });
     const accounts = normalizeSocialConnectedAccounts(result && (result.accounts || result.data || result));
     console.log("[social-card] render source edge", { platform: platform || "all", accounts: accounts.length });
     return accounts;
