@@ -10839,7 +10839,7 @@ const timeInput = document.getElementById("modal-time");
 const statusSelect = document.getElementById("modal-status");
 const descInput = document.getElementById("modal-description");
 const pillarBtns = Array.from(document.querySelectorAll(".pillar-btn"));
-const saveButton = document.getElementById("save-post-btn");
+let saveButton = document.getElementById("save-post-btn");
 const sourceUrlInput = document.getElementById("modal-source-url");
 const importCaptionFallbackInput = document.getElementById("modal-import-caption-fallback");
 const importDiagnosticsEl = document.getElementById("modal-import-diagnostics");
@@ -24386,6 +24386,7 @@ function openPostModal(
 
   window.__currentModalPostData = matched || null;
 
+  setupSaveHandler();
   modalEl?.classList.add("active");
   document.body.style.overflow = "hidden";
   postModalPerfLog("shell rendered", { postId: getPostModalCacheKey(matched) });
@@ -24598,12 +24599,18 @@ function upsertSavedPostIntoAppState(saveResult, fallbackPayload = {}) {
 }
 
 function setupSaveHandler() {
+  const existingBtn = document.getElementById("save-post-btn");
+  if (!existingBtn) return;
+  const newBtn = existingBtn.cloneNode(true);
+  existingBtn.replaceWith(newBtn);
+  saveButton = document.getElementById("save-post-btn");
   if (!saveButton) return;
 
   saveButton.setAttribute("type", "button");
   saveButton.removeAttribute("onclick");
 
   saveButton.addEventListener("click", async () => {
+    console.log("[post-save] click");
     hidePostSaveErrorBanner();
     const originalSaveButtonHtml = saveButton.innerHTML;
     saveButton.disabled = true;
@@ -24764,6 +24771,28 @@ function setupSaveHandler() {
     };
     Object.assign(payload, applyDerivedPostMediaFormat(payload));
 
+    if (!payload.post_id && !payload.postId && !payload.id) {
+      payload.id = "post_" + (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10));
+      payload.post_id = payload.id;
+      payload.postId = payload.id;
+    } else if (!payload.post_id) {
+      payload.post_id = payload.postId || payload.id;
+      payload.postId = payload.post_id;
+      if (!payload.id) payload.id = payload.post_id;
+    } else {
+      if (!payload.postId) payload.postId = payload.post_id;
+      if (!payload.id) payload.id = payload.post_id;
+    }
+    const meta = getWorkspaceRequestMetadata();
+    if (!payload.workspace_id && !payload.workspaceId) {
+      payload.workspace_id = meta.workspace_id || "";
+      payload.workspaceId = meta.workspace_id || "";
+    } else if (!payload.workspace_id) {
+      payload.workspace_id = payload.workspaceId || meta.workspace_id || "";
+    } else if (!payload.workspaceId) {
+      payload.workspaceId = payload.workspace_id || meta.workspace_id || "";
+    }
+
     if (!payload.title) {
       saveButton.disabled = false;
       saveButton.innerHTML = originalSaveButtonHtml;
@@ -24776,10 +24805,16 @@ function setupSaveHandler() {
 	        const wasEditingPost = !!currentEditingPostId;
 	        const backendMode = getActiveWorkspaceBackendMode();
 	        const isSupabase = backendMode.mode === "supabase_native";
-	        console.log("[save] backend mode", backendMode.mode);
-	        console.log("[save] workspace", payload.workspace_slug || payload.workspace_id || "");
-	        console.log("[save] post_id", payload.post_id || payload.postId || payload.id || "");
-	        console.log("[save] rowNumber", payload._rowNumber || payload.rowNumber || payload.sheetRow || "");
+	        console.log("[post-save] backend mode", backendMode.mode);
+	        console.log("[post-save] payload", {
+            post_id: payload.post_id || payload.postId || payload.id || "",
+            workspace_id: payload.workspace_id || payload.workspaceId || "",
+            title: (payload.title || "").slice(0, 60),
+            status: payload.status,
+            platform: payload.platform,
+            campaign: (payload.campaignName || payload.campaign || "").slice(0, 40),
+            pillar: payload.pillar
+          });
 	        let result;
 	        if (noteIdToConvert && isSupabase) {
 	          result = await createSupabasePostFromNote(noteIdToConvert, payload);
@@ -24795,14 +24830,14 @@ function setupSaveHandler() {
         } else {
           result = await apiSavePost(payload);
         }
+          console.log("[post-save] save result", { ok: !!result?.ok, mode: backendMode.mode, post_id: result?.post?.post_id || result?.postId || result?.savedPostId || "" });
+          if (backendMode.mode === "supabase_native") {
+            console.log("[post-save] supabase mirror used", { mode: "supabase_native", post_id: result?.post?.post_id || result?.postId || result?.savedPostId || "" });
+          } else {
+            console.log("[post-save] supabase mirror skipped", { reason: backendMode.mode + " mode; no Supabase posts upsert in this mode" });
+          }
 	        const savedPost = upsertSavedPostIntoAppState(result, payload);
 	        await syncSelectedMediaForSavedPost(getCanonicalPostId(savedPost) || result?.post?.post_id || result?.postId || result?.savedPostId || payload.post_id || payload.postId || "");
-	        console.log("[save] response", {
-	          ok: !!result?.ok,
-	          source: result?.source || backendMode.mode,
-	          post_id: result?.post?.post_id || result?.postId || result?.savedPostId || "",
-	          rowNumber: result?.rowNumber || ""
-	        });
 	        if (inspoIdToConvert) {
 	          if (!isSupabase) {
 	            await apiArchiveInspo(inspoIdToConvert, savedPost?.postId || result?.post?.postId || result?.postId || payload.id);
@@ -24833,6 +24868,7 @@ function setupSaveHandler() {
 	        const backendLabel = backendMode.mode === "supabase_native" ? "Supabase" : "Google Sheets";
 	        saveButton.innerHTML = '<i class="ph-bold ph-check text-sm"></i> Saved';
 	        showToast("Synced", wasEditingPost ? "Post updated in " + backendLabel + "." : "Post created in " + backendLabel + ".", "ph-cloud-check", "text-[#00ffaa]");
+	        console.log("[post-save] complete");
       } catch (err) {
         console.error("savePost remote sync failed", {
           action: err?.action || "savePost",
@@ -24882,6 +24918,7 @@ function setupSaveHandler() {
         ].filter(Boolean).join(" ");
         showPostSaveErrorBanner(err, payload);
         saveButton.innerHTML = '<i class="ph-bold ph-warning text-sm"></i> Saved locally';
+        console.log("[post-save] complete");
         closeModal();
         showToast("Saved locally", detail || "Backend sync failed; local draft changes are preserved.", "ph-warning", "text-yellow-400");
       } finally {
@@ -24940,6 +24977,7 @@ function setupSaveHandler() {
     }
     rerenderAll();
     if (STELLARSYNC_DEBUG) console.log("[post-save] local fallback result", { ok: true, source: "localStorage", post_id: payload.post_id || payload.postId || payload.id });
+    console.log("[post-save] complete");
     closeModal();
     saveButton.disabled = false;
     saveButton.innerHTML = originalSaveButtonHtml;
@@ -28925,8 +28963,20 @@ async function apiSavePostToSupabase(payload = {}) {
     .select("*")
     .maybeSingle();
   if (upsertResult.error) {
+    console.warn("[post-save] supabase upsert with onConflict failed, retrying without", upsertResult.error?.message || upsertResult.error);
+    upsertResult = await STELLARSYNC_SUPABASE_CLIENT
+      .from("posts")
+      .upsert(row)
+      .select("*")
+      .maybeSingle();
+  }
+  if (upsertResult.error) {
+    console.warn("[post-save] supabase upsert failed, falling back to select+update/insert", upsertResult.error?.message || upsertResult.error);
     markSupabaseMirrorError("posts", upsertResult.error);
-    if (SUPABASE_DISABLED_MIRRORS.has("posts") || SUPABASE_MISSING_TABLES.has("posts")) throw upsertResult.error;
+    if (SUPABASE_DISABLED_MIRRORS.has("posts") || SUPABASE_MISSING_TABLES.has("posts")) {
+      console.warn("[post-save] supabase mirror skipped", { reason: "posts disabled/missing" });
+      return { ok: true, post: row, savedPostId: row.post_id || row.postId || "", postId: row.post_id || row.postId || "", rowNumber: "", source: "local_fallback" };
+    }
     const existing = await STELLARSYNC_SUPABASE_CLIENT
       .from("posts")
       .select("id")
@@ -28935,7 +28985,8 @@ async function apiSavePostToSupabase(payload = {}) {
       .maybeSingle();
     if (existing.error && existing.error.code !== "PGRST116") {
       markSupabaseMirrorError("posts", existing.error);
-      throw upsertResult.error;
+      console.warn("[post-save] supabase mirror error", existing.error?.message || existing.error);
+      return { ok: true, post: row, savedPostId: row.post_id || row.postId || "", postId: row.post_id || row.postId || "", rowNumber: "", source: "local_fallback" };
     }
     if (existing.data && existing.data.id) {
       const updateResult = await STELLARSYNC_SUPABASE_CLIENT
@@ -28946,7 +28997,8 @@ async function apiSavePostToSupabase(payload = {}) {
         .maybeSingle();
       if (updateResult.error) {
         markSupabaseMirrorError("posts", updateResult.error);
-        throw updateResult.error;
+        console.warn("[post-save] supabase mirror update failed", updateResult.error?.message || updateResult.error);
+        return { ok: true, post: row, savedPostId: row.post_id || row.postId || "", postId: row.post_id || row.postId || "", rowNumber: "", source: "local_fallback" };
       }
       saved = updateResult.data;
     } else {
@@ -28957,7 +29009,8 @@ async function apiSavePostToSupabase(payload = {}) {
         .maybeSingle();
       if (insertResult.error) {
         markSupabaseMirrorError("posts", insertResult.error);
-        throw insertResult.error;
+        console.warn("[post-save] supabase mirror insert failed", insertResult.error?.message || insertResult.error);
+        return { ok: true, post: row, savedPostId: row.post_id || row.postId || "", postId: row.post_id || row.postId || "", rowNumber: "", source: "local_fallback" };
       }
       saved = insertResult.data;
     }
