@@ -4213,7 +4213,6 @@
                     </button>
                     <input id="modal-media-upload-input" type="file" class="hidden" accept="image/*,video/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt" multiple />
                     <p id="modal-media-status" class="text-[10px] text-gray-500 mt-2 leading-tight">No media linked</p>
-                    <div id="modal-existing-media-picker" class="mt-3 space-y-2"></div>
                   </div>
                 
                   <div class="flex-1 flex flex-col">
@@ -4229,6 +4228,7 @@
                     <textarea id="modal-description" class="form-input flex-1 resize-none font-medium text-sm leading-relaxed" placeholder="Write your compelling copy here..."></textarea>
                   </div>
                 </div>
+                <div id="modal-existing-media-picker" class="mt-3 space-y-2 w-full"></div>
 
                 <div id="modal-carousel-manager" class="p-4 rounded-2xl bg-[#0f0a18] border border-white/5 space-y-3">
                   <div class="flex items-center justify-between gap-3 flex-wrap">
@@ -4623,7 +4623,7 @@
           </div>
           <div>
             <h3 class="text-white font-bold text-lg">Install StellarSync</h3>
-            <p class="text-xs text-gray-500 mt-1">Install StellarSync as an app for faster access.</p>
+            <p class="text-xs text-gray-500 mt-1">Use the best install flow for this device.</p>
           </div>
         </div>
         <button id="close-install-helper-modal-btn" type="button" class="w-10 h-10 rounded-xl bg-[#1a1128] hover:bg-[#231738] text-gray-400 hover:text-white border border-white/5 transition-colors flex items-center justify-center">
@@ -4636,28 +4636,25 @@
           StellarSync is already installed on this device.
         </div>
         <div class="p-4 rounded-2xl bg-[#181125] border border-white/5">
-          <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2 flex items-center gap-2"><i class="ph-bold ph-browser text-[#c77dff]"></i> Desktop / Android</p>
-          <p id="install-helper-desktop-copy" class="text-sm text-gray-300">Click your browser's URL bar download button. You can also download the StellarSync Plugin ZIP, unzip it, and load it as an unpacked extension.</p>
+          <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Desktop / Android</p>
+          <p id="install-helper-desktop-copy" class="text-sm text-gray-300">Use the Install App button when it becomes available in Chrome or Edge.</p>
         </div>
         <div class="p-4 rounded-2xl bg-[#181125] border border-white/5">
-          <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2 flex items-center gap-2"><i class="ph-bold ph-device-mobile text-[#c77dff]"></i> iPhone / iPad</p>
-          <p class="text-sm text-gray-300">Open StellarSync in Safari, tap Share <i class="ph-bold ph-share"></i>, then choose <strong>Add to Home Screen</strong>.</p>
+          <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">iPhone / iPad</p>
+          <p class="text-sm text-gray-300">Open StellarSync in Safari, tap Share, then choose Add to Home Screen.</p>
         </div>
         <div class="p-4 rounded-2xl bg-[#181125] border border-white/5">
-          <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2 flex items-center gap-2"><i class="ph-bold ph-puzzle-piece text-[#c77dff]"></i> Browser Plugin</p>
-          <p class="text-sm text-gray-300">Download the StellarSync Plugin ZIP, unzip it, and load it manually from your browser's extension manager (chrome://extensions → Load unpacked).</p>
+          <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Unsupported Browser</p>
+          <p class="text-sm text-gray-300">If install is unavailable, open StellarSync in Safari, Chrome, or Edge and try again.</p>
         </div>
       </div>
 
       <div class="px-6 py-5 border-t border-white/5 flex justify-end gap-3">
-        <button id="install-helper-action-btn" type="button" class="px-4 py-2 bg-gradient-to-r from-[#9d4edd] to-[#c77dff] hover:opacity-90 text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all border border-white/10">
-          Install App
-        </button>
-        <button id="install-helper-instructions-btn" type="button" class="px-4 py-2 bg-[#181125] hover:bg-[#231738] text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all border border-white/10">
-          View Instructions
-        </button>
         <button id="close-install-helper-btn" type="button" class="px-4 py-2 bg-[#1a1128] hover:bg-[#231738] text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all border border-white/10">
           Close
+        </button>
+        <button id="install-helper-action-btn" type="button" class="px-4 py-2 bg-gradient-to-r from-[#9d4edd] to-[#c77dff] hover:opacity-90 text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all border border-white/10">
+          Install App
         </button>
       </div>
     </div>
@@ -5705,14 +5702,43 @@ function isMissingColumnError(error, columnName = "") {
   return msg.includes("column") && (msg.includes("does not exist") || msg.includes("not found") || msg.includes("schema cache"));
 }
 
+function isOptionalProfileSettingsError(error) {
+  const msg = String(error && (error.message || error.details || error.hint || error.code) || error || "").toLowerCase();
+  if (!msg) return false;
+  return isMissingColumnError(error) ||
+    msg.includes("404") ||
+    msg.includes("pgrst205") ||
+    msg.includes("does not exist") ||
+    msg.includes("schema cache") ||
+    msg.includes("could not find the table") ||
+    msg.includes("relation") && msg.includes("does not exist");
+}
+
 function getWorkspaceBrandingDefaults(workspace = {}) {
+  const name = String(
+    workspace.brand_name ||
+    workspace.brandName ||
+    workspace.display_name ||
+    workspace.displayName ||
+    workspace.name ||
+    workspace.workspace_name ||
+    ""
+  ).trim();
   return {
+    brand_name: name,
+    brand_voice: String(workspace.brand_voice || workspace.brandVoice || "").trim(),
+    mission: String(workspace.mission || "").trim(),
+    website: String(workspace.website || "").trim(),
+    primary_color: String(workspace.primary_color || workspace.primaryColor || workspace.brand_accent || "").trim(),
+    secondary_color: String(workspace.secondary_color || workspace.secondaryColor || "").trim(),
     short_name: String(workspace.short_name || "").trim(),
     avatar_mode: String(workspace.avatar_mode || "initials").trim() || "initials",
     icon: String(workspace.icon || "").trim(),
     avatar_initials: String(workspace.avatar_initials || getWorkspaceInitials(workspace) || "").trim(),
     constellation_shape: String(workspace.constellation_shape || "star").trim() || "star",
-    media_bucket: String(workspace.media_bucket || workspace.storage_bucket || "media").trim() || "media"
+    media_bucket: String(workspace.media_bucket || workspace.storage_bucket || "media").trim() || "media",
+    default_pillars: Array.isArray(workspace.default_pillars) ? clonePillarDefinitions(workspace.default_pillars) : [],
+    pillars: Array.isArray(workspace.pillars) ? workspace.pillars.slice() : []
   };
 }
 
@@ -5744,6 +5770,12 @@ function getSessionWorkspaceConfig() {
 	      supabase_media_enabled: Boolean(parsed.supabase_media_enabled),
 	      media_bucket: String(parsed.media_bucket || parsed.storage_bucket || "media").trim(),
 	      plan: String(parsed.plan || "").trim(),
+	      brand_name: String(parsed.brand_name || parsed.brandName || parsed.display_name || parsed.displayName || "").trim(),
+	      brand_voice: String(parsed.brand_voice || parsed.brandVoice || "").trim(),
+	      mission: String(parsed.mission || "").trim(),
+	      website: String(parsed.website || "").trim(),
+	      primary_color: String(parsed.primary_color || parsed.primaryColor || parsed.brand_accent || "").trim(),
+	      secondary_color: String(parsed.secondary_color || parsed.secondaryColor || "").trim(),
 	      short_name: String(parsed.short_name || "").trim(),
 	      avatar_initials: String(parsed.avatar_initials || "").trim(),
 	      avatar_mode: String(parsed.avatar_mode || parsed.avatarMode || "").trim(),
@@ -5809,6 +5841,12 @@ function loadWorkspaceConfig() {
 	      supabase_anon_key: SUPABASE_ANON_KEY,
 	      storage_bucket: sessionConfig.media_bucket || masterConfig.storage_bucket || "media",
 	      short_name: sessionConfig.short_name || "",
+	      brand_name: sessionConfig.brand_name || "",
+	      brand_voice: sessionConfig.brand_voice || "",
+	      mission: sessionConfig.mission || "",
+	      website: sessionConfig.website || "",
+	      primary_color: sessionConfig.primary_color || "",
+	      secondary_color: sessionConfig.secondary_color || "",
 	      avatar_initials: sessionConfig.avatar_initials || "",
 	      avatar_mode: sessionConfig.avatar_mode || "initials",
 	      icon: sessionConfig.icon || "",
@@ -5843,13 +5881,18 @@ function loadWorkspaceConfig() {
     monday_auto_sync_on_save: workspaceConfig.monday_auto_sync_on_save !== undefined ? Boolean(workspaceConfig.monday_auto_sync_on_save) : (masterConfig.monday_auto_sync_on_save !== undefined ? Boolean(masterConfig.monday_auto_sync_on_save) : true),
     storage_bucket: String(workspaceConfig.storage_bucket || masterConfig.storage_bucket || "media").trim(),
     media_bucket: String(workspaceConfig.media_bucket || masterConfig.media_bucket || workspaceConfig.storage_bucket || masterConfig.storage_bucket || "media").trim(),
+    brand_name: String(workspaceConfig.brand_name || workspaceConfig.brandName || workspaceConfig.display_name || workspaceConfig.displayName || masterConfig.brand_name || masterConfig.brandName || masterConfig.name || "").trim(),
+    brand_voice: String(workspaceConfig.brand_voice || workspaceConfig.brandVoice || masterConfig.brand_voice || masterConfig.brandVoice || "").trim(),
+    mission: String(workspaceConfig.mission || masterConfig.mission || "").trim(),
+    website: String(workspaceConfig.website || masterConfig.website || "").trim(),
+    primary_color: String(workspaceConfig.primary_color || workspaceConfig.primaryColor || masterConfig.primary_color || masterConfig.primaryColor || masterConfig.brand_accent || "").trim(),
+    secondary_color: String(workspaceConfig.secondary_color || workspaceConfig.secondaryColor || masterConfig.secondary_color || masterConfig.secondaryColor || "").trim(),
     short_name: String(workspaceConfig.short_name || masterConfig.short_name || "").trim(),
     avatar_initials: String(workspaceConfig.avatar_initials || masterConfig.avatar_initials || "").trim(),
     avatar_mode: String(workspaceConfig.avatar_mode || workspaceConfig.avatarMode || masterConfig.avatar_mode || "initials").trim(),
     icon: String(workspaceConfig.icon || workspaceConfig.avatar_icon || masterConfig.icon || "").trim(),
     constellation_shape: String(workspaceConfig.constellation_shape || masterConfig.constellation_shape || "star").trim() || "star",
     brand_accent: String(workspaceConfig.brand_accent || masterConfig.brand_accent || "").trim(),
-    brand_voice: String(workspaceConfig.brand_voice || masterConfig.brand_voice || "").trim(),
     default_platforms: Array.isArray(workspaceConfig.default_platforms) ? workspaceConfig.default_platforms : Array.isArray(masterConfig.default_platforms) ? masterConfig.default_platforms : [],
     default_pillars: Array.isArray(workspaceConfig.default_pillars) ? workspaceConfig.default_pillars : Array.isArray(masterConfig.default_pillars) ? masterConfig.default_pillars : [],
     default_statuses: Array.isArray(workspaceConfig.default_statuses) ? workspaceConfig.default_statuses : Array.isArray(masterConfig.default_statuses) ? masterConfig.default_statuses : [],
@@ -5886,6 +5929,12 @@ function normalizeSupabaseWorkspaceConfig(workspace) {
     supabase_media_enabled: Boolean(source.supabase_media_enabled),
     media_bucket: String(source.media_bucket || source.storage_bucket || "media").trim(),
     short_name: String(source.short_name || source.shortName || "").trim(),
+    brand_name: String(source.brand_name || source.brandName || source.display_name || source.displayName || "").trim(),
+    brand_voice: String(source.brand_voice || source.brandVoice || "").trim(),
+    mission: String(source.mission || "").trim(),
+    website: String(source.website || "").trim(),
+    primary_color: String(source.primary_color || source.primaryColor || source.brand_accent || "").trim(),
+    secondary_color: String(source.secondary_color || source.secondaryColor || "").trim(),
     avatar_initials: String(source.avatar_initials || source.avatarInitials || "").trim(),
     avatar_mode: String(source.avatar_mode || source.avatarMode || "").trim(),
     icon: String(source.icon || source.avatar_icon || source.avatarIcon || "").trim(),
@@ -5950,14 +5999,11 @@ function resolveWorkspaceBackendConfig(workspace, settings) {
   ]);
   const sheetId = firstPresent([
     { source: "workspace_settings.google_sheet_id", value: prefs.google_sheet_id },
-    { source: "workspace_settings.sheet_id", value: prefs.sheet_id },
     { source: "workspaces.google_sheet_id", value: active.google_sheet_id },
     { source: "workspaces.sheet_id", value: active.sheet_id }
   ]);
   const appsScriptUrl = firstPresent([
     { source: "workspace_settings.apps_script_url", value: prefs.apps_script_url },
-    { source: "workspace_settings.script_url", value: prefs.script_url },
-    { source: "workspace_settings.web_app_url", value: prefs.web_app_url },
     { source: "workspaces.apps_script_url", value: active.apps_script_url },
     { source: "workspaces.script_url", value: active.script_url },
     { source: "workspaces.web_app_url", value: active.web_app_url }
@@ -5999,11 +6045,23 @@ function resolveWorkspaceBackendConfig(workspace, settings) {
 function mergeWorkspaceSettings(workspace, settings) {
   if (!workspace || !settings) return workspace;
   const backendConfig = resolveWorkspaceBackendConfig(workspace, settings);
-  const displayName = String(settings.brand_name || settings.brandName || settings.display_name || settings.displayName || "").trim();
+  const displayName = String(settings.brand_name || settings.brandName || settings.display_name || settings.displayName || workspace.brand_name || workspace.brandName || workspace.name || "").trim();
   const shortName = String(settings.short_name || settings.shortName || "").trim();
   const avatarInitials = String(settings.avatar_initials || settings.avatarInitials || "").trim();
   const avatarMode = String(settings.avatar_mode || settings.avatarMode || "").trim();
   const icon = String(settings.icon || settings.avatar_icon || settings.avatarIcon || "").trim();
+  const brandVoice = String(settings.brand_voice || settings.brandVoice || workspace.brand_voice || workspace.brandVoice || "").trim();
+  const mission = String(settings.mission || workspace.mission || "").trim();
+  const website = String(settings.website || workspace.website || "").trim();
+  const primaryColor = String(settings.primary_color || settings.primaryColor || workspace.primary_color || workspace.primaryColor || workspace.brand_accent || "").trim();
+  const secondaryColor = String(settings.secondary_color || settings.secondaryColor || workspace.secondary_color || workspace.secondaryColor || "").trim();
+  const brandName = String(settings.brand_name || settings.brandName || settings.display_name || settings.displayName || workspace.brand_name || workspace.brandName || workspace.name || "").trim();
+  const defaultPillars = Array.isArray(settings.default_pillars)
+    ? settings.default_pillars.map(function(p) { return typeof p === "object" && p !== null ? p : getDefaultPillarObject(String(p || "").trim()); }).filter(Boolean)
+    : (Array.isArray(workspace.default_pillars) ? workspace.default_pillars.map(function(p) { return typeof p === "object" && p !== null ? p : getDefaultPillarObject(String(p || "").trim()); }).filter(Boolean) : []);
+  const pillars = Array.isArray(settings.pillars)
+    ? settings.pillars.map(function(p) { return String(p || "").trim(); }).filter(Boolean)
+    : (Array.isArray(workspace.pillars) ? workspace.pillars.map(function(p) { return String(p || "").trim(); }).filter(Boolean) : []);
   const plan = normalizeWorkspacePlan(settings.plan_slug || settings.plan || settings.subscription_tier || workspace.plan_slug || workspace.plan || workspace.subscription_tier || "starter");
   const featureFlags = {
     ...getDefaultFeatureFlagsForPlan(plan),
@@ -6013,6 +6071,7 @@ function mergeWorkspaceSettings(workspace, settings) {
   return {
     ...workspace,
     name: displayName || workspace.name,
+    brand_name: brandName || displayName || workspace.brand_name || workspace.name,
     plan: workspace.plan || plan,
     plan_slug: plan,
     subscription_tier: normalizeWorkspacePlan(settings.subscription_tier || workspace.subscription_tier || plan),
@@ -6025,16 +6084,35 @@ function mergeWorkspaceSettings(workspace, settings) {
     avatar_mode: avatarMode || workspace.avatar_mode || "initials",
     icon: icon || workspace.icon || "",
     constellation_shape: String(settings.constellation_shape || workspace.constellation_shape || "star").trim() || "star",
-    brand_accent: String(settings.brand_accent || workspace.brand_accent || "").trim(),
-    brand_voice: String(settings.brand_voice || workspace.brand_voice || "").trim(),
+    brand_accent: String(settings.brand_accent || primaryColor || workspace.brand_accent || "").trim(),
+    brand_color: String(settings.brand_color || primaryColor || workspace.brand_color || "").trim(),
+    brand_voice: brandVoice || workspace.brand_voice || "",
+    mission: mission || workspace.mission || "",
+    website: website || workspace.website || "",
+    primary_color: primaryColor || workspace.primary_color || workspace.brand_accent || "",
+    secondary_color: secondaryColor || workspace.secondary_color || "",
     media_bucket: String(settings.media_bucket || workspace.media_bucket || workspace.storage_bucket || "media").trim(),
     media_prefix: String(settings.media_prefix || workspace.media_prefix || "").trim(),
+    default_pillars: defaultPillars,
+    pillars: pillars,
     default_platforms: Array.isArray(settings.default_platforms) ? settings.default_platforms : (workspace.default_platforms || []),
-    default_pillars: Array.isArray(settings.default_pillars) ? settings.default_pillars.map(function(p) { return typeof p === "object" && p !== null ? p : getDefaultPillarObject(String(p || "").trim()); }).filter(Boolean) : (Array.isArray(workspace.default_pillars) ? workspace.default_pillars.map(function(p) { return typeof p === "object" && p !== null ? p : getDefaultPillarObject(String(p || "").trim()); }).filter(Boolean) : []),
     default_statuses: Array.isArray(settings.default_statuses) ? settings.default_statuses : (workspace.default_statuses || []),
     default_post_types: Array.isArray(settings.default_post_types) ? settings.default_post_types : (workspace.default_post_types || []),
     current_month: String(settings.current_month || settings.currentMonth || workspace.current_month || workspace.currentMonth || "").trim(),
     current_year: String(workspace.current_year || workspace.currentYear || "").trim(),
+    brandOS: {
+      brand_name: brandName || displayName || workspace.brand_name || workspace.name || "",
+      brand_voice: brandVoice || workspace.brand_voice || "",
+      mission: mission || workspace.mission || "",
+      website: website || workspace.website || "",
+      primary_color: primaryColor || workspace.primary_color || workspace.brand_accent || "",
+      secondary_color: secondaryColor || workspace.secondary_color || "",
+      icon: icon || workspace.icon || "",
+      avatar_initials: avatarInitials || workspace.avatar_initials || "",
+      short_name: shortName || workspace.short_name || "",
+      default_pillars: defaultPillars,
+      pillars: pillars
+    },
     backend_type: backendConfig.backendType,
     google_sheet_id: backendConfig.sheetId,
     sheet_id: backendConfig.sheetId,
@@ -6059,44 +6137,26 @@ async function loadWorkspaceBrandingSettings(workspaceId, workspace = {}) {
     "id",
     "workspace_id",
     "brand_name",
-    "plan",
     "plan_slug",
     "subscription_tier",
     "managed_account",
-    "is_admin_workspace",
     "feature_flags",
     "backend_type",
     "short_name",
-    "avatar_mode",
     "icon",
     "avatar_initials",
-    "constellation_shape",
-    "brand_accent",
     "brand_voice",
-    "media_bucket",
-    "media_prefix",
+    "mission",
+    "website",
+    "timezone",
+    "primary_color",
+    "secondary_color",
     "google_sheet_id",
-    "sheet_id",
     "apps_script_url",
-    "script_url",
-    "web_app_url",
     "sheet_sync_enabled",
-    "sheet_sync_direction",
-    "sheet_last_pushed_at",
-    "sheet_last_pulled_at",
-    "monday_board_id",
-    "monday_sync_enabled",
-    "monday_sync_direction",
-    "monday_last_pushed_at",
-    "monday_last_pulled_at",
-    "monday_auto_sync_on_save",
-    "default_platforms",
-    "default_pillars",
-    "default_statuses",
-    "default_post_types",
-    "current_month"
+    "default_pillars"
   ].join(",");
-  const minimalFields = "id,workspace_id,workspace_slug,brand_name,plan_slug,subscription_tier,managed_account,feature_flags,backend_type";
+  const minimalFields = "id,workspace_id,brand_name,plan_slug,subscription_tier,managed_account,feature_flags,backend_type";
 
   async function runSettingsSelect(fields) {
     const wsColumns = await getWorkspaceSettingsColumns();
@@ -6139,7 +6199,29 @@ async function loadWorkspaceSettingsForWorkspace(workspace) {
   if (!slug && !workspaceId) return workspace;
   try {
     const settings = await loadWorkspaceBrandingSettings(workspaceId, workspace);
-    return mergeWorkspaceSettings(workspace, settings);
+    const resolvedWorkspace = mergeWorkspaceSettings(workspace, settings);
+    if (typeof appState === "object" && appState) {
+      appState.workspace = {
+        ...(appState.workspace && typeof appState.workspace === "object" ? appState.workspace : {}),
+        ...resolvedWorkspace
+      };
+      appState.brandOS = {
+        ...(appState.brandOS && typeof appState.brandOS === "object" ? appState.brandOS : {}),
+        ...getWorkspaceBrandingDefaults(resolvedWorkspace),
+        brand_name: resolvedWorkspace.brand_name || resolvedWorkspace.name || "",
+        brand_voice: resolvedWorkspace.brand_voice || "",
+        mission: resolvedWorkspace.mission || "",
+        website: resolvedWorkspace.website || "",
+        primary_color: resolvedWorkspace.primary_color || resolvedWorkspace.brand_accent || "",
+        secondary_color: resolvedWorkspace.secondary_color || "",
+        icon: resolvedWorkspace.icon || "",
+        avatar_initials: resolvedWorkspace.avatar_initials || "",
+        short_name: resolvedWorkspace.short_name || "",
+        default_pillars: clonePillarDefinitions(resolvedWorkspace.default_pillars || []),
+        pillars: Array.isArray(resolvedWorkspace.pillars) ? resolvedWorkspace.pillars.slice() : []
+      };
+    }
+    return resolvedWorkspace;
   } catch (err) {
     console.warn("[workspace-settings] load failed", err);
     return workspace;
@@ -6156,15 +6238,18 @@ async function loadProfileSettingsForUser(user) {
         .eq("user_id", user.id)
         .maybeSingle();
       if (result.error) {
-        if (isMissingColumnError(result.error) || String(result.error.message || "").toLowerCase().includes("does not exist")) continue;
-        console.warn("[icon-save] profile load skipped", result.error.message || result.error);
+        if (isOptionalProfileSettingsError(result.error)) {
+          if (STELLARSYNC_DEBUG) console.warn("[icon-save] optional profile load skipped", { table: tableName, error: result.error.message || result.error });
+          continue;
+        }
+        if (STELLARSYNC_DEBUG) console.warn("[icon-save] profile load skipped", result.error.message || result.error);
         continue;
       }
       if (result.data) {
         return { ...user, user_metadata: { ...(user.user_metadata || {}), ...result.data } };
       }
     } catch (err) {
-      if (!isMissingColumnError(err) && !String(err?.message || err).toLowerCase().includes("does not exist")) {
+      if (!isOptionalProfileSettingsError(err) && STELLARSYNC_DEBUG) {
         console.warn("[icon-save] profile load skipped", err?.message || err);
       }
     }
@@ -6344,8 +6429,11 @@ function showAppRouterState({ title, message, detail = "", ctaHref = "", ctaLabe
   if (loadingEl) loadingEl.classList.add("hidden");
   const overlay = document.createElement("div");
   overlay.id = "app-router-state";
-  overlay.className = "fixed inset-0 z-[10000] flex items-center justify-center p-6";
+  overlay.className = "fixed inset-0 z-[10000] flex items-center justify-center p-6 min-h-screen min-w-screen";
   overlay.style.background = "#0a0514";
+  const loginHref = "/login/";
+  const loginLabel = "Login";
+  const hasCta = Boolean(ctaHref);
   overlay.innerHTML = `
     <div class="w-full max-w-xl bg-[#120c1d] border border-white/10 rounded-2xl p-8 text-center shadow-2xl">
       <div class="w-14 h-14 rounded-2xl bg-[#231738] flex items-center justify-center mx-auto mb-6 text-[#c77dff]">
@@ -6354,7 +6442,10 @@ function showAppRouterState({ title, message, detail = "", ctaHref = "", ctaLabe
       <h1 class="text-2xl font-extrabold text-white mb-3">${escapeHtml(title || "Workspace setup needed")}</h1>
       <p class="text-sm text-gray-300 leading-relaxed mb-4">${escapeHtml(message || "")}</p>
       ${detail ? `<p class="text-xs text-gray-500 leading-relaxed mb-6">${escapeHtml(detail)}</p>` : ""}
-      ${ctaHref ? `<a href="${escapeHtml(ctaHref)}" class="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-[#2d1b4e] hover:bg-[#3d2b5e] text-white text-xs uppercase tracking-widest font-bold transition-colors">${escapeHtml(ctaLabel || "Continue")}</a>` : ""}
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-3 mt-6">
+        ${hasCta ? `<a href="${escapeHtml(ctaHref)}" class="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-[#2d1b4e] hover:bg-[#3d2b5e] text-white text-xs uppercase tracking-widest font-bold transition-colors w-full sm:w-auto">${escapeHtml(ctaLabel || "Continue")}</a>` : ""}
+        <a href="${escapeHtml(loginHref)}" class="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-[#1a1128] hover:bg-[#231738] text-white text-xs uppercase tracking-widest font-bold transition-colors border border-white/10 w-full sm:w-auto">${escapeHtml(loginLabel)}</a>
+      </div>
     </div>
   `;
   document.body.appendChild(overlay);
@@ -7371,6 +7462,14 @@ function getCampaignColorForPost(post) {
 
 function getWorkspacePillars() {
   if (typeof appState !== "undefined" && appState) {
+    var bop = appState?.brandOS?.default_pillars;
+    if (Array.isArray(bop) && bop.length && typeof bop[0] === "object") return bop;
+    if (Array.isArray(bop) && bop.length) {
+      return bop.map(function(p) {
+        var s = typeof p === "string" ? p.trim().toLowerCase() : "";
+        return getDefaultPillarObject(s);
+      }).filter(Boolean);
+    }
     var wp = appState?.settings?.default_pillars;
     if (Array.isArray(wp) && wp.length && typeof wp[0] === "object") return wp;
     if (Array.isArray(wp) && wp.length) {
@@ -7435,7 +7534,11 @@ function getDefaultPillarObject(slug) {
     identity: { name: "Identity", slug: "identity", icon: "ph-heart", color: "#00f0ff", enabled: true },
     application: { name: "Application", slug: "application", icon: "ph-crown", color: "#ffd700", enabled: true },
     education: { name: "Education", slug: "education", icon: "ph-book-open", color: "#b25fff", enabled: true },
-    promotion: { name: "Promotion", slug: "promotion", icon: "ph-sparkle", color: "#f472b6", enabled: true }
+    promotion: { name: "Promotion", slug: "promotion", icon: "ph-sparkle", color: "#f472b6", enabled: true },
+    algorithm: { name: "Algorithm", slug: "algorithm", icon: "ph-sparkle", color: "#7c3aed", enabled: true },
+    jobs: { name: "Jobs", slug: "jobs", icon: "ph-briefcase", color: "#2563eb", enabled: true },
+    climate: { name: "Climate", slug: "climate", icon: "ph-leaf", color: "#14b8a6", enabled: true },
+    systems: { name: "Systems", slug: "systems", icon: "ph-circles-three", color: "#0f766e", enabled: true }
   };
   return defaults[s] || { name: toTitleCase(s.replace(/[-_]+/g, " ")), slug: s, icon: "ph-sparkle", color: "#c77dff", enabled: true };
 }
@@ -7843,6 +7946,32 @@ function extractSheetRowsFromPullResult(result, tab) {
   return [];
 }
 
+function isHybridMeaningfulValue(value) {
+  if (value === undefined || value === null) return false;
+  if (typeof value === "string") return !!String(value).trim();
+  if (Array.isArray(value)) return value.some(function(item) { return isHybridMeaningfulValue(item); });
+  if (typeof value === "object") return Object.keys(value).length > 0;
+  return true;
+}
+
+function pickHybridFieldValue(source, aliases = []) {
+  if (!source || typeof source !== "object") return "";
+  var keys = Array.isArray(aliases) ? aliases : [aliases];
+  for (var i = 0; i < keys.length; i += 1) {
+    var key = String(keys[i] || "").trim();
+    if (!key) continue;
+    if (Object.prototype.hasOwnProperty.call(source, key) && isHybridMeaningfulValue(source[key])) {
+      return source[key];
+    }
+    var normalizedKey = key.toLowerCase().replace(/[^a-z0-9]+/g, "");
+    var matchedKey = Object.keys(source).find(function(candidate) {
+      return String(candidate || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "") === normalizedKey;
+    });
+    if (matchedKey && isHybridMeaningfulValue(source[matchedKey])) return source[matchedKey];
+  }
+  return "";
+}
+
 function mergeMediaAssetsPreservingExisting(currentAssets = [], incomingAssets = []) {
   var merged = [];
   var seenKeys = new Set();
@@ -7876,6 +8005,16 @@ function normalizeHybridSettingsCategoryKey(value) {
   var key = String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
   if (key === "platform" || key === "platforms") return "platforms";
   if (key === "pillar" || key === "pillars" || key === "defaultpillars") return "pillars";
+  if (key === "brandname" || key === "brand") return "brandName";
+  if (key === "brandvoice" || key === "voice") return "brandVoice";
+  if (key === "mission") return "mission";
+  if (key === "website" || key === "url") return "website";
+  if (key === "primarycolor" || key === "primarycolour" || key === "accentcolor" || key === "brandaccent") return "primaryColor";
+  if (key === "secondarycolor" || key === "secondarycolour") return "secondaryColor";
+  if (key === "avatarinitials" || key === "initials") return "avatarInitials";
+  if (key === "shortname") return "shortName";
+  if (key === "icon" || key === "avataricon") return "icon";
+  if (key === "brandos") return "brandOS";
   if (key === "status" || key === "statuses" || key === "defaultstatuses") return "statuses";
   if (key === "posttype" || key === "posttypes" || key === "defaultposttypes") return "postTypes";
   if (key === "campaign" || key === "campaigns") return "campaigns";
@@ -7894,7 +8033,39 @@ function splitHybridSheetValues(value) {
 }
 
 function coerceHybridSheetSettings(input) {
-  if (!Array.isArray(input)) return input && typeof input === "object" ? { ...input } : {};
+  if (!Array.isArray(input)) {
+    var cloned = input && typeof input === "object" ? { ...input } : {};
+    cloned.platforms = Array.isArray(cloned.platforms) ? cloned.platforms.slice() : splitHybridSheetValues(cloned.platforms || cloned.platform || "");
+    var pillarSource = Array.isArray(cloned.default_pillars) && cloned.default_pillars.length
+      ? cloned.default_pillars
+      : Array.isArray(cloned.pillars) && cloned.pillars.length
+        ? cloned.pillars
+        : splitHybridSheetValues(cloned.pillars || cloned.default_pillars || cloned.defaultPillars || "");
+    cloned.pillars = Array.isArray(cloned.pillars) ? cloned.pillars.slice() : (Array.isArray(pillarSource)
+      ? pillarSource.map(function(value) { return String(typeof value === "object" && value !== null ? value.slug || value.name || "" : value || "").trim(); }).filter(Boolean)
+      : splitHybridSheetValues(pillarSource).filter(Boolean));
+    cloned.statuses = Array.isArray(cloned.statuses) ? cloned.statuses.slice() : splitHybridSheetValues(cloned.statuses || cloned.default_statuses || cloned.defaultStatuses || "");
+    cloned.postTypes = Array.isArray(cloned.postTypes) ? cloned.postTypes.slice() : splitHybridSheetValues(cloned.postTypes || cloned.post_types || cloned.default_post_types || cloned.defaultPostTypes || "");
+    cloned.campaigns = Array.isArray(cloned.campaigns) ? cloned.campaigns.slice() : splitHybridSheetValues(cloned.campaigns || "");
+    cloned.months = Array.isArray(cloned.months) ? cloned.months.slice() : splitHybridSheetValues(cloned.months || "");
+    cloned.campaignColors = cloned.campaignColors && typeof cloned.campaignColors === "object" ? { ...cloned.campaignColors } : {};
+    cloned.brandName = String(cloned.brandName || cloned.brand_name || cloned.display_name || cloned.displayName || "").trim();
+    cloned.brandVoice = String(cloned.brandVoice || cloned.brand_voice || "").trim();
+    cloned.mission = String(cloned.mission || "").trim();
+    cloned.website = String(cloned.website || "").trim();
+    cloned.primaryColor = String(cloned.primaryColor || cloned.primary_color || cloned.brand_accent || "").trim();
+    cloned.secondaryColor = String(cloned.secondaryColor || cloned.secondary_color || "").trim();
+    cloned.icon = String(cloned.icon || cloned.avatar_icon || "").trim();
+    cloned.avatarInitials = String(cloned.avatarInitials || cloned.avatar_initials || "").trim();
+    cloned.shortName = String(cloned.shortName || cloned.short_name || "").trim();
+    cloned.default_pillars = Array.isArray(cloned.default_pillars)
+      ? clonePillarDefinitions(cloned.default_pillars)
+      : cloned.pillars.length
+        ? clonePillarDefinitions(cloned.pillars)
+        : [];
+    cloned.pillars = cloned.pillars.map(function(value) { return String(typeof value === "object" && value !== null ? value.slug || value.name || "" : value || "").trim(); }).filter(Boolean);
+    return cloned;
+  }
   var settings = {
     platforms: [],
     pillars: [],
@@ -7902,7 +8073,16 @@ function coerceHybridSheetSettings(input) {
     postTypes: [],
     campaigns: [],
     campaignColors: {},
-    months: []
+    months: [],
+    brandName: "",
+    brandVoice: "",
+    mission: "",
+    website: "",
+    primaryColor: "",
+    secondaryColor: "",
+    icon: "",
+    avatarInitials: "",
+    shortName: ""
   };
   input.forEach(function(row) {
     if (!row || typeof row !== "object") return;
@@ -7910,6 +8090,10 @@ function coerceHybridSheetSettings(input) {
       var category = normalizeHybridSettingsCategoryKey(key);
       if (!category || category === "campaignColors") return;
       var values = splitHybridSheetValues(row[key]);
+      if (category === "brandName" || category === "brandVoice" || category === "mission" || category === "website" || category === "primaryColor" || category === "secondaryColor" || category === "icon" || category === "avatarInitials" || category === "shortName") {
+        if (!isHybridMeaningfulValue(settings[category]) && values.length) settings[category] = values[0];
+        return;
+      }
       if (Array.isArray(settings[category])) settings[category] = settings[category].concat(values);
       else if (!settings[category] && values.length) settings[category] = values[0];
     });
@@ -7928,6 +8112,10 @@ function coerceHybridSheetSettings(input) {
       if (campaignName && colorValue && /^#|rgb|hsl/i.test(colorValue)) settings.campaignColors[campaignName] = colorValue;
       return;
     }
+    if (category === "brandName" || category === "brandVoice" || category === "mission" || category === "website" || category === "primaryColor" || category === "secondaryColor" || category === "icon" || category === "avatarInitials" || category === "shortName") {
+      if (!isHybridMeaningfulValue(settings[category]) && values.length) settings[category] = values[0];
+      return;
+    }
     if (Array.isArray(settings[category])) settings[category] = settings[category].concat(values);
     else if (category && !settings[category] && values.length) settings[category] = values[0];
   });
@@ -7936,7 +8124,119 @@ function coerceHybridSheetSettings(input) {
       return list.indexOf(value) === index;
     });
   });
+  settings.default_pillars = Array.isArray(settings.default_pillars) && settings.default_pillars.length
+    ? clonePillarDefinitions(settings.default_pillars)
+    : clonePillarDefinitions(settings.pillars || []);
   return settings;
+}
+
+function resolveHybridBrandOSFields(sheetSettings = {}, supabaseSettings = {}, workspace = {}) {
+  var sheet = coerceHybridSheetSettings(sheetSettings);
+  var supabase = normalizeRemoteSettings(supabaseSettings || {});
+  var base = getWorkspaceBrandingDefaults(workspace || supabaseSettings || {});
+  var sheetPillars = clonePillarDefinitions(
+    Array.isArray(sheet.default_pillars) && sheet.default_pillars.length
+      ? sheet.default_pillars
+      : Array.isArray(sheet.pillars) && sheet.pillars.length
+        ? sheet.pillars.map(function(value) { return getDefaultPillarObject(value); })
+        : []
+  );
+  var fallbackPillars = clonePillarDefinitions(
+    Array.isArray(supabase.default_pillars) && supabase.default_pillars.length
+      ? supabase.default_pillars
+      : Array.isArray(workspace.default_pillars) && workspace.default_pillars.length
+        ? workspace.default_pillars
+        : base.default_pillars
+  );
+  var resolvedPillars = sheetPillars.length ? sheetPillars : fallbackPillars.length ? fallbackPillars : getFallbackWorkspacePillars(workspace);
+  var resolved = {
+    ...base,
+    ...supabase,
+    brand_name: String(pickHybridFieldValue(sheet, ["brandName", "brand_name", "display_name", "displayName", "name"]) || supabase.brand_name || base.brand_name || "").trim(),
+    brand_voice: String(pickHybridFieldValue(sheet, ["brandVoice", "brand_voice", "voice"]) || supabase.brand_voice || base.brand_voice || "").trim(),
+    mission: String(pickHybridFieldValue(sheet, ["mission"]) || supabase.mission || base.mission || "").trim(),
+    website: String(pickHybridFieldValue(sheet, ["website", "url"]) || supabase.website || base.website || "").trim(),
+    primary_color: String(pickHybridFieldValue(sheet, ["primaryColor", "primary_color", "primaryColour", "accentColor", "brandAccent"]) || supabase.primary_color || base.primary_color || supabase.brand_accent || base.brand_accent || "").trim(),
+    secondary_color: String(pickHybridFieldValue(sheet, ["secondaryColor", "secondary_color", "secondaryColour"]) || supabase.secondary_color || base.secondary_color || "").trim(),
+    icon: String(pickHybridFieldValue(sheet, ["icon", "avatarIcon"]) || supabase.icon || base.icon || "").trim(),
+    avatar_initials: String(pickHybridFieldValue(sheet, ["avatarInitials", "avatar_initials", "initials"]) || supabase.avatar_initials || base.avatar_initials || "").trim(),
+    short_name: String(pickHybridFieldValue(sheet, ["shortName", "short_name"]) || supabase.short_name || base.short_name || "").trim(),
+    default_pillars: clonePillarDefinitions(resolvedPillars),
+    pillars: Array.isArray(sheet.pillars) && sheet.pillars.length ? sheet.pillars.slice() : Array.isArray(supabase.pillars) && supabase.pillars.length ? supabase.pillars.slice() : (Array.isArray(base.pillars) ? base.pillars.slice() : [])
+  };
+  if (STELLARSYNC_DEBUG) {
+    console.log("[brand-os-hybrid] sheet fields found", {
+      brand_name: resolved.brand_name,
+      brand_voice: resolved.brand_voice,
+      mission: resolved.mission,
+      website: resolved.website,
+      primary_color: resolved.primary_color,
+      secondary_color: resolved.secondary_color,
+      icon: resolved.icon,
+      avatar_initials: resolved.avatar_initials,
+      short_name: resolved.short_name,
+      default_pillars: (sheet.default_pillars || []).length || 0,
+      pillars: (sheet.pillars || []).length || 0
+    });
+    console.log("[brand-os-hybrid] supabase fallback fields", {
+      brand_name: supabase.brand_name || "",
+      brand_voice: supabase.brand_voice || "",
+      mission: supabase.mission || "",
+      website: supabase.website || "",
+      primary_color: supabase.primary_color || "",
+      secondary_color: supabase.secondary_color || "",
+      icon: supabase.icon || "",
+      avatar_initials: supabase.avatar_initials || "",
+      short_name: supabase.short_name || "",
+      default_pillars: Array.isArray(supabase.default_pillars) ? supabase.default_pillars.length : 0
+    });
+    console.log("[brand-os-hybrid] resolved fields", {
+      brand_name: resolved.brand_name,
+      brand_voice: resolved.brand_voice,
+      mission: resolved.mission,
+      website: resolved.website,
+      primary_color: resolved.primary_color,
+      secondary_color: resolved.secondary_color,
+      icon: resolved.icon,
+      avatar_initials: resolved.avatar_initials,
+      short_name: resolved.short_name,
+      default_pillars: resolved.default_pillars.map(function(p) { return p.name || p.slug || ""; })
+    });
+  }
+  return resolved;
+}
+
+function resolveHybridWorkspaceSettings(sheetSettings = {}, supabaseSettings = {}, workspace = {}) {
+  var sheet = coerceHybridSheetSettings(sheetSettings);
+  var supabase = normalizeRemoteSettings(supabaseSettings || {});
+  var defaults = normalizeRemoteSettings(getDefaultSettings());
+  var brandOS = resolveHybridBrandOSFields(sheet, supabase, workspace);
+  var merged = {
+    ...defaults,
+    ...supabase,
+    ...sheet,
+    ...brandOS,
+    platforms: sheet.platforms.length ? sheet.platforms : (supabase.platforms.length ? supabase.platforms : defaults.platforms),
+    pillars: sheet.pillars.length ? sheet.pillars : (supabase.pillars.length ? supabase.pillars : defaults.pillars),
+    statuses: sheet.statuses.length ? sheet.statuses : (supabase.statuses.length ? supabase.statuses : defaults.statuses),
+    postTypes: sheet.postTypes.length ? sheet.postTypes : (supabase.postTypes.length ? supabase.postTypes : defaults.postTypes),
+    campaigns: sheet.campaigns.length ? sheet.campaigns : (supabase.campaigns.length ? supabase.campaigns : defaults.campaigns),
+    months: sheet.months.length ? sheet.months : (supabase.months.length ? supabase.months : defaults.months),
+    campaignColors: {
+      ...(defaults.campaignColors || {}),
+      ...(supabase.campaignColors || {}),
+      ...(sheet.campaignColors || {})
+    },
+    default_pillars: brandOS.default_pillars && brandOS.default_pillars.length
+      ? clonePillarDefinitions(brandOS.default_pillars)
+      : (Array.isArray(supabase.default_pillars) && supabase.default_pillars.length
+        ? clonePillarDefinitions(supabase.default_pillars)
+        : clonePillarDefinitions(defaults.default_pillars || []))
+  };
+  return {
+    settings: normalizeRemoteSettings(merged),
+    brandOS: brandOS
+  };
 }
 
 function extractPillarsFromBrandFrameworkRows(rows = []) {
@@ -7961,8 +8261,11 @@ function extractPillarsFromBrandFrameworkRows(rows = []) {
 }
 
 function resolveHybridWorkspacePillars(sheetData = {}) {
-  var settingsObject = coerceHybridSheetSettings(sheetData.settings);
+  var settingsObject = coerceHybridSheetSettings(sheetData.settings || sheetData.workspace_settings || sheetData.brand_os || sheetData.brand || {});
   var sheetPillars = clonePillarDefinitions(settingsObject.default_pillars || settingsObject.pillars || []);
+  if (!sheetPillars.length && sheetData.brand_os && Array.isArray(sheetData.brand_os.default_pillars)) {
+    sheetPillars = clonePillarDefinitions(sheetData.brand_os.default_pillars);
+  }
   var brandPillars = extractPillarsFromBrandFrameworkRows(sheetData.brandFramework || []);
   var canonical = sheetPillars.length ? sheetPillars : brandPillars.length ? brandPillars : getFallbackWorkspacePillars();
   console.log("[pillars-sync] sheet pillars", sheetPillars.map(function(item) { return item.name || item.slug; }));
@@ -7982,16 +8285,60 @@ function hydrateHybridSheetData(sheetData = {}) {
     }
   }
 
-  var settings = coerceHybridSheetSettings(sheetData.settings);
+  var settingsBundle = resolveHybridWorkspaceSettings(
+    sheetData.brand_os || sheetData.brand || sheetData.workspace_settings || sheetData.settings,
+    appState.settings || (WORKSPACE_RUNTIME_CONFIG?.active || {}),
+    WORKSPACE_RUNTIME_CONFIG?.active || {}
+  );
+  var settings = settingsBundle.settings || {};
+  var brandOS = settingsBundle.brandOS || resolveHybridBrandOSFields(sheetData.brand_os || sheetData.brand || sheetData.workspace_settings || sheetData.settings, appState.settings || {}, WORKSPACE_RUNTIME_CONFIG?.active || {});
   var hybridPillars = resolveHybridWorkspacePillars(sheetData);
   settings.default_pillars = clonePillarDefinitions(hybridPillars);
   settings.pillars = hybridPillars.map(function(item) { return item.slug || item.name || ""; }).filter(Boolean);
+  brandOS.default_pillars = clonePillarDefinitions(hybridPillars);
+  brandOS.pillars = settings.pillars.slice();
   if (settings && typeof settings === "object") {
-    appState.settings = normalizeRemoteSettings(settings);
+    appState.settings = normalizeRemoteSettings({
+      ...(appState.settings || {}),
+      ...settings,
+      default_pillars: clonePillarDefinitions(hybridPillars),
+      pillars: settings.pillars.slice()
+    });
     appState.settings.default_pillars = clonePillarDefinitions(hybridPillars);
-    appState.settings.pillars = hybridPillars.map(function(item) { return item.slug || item.name || ""; }).filter(Boolean);
-    if (appState.workspace && typeof appState.workspace === "object") appState.workspace.default_pillars = clonePillarDefinitions(hybridPillars);
-    if (WORKSPACE_RUNTIME_CONFIG?.active) WORKSPACE_RUNTIME_CONFIG.active.default_pillars = clonePillarDefinitions(hybridPillars);
+    appState.settings.pillars = settings.pillars.slice();
+    appState.workspace = {
+      ...(appState.workspace && typeof appState.workspace === "object" ? appState.workspace : {}),
+      ...(WORKSPACE_RUNTIME_CONFIG?.active || {}),
+      ...settings,
+      brandOS: { ...brandOS },
+      default_pillars: clonePillarDefinitions(hybridPillars),
+      pillars: settings.pillars.slice()
+    };
+    appState.brandOS = {
+      ...(appState.brandOS && typeof appState.brandOS === "object" ? appState.brandOS : {}),
+      ...brandOS,
+      default_pillars: clonePillarDefinitions(hybridPillars),
+      pillars: settings.pillars.slice()
+    };
+    if (WORKSPACE_RUNTIME_CONFIG?.active) {
+      WORKSPACE_RUNTIME_CONFIG.active = mergeWorkspaceSettings(WORKSPACE_RUNTIME_CONFIG.active, {
+        ...settings,
+        default_pillars: clonePillarDefinitions(hybridPillars),
+        pillars: settings.pillars.slice(),
+        brand_name: brandOS.brand_name,
+        brand_voice: brandOS.brand_voice,
+        mission: brandOS.mission,
+        website: brandOS.website,
+        primary_color: brandOS.primary_color,
+        secondary_color: brandOS.secondary_color,
+        icon: brandOS.icon,
+        avatar_initials: brandOS.avatar_initials,
+        short_name: brandOS.short_name
+      });
+      WORKSPACE_RUNTIME_CONFIG.active.default_pillars = clonePillarDefinitions(hybridPillars);
+      WORKSPACE_RUNTIME_CONFIG.active.pillars = settings.pillars.slice();
+      WORKSPACE_RUNTIME_CONFIG.active.brandOS = { ...brandOS };
+    }
   }
 
   var mediaRows = Array.isArray(sheetData.media) ? sheetData.media : [];
@@ -9186,6 +9533,18 @@ const GENERIC_STARTER_SETTINGS = {
 
 const EMPTY_WORKSPACE_SETTINGS = {
   ...GENERIC_STARTER_SETTINGS,
+  brand_name: "",
+  brand_voice: "",
+  mission: "",
+  website: "",
+  primary_color: "",
+  secondary_color: "",
+  short_name: "",
+  avatar_mode: "initials",
+  icon: "",
+  avatar_initials: "",
+  default_pillars: [],
+  pillars: [],
   campaigns: [],
   campaignColors: {}
 };
@@ -9194,6 +9553,8 @@ const EMPTY_WORKSPACE_STATE = {
   posts: [],
   campaigns: [],
   settings: EMPTY_WORKSPACE_SETTINGS,
+  workspace: {},
+  brandOS: {},
   inspo: [],
   notes: [],
   media: [],
@@ -13618,8 +13979,54 @@ function buildConstellationRows() {
         _constellationLayout: getConstellationLayoutConfig({ ...campaign, posts, _constellationRowIndex: rowIndex }, rowIndex)
       };
     });
-  console.log("[constellation-campaign] final nodes", mapped.map((campaign) => campaign.campaignName || "Uncategorized"));
-  return mapped.map((campaign, index) => rebuildConstellationCampaignGeometry(campaign, index));
+  const mappedByName = new Map(mapped.map((campaign) => [normalizeLookupValue(campaign.campaignName || ""), campaign]));
+  const droppedKeys = new Set();
+  mapped.forEach((campaign) => {
+    const campaignName = String(campaign.campaignName || "").trim();
+    const parentName = getConstellationFragmentParent(campaignName, canonicalCampaignNames, campaignRecords);
+    if (!parentName) return;
+    const parent = mappedByName.get(normalizeLookupValue(parentName));
+    if (parent && parent !== campaign) {
+      const existingPostKeys = new Set((parent.posts || []).map((post) => String(post.id || post.postId || post.sheetRow || post.rowNumber || "").trim()).filter(Boolean));
+      (campaign.posts || []).forEach((post) => {
+        const postKey = String(post.id || post.postId || post.sheetRow || post.rowNumber || "").trim();
+        if (!postKey || !existingPostKeys.has(postKey)) {
+          parent.posts.push(post);
+          if (postKey) existingPostKeys.add(postKey);
+        }
+      });
+    }
+    droppedKeys.add(normalizeLookupValue(campaignName));
+    if (STELLARSYNC_DEBUG) {
+      const firstPost = (campaign.posts || [])[0] || {};
+      console.log("[constellation-campaign] dropped fragment", {
+        fragmentName: campaignName,
+        parentCanonicalCampaign: parentName,
+        sourcePostId: String(firstPost.id || firstPost.postId || "").trim(),
+        sourceRow: String(firstPost.sheetRow || firstPost.rowNumber || firstPost.row_number || "").trim()
+      });
+    }
+  });
+  const filteredMapped = mapped.filter((campaign) => !droppedKeys.has(normalizeLookupValue(campaign.campaignName || "")));
+  campaignLaneMap = new Map();
+  const finalMapped = filteredMapped.map((campaign, laneIndex) => {
+    const posts = (Array.isArray(campaign.posts) ? campaign.posts : []).sort((a, b) => {
+      const aTime = parsePostDate(normalizePostCalendarDateKey(a) || a.date)?.getTime() || 0;
+      const bTime = parsePostDate(normalizePostCalendarDateKey(b) || b.date)?.getTime() || 0;
+      return aTime - bTime;
+    });
+    const laneKey = getConstellationCampaignLaneKey(campaign) || `__uncategorized__${laneIndex}`;
+    campaignLaneMap.set(laneKey, laneIndex);
+    return {
+      ...campaign,
+      posts,
+      _constellationLaneKey: laneKey,
+      _constellationRowIndex: laneIndex,
+      _constellationLayout: getConstellationLayoutConfig({ ...campaign, posts, _constellationRowIndex: laneIndex }, laneIndex)
+    };
+  });
+  console.log("[constellation-campaign] final nodes", finalMapped.map((campaign) => campaign.campaignName || "Uncategorized"));
+  return finalMapped.map((campaign, index) => rebuildConstellationCampaignGeometry(campaign, index));
 }
 
 function normalizeCampaignLaneKey(value = "") {
@@ -13717,6 +14124,21 @@ function resolveConstellationCampaignCandidate(rawCampaignName = "", canonicalNa
     return { keep: false, raw, canonicalName: "", reason: "fragment" };
   }
   return { keep: true, raw, canonicalName: raw, reason: "standalone" };
+}
+
+function getConstellationFragmentParent(name = "", canonicalNames = [], sourceRecords = []) {
+  const key = normalizeLookupValue(name);
+  if (!key) return "";
+  const sourceKeys = new Set(
+    (Array.isArray(sourceRecords) ? sourceRecords : []).map((r) => normalizeLookupValue(r.campaignName || r.campaign_name || r.name || ""))
+  );
+  if (sourceKeys.has(key)) return "";
+  return (Array.isArray(canonicalNames) ? canonicalNames : []).find((other) => {
+    const otherName = String(other || "").trim();
+    if (!otherName || normalizeLookupValue(otherName) === key) return false;
+    if (!otherName.includes(",")) return false;
+    return normalizeLookupValue(otherName).indexOf(key) !== -1;
+  }) || "";
 }
 
 function discardCampaignNameFragments(names = [], sourceRecords = [], sourceFunction = "discardCampaignNameFragments") {
@@ -25967,23 +26389,22 @@ function setupPWAInstall() {
 
   const handleInstallAction = async () => {
     if (installContext.isStandalone) return;
-    if (deferredInstallPrompt) {
-      console.log("[install-app] browser prompt started");
-      deferredInstallPrompt.prompt();
-      const result = await deferredInstallPrompt.userChoice;
+    if (!deferredInstallPrompt) {
+      if (installContext.isIos) {
+        showToast("Install tip", "On iPhone or iPad, use Share then Add to Home Screen.", "ph-device-mobile", "text-[#38bdf8]");
+      } else {
+        showToast("Install unavailable", "Open StellarSync in Chrome, Edge, or Safari and try again.", "ph-browser", "text-yellow-400");
+      }
+      return false;
+    }
+    deferredInstallPrompt.prompt();
+    try {
+      await deferredInstallPrompt.userChoice;
+      return true;
+    } finally {
       deferredInstallPrompt = null;
       setInstallButtonVisibility(false);
-      if (result.outcome === "accepted") {
-        console.log("[install-app] user accepted install");
-        return true;
-      } else {
-        console.log("[install-app] user dismissed install");
-        return false;
-      }
     }
-    console.log("[install-app] prompt unavailable");
-    showToast("Install unavailable", "Install App is not available in this browser.", "ph-browser", "text-yellow-400");
-    return false;
   };
 
   window.addEventListener("online", () => {
@@ -26002,14 +26423,6 @@ function setupPWAInstall() {
   installHelperActionBtn?.addEventListener("click", async () => {
     const installed = await handleInstallAction();
     if (installed) closeInstallHelperModal();
-  });
-  installHelperInstructionsBtn?.addEventListener("click", () => {
-    console.log("[install-app] prompt unavailable");
-    if (installHelperDesktopCopy) {
-      installHelperDesktopCopy.textContent = installContext.isIos
-        ? "Open StellarSync in Safari, tap Share, then choose Add to Home Screen."
-        : "If the browser install prompt is unavailable, use your browser menu to install this app or bookmark StellarSync.";
-    }
   });
   closeInstallHelperModalBtn?.addEventListener("click", closeInstallHelperModal);
   closeInstallHelperBtn?.addEventListener("click", closeInstallHelperModal);
@@ -26075,22 +26488,24 @@ function registerServiceWorkerSafe() {
     window.__appErrors.push({ msg: "SW registration failed", stack: err?.stack, phase: "registerServiceWorkerSafe", time: Date.now() });
   });
 }
-
 function openInstallHelperModal() {
   console.log("[modal] open install-helper");
   console.log("[install-app] modal opened");
   if (!installHelperModal || !installHelperModalCard) return;
+
   installContext.isStandalone = detectStandaloneMode();
   if (installHelperInstalledState) {
     installHelperInstalledState.classList.toggle("hidden", !installContext.isStandalone);
   }
   if (installHelperDesktopCopy) {
-    installHelperDesktopCopy.textContent = "Click your browser's URL bar download button or download the StellarSync Plugin ZIP, unzip it, and load it manually as an unpacked extension.";
+    installHelperDesktopCopy.textContent = deferredInstallPrompt
+      ? "Use the Install App button below to trigger the browser install prompt."
+      : "If the browser supports install, the Install App button will appear in Chrome or Edge.";
   }
   if (installHelperActionBtn) {
     installHelperActionBtn.disabled = installContext.isStandalone;
     installHelperActionBtn.classList.toggle("opacity-50", installContext.isStandalone);
-    installHelperActionBtn.textContent = "Install App";
+    installHelperActionBtn.textContent = deferredInstallPrompt ? "Install Now" : installContext.isIos ? "Show iOS Steps" : "Install App";
   }
   installHelperModal.classList.remove("opacity-0", "pointer-events-none");
   installHelperModalCard.classList.remove("scale-95");
@@ -27300,6 +27715,14 @@ async function loadSheetsWorkspaceDataForHybrid(requestedTabs) {
     var primaryPosts = filterBlankPostsForRender(extractPostsFromSheetPullResult(result));
     console.log("[posts] boot pull posts count", primaryPosts.length);
     console.log("[posts] boot pull loaded count", primaryPosts.length);
+    var settingsRows = extractSheetRowsFromPullResult(result, "SETTINGS");
+    var brandFrameworkRows = extractSheetRowsFromPullResult(result, "BRAND_FRAMEWORK");
+    var brandSource = result.brand_os || result.brand || result.workspace_settings || settingsRows;
+    var resolvedBrandOS = resolveHybridBrandOSFields(brandSource, appState.settings || (WORKSPACE_RUNTIME_CONFIG?.active || {}), WORKSPACE_RUNTIME_CONFIG?.active || {});
+    var resolvedPillars = resolveHybridWorkspacePillars({
+      settings: settingsRows,
+      brandFramework: brandFrameworkRows
+    });
     var payload = {
       tabsReturned: tabs.filter(function(tab) { return Object.prototype.hasOwnProperty.call(result || {}, tab); }),
       posts: primaryPosts,
@@ -27308,8 +27731,13 @@ async function loadSheetsWorkspaceDataForHybrid(requestedTabs) {
       notes: extractSheetRowsFromPullResult(result, "NOTES"),
       inspo: extractSheetRowsFromPullResult(result, "INSPO"),
       aiDrafts: extractSheetRowsFromPullResult(result, "AI_DRAFTS"),
-      settings: extractSheetRowsFromPullResult(result, "SETTINGS"),
-      brandFramework: extractSheetRowsFromPullResult(result, "BRAND_FRAMEWORK")
+      settings: settingsRows,
+      workspace_settings: settingsRows,
+      brand_os: resolvedBrandOS,
+      brand: resolvedBrandOS,
+      brandFramework: brandFrameworkRows,
+      pillars: resolvedPillars,
+      default_pillars: clonePillarDefinitions(resolvedPillars)
     };
     if (!tabs.includes("POSTS") || primaryPosts.length > 0) return payload;
   } catch (err) {
@@ -27326,6 +27754,9 @@ async function loadSheetsWorkspaceDataForHybrid(requestedTabs) {
       inspo: [],
       aiDrafts: [],
       settings: {},
+      workspace_settings: {},
+      brand_os: {},
+      brand: {},
       brandFramework: []
     };
   }
@@ -27340,6 +27771,9 @@ async function loadSheetsWorkspaceDataForHybrid(requestedTabs) {
     inspo: [],
     aiDrafts: [],
     settings: {},
+    workspace_settings: {},
+    brand_os: {},
+    brand: {},
     brandFramework: []
   };
 }
@@ -30236,7 +30670,25 @@ function renderBrandFrameworkEditor() {
   ["Core Identity", "System Philosophy", "Participation Architecture", "Orientation", "Spatial / Geographic Systems", "Interpreter of Systems", "Classification Before Distribution", "Community-Led Systems", "Language Carries Structure", "Embedded Builder Perspective", "Legibility", "Platform-Specific Strategy", "CTA Philosophy", "Hook Patterns", "Emotional Entry Points", "Carousel Philosophy", "AI Anti-Patterns", "Grammar Rules", "Preferred Vocabulary", "Avoid Vocabulary"].forEach(function(section) {
     if (sections.indexOf(section) === -1) diagnostics.push("Missing framework section: " + section + ".");
   });
-  brandFrameworkDiagnostics.innerHTML = (diagnostics.length ? diagnostics : ["No framework conflicts detected from local Brand OS data."]).map(function(item) { return '<div class="text-sm text-gray-300 wrap-safe">' + escapeHtml(item) + '</div>'; }).join("");
+  var resolvedBrandOS = appState.brandOS || appState.workspace || (WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active) || {};
+  var resolvedPillars = getWorkspacePillars();
+  var brandSummary = [
+    { label: "Brand", value: resolvedBrandOS.brand_name || resolvedBrandOS.name || resolvedBrandOS.workspace_slug || resolvedBrandOS.slug || "Workspace" },
+    { label: "Voice", value: resolvedBrandOS.brand_voice || "Unspecified" },
+    { label: "Mission", value: resolvedBrandOS.mission || "Unspecified" },
+    { label: "Website", value: resolvedBrandOS.website || "Unspecified" },
+    { label: "Primary", value: resolvedBrandOS.primary_color || resolvedBrandOS.brand_accent || "Unspecified" },
+    { label: "Secondary", value: resolvedBrandOS.secondary_color || "Unspecified" },
+    { label: "Avatar", value: [resolvedBrandOS.avatar_initials || "", resolvedBrandOS.icon ? resolvedBrandOS.icon : ""].filter(Boolean).join(" · ") || "Unspecified" },
+    { label: "Pillars", value: resolvedPillars.map(function(p) { return p.name || p.slug || ""; }).filter(Boolean).join(", ") || "Unspecified" }
+  ].map(function(item) {
+    return '<div class="p-3 rounded-xl bg-[#120c1d] border border-white/5"><div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">' + escapeHtml(item.label) + '</div><div class="text-sm text-white wrap-safe">' + escapeHtml(item.value) + '</div></div>';
+  }).join("");
+  brandFrameworkDiagnostics.innerHTML = [
+    '<div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">' + brandSummary + '</div>',
+    '<div class="text-xs uppercase tracking-widest text-gray-500 font-bold mb-2">Brand OS checks</div>',
+    (diagnostics.length ? diagnostics : ["No framework conflicts detected from local Brand OS data."]).map(function(item) { return '<div class="text-sm text-gray-300 wrap-safe">' + escapeHtml(item) + '</div>'; }).join("")
+  ].join("");
 }
 
 function renderBrandOSPillarEditor() {
@@ -30800,6 +31252,16 @@ function normalizeRemoteSettings(settings) {
       }).filter(Boolean);
 
   return {
+    brand_name: String(settings?.brand_name || settings?.brandName || settings?.display_name || settings?.displayName || "").trim(),
+    brand_voice: String(settings?.brand_voice || settings?.brandVoice || "").trim(),
+    mission: String(settings?.mission || "").trim(),
+    website: String(settings?.website || "").trim(),
+    primary_color: String(settings?.primary_color || settings?.primaryColor || settings?.brand_accent || "").trim(),
+    secondary_color: String(settings?.secondary_color || settings?.secondaryColor || "").trim(),
+    short_name: String(settings?.short_name || settings?.shortName || "").trim(),
+    avatar_mode: String(settings?.avatar_mode || settings?.avatarMode || "").trim(),
+    icon: String(settings?.icon || settings?.avatar_icon || settings?.avatarIcon || "").trim(),
+    avatar_initials: String(settings?.avatar_initials || settings?.avatarInitials || "").trim(),
     platforms: normalizeList(settings?.platforms, defaults.platforms, (value) => String(value || "").trim().toLowerCase()),
     pillars: normalizeList(settings?.pillars, defaults.pillars, (value) => normalizePillar(value)),
     default_pillars: normalizedDefaultPillars.length ? normalizedDefaultPillars : getFallbackWorkspacePillars(),
@@ -32047,6 +32509,8 @@ function loadLocalState() {
       posts: Array.isArray(parsed.posts) ? parsed.posts : structuredCloneState(DEFAULT_STATE.posts),
       campaigns: Array.isArray(parsed.campaigns) ? parsed.campaigns : structuredCloneState(DEFAULT_STATE.campaigns),
       settings: parsed.settings ? normalizeRemoteSettings(parsed.settings) : structuredCloneState(DEFAULT_STATE.settings),
+      workspace: parsed.workspace && typeof parsed.workspace === "object" ? { ...parsed.workspace } : {},
+      brandOS: parsed.brandOS && typeof parsed.brandOS === "object" ? { ...parsed.brandOS } : {},
       inspo: Array.isArray(parsed.inspo) ? parsed.inspo : structuredCloneState(DEFAULT_STATE.inspo),
       notes: Array.isArray(parsed.notes) ? parsed.notes : structuredCloneState(DEFAULT_STATE.notes),
       media: Array.isArray(parsed.media) ? parsed.media : structuredCloneState(DEFAULT_STATE.media),
@@ -33512,16 +33976,23 @@ async function savePWProfile() {
     for (const tableName of ["profile_settings", "user_preferences"]) {
       const profilePayload = { ...payload, user_id: userId };
       const upsertResult = await STELLARSYNC_SUPABASE_CLIENT.from(tableName).upsert(profilePayload, { onConflict: "user_id" }).select("user_id,display_name,profile_image_url").maybeSingle();
-      console.log("[icon-save] response", { table: tableName, ok: !upsertResult?.error, error: upsertResult?.error || null });
+      if (STELLARSYNC_DEBUG) console.log("[icon-save] response", { table: tableName, ok: !upsertResult?.error, error: upsertResult?.error || null });
       if (!upsertResult?.error) {
         profileTable = tableName;
         break;
       }
       lastProfileError = upsertResult.error;
-      if (!isMissingColumnError(upsertResult.error) && !String(upsertResult.error?.message || "").toLowerCase().includes("does not exist")) throw upsertResult.error;
+      if (!isOptionalProfileSettingsError(upsertResult.error)) throw upsertResult.error;
     }
     if (!profileTable) {
-      throw new Error("Missing profile settings table/columns: expected public.profile_settings or public.user_preferences with user_id, display_name. Last error: " + (lastProfileError?.message || "unknown"));
+      if (STELLARSYNC_DEBUG) console.warn("[icon-save] optional profile settings unavailable", lastProfileError?.message || lastProfileError || "unknown");
+      STELLARSYNC_AUTH_USER = { ...user, user_metadata: { ...(user.user_metadata || {}), ...payload } };
+      if (typeof window !== "undefined") window.__currentAuthUser = STELLARSYNC_AUTH_USER;
+      if (statusEl) { statusEl.textContent = "Profile saved."; statusEl.className = "text-xs text-emerald-400"; statusEl.classList.remove("hidden"); }
+      renderWorkspaceBranding();
+      updateToast(loadingToastId, "success", "Profile saved", "Profile settings updated for this session.");
+      setTimeout(function() { if (statusEl) statusEl.classList.add("hidden"); }, 3000);
+      return;
     }
     var reloadResult = await STELLARSYNC_SUPABASE_CLIENT.from(profileTable).select("user_id,display_name,profile_image_url").eq("user_id", userId).maybeSingle();
     if (reloadResult.error) throw reloadResult.error;
@@ -33551,7 +34022,6 @@ var WORKSPACE_SETTINGS_COLUMNS_CACHE = null;
 var WORKSPACE_SETTINGS_ALLOWED_FIELDS = [
   "id",
   "workspace_id",
-  "workspace_slug",
   "brand_name",
   "brand_voice",
   "mission",
@@ -33562,20 +34032,15 @@ var WORKSPACE_SETTINGS_ALLOWED_FIELDS = [
   "icon",
   "avatar_initials",
   "short_name",
-  "default_pillars",
   "feature_flags",
-  "managed_account",
-  "plan_slug",
-  "subscription_tier",
   "backend_type",
-  "sheet_id",
   "google_sheet_id",
   "apps_script_url",
-  "script_url",
-  "web_app_url",
   "sheet_sync_enabled",
-  "updated_at",
-  "created_at"
+  "default_pillars",
+  "plan_slug",
+  "subscription_tier",
+  "managed_account"
 ];
 var WORKSPACE_SETTINGS_OPTIONAL_FIELDS = WORKSPACE_SETTINGS_ALLOWED_FIELDS.slice();
 var WORKSPACE_SETTINGS_FIELD_ALIASES = {
@@ -33836,7 +34301,9 @@ async function savePWWorkspace() {
       var persistedFields = reloadedWorkspace?.fields || reloadFields;
       var mismatch = ["brand_name", "short_name", "icon", "avatar_initials"].filter(function(key) {
         if (persistedFields.indexOf(key) === -1) return false;
-        return String((persisted && persisted[key]) || "").trim() !== String((settingsPayload && settingsPayload[key]) || "").trim();
+        var persistedVal = (persisted && persisted[key] !== null && persisted[key] !== undefined) ? String(persisted[key]).trim() : "";
+        var payloadVal = (settingsPayload && settingsPayload[key] !== null && settingsPayload[key] !== undefined) ? String(settingsPayload[key]).trim() : "";
+        return persistedVal !== payloadVal;
       });
       console.log("[icon-save] mismatch", mismatch);
       if (mismatch.length) throw new Error("Workspace save verification failed: " + mismatch.join(", "));
