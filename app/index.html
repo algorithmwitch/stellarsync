@@ -12187,7 +12187,7 @@ function setupWorkspaceUI() {
       event.preventDefault();
       event.stopPropagation();
       toggleProfileMenu(false);
-      handlePWAInstallAction({ openHelper: true });
+      openInstallHelperModal();
       return;
     }
     if (action === "support") {
@@ -27211,7 +27211,7 @@ function setInstallButtonVisibility() {
     mobileInstallAppBtn.classList.toggle("inline-flex", showMobile);
   }
   document.querySelectorAll('[data-workspace-action="install"]').forEach(function(button) {
-    button.classList.toggle("hidden", !visible);
+    button.classList.toggle("hidden", state === "installed" || (mobileOnly && visible));
   });
 }
 
@@ -27323,8 +27323,8 @@ function setupPWAInstall() {
     rerenderAll();
   });
 
-  installAppBtn?.addEventListener("click", function() { handlePWAInstallAction({ openHelper: true }); });
-  mobileInstallAppBtn?.addEventListener("click", function() { handlePWAInstallAction({ openHelper: true }); });
+  installAppBtn?.addEventListener("click", openInstallHelperModal);
+  mobileInstallAppBtn?.addEventListener("click", openInstallHelperModal);
   installHelperActionBtn?.addEventListener("click", async () => {
     const installed = await handlePWAInstallAction({ openHelper: false });
     if (installed) closeInstallHelperModal();
