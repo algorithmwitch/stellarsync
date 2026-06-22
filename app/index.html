@@ -7609,66 +7609,54 @@ function getResolvedPostCampaignNames(posts = [], campaignRecords = []) {
 }
 
 function buildCanonicalCampaignRecords() {
-  const state = getAppStateRef() || {};
-  const sourceRecords = Array.isArray(state?.campaigns) ? state.campaigns : [];
-  const settingsCampaigns = Array.isArray(state?.settings?.campaigns) ? state.settings.campaigns : [];
-  const sourceNames = sourceRecords.map((campaign) => String(campaign?.campaignName || campaign?.campaign_name || campaign?.name || "").trim()).filter(Boolean);
-  const resolvedPostNames = getResolvedPostCampaignNames(Array.isArray(state?.posts) ? state.posts : [], sourceRecords);
-  const candidateNames = sourceRecords.length ? sourceNames.concat(resolvedPostNames) : (settingsCampaigns.length ? settingsCampaigns.slice() : resolvedPostNames);
-  const fragmentSourceRecords = sourceRecords.concat(resolvedPostNames.map((campaignName) => ({
-    campaignName,
-    campaign_name: campaignName,
-    name: campaignName
-  })));
-  const orderedNames = discardCampaignNameFragments(candidateNames, fragmentSourceRecords, "buildCanonicalCampaignRecords");
-  const orderedKeySet = new Set(orderedNames.map((name) => normalizeLookupValue(name)));
-  if (STELLARSYNC_DEBUG && sourceRecords.length && settingsCampaigns.length) {
-    settingsCampaigns.forEach((campaignName) => {
-      const key = normalizeLookupValue(campaignName);
-      if (key && !orderedKeySet.has(key)) {
-        console.log("[constellation-campaign] dropped stale registry campaign", {
-          campaignName: String(campaignName || "").trim(),
-          source: "SETTINGS/appState.settings.campaigns"
-        });
-      }
-    });
-  }
-  const seen = new Set();
-  return orderedNames.map((campaignName, index) => {
-    const displayName = normalizeCampaignDisplayName(campaignName);
-    const key = normalizeLookupValue(displayName);
-    if (!displayName || seen.has(key)) return null;
-    seen.add(key);
-    const matched = sourceRecords.find((campaign) => normalizeLookupValue(campaign.campaignName || campaign.campaign_name || campaign.name || "") === key) || null;
-    const finalRecord = {
-      ...(matched || {}),
-      campaignId: String(matched?.campaignId || matched?.campaign_id || matched?.campaignID || matched?.id || `CMP-${key.replace(/[^a-z0-9]+/g, "").toUpperCase().slice(0, 8) || index}`).trim(),
-      campaignName: String(matched?.campaignName || matched?.campaign_name || matched?.name || displayName).trim(),
-      campaign_name: String(matched?.campaign_name || matched?.campaignName || matched?.name || displayName).trim(),
-      name: String(matched?.name || matched?.campaignName || matched?.campaign_name || displayName).trim(),
-      color: String(matched?.color || matched?.campaignColor || matched?.campaign_color || matched?.hexColor || matched?.hex_color || "").trim(),
-      campaignColor: String(matched?.campaignColor || matched?.campaign_color || matched?.color || matched?.hexColor || matched?.hex_color || "").trim(),
-      campaign_color: String(matched?.campaign_color || matched?.campaignColor || matched?.color || matched?.hex_color || matched?.hexColor || "").trim(),
-      pillar: String(matched?.pillar || matched?.contentPillar || matched?.content_pillar || "").trim(),
-      sortOrder: Number(matched?.sortOrder ?? index) || index,
-      isArchived: Boolean(matched?.isArchived)
+  const settingsCampaigns = Array.isArray(appState?.settings?.campaigns) ? appState.settings.campaigns : [];
+  const sourceRecords = Array.isArray(appState?.campaigns) ? appState.campaigns : [];
+  const byKey = new Map();
+  const ordered = [];
+
+  function addCampaignRecord(campaign, index, fromSettings = false) {
+    const campaignName = normalizeCampaignDisplayName(campaign?.campaignName || campaign?.name || campaign || "");
+    if (!campaignName) return;
+    const key = normalizeLookupValue(campaignName);
+    if (!key) return;
+    const campaignId = String(campaign?.campaignId || campaign?.id || "").trim();
+    const sortOrder = Number(campaign?.sortOrder ?? index) || index;
+    const next = {
+      ...(fromSettings ? {} : campaign),
+      campaignId,
+      campaignName,
+      sortOrder,
+      isArchived: Boolean(campaign?.isArchived)
     };
-    logCampaignFinalSource({
-      finalCampaignName: finalRecord.campaignName,
-      sourceFunction: "buildCanonicalCampaignRecords",
-      sourceSheet: matched ? "CAMPAIGNS/appState.campaigns" : (sourceRecords.length ? "POSTS/resolved campaign name" : "SETTINGS/appState.settings.campaigns"),
-      sourceRow: matched?.row_number || matched?.rowNumber || "",
-      sourcePostId: "",
-      rawValue: campaignName,
-      parsedParts: splitExplicitCampaignValues(campaignName),
-      retainedReason: matched ? "matched source record" : (sourceRecords.length ? "resolved post campaign" : "settings option")
+    const existing = byKey.get(key);
+    if (!existing) {
+      byKey.set(key, next);
+      ordered.push(next);
+      return;
+    }
+    byKey.set(key, {
+      ...existing,
+      ...next,
+      campaignName: existing.campaignName || next.campaignName,
+      campaignId: existing.campaignId || next.campaignId,
+      sortOrder: Number.isFinite(Number(existing.sortOrder)) ? Number(existing.sortOrder) : sortOrder,
+      isArchived: Boolean(existing.isArchived && next.isArchived)
     });
-    return finalRecord;
-  }).filter(Boolean);
+    ordered[ordered.findIndex((item) => normalizeLookupValue(item.campaignName || "") === key)] = byKey.get(key);
+  }
+
+  settingsCampaigns.forEach((name, index) => addCampaignRecord({ campaignName: name, sortOrder: index }, index, true));
+  sourceRecords.forEach((campaign, index) => addCampaignRecord(campaign, index, false));
+
+  return ordered
+    .filter((campaign) => !campaign.isArchived)
+    .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0) || String(a.campaignName || "").localeCompare(String(b.campaignName || "")));
 }
 
 function getAvailableCampaignRecords() {
-  return buildCanonicalCampaignRecords().filter((campaign) => !campaign.isArchived);
+  const records = buildCanonicalCampaignRecords();
+  if (STELLARSYNC_DEBUG) console.log("[campaign-source] appState.campaigns count", Array.isArray(appState?.campaigns) ? appState.campaigns.length : 0, "available count", records.length);
+  return records;
 }
 
 function getCleanCampaignRecords() {
@@ -7888,47 +7876,54 @@ function resolveCampaignColor(campaignOrName) {
       ? campaignOrName.campaignId || campaignOrName.campaign_id || campaignOrName.id || ""
       : ""
   ).trim();
+  var nameKey = normalizeLookupValue(campaignName);
+  var state = getAppStateRef() || {};
+  var matchedCampaign = (Array.isArray(state?.campaigns) ? state.campaigns : []).find(function(c) {
+    if (campaignId && String(c.campaignId || c.campaign_id || c.id || "").trim() === campaignId) return true;
+    if (nameKey && normalizeLookupValue(c.campaignName || c.campaign_name || c.name || "") === nameKey) return true;
+    return false;
+  }) || null;
+  if (matchedCampaign) {
+    var matchColor = getDirectCampaignColor(matchedCampaign);
+    if (matchColor) {
+      if (STELLARSYNC_DEBUG) console.log("[campaign-color] resolved", { campaign: campaignName || campaignId || "?", source: "appState.campaigns", color: matchColor });
+      return matchColor;
+    }
+  }
   var directColor = getDirectCampaignColor(campaignOrName);
   if (!directColor && typeof campaignOrName === "string" && /^#|rgb|hsl/i.test(String(campaignOrName || "").trim())) {
     directColor = String(campaignOrName || "").trim();
   }
   if (directColor) {
-    if (STELLARSYNC_DEBUG) console.log("[constellation-color]", { campaign: campaignName || String(campaignOrName || ""), source: "direct", color: directColor });
+    if (STELLARSYNC_DEBUG) console.log("[campaign-color] resolved", { campaign: campaignName || String(campaignOrName || ""), source: "direct", color: directColor });
     return directColor;
   }
-  var state = getAppStateRef() || {};
-  var campaignKey = normalizeLookupValue(campaignName || "");
-  var matchedCampaign = (Array.isArray(state?.campaigns) ? state.campaigns : []).find(function(campaign) {
-    var idMatch = campaignId && String(campaign.campaignId || campaign.campaign_id || campaign.id || "").trim() === campaignId;
-    var nameMatch = campaignKey && normalizeLookupValue(campaign.campaignName || campaign.campaign_name || campaign.name || "") === campaignKey;
-    return idMatch || nameMatch;
-  }) || null;
-  var stateColor = getDirectCampaignColor(matchedCampaign);
-  if (stateColor) {
-    if (STELLARSYNC_DEBUG) console.log("[constellation-color]", { campaign: campaignName || String(campaignOrName || ""), source: "appState.campaigns", color: stateColor });
-    return stateColor;
-  }
-  var overrides = getWorkspaceCampaignColorOverrides(state);
-  var overrideKey = campaignKey;
-  if (overrideKey && overrides[overrideKey]) {
-    if (STELLARSYNC_DEBUG) console.log("[constellation-color]", { campaign: campaignName || String(campaignOrName || ""), source: "workspace_settings", color: overrides[overrideKey] });
-    return overrides[overrideKey];
-  }
-  var stored = getStoredCampaignColorMap();
-  if (campaignKey && stored[campaignKey]) {
-    if (STELLARSYNC_DEBUG) console.log("[constellation-color]", { campaign: campaignName || String(campaignOrName || ""), source: "localStorage", color: stored[campaignKey] });
-    return stored[campaignKey];
-  }
   var stable = campaignName ? getStableCampaignColorByName(campaignName) : "#c77dff";
-  var active = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active || {};
-  var workspaceText = [active.workspace_slug, active.slug, active.name, active.workspace_name, active.brand_name, active.display_name].map(function(value) { return String(value || "").toLowerCase(); }).join(" ");
-  var namedFallback = (isGPEWorkspace(active) && GPE_STABLE_CAMPAIGN_COLORS[overrideKey]) || ((workspaceText.includes("algorithm-witch") || workspaceText.includes("algorithm witch")) && ALGORITHM_WITCH_STABLE_CAMPAIGN_COLORS[overrideKey]);
-  if (STELLARSYNC_DEBUG) console.log("[constellation-color]", { campaign: campaignName || String(campaignOrName || ""), source: namedFallback ? "hardcoded-stable" : (campaignName ? "stable-fallback" : "default"), color: stable });
+  if (STELLARSYNC_DEBUG) console.log("[campaign-color] resolved", { campaign: campaignName || String(campaignOrName || ""), source: stable ? "stable-fallback" : "default", color: stable });
   return stable;
 }
 
 function getCampaignColor(item, pillar = "") {
-  return resolveCampaignColor(item || "");
+  var campaignName = typeof item === "string" ? item : (item?.campaignName || item?.campaign_name || item?.name || "");
+  var campaignId = typeof item === "object" ? (item?.campaignId || item?.campaign_id || item?.id || "") : "";
+  var nameKey = normalizeLookupValue(campaignName);
+  var state = getAppStateRef() || {};
+  var matched = (Array.isArray(state?.campaigns) ? state.campaigns : []).find(function(c) {
+    if (campaignId && String(c.campaignId || c.campaign_id || c.id || "").trim() === String(campaignId).trim()) return true;
+    if (nameKey && normalizeLookupValue(c.campaignName || c.campaign_name || c.name || "") === nameKey) return true;
+    return false;
+  }) || null;
+  if (matched) {
+    var matchColor = getDirectCampaignColor(matched);
+    if (matchColor) return matchColor;
+  }
+  var directColor = typeof item === "object" ? getDirectCampaignColor(item) : "";
+  if (directColor) {
+    if (STELLARSYNC_DEBUG) console.log("[campaign-color] resolved", { campaign: campaignName || "?", source: "item", color: directColor });
+    return directColor;
+  }
+  var stable = campaignName ? getStableCampaignColorByName(campaignName) : (pillar ? getPillarTheme(pillar).color : "#c77dff");
+  return stable;
 }
 
 function getCampaignColorForPost(post) {
@@ -9832,10 +9827,11 @@ function validatePlatformLocally(platform, caption, postType, mediaItems, mediaU
   return { platform, errors, warnings, media };
 }
 
-function renderCampaignOptions(campaigns = getCleanCampaignRecords(), currentValue = "") {
+function renderCampaignOptions(campaigns = getAvailableCampaignRecords(), currentValue = "") {
   const activeCampaigns = (Array.isArray(campaigns) ? campaigns : [])
     .filter((campaign) => !campaign.isArchived)
     .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0) || String(a.campaignName || "").localeCompare(String(b.campaignName || "")));
+  if (STELLARSYNC_DEBUG) console.log("[campaign-dropdown] options count", activeCampaigns.length);
   const selectedCampaignId = String(currentValue || "").trim();
   const selected = getCampaignById(selectedCampaignId, activeCampaigns) || getCampaignByName(selectedCampaignId, activeCampaigns);
   const options = ['<option value="">No campaign</option>'].concat(activeCampaigns.map((campaign) => {
@@ -13553,7 +13549,7 @@ function populateCampaignDropdown() {
   if (!campaignSelect) return;
 
   const currentValue = campaignSelect.value || "";
-  const { html, selectedCampaignId } = renderCampaignOptions(getCleanCampaignRecords(), currentValue);
+  const { html, selectedCampaignId } = renderCampaignOptions(getAvailableCampaignRecords(), currentValue);
   campaignSelect.innerHTML = html;
   campaignSelect.value = selectedCampaignId;
   updateModalCampaignPreview();
@@ -13606,6 +13602,8 @@ function renderCampaignPillarIconPreview() {
 
 function openCampaignModal(options = "authority") {
   console.log("[modal] open campaign");
+  var modalCampaignName = typeof options === "string" ? options : (options?.campaignId || options?.campaignName || "");
+  if (STELLARSYNC_DEBUG) console.log("[campaign-modal] open", { edit: !!options.campaignId, campaignName: modalCampaignName, campaignId: options.campaignId || "", campaignsCount: Array.isArray(appState?.campaigns) ? appState.campaigns.length : 0 });
   if (!campaignModal || !campaignModalCard) return;
 
   const config = typeof options === "string"
@@ -13787,19 +13785,12 @@ async function saveCampaignFromModal() {
   }, 0)) + 1;
 
   const payload = {
-    id: existingCampaign?.id || existingCampaign?.campaignId || "",
     campaignId: existingCampaign?.campaignId || existingCampaign?.campaign_id || existingCampaign?.id || "",
-    campaign_id: existingCampaign?.campaign_id || existingCampaign?.campaignId || existingCampaign?.id || "",
-    name: campaignName,
     campaignName,
-    campaign_name: campaignName,
+    pillar,
     color,
     campaign_color: color,
     hex_color: color,
-    description: existingCampaign?.description || "",
-    goal: existingCampaign?.goal || "",
-    status: existingCampaign?.status || "active",
-    pillar,
     sortOrder: Number(existingCampaign?.sortOrder || nextSortOrder),
     isArchived,
     iconShape,
@@ -13808,8 +13799,79 @@ async function saveCampaignFromModal() {
   if (STELLARSYNC_DEBUG) console.log("[campaign-save] payload", payload);
 
   try {
-    const normalized = upsertCampaignIntoLocalState(normalizeCampaignSavePayload(payload, existingCampaign, nextSortOrder));
-    if (STELLARSYNC_DEBUG) console.log("[campaign-save] local updated", normalized);
+    var savedCampaignId = payload.campaignId;
+    const backendMode = getActiveWorkspaceBackendMode();
+    const isHybrid = isGoogleSheetsFrontendMode(backendMode.mode);
+
+    if (isHybrid && APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
+      try {
+        var saveResult = await apiSaveCampaign(payload);
+        if (STELLARSYNC_DEBUG) console.log("[campaign-save] result", saveResult);
+        if (saveResult && (saveResult.campaignId || saveResult.campaign?.campaignId)) {
+          savedCampaignId = saveResult.campaignId || saveResult.campaign?.campaignId || savedCampaignId;
+        }
+        if (existingCampaign && String(existingCampaign.color || "").trim().toLowerCase() !== String(color || "").trim().toLowerCase()) {
+          try {
+            await apiUpdateCampaignColor({ campaignId: savedCampaignId, color, campaign_color: color, hex_color: color });
+          } catch (colorErr) {
+            if (STELLARSYNC_DEBUG) console.log("[campaign-save] color route skipped", colorErr?.message || colorErr);
+          }
+        }
+      } catch (apiErr) {
+        if (STELLARSYNC_DEBUG) console.log("[campaign-save] api failed, saving locally", apiErr?.message || apiErr);
+      }
+    } else if (backendMode.mode === "supabase_native" && STELLARSYNC_SUPABASE_CLIENT) {
+      try {
+        await saveCampaignToSupabaseFallback(payload);
+      } catch (supErr) {
+        if (STELLARSYNC_DEBUG) console.log("[campaign-save] supabase fallback skipped", supErr?.message || supErr);
+      }
+    }
+
+    const normalized = {
+      campaignId: savedCampaignId || `CMP-${normalizeLookupValue(campaignName).replace(/[^a-z0-9]+/g, "").toUpperCase().slice(0, 10) || Date.now()}`,
+      campaignName,
+      campaign_name: campaignName,
+      name: campaignName,
+      pillar,
+      color,
+      campaignColor: color,
+      campaign_color: color,
+      hex_color: color,
+      iconShape,
+      icon_shape: iconShape,
+      pathStyle,
+      path_style: pathStyle,
+      sortOrder: Number(existingCampaign?.sortOrder || nextSortOrder),
+      isArchived,
+      createdAt: existingCampaign?.createdAt || new Date().toISOString()
+    };
+
+    const existingIndex = (appState.campaigns || []).findIndex(function(item) {
+      return String(item.campaignId || item.campaign_id || item.id || "") === String(normalized.campaignId)
+        || normalizeLookupValue(item.campaignName || item.campaign_name || item.name || "") === normalizeLookupValue(normalized.campaignName);
+    });
+    if (existingIndex >= 0) appState.campaigns.splice(existingIndex, 1, normalized);
+    else appState.campaigns.push(normalized);
+
+    appState.posts = (appState.posts || []).map(function(post) {
+      const sameCampaign = String(post.campaignId || post.campaign_id || "") === String(normalized.campaignId || "")
+        || normalizeLookupValue(post.campaignName || post.campaign_name || post.campaign || "") === normalizeLookupValue(existingCampaign?.campaignName || normalized.campaignName || "");
+      if (!sameCampaign) return post;
+      return {
+        ...post,
+        campaignId: normalized.campaignId,
+        campaign_id: normalized.campaignId,
+        campaignName: normalized.campaignName,
+        campaign_name: normalized.campaignName,
+        campaignColor: normalized.color,
+        campaign_color: normalized.color,
+        hubTitle: normalized.campaignName,
+        hubPillarLabel: formatContentPillarLabel(normalized.pillar)
+      };
+    });
+
+    persistLocalState();
     rerenderAll();
 
     if (campaignModalTargetSelect) {
@@ -13818,52 +13880,6 @@ async function saveCampaignFromModal() {
 
     closeCampaignModal();
     showToast(existingCampaign ? "Campaign updated" : "Campaign created", existingCampaign ? "Campaign details saved." : "New campaign added.", "ph-check", "text-[#00ffaa]");
-
-    const backendMode = getActiveWorkspaceBackendMode();
-    const backendPath = APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()
-      ? (isGoogleSheetsFrontendMode(backendMode.mode) ? "google_sheets_hybrid" : backendMode.mode === "supabase_native" ? "supabase_native" : backendMode.mode)
-      : "localStorage";
-    if (STELLARSYNC_DEBUG) console.log("[campaign-save] backend path", backendPath);
-    if (backendPath === "localStorage") {
-      if (STELLARSYNC_DEBUG) console.log("[campaign-save] fallback result", { ok: true, source: "localStorage" });
-      return;
-    }
-
-    try {
-      let backendResult = null;
-      if (isGoogleSheetsFrontendMode(backendMode.mode)) {
-        backendResult = await apiSaveCampaign(payload);
-        if (existingCampaign && String(existingCampaign.color || "").trim().toLowerCase() !== String(color || "").trim().toLowerCase()) {
-          try {
-            backendResult = await apiUpdateCampaignColor({ campaignId: normalized.campaignId, campaign_id: normalized.campaignId, color, campaign_color: color, hex_color: color });
-          } catch (colorErr) {
-            if (STELLARSYNC_DEBUG) console.log("[campaign-save] backend color route skipped", colorErr?.message || colorErr);
-          }
-        }
-      } else if (backendMode.mode === "supabase_native") {
-        backendResult = await saveCampaignToSupabaseFallback(normalized);
-      }
-      if (STELLARSYNC_DEBUG) console.log("[campaign-save] backend result", backendResult || { ok: true, skipped: true });
-      if (isGoogleSheetsFrontendMode(backendMode.mode)) {
-        await refreshSheetsTabsQuietly(["CAMPAIGNS"]);
-        upsertCampaignIntoLocalState(normalized);
-        persistLocalState();
-        rerenderAll();
-      }
-    } catch (backendErr) {
-      if (STELLARSYNC_DEBUG) console.log("[campaign-save] backend result", { ok: false, error: backendErr?.message || backendErr });
-      if (backendMode.mode === "supabase_native" && STELLARSYNC_SUPABASE_CLIENT) {
-        try {
-          const supabaseFallback = await saveCampaignToSupabaseFallback(normalized);
-          if (STELLARSYNC_DEBUG) console.log("[campaign-save] fallback result", supabaseFallback);
-          return;
-        } catch (supabaseErr) {
-          if (STELLARSYNC_DEBUG) console.log("[campaign-save] fallback result", { ok: false, source: "supabase_native", error: supabaseErr?.message || supabaseErr });
-        }
-      }
-      if (STELLARSYNC_DEBUG) console.log("[campaign-save] fallback result", { ok: true, source: "localStorage", reason: backendErr?.message || backendErr });
-      showToast("Campaign saved locally", "Backend campaign sync did not complete; local changes are preserved.", "ph-warning", "text-yellow-400");
-    }
   } catch (err) {
     console.error(err);
     showToast("Campaign failed", err.message || "Could not save campaign.", "ph-warning", "text-yellow-400");
