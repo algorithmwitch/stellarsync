@@ -5,6 +5,7 @@
     <link rel="manifest" href="./manifest.webmanifest">
     <meta name="theme-color" content="#0a0612">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="StellarSync">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="../icon/stellarsync-apple-touch-icon.png">
@@ -1496,7 +1497,8 @@
         }
 
         .pw-icon-btn.active,
-        .pw-ws-icon-btn.active {
+        .pw-ws-icon-btn.active,
+        .pillar-icon-btn.active {
             background: #2d1b4e !important;
             color: white !important;
             border-color: rgba(199,125,255,0.5) !important;
@@ -2444,7 +2446,7 @@
                   <span class="flex items-center gap-3"><i class="ph-bold ph-puzzle-piece text-[#c77dff]"></i> Install Plugin</span>
                   <i class="ph-bold ph-caret-right text-gray-500"></i>
                 </button>
-                <button type="button" class="workspace-menu-btn" data-workspace-action="install">
+                <button type="button" class="workspace-menu-btn hidden" data-workspace-action="install">
                   <span class="flex items-center gap-3"><i class="ph-bold ph-download-simple text-[#38bdf8]"></i> Install App</span>
                   <i class="ph-bold ph-caret-right text-gray-500"></i>
                 </button>
@@ -4618,12 +4620,12 @@
       <div class="flex items-center justify-between px-6 py-5 border-b border-white/5">
         <div class="flex items-center gap-4 mb-4">
           <div class="w-14 h-14 rounded-2xl bg-[#231738] flex items-center justify-center overflow-hidden shrink-0">
-            <img src="../icon/stellarsync-192.png" alt="StellarSync" class="w-full h-full object-cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" loading="lazy">
-            <i class="ph-fill ph-sparkle text-[#c77dff] text-3xl hidden"></i>
+            <img id="install-helper-icon-img" src="../icon/stellarsync-192.png" alt="StellarSync" class="w-full h-full object-cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" loading="lazy">
+            <i id="install-helper-fallback-icon" class="ph-fill ph-sparkle text-[#c77dff] text-3xl hidden"></i>
           </div>
           <div>
-            <h3 class="text-white font-bold text-lg">Install StellarSync</h3>
-            <p class="text-xs text-gray-500 mt-1">Use the best install flow for this device.</p>
+            <h3 id="install-helper-title" class="text-white font-bold text-lg">Install StellarSync</h3>
+            <p id="install-helper-subtitle" class="text-xs text-gray-500 mt-1">Use the best install flow for this device.</p>
           </div>
         </div>
         <button id="close-install-helper-modal-btn" type="button" class="w-10 h-10 rounded-xl bg-[#1a1128] hover:bg-[#231738] text-gray-400 hover:text-white border border-white/5 transition-colors flex items-center justify-center">
@@ -4641,11 +4643,11 @@
         </div>
         <div class="p-4 rounded-2xl bg-[#181125] border border-white/5">
           <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">iPhone / iPad</p>
-          <p class="text-sm text-gray-300">Open StellarSync in Safari, tap Share, then choose Add to Home Screen.</p>
+          <p id="install-helper-ios-copy" class="text-sm text-gray-300">Open StellarSync in Safari, tap Share, then choose Add to Home Screen.</p>
         </div>
         <div class="p-4 rounded-2xl bg-[#181125] border border-white/5">
           <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Unsupported Browser</p>
-          <p class="text-sm text-gray-300">If install is unavailable, open StellarSync in Safari, Chrome, or Edge and try again.</p>
+          <p id="install-helper-unsupported-copy" class="text-sm text-gray-300">If install is unavailable, open StellarSync in Safari, Chrome, or Edge and try again.</p>
         </div>
       </div>
 
@@ -5952,6 +5954,7 @@ function normalizeSupabaseWorkspaceConfig(workspace) {
     avatar_initials: String(source.avatar_initials || source.avatarInitials || "").trim(),
     avatar_mode: String(source.avatar_mode || source.avatarMode || "").trim(),
     icon: String(source.icon || source.avatar_icon || source.avatarIcon || "").trim(),
+    pillar_icons: normalizePillarIconMap(source.pillar_icons || source.pillarIcons),
     constellation_shape: String(source.constellation_shape || source.constellationShape || "star").trim() || "star",
     brand_accent: String(source.brand_accent || source.brandAccent || "").trim(),
     brand_voice: String(source.brand_voice || source.brandVoice || "").trim(),
@@ -6072,8 +6075,12 @@ function mergeWorkspaceSettings(workspace, settings) {
   const secondaryColor = String(settings.secondary_color || settings.secondaryColor || workspace.secondary_color || workspace.secondaryColor || "").trim();
   const brandName = String(settings.brand_name || settings.brandName || settings.display_name || settings.displayName || workspace.brand_name || workspace.brandName || workspace.name || "").trim();
   const defaultPillars = Array.isArray(settings.default_pillars)
-    ? settings.default_pillars.map(function(p) { return typeof p === "object" && p !== null ? p : getDefaultPillarObject(String(p || "").trim()); }).filter(Boolean)
-    : (Array.isArray(workspace.default_pillars) ? workspace.default_pillars.map(function(p) { return typeof p === "object" && p !== null ? p : getDefaultPillarObject(String(p || "").trim()); }).filter(Boolean) : []);
+    ? applyPillarIconsToDefinitions(settings.default_pillars.map(function(p) { return typeof p === "object" && p !== null ? p : getDefaultPillarObject(String(p || "").trim()); }).filter(Boolean), normalizePillarIconMap(settings.pillar_icons || settings.pillarIcons || workspace.pillar_icons || workspace.pillarIcons))
+    : (Array.isArray(workspace.default_pillars) ? applyPillarIconsToDefinitions(workspace.default_pillars.map(function(p) { return typeof p === "object" && p !== null ? p : getDefaultPillarObject(String(p || "").trim()); }).filter(Boolean), normalizePillarIconMap(settings.pillar_icons || settings.pillarIcons || workspace.pillar_icons || workspace.pillarIcons)) : []);
+  const pillarIcons = {
+    ...normalizePillarIconMap(workspace.pillar_icons || workspace.pillarIcons),
+    ...normalizePillarIconMap(settings.pillar_icons || settings.pillarIcons)
+  };
   const pillars = Array.isArray(settings.pillars)
     ? settings.pillars.map(function(p) { return String(p || "").trim(); }).filter(Boolean)
     : (Array.isArray(workspace.pillars) ? workspace.pillars.map(function(p) { return String(p || "").trim(); }).filter(Boolean) : []);
@@ -6098,6 +6105,7 @@ function mergeWorkspaceSettings(workspace, settings) {
     avatar_initials: avatarInitials || workspace.avatar_initials || "",
     avatar_mode: avatarMode || workspace.avatar_mode || "initials",
     icon: icon || workspace.icon || "",
+    pillar_icons: pillarIcons,
     constellation_shape: String(settings.constellation_shape || workspace.constellation_shape || "star").trim() || "star",
     brand_accent: String(settings.brand_accent || primaryColor || workspace.brand_accent || "").trim(),
     brand_color: String(settings.brand_color || primaryColor || workspace.brand_color || "").trim(),
@@ -6123,6 +6131,7 @@ function mergeWorkspaceSettings(workspace, settings) {
       primary_color: primaryColor || workspace.primary_color || workspace.brand_accent || "",
       secondary_color: secondaryColor || workspace.secondary_color || "",
       icon: icon || workspace.icon || "",
+      pillar_icons: pillarIcons,
       avatar_initials: avatarInitials || workspace.avatar_initials || "",
       short_name: shortName || workspace.short_name || "",
       default_pillars: defaultPillars,
@@ -7397,6 +7406,89 @@ function clonePillarDefinitions(pillars = []) {
   }).filter(Boolean);
 }
 
+function normalizePillarIconClass(icon) {
+  var value = String(icon || "").trim().toLowerCase().replace(/_/g, "-");
+  if (!value) return "";
+  if (value.indexOf("ph-") === 0) return value;
+  return getWorkspaceAvatarIconClass(value);
+}
+
+function normalizePillarIconMap(map) {
+  if (!map) return {};
+  var parsed = map;
+  if (typeof map === "string") {
+    try {
+      parsed = JSON.parse(map);
+    } catch (_) {
+      parsed = {};
+    }
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+  var normalized = {};
+  Object.keys(parsed).forEach(function(key) {
+    var pillarKey = normalizePillarToken(key);
+    var icon = normalizePillarIconClass(parsed[key]);
+    if (pillarKey && icon) normalized[pillarKey] = icon;
+  });
+  return normalized;
+}
+
+function getDeterministicPillarIcon(pillar) {
+  var normalized = normalizePillarToken(typeof pillar === "object" && pillar ? (pillar.slug || pillar.name || "") : pillar);
+  var known = {
+    advocacy: "ph-megaphone",
+    community: "ph-users-three",
+    wellness: "ph-heart",
+    leadership: "ph-crown",
+    educate: "ph-book-open",
+    engage: "ph-chat-circle-text",
+    inform: "ph-broadcast",
+    inspire: "ph-sparkle",
+    authority: "ph-megaphone",
+    distribution: "ph-network",
+    identity: "ph-heart",
+    application: "ph-magic-wand",
+    education: "ph-book-open",
+    promotion: "ph-rocket-launch",
+    algorithm: "ph-stars",
+    jobs: "ph-target",
+    climate: "ph-leaf",
+    systems: "ph-compass"
+  };
+  if (known[normalized]) return known[normalized];
+  var icons = [
+    "ph-sparkle", "ph-magic-wand", "ph-megaphone", "ph-target", "ph-rocket-launch",
+    "ph-lightbulb", "ph-book-open", "ph-chart-line-up", "ph-users-three", "ph-hands-clapping",
+    "ph-heart", "ph-globe", "ph-leaf", "ph-fire", "ph-compass", "ph-planet",
+    "ph-stars", "ph-pencil-simple", "ph-broadcast", "ph-network", "ph-funnel",
+    "ph-calendar-star", "ph-quotes", "ph-chat-circle-text"
+  ];
+  var hash = 0;
+  for (var i = 0; i < normalized.length; i++) {
+    hash = ((hash << 5) - hash) + normalized.charCodeAt(i);
+    hash |= 0;
+  }
+  return icons[Math.abs(hash) % icons.length] || "ph-sparkle";
+}
+
+function getWorkspacePillarIconMap(state = getAppStateRef() || {}, workspace = WORKSPACE_RUNTIME_CONFIG?.active || {}) {
+  return {
+    ...normalizePillarIconMap(workspace?.pillar_icons || workspace?.pillarIcons),
+    ...normalizePillarIconMap(state?.workspace?.pillar_icons || state?.workspace?.pillarIcons),
+    ...normalizePillarIconMap(state?.workspaceSettings?.pillar_icons || state?.workspaceSettings?.pillarIcons),
+    ...normalizePillarIconMap(state?.settings?.pillar_icons || state?.settings?.pillarIcons),
+    ...normalizePillarIconMap(state?.brandOS?.pillar_icons || state?.brandOS?.pillarIcons)
+  };
+}
+
+function applyPillarIconsToDefinitions(pillars = [], iconMap = getWorkspacePillarIconMap()) {
+  return clonePillarDefinitions(pillars).map(function(pillar) {
+    var slug = normalizePillarToken(pillar.slug || pillar.name || "");
+    var icon = iconMap[slug] || normalizePillarIconClass(pillar.icon) || getDeterministicPillarIcon(slug || pillar.name);
+    return { ...pillar, slug: slug || pillar.slug || "", icon };
+  });
+}
+
 function isGPEHybridWorkspace(workspace = WORKSPACE_RUNTIME_CONFIG?.active || {}) {
   var activeWorkspace = workspace || {};
   var slug = String(activeWorkspace.workspace_slug || activeWorkspace.slug || getCurrentWorkspaceSlug() || "").trim().toLowerCase();
@@ -7449,7 +7541,8 @@ function getCanonicalPillarValue(value, fallback = "") {
 }
 
 function formatContentPillarLabel(value) {
-  return normalizePillarLabel(value);
+  var pillar = getWorkspacePillarBySlug(value);
+  return pillar && pillar.name ? pillar.name : normalizePillarLabel(value);
 }
 
 function formatCampaignDisplayName(value) {
@@ -7856,35 +7949,36 @@ function getCampaignColorForPost(post) {
 }
 
 function getWorkspacePillars(workspace = WORKSPACE_RUNTIME_CONFIG?.active || {}, state = getAppStateRef()) {
+  var iconMap = getWorkspacePillarIconMap(state, workspace);
   if (state && typeof state === "object") {
     var bop = state?.brandOS?.default_pillars;
-    if (Array.isArray(bop) && bop.length && typeof bop[0] === "object") return bop;
+    if (Array.isArray(bop) && bop.length && typeof bop[0] === "object") return applyPillarIconsToDefinitions(bop, iconMap);
     if (Array.isArray(bop) && bop.length) {
-      return bop.map(function(p) {
+      return applyPillarIconsToDefinitions(bop.map(function(p) {
         var s = typeof p === "string" ? p.trim().toLowerCase() : "";
         return getDefaultPillarObject(s);
-      }).filter(Boolean);
+      }).filter(Boolean), iconMap);
     }
     var wp = state?.settings?.default_pillars;
-    if (Array.isArray(wp) && wp.length && typeof wp[0] === "object") return wp;
+    if (Array.isArray(wp) && wp.length && typeof wp[0] === "object") return applyPillarIconsToDefinitions(wp, iconMap);
     if (Array.isArray(wp) && wp.length) {
-      return wp.map(function(p) {
+      return applyPillarIconsToDefinitions(wp.map(function(p) {
         var s = typeof p === "string" ? p.trim().toLowerCase() : "";
         return getDefaultPillarObject(s);
-      }).filter(Boolean);
+      }).filter(Boolean), iconMap);
     }
   }
   if (typeof WORKSPACE_RUNTIME_CONFIG !== "undefined" && WORKSPACE_RUNTIME_CONFIG) {
     var wp2 = workspace?.default_pillars || WORKSPACE_RUNTIME_CONFIG?.active?.default_pillars;
-    if (Array.isArray(wp2) && wp2.length && typeof wp2[0] === "object") return wp2;
+    if (Array.isArray(wp2) && wp2.length && typeof wp2[0] === "object") return applyPillarIconsToDefinitions(wp2, iconMap);
     if (Array.isArray(wp2) && wp2.length) {
-      return wp2.map(function(p) {
+      return applyPillarIconsToDefinitions(wp2.map(function(p) {
         var s = typeof p === "string" ? p.trim().toLowerCase() : "";
         return getDefaultPillarObject(s);
-      }).filter(Boolean);
+      }).filter(Boolean), iconMap);
     }
   }
-  return getFallbackWorkspacePillars(workspace);
+  return applyPillarIconsToDefinitions(getFallbackWorkspacePillars(workspace), iconMap);
 }
 
 function getWorkspacePillarBySlug(slug, workspace = WORKSPACE_RUNTIME_CONFIG?.active || {}, state = getAppStateRef()) {
@@ -7942,11 +8036,11 @@ function getPillarSymbol(pillar) {
   var p = getWorkspacePillarBySlug(pillar);
   if (p && p.icon) {
     if (STELLARSYNC_DEBUG) console.log("[pillar-symbol] resolved from workspace", { pillar, symbol: p.icon });
-    return p.icon;
+    return normalizePillarIconClass(p.icon);
   }
-  var d = getDefaultPillarObject(pillar);
-  if (STELLARSYNC_DEBUG) console.log("[pillar-symbol] resolved", { pillar, symbol: d.icon });
-  return d.icon;
+  var fallback = getDeterministicPillarIcon(pillar);
+  if (STELLARSYNC_DEBUG) console.log("[pillar-symbol] resolved", { pillar, symbol: fallback });
+  return fallback;
 }
 
 function getConstellationCampaignLaneKey(campaign) {
@@ -8414,6 +8508,7 @@ function normalizeHybridSettingsCategoryKey(value) {
   if (key === "posttype" || key === "posttypes" || key === "defaultposttypes") return "postTypes";
   if (key === "campaign" || key === "campaigns") return "campaigns";
   if (key === "campaigncolor" || key === "campaigncolors") return "campaignColors";
+  if (key === "pillaricon" || key === "pillaricons") return "pillarIcons";
   if (key === "month" || key === "months") return "months";
   if (key === "queuelimit") return "queueLimit";
   if (key === "currentmonth") return "currentMonth";
@@ -8444,6 +8539,7 @@ function coerceHybridSheetSettings(input) {
     cloned.campaigns = Array.isArray(cloned.campaigns) ? cloned.campaigns.slice() : splitHybridSheetValues(cloned.campaigns || "");
     cloned.months = Array.isArray(cloned.months) ? cloned.months.slice() : splitHybridSheetValues(cloned.months || "");
     cloned.campaignColors = cloned.campaignColors && typeof cloned.campaignColors === "object" ? { ...cloned.campaignColors } : {};
+    cloned.pillar_icons = normalizePillarIconMap(cloned.pillar_icons || cloned.pillarIcons);
     cloned.brandName = String(cloned.brandName || cloned.brand_name || cloned.display_name || cloned.displayName || "").trim();
     cloned.brandVoice = String(cloned.brandVoice || cloned.brand_voice || "").trim();
     cloned.mission = String(cloned.mission || "").trim();
@@ -8454,9 +8550,9 @@ function coerceHybridSheetSettings(input) {
     cloned.avatarInitials = String(cloned.avatarInitials || cloned.avatar_initials || "").trim();
     cloned.shortName = String(cloned.shortName || cloned.short_name || "").trim();
     cloned.default_pillars = Array.isArray(cloned.default_pillars)
-      ? clonePillarDefinitions(cloned.default_pillars)
+      ? applyPillarIconsToDefinitions(cloned.default_pillars, cloned.pillar_icons)
       : cloned.pillars.length
-        ? clonePillarDefinitions(cloned.pillars)
+        ? applyPillarIconsToDefinitions(cloned.pillars, cloned.pillar_icons)
         : [];
     cloned.pillars = cloned.pillars.map(function(value) { return String(typeof value === "object" && value !== null ? value.slug || value.name || "" : value || "").trim(); }).filter(Boolean);
     return cloned;
@@ -8468,6 +8564,7 @@ function coerceHybridSheetSettings(input) {
     postTypes: [],
     campaigns: [],
     campaignColors: {},
+    pillar_icons: {},
     months: [],
     brandName: "",
     brandVoice: "",
@@ -8483,7 +8580,7 @@ function coerceHybridSheetSettings(input) {
     if (!row || typeof row !== "object") return;
     Object.keys(row).forEach(function(key) {
       var category = normalizeHybridSettingsCategoryKey(key);
-      if (!category || category === "campaignColors") return;
+      if (!category || category === "campaignColors" || category === "pillarIcons") return;
       var values = splitHybridSheetValues(row[key]);
       if (category === "brandName" || category === "brandVoice" || category === "mission" || category === "website" || category === "primaryColor" || category === "secondaryColor" || category === "icon" || category === "avatarInitials" || category === "shortName") {
         if (!isHybridMeaningfulValue(settings[category]) && values.length) settings[category] = values[0];
@@ -8507,6 +8604,16 @@ function coerceHybridSheetSettings(input) {
       if (campaignName && colorValue && /^#|rgb|hsl/i.test(colorValue)) settings.campaignColors[campaignName] = colorValue;
       return;
     }
+    if (category === "pillarIcons") {
+      settings.pillar_icons = {
+        ...settings.pillar_icons,
+        ...normalizePillarIconMap(row.pillar_icons || row.pillarIcons || row[valueKey])
+      };
+      var pillarName = row.pillar || row.pillar_name || row.name || row.label || "";
+      var pillarIcon = row.icon || row.pillar_icon || row[valueKey] || "";
+      if (pillarName && pillarIcon) settings.pillar_icons[normalizePillarToken(pillarName)] = normalizePillarIconClass(pillarIcon);
+      return;
+    }
     if (category === "brandName" || category === "brandVoice" || category === "mission" || category === "website" || category === "primaryColor" || category === "secondaryColor" || category === "icon" || category === "avatarInitials" || category === "shortName") {
       if (!isHybridMeaningfulValue(settings[category]) && values.length) settings[category] = values[0];
       return;
@@ -8520,8 +8627,8 @@ function coerceHybridSheetSettings(input) {
     });
   });
   settings.default_pillars = Array.isArray(settings.default_pillars) && settings.default_pillars.length
-    ? clonePillarDefinitions(settings.default_pillars)
-    : clonePillarDefinitions(settings.pillars || []);
+    ? applyPillarIconsToDefinitions(settings.default_pillars, settings.pillar_icons)
+    : applyPillarIconsToDefinitions(settings.pillars || [], settings.pillar_icons);
   return settings;
 }
 
@@ -8529,6 +8636,11 @@ function resolveHybridBrandOSFields(sheetSettings = {}, supabaseSettings = {}, w
   var sheet = coerceHybridSheetSettings(sheetSettings);
   var supabase = normalizeRemoteSettings(supabaseSettings || {});
   var base = getWorkspaceBrandingDefaults(workspace || supabaseSettings || {});
+  var pillarIcons = {
+    ...normalizePillarIconMap(base.pillar_icons || base.pillarIcons),
+    ...normalizePillarIconMap(supabase.pillar_icons || supabase.pillarIcons),
+    ...normalizePillarIconMap(sheet.pillar_icons || sheet.pillarIcons)
+  };
   var sheetPillars = clonePillarDefinitions(
     Array.isArray(sheet.default_pillars) && sheet.default_pillars.length
       ? sheet.default_pillars
@@ -8544,6 +8656,7 @@ function resolveHybridBrandOSFields(sheetSettings = {}, supabaseSettings = {}, w
         : base.default_pillars
   );
   var resolvedPillars = sheetPillars.length ? sheetPillars : fallbackPillars.length ? fallbackPillars : getFallbackWorkspacePillars(workspace);
+  resolvedPillars = applyPillarIconsToDefinitions(resolvedPillars, pillarIcons);
   var resolved = {
     ...base,
     ...supabase,
@@ -8556,6 +8669,7 @@ function resolveHybridBrandOSFields(sheetSettings = {}, supabaseSettings = {}, w
     icon: String(pickHybridFieldValue(sheet, ["icon", "avatarIcon"]) || supabase.icon || base.icon || "").trim(),
     avatar_initials: String(pickHybridFieldValue(sheet, ["avatarInitials", "avatar_initials", "initials"]) || supabase.avatar_initials || base.avatar_initials || "").trim(),
     short_name: String(pickHybridFieldValue(sheet, ["shortName", "short_name"]) || supabase.short_name || base.short_name || "").trim(),
+    pillar_icons: pillarIcons,
     default_pillars: clonePillarDefinitions(resolvedPillars),
     pillars: Array.isArray(sheet.pillars) && sheet.pillars.length ? sheet.pillars.slice() : Array.isArray(supabase.pillars) && supabase.pillars.length ? supabase.pillars.slice() : (Array.isArray(base.pillars) ? base.pillars.slice() : [])
   };
@@ -8626,7 +8740,13 @@ function resolveHybridWorkspaceSettings(sheetSettings = {}, supabaseSettings = {
       ? clonePillarDefinitions(brandOS.default_pillars)
       : (Array.isArray(supabase.default_pillars) && supabase.default_pillars.length
         ? clonePillarDefinitions(supabase.default_pillars)
-        : clonePillarDefinitions(defaults.default_pillars || []))
+        : clonePillarDefinitions(defaults.default_pillars || [])),
+    pillar_icons: {
+      ...(defaults.pillar_icons || {}),
+      ...(supabase.pillar_icons || {}),
+      ...(sheet.pillar_icons || {}),
+      ...(brandOS.pillar_icons || {})
+    }
   };
   return {
     settings: normalizeRemoteSettings(merged),
@@ -8657,12 +8777,13 @@ function extractPillarsFromBrandFrameworkRows(rows = []) {
 
 function resolveHybridWorkspacePillars(sheetData = {}) {
   var settingsObject = coerceHybridSheetSettings(sheetData.settings || sheetData.workspace_settings || sheetData.brand_os || sheetData.brand || {});
-  var sheetPillars = clonePillarDefinitions(settingsObject.default_pillars || settingsObject.pillars || []);
+  var iconMap = normalizePillarIconMap(settingsObject.pillar_icons || settingsObject.pillarIcons || sheetData.pillar_icons || sheetData.pillarIcons);
+  var sheetPillars = applyPillarIconsToDefinitions(settingsObject.default_pillars || settingsObject.pillars || [], iconMap);
   if (!sheetPillars.length && sheetData.brand_os && Array.isArray(sheetData.brand_os.default_pillars)) {
-    sheetPillars = clonePillarDefinitions(sheetData.brand_os.default_pillars);
+    sheetPillars = applyPillarIconsToDefinitions(sheetData.brand_os.default_pillars, iconMap);
   }
   var brandPillars = extractPillarsFromBrandFrameworkRows(sheetData.brandFramework || []);
-  var canonical = sheetPillars.length ? sheetPillars : brandPillars.length ? brandPillars : getFallbackWorkspacePillars();
+  var canonical = applyPillarIconsToDefinitions(sheetPillars.length ? sheetPillars : brandPillars.length ? brandPillars : getFallbackWorkspacePillars(), iconMap);
   console.log("[pillars-sync] sheet pillars", sheetPillars.map(function(item) { return item.name || item.slug; }));
   console.log("[pillars-sync] brand os pillars", brandPillars.map(function(item) { return item.name || item.slug; }));
   console.log("[pillars-sync] canonical workspace pillars", canonical.map(function(item) { return item.name || item.slug; }));
@@ -8689,9 +8810,15 @@ function hydrateHybridSheetData(sheetData = {}, options = {}) {
   var settings = settingsBundle.settings || {};
   var brandOS = settingsBundle.brandOS || resolveHybridBrandOSFields(sheetData.brand_os || sheetData.brand || sheetData.workspace_settings || sheetData.settings, appState.settings || {}, WORKSPACE_RUNTIME_CONFIG?.active || {});
   var hybridPillars = resolveHybridWorkspacePillars(sheetData);
-  settings.default_pillars = clonePillarDefinitions(hybridPillars);
+  var pillarIcons = {
+    ...normalizePillarIconMap(settings.pillar_icons || settings.pillarIcons),
+    ...normalizePillarIconMap(brandOS.pillar_icons || brandOS.pillarIcons)
+  };
+  settings.pillar_icons = pillarIcons;
+  brandOS.pillar_icons = pillarIcons;
+  settings.default_pillars = applyPillarIconsToDefinitions(hybridPillars, pillarIcons);
   settings.pillars = hybridPillars.map(function(item) { return item.slug || item.name || ""; }).filter(Boolean);
-  brandOS.default_pillars = clonePillarDefinitions(hybridPillars);
+  brandOS.default_pillars = applyPillarIconsToDefinitions(hybridPillars, pillarIcons);
   brandOS.pillars = settings.pillars.slice();
   if (settings && typeof settings === "object") {
     const existingSettings = appState.settings && typeof appState.settings === "object" ? appState.settings : {};
@@ -8702,29 +8829,38 @@ function hydrateHybridSheetData(sheetData = {}, options = {}) {
     appState.settings = normalizeRemoteSettings({
       ...(appState.settings || {}),
       ...settings,
-      default_pillars: clonePillarDefinitions(hybridPillars),
+      default_pillars: applyPillarIconsToDefinitions(hybridPillars, pillarIcons),
+      pillar_icons: pillarIcons,
       pillars: settings.pillars.slice()
     });
-    appState.settings.default_pillars = clonePillarDefinitions(hybridPillars);
+    appState.settings.default_pillars = applyPillarIconsToDefinitions(hybridPillars, pillarIcons);
+    appState.settings.pillar_icons = pillarIcons;
     appState.settings.pillars = settings.pillars.slice();
+    appState.workspaceSettings = {
+      ...(appState.workspaceSettings && typeof appState.workspaceSettings === "object" ? appState.workspaceSettings : {}),
+      pillar_icons: pillarIcons
+    };
     appState.workspace = {
       ...(appState.workspace && typeof appState.workspace === "object" ? appState.workspace : {}),
       ...(WORKSPACE_RUNTIME_CONFIG?.active || {}),
       ...settings,
       brandOS: { ...brandOS },
-      default_pillars: clonePillarDefinitions(hybridPillars),
+      default_pillars: applyPillarIconsToDefinitions(hybridPillars, pillarIcons),
+      pillar_icons: pillarIcons,
       pillars: settings.pillars.slice()
     };
     appState.brandOS = {
       ...(appState.brandOS && typeof appState.brandOS === "object" ? appState.brandOS : {}),
       ...brandOS,
-      default_pillars: clonePillarDefinitions(hybridPillars),
+      default_pillars: applyPillarIconsToDefinitions(hybridPillars, pillarIcons),
+      pillar_icons: pillarIcons,
       pillars: settings.pillars.slice()
     };
     if (WORKSPACE_RUNTIME_CONFIG?.active) {
       WORKSPACE_RUNTIME_CONFIG.active = mergeWorkspaceSettings(WORKSPACE_RUNTIME_CONFIG.active, {
         ...settings,
-        default_pillars: clonePillarDefinitions(hybridPillars),
+        default_pillars: applyPillarIconsToDefinitions(hybridPillars, pillarIcons),
+        pillar_icons: pillarIcons,
         pillars: settings.pillars.slice(),
         brand_name: brandOS.brand_name,
         brand_voice: brandOS.brand_voice,
@@ -8736,9 +8872,10 @@ function hydrateHybridSheetData(sheetData = {}, options = {}) {
         avatar_initials: brandOS.avatar_initials,
         short_name: brandOS.short_name
       });
-      WORKSPACE_RUNTIME_CONFIG.active.default_pillars = clonePillarDefinitions(hybridPillars);
+      WORKSPACE_RUNTIME_CONFIG.active.default_pillars = applyPillarIconsToDefinitions(hybridPillars, pillarIcons);
+      WORKSPACE_RUNTIME_CONFIG.active.pillar_icons = pillarIcons;
       WORKSPACE_RUNTIME_CONFIG.active.pillars = settings.pillars.slice();
-      WORKSPACE_RUNTIME_CONFIG.active.brandOS = { ...brandOS };
+      WORKSPACE_RUNTIME_CONFIG.active.brandOS = { ...brandOS, pillar_icons: pillarIcons };
     }
   }
 
@@ -9260,7 +9397,8 @@ function getArtifactBadge(artifact) {
 }
 
 function renderPillarShape(pillar, className = "", theme = getPillarTheme(pillar)) {
-  return `<span class="${escapeHtml(className)} inline-block w-2.5 h-2.5 rounded-full shrink-0" style="background:${escapeHtml(theme.color || "#c77dff")}"></span>`;
+  var symbol = getPillarSymbol(pillar);
+  return `<span class="${escapeHtml(className)} inline-flex w-5 h-5 rounded-lg shrink-0 items-center justify-center bg-[#120c1d] border border-white/5 text-gray-300"><i class="ph-fill ${escapeHtml(symbol)} text-xs"></i></span>`;
 }
 
 function normalizePlatformTarget(value) {
@@ -9947,13 +10085,15 @@ const EMPTY_WORKSPACE_SETTINGS = {
   default_pillars: [],
   pillars: [],
   campaigns: [],
-  campaignColors: {}
+  campaignColors: {},
+  pillar_icons: {}
 };
 
 const EMPTY_WORKSPACE_STATE = {
   posts: [],
   campaigns: [],
   settings: EMPTY_WORKSPACE_SETTINGS,
+  workspaceSettings: {},
   workspace: {},
   brandOS: {},
   inspo: [],
@@ -10523,7 +10663,9 @@ function applyTierFeatureGates() {
 
 let installContext = {
   isIos: /iphone|ipad|ipod/i.test(navigator.userAgent || ""),
-  isStandalone: false
+  isStandalone: false,
+  promptAvailable: false,
+  unsupported: false
 };
 let serviceWorkerStatus = {
   version: APP_SERVICE_WORKER_VERSION,
@@ -10979,6 +11121,12 @@ const installHelperActionBtn = document.getElementById("install-helper-action-bt
 const installHelperInstructionsBtn = document.getElementById("install-helper-instructions-btn");
 const installHelperDesktopCopy = document.getElementById("install-helper-desktop-copy");
 const installHelperInstalledState = document.getElementById("install-helper-installed-state");
+const installHelperTitle = document.getElementById("install-helper-title");
+const installHelperSubtitle = document.getElementById("install-helper-subtitle");
+const installHelperIconImg = document.getElementById("install-helper-icon-img");
+const installHelperFallbackIcon = document.getElementById("install-helper-fallback-icon");
+const installHelperIosCopy = document.getElementById("install-helper-ios-copy");
+const installHelperUnsupportedCopy = document.getElementById("install-helper-unsupported-copy");
 const confirmActionModal = document.getElementById("confirm-action-modal");
 const confirmActionModalCard = document.getElementById("confirm-action-modal-card");
 const confirmActionTitle = document.getElementById("confirm-action-title");
@@ -12018,7 +12166,7 @@ function setupWorkspaceUI() {
       event.preventDefault();
       event.stopPropagation();
       toggleProfileMenu(false);
-      openInstallHelperModal();
+      handlePWAInstallAction({ openHelper: true });
       return;
     }
     if (action === "support") {
@@ -13433,8 +13581,27 @@ function defaultCampaignColor(campaignName, pillar) {
 function renderCampaignPillarInputOptions(selectedPillar = "") {
   if (!campaignPillarInput) return;
   const pillars = getAvailableContentPillars();
-  campaignPillarInput.innerHTML = pillars.map((pillar) => `<option value="${escapeHtml(pillar)}">${escapeHtml(formatContentPillarLabel(pillar))}</option>`).join("");
+  campaignPillarInput.innerHTML = pillars.map((pillar) => {
+    var slug = normalizePillar(pillar);
+    return `<option value="${escapeHtml(slug)}">${escapeHtml(formatContentPillarLabel(slug))}</option>`;
+  }).join("");
   campaignPillarInput.value = normalizePillar(selectedPillar || pillars[0] || "authority");
+  if (!document.getElementById("campaign-pillar-icon-preview")) {
+    campaignPillarInput.insertAdjacentHTML("afterend", '<div id="campaign-pillar-icon-preview" class="mt-2 px-3 py-2 rounded-xl bg-[#120c1d] border border-white/5 text-xs text-gray-300 flex items-center gap-2"></div>');
+  }
+  renderCampaignPillarIconPreview();
+  if (campaignPillarInput.dataset.pillarIconPreviewBound !== "true") {
+    campaignPillarInput.dataset.pillarIconPreviewBound = "true";
+    campaignPillarInput.addEventListener("change", renderCampaignPillarIconPreview);
+  }
+}
+
+function renderCampaignPillarIconPreview() {
+  var preview = document.getElementById("campaign-pillar-icon-preview");
+  if (!preview || !campaignPillarInput) return;
+  var normalized = normalizePillar(campaignPillarInput.value || getAvailableContentPillars()[0] || "authority");
+  var symbol = getPillarSymbol(normalized);
+  preview.innerHTML = '<span class="inline-flex w-7 h-7 rounded-lg bg-[#1a1128] border border-white/10 items-center justify-center text-white"><i class="ph-fill ' + escapeHtml(symbol) + '"></i></span><span>' + escapeHtml(formatContentPillarLabel(normalized)) + '</span>';
 }
 
 function openCampaignModal(options = "authority") {
@@ -23556,11 +23723,11 @@ function updateModalPillarMeta(pillar) {
 function setPillar(pillar) {
   document.querySelectorAll("#modal-pillar-buttons .pillar-btn").forEach((btn) => {
     const isActive = btn.dataset.pillar === pillar;
-    const color = getPillarTheme(btn.dataset.pillar || "");
+    const theme = getPillarTheme(btn.dataset.pillar || "");
     btn.classList.toggle("active", isActive);
-    btn.style.borderColor = isActive ? color : "rgba(255,255,255,0.04)";
-    btn.style.color = isActive ? color : "#94a3b8";
-    btn.style.background = isActive ? `${color}14` : "#181125";
+    btn.style.borderColor = isActive ? theme.color : "rgba(255,255,255,0.04)";
+    btn.style.color = isActive ? theme.color : "#94a3b8";
+    btn.style.background = isActive ? theme.bg : "#181125";
   });
   updateModalPillarMeta(pillar);
 }
@@ -26925,67 +27092,149 @@ function openLinkedInCaptureImporter() {
   openLinkedInBulkImportModal();
 }
 
+function getInstallAppDisplayName() {
+  var active = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active || {};
+  return String(active.brand_name || active.display_name || active.name || active.workspace_name || active.workspace_slug || active.slug || "StellarSync").trim() || "StellarSync";
+}
+
+function getInstallAppIconUrl() {
+  var active = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active || {};
+  return String(active.avatar_url || active.profile_image_url || active.profileImageUrl || active.icon_url || active.iconUrl || "").trim();
+}
+
+function getInstallAppIconClass() {
+  var active = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active || {};
+  return getWorkspaceAvatarIconClass(active.icon || active.avatar_icon || active.avatarIcon || "") || "ph-sparkle";
+}
+
+function getInstallAvailabilityState() {
+  installContext.isStandalone = detectStandaloneMode();
+  installContext.isIos = /iphone|ipad|ipod/i.test(navigator.userAgent || "");
+  installContext.promptAvailable = Boolean(deferredInstallPrompt);
+  if (installContext.isStandalone) return "installed";
+  if (deferredInstallPrompt) return "available";
+  if (installContext.isIos) return "ios";
+  return "unsupported";
+}
+
+function setInstallButtonVisibility() {
+  var state = getInstallAvailabilityState();
+  var mobileOnly = window.innerWidth <= 768;
+  var canPrompt = state === "available";
+  var canShowFallback = state === "ios";
+  var visible = canPrompt || canShowFallback;
+  var showDesktop = visible && !mobileOnly;
+  var showMobile = visible && mobileOnly;
+
+  if (installAppBtn) {
+    installAppBtn.classList.toggle("hidden", !showDesktop);
+    installAppBtn.classList.toggle("inline-flex", showDesktop);
+  }
+  if (mobileInstallAppBtn) {
+    mobileInstallAppBtn.classList.toggle("hidden", !showMobile);
+    mobileInstallAppBtn.classList.toggle("inline-flex", showMobile);
+  }
+  document.querySelectorAll('[data-workspace-action="install"]').forEach(function(button) {
+    button.classList.toggle("hidden", !visible);
+  });
+}
+
+function updateInstallHelperContent() {
+  var appName = getInstallAppDisplayName();
+  var state = getInstallAvailabilityState();
+  if (installHelperTitle) installHelperTitle.textContent = "Install " + appName;
+  if (installHelperSubtitle) installHelperSubtitle.textContent = state === "available" ? "Install this workspace as an app on this device." : "Use the best install flow for this device.";
+  if (installHelperIconImg) {
+    var iconUrl = getInstallAppIconUrl();
+    installHelperIconImg.src = iconUrl || "../icon/stellarsync-192.png";
+    installHelperIconImg.alt = appName;
+    installHelperIconImg.classList.toggle("hidden", !iconUrl);
+  }
+  if (installHelperFallbackIcon) {
+    installHelperFallbackIcon.className = "ph-fill " + getInstallAppIconClass() + " text-[#c77dff] text-3xl" + (getInstallAppIconUrl() ? " hidden" : "");
+  }
+  if (installHelperInstalledState) {
+    installHelperInstalledState.textContent = appName + " is already installed on this device.";
+    installHelperInstalledState.classList.toggle("hidden", state !== "installed");
+  }
+  if (installHelperDesktopCopy) {
+    installHelperDesktopCopy.textContent = state === "available"
+      ? "Use Install Now to trigger the browser install prompt."
+      : "Chrome or Edge will show an install option here when this workspace is eligible.";
+  }
+  if (installHelperIosCopy) {
+    installHelperIosCopy.textContent = "Open " + appName + " in Safari, tap Share, then choose Add to Home Screen.";
+  }
+  if (installHelperUnsupportedCopy) {
+    installHelperUnsupportedCopy.textContent = "If install is unavailable, open " + appName + " in Safari, Chrome, or Edge and try again.";
+  }
+  if (installHelperActionBtn) {
+    installHelperActionBtn.disabled = state === "installed" || state === "unsupported";
+    installHelperActionBtn.classList.toggle("opacity-50", installHelperActionBtn.disabled);
+    installHelperActionBtn.textContent = state === "available" ? "Install Now" : state === "ios" ? "Show iOS Steps" : state === "installed" ? "Installed" : "Install Unavailable";
+  }
+}
+
+async function handlePWAInstallAction(options = {}) {
+  var state = getInstallAvailabilityState();
+  var appName = getInstallAppDisplayName();
+  if (state === "installed") return true;
+  if (state === "ios") {
+    if (options.openHelper !== false) openInstallHelperModal();
+    else showToast("Install tip", "On iPhone or iPad, use Share then Add to Home Screen.", "ph-device-mobile", "text-[#38bdf8]");
+    return false;
+  }
+  if (!deferredInstallPrompt) {
+    if (options.openHelper) openInstallHelperModal();
+    else showToast("Install unavailable", "Open " + appName + " in Chrome, Edge, or Safari and try again.", "ph-browser", "text-yellow-400");
+    setInstallButtonVisibility();
+    return false;
+  }
+  var promptEvent = deferredInstallPrompt;
+  deferredInstallPrompt = null;
+  installContext.promptAvailable = false;
+  try {
+    promptEvent.prompt();
+    var choice = await promptEvent.userChoice;
+    if (STELLARSYNC_DEBUG) console.log("[install] user choice", choice || {});
+    return choice && choice.outcome === "accepted";
+  } catch (err) {
+    deferredInstallPrompt = promptEvent;
+    installContext.promptAvailable = true;
+    if (STELLARSYNC_DEBUG) console.warn("[install] prompt failed", err?.message || err);
+    showToast("Install unavailable", err?.message || "The browser install prompt could not open.", "ph-warning", "text-yellow-400");
+    return false;
+  } finally {
+    setInstallButtonVisibility();
+    updateInstallHelperContent();
+  }
+}
+
 function setupPWAInstall() {
   installContext.isStandalone = detectStandaloneMode();
   installContext.isIos = /iphone|ipad|ipod/i.test(navigator.userAgent || "");
-  const isMobileViewport = () => window.innerWidth <= 768;
-
-  const setInstallButtonVisibility = (visible) => {
-    const mobileOnly = isMobileViewport();
-    const showDesktop = visible && !installContext.isStandalone && !mobileOnly;
-    const showMobile = visible && !installContext.isStandalone && mobileOnly;
-
-    if (installAppBtn) {
-      installAppBtn.classList.toggle("hidden", !showDesktop);
-      installAppBtn.classList.toggle("inline-flex", showDesktop);
-    }
-    if (mobileInstallAppBtn) {
-      mobileInstallAppBtn.classList.toggle("hidden", !showMobile);
-      mobileInstallAppBtn.classList.toggle("inline-flex", showMobile);
-    }
-    document.querySelectorAll('[data-workspace-action="install"]').forEach((button) => {
-      button.classList.toggle("hidden", installContext.isStandalone || (mobileOnly && visible));
-    });
-  };
-
-  if (installContext.isIos && !installContext.isStandalone) {
-    setInstallButtonVisibility(true);
-  }
+  setInstallButtonVisibility();
+  updateInstallHelperContent();
 
   window.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
     deferredInstallPrompt = event;
-    setInstallButtonVisibility(true);
+    installContext.promptAvailable = true;
+    installContext.unsupported = false;
+    setInstallButtonVisibility();
+    updateInstallHelperContent();
     console.log("[install] beforeinstallprompt captured");
   });
 
   window.addEventListener("appinstalled", () => {
     deferredInstallPrompt = null;
     installContext.isStandalone = true;
-    setInstallButtonVisibility(false);
+    installContext.promptAvailable = false;
+    setInstallButtonVisibility();
+    updateInstallHelperContent();
     closeInstallHelperModal();
     rerenderAll();
   });
-
-  const handleInstallAction = async () => {
-    if (installContext.isStandalone) return;
-    if (!deferredInstallPrompt) {
-      if (installContext.isIos) {
-        showToast("Install tip", "On iPhone or iPad, use Share then Add to Home Screen.", "ph-device-mobile", "text-[#38bdf8]");
-      } else {
-        showToast("Install unavailable", "Open StellarSync in Chrome, Edge, or Safari and try again.", "ph-browser", "text-yellow-400");
-      }
-      return false;
-    }
-    deferredInstallPrompt.prompt();
-    try {
-      await deferredInstallPrompt.userChoice;
-      return true;
-    } finally {
-      deferredInstallPrompt = null;
-      setInstallButtonVisibility(false);
-    }
-  };
 
   window.addEventListener("online", () => {
     offlineMode = false;
@@ -26998,10 +27247,10 @@ function setupPWAInstall() {
     rerenderAll();
   });
 
-  installAppBtn?.addEventListener("click", openInstallHelperModal);
-  mobileInstallAppBtn?.addEventListener("click", openInstallHelperModal);
+  installAppBtn?.addEventListener("click", function() { handlePWAInstallAction({ openHelper: true }); });
+  mobileInstallAppBtn?.addEventListener("click", function() { handlePWAInstallAction({ openHelper: true }); });
   installHelperActionBtn?.addEventListener("click", async () => {
-    const installed = await handleInstallAction();
+    const installed = await handlePWAInstallAction({ openHelper: false });
     if (installed) closeInstallHelperModal();
   });
   closeInstallHelperModalBtn?.addEventListener("click", closeInstallHelperModal);
@@ -27010,14 +27259,14 @@ function setupPWAInstall() {
     if (event.target === installHelperModal) closeInstallHelperModal();
   });
   window.addEventListener("resize", () => {
-    setInstallButtonVisibility(Boolean(deferredInstallPrompt) || (installContext.isIos && !installContext.isStandalone));
+    setInstallButtonVisibility();
   });
 
   if (appUpdateBtn) {
     appUpdateBtn.addEventListener("click", applyServiceWorkerUpdate);
   }
 
-  setInstallButtonVisibility(Boolean(deferredInstallPrompt) || (installContext.isIos && !installContext.isStandalone));
+  setInstallButtonVisibility();
   updateAppStatusBanner();
 }
 
@@ -27074,19 +27323,7 @@ function openInstallHelperModal() {
   if (!installHelperModal || !installHelperModalCard) return;
 
   installContext.isStandalone = detectStandaloneMode();
-  if (installHelperInstalledState) {
-    installHelperInstalledState.classList.toggle("hidden", !installContext.isStandalone);
-  }
-  if (installHelperDesktopCopy) {
-    installHelperDesktopCopy.textContent = deferredInstallPrompt
-      ? "Use the Install App button below to trigger the browser install prompt."
-      : "If the browser supports install, the Install App button will appear in Chrome or Edge.";
-  }
-  if (installHelperActionBtn) {
-    installHelperActionBtn.disabled = installContext.isStandalone;
-    installHelperActionBtn.classList.toggle("opacity-50", installContext.isStandalone);
-    installHelperActionBtn.textContent = deferredInstallPrompt ? "Install Now" : installContext.isIos ? "Show iOS Steps" : "Install App";
-  }
+  updateInstallHelperContent();
   installHelperModal.classList.remove("opacity-0", "pointer-events-none");
   installHelperModalCard.classList.remove("scale-95");
   installHelperModalCard.classList.add("scale-100");
@@ -31371,41 +31608,44 @@ function renderBrandFrameworkEditor() {
 function renderBrandOSPillarEditor() {
   console.log("[brand-os] render pillar editor");
   if (!brandFrameworkEditor || !brandFrameworkDiagnostics) return;
-  var pillars = getWorkspacePillars();
+  var pillars = getPillarEditBuffer();
   console.log("[pillars] loaded workspace pillars", pillars.length);
   var html = '<div class="p-4 rounded-2xl bg-[#181125] border border-white/5">';
-  html += '<div class="flex items-center justify-between gap-3 mb-4"><div class="text-sm font-bold text-white">Workspace Pillars</div>';
+  html += '<div class="flex items-center justify-between gap-3 mb-4"><div><div class="text-sm font-bold text-white">Workspace Pillars</div><div class="text-[10px] text-emerald-300 mt-1">' + escapeHtml(BRAND_OS_PILLAR_LAST_SAVED_LABEL || "Icon changes save to workspace settings") + '</div></div>';
   html += '<button type="button" onclick="addBrandOSPillar()" class="px-3 py-1.5 rounded-xl bg-[#231738] hover:bg-[#2d1b4e] text-white text-[10px] uppercase tracking-wider font-bold border border-white/5 transition-colors"><i class="ph-bold ph-plus"></i> Add Pillar</button>';
   html += '</div>';
   if (!pillars.length) {
     html += '<div class="text-sm text-gray-400 py-4 text-center">No pillars defined. Add one to get started.</div>';
   } else {
     html += pillars.map(function(p, i) {
-      var iconClass = getWorkspaceAvatarIconClass(p.icon || getDefaultPillarObject(p.slug || p.name || "").icon);
-      return '<div class="flex items-center gap-3 p-3 rounded-xl bg-[#120c1d] border border-white/5 mb-2">' +
+      var slug = normalizePillarToken(p.slug || p.name || "");
+      var iconClass = normalizePillarIconClass(p.icon) || getDeterministicPillarIcon(slug || p.name);
+      var iconGrid = PILLAR_ICON_OPTIONS.map(function(icon) {
+        var active = normalizePillarIconClass(icon) === iconClass;
+        return '<button type="button" class="pillar-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg ' + (active ? "active" : "") + '" title="' + escapeHtml(icon) + '" onclick="setBrandOSPillarIcon(' + i + ', \'' + escapeHtml(icon) + '\')"><i class="ph-fill ' + escapeHtml(icon) + '"></i></button>';
+      }).join("");
+      return '<div class="p-4 rounded-xl bg-[#120c1d] border border-white/5 mb-3 space-y-4">' +
+        '<div class="flex items-start gap-3">' +
+        '<div class="flex flex-col gap-1 pt-1">' +
         '<button type="button" onclick="moveBrandOSPillar(' + i + ', -1)" class="text-gray-500 hover:text-white transition-colors" title="Move up"><i class="ph-bold ph-caret-up"></i></button>' +
         '<button type="button" onclick="moveBrandOSPillar(' + i + ', 1)" class="text-gray-500 hover:text-white transition-colors" title="Move down"><i class="ph-bold ph-caret-down"></i></button>' +
-        '<span class="inline-flex w-9 h-9 rounded-xl shrink-0 items-center justify-center bg-[#1a1128] border border-white/10 text-white"><i class="ph-fill ' + escapeHtml(iconClass) + ' text-sm"></i></span>' +
-        '<input class="form-input text-sm flex-1 min-w-0" data-pillar-idx="' + i + '" data-field="name" value="' + escapeHtml(p.name || "") + '" placeholder="Pillar name" oninput="updateBrandOSPillarField(' + i + ', \'name\', this.value)">' +
-        '<select class="form-input text-sm w-40" data-pillar-idx="' + i + '" data-field="icon" onchange="updateBrandOSPillarField(' + i + ', \'icon\', this.value)">' +
-        '<option value="ph-megaphone" ' + (p.icon === "ph-megaphone" ? "selected" : "") + '>Advocacy</option>' +
-        '<option value="ph-users-three" ' + (p.icon === "ph-users-three" ? "selected" : "") + '>Community</option>' +
-        '<option value="ph-heart" ' + (p.icon === "ph-heart" ? "selected" : "") + '>Wellness</option>' +
-        '<option value="ph-crown" ' + (p.icon === "ph-crown" ? "selected" : "") + '>Leadership</option>' +
-        '<option value="ph-book-open" ' + (p.icon === "ph-book-open" ? "selected" : "") + '>Education</option>' +
-        '<option value="ph-hand-heart" ' + (p.icon === "ph-hand-heart" ? "selected" : "") + '>Fundraising</option>' +
-        '<option value="ph-leaf" ' + (p.icon === "ph-leaf" ? "selected" : "") + '>Climate</option>' +
-        '<option value="ph-briefcase" ' + (p.icon === "ph-briefcase" ? "selected" : "") + '>Jobs</option>' +
-        '<option value="ph-sparkle" ' + (p.icon === "ph-sparkle" ? "selected" : "") + '>Sparkle</option>' +
-        '<option value="ph-star" ' + (p.icon === "ph-star" ? "selected" : "") + '>Star</option>' +
-        '<option value="ph-lightbulb" ' + (p.icon === "ph-lightbulb" ? "selected" : "") + '>Lightbulb</option>' +
-        '<option value="ph-target" ' + (p.icon === "ph-target" ? "selected" : "") + '>Target</option>' +
-        '<option value="ph-trend-up" ' + (p.icon === "ph-trend-up" ? "selected" : "") + '>Growth</option>' +
-        '<option value="ph-graph" ' + (p.icon === "ph-graph" ? "selected" : "") + '>Analytics</option>' +
-        '<option value="ph-globe" ' + (p.icon === "ph-globe" ? "selected" : "") + '>Global</option>' +
-        '</select>' +
+        '</div>' +
+        '<div class="inline-flex w-12 h-12 rounded-xl shrink-0 items-center justify-center bg-[#1a1128] border border-white/10 text-white"><i class="ph-fill ' + escapeHtml(iconClass) + ' text-xl"></i></div>' +
+        '<div class="min-w-0 flex-1 space-y-2">' +
+        '<input class="form-input text-sm w-full" data-pillar-idx="' + i + '" data-field="name" value="' + escapeHtml(p.name || "") + '" placeholder="Pillar name" oninput="updateBrandOSPillarField(' + i + ', \'name\', this.value)">' +
+        '<input class="form-input text-xs w-full" data-pillar-idx="' + i + '" data-field="description" value="' + escapeHtml(p.description || "") + '" placeholder="Optional short description" oninput="updateBrandOSPillarField(' + i + ', \'description\', this.value)">' +
+        '<div class="flex items-center gap-3 flex-wrap">' +
+        '<span class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Saved as ' + escapeHtml(slug || "new-pillar") + '</span>' +
         '<label class="text-xs text-gray-400 flex items-center gap-1 shrink-0"><input type="checkbox" data-pillar-idx="' + i + '" data-field="enabled" ' + (p.enabled !== false ? "checked" : "") + ' onchange="updateBrandOSPillarField(' + i + ', \'enabled\', this.checked)"> Active</label>' +
-        '<button type="button" onclick="removeBrandOSPillar(' + i + ')" class="text-red-400 hover:text-red-300 transition-colors" title="Remove pillar"><i class="ph-bold ph-trash"></i></button>' +
+        '</div>' +
+        '</div>' +
+        '<button type="button" onclick="removeBrandOSPillar(' + i + ')" class="text-red-400 hover:text-red-300 transition-colors pt-2" title="Remove pillar"><i class="ph-bold ph-trash"></i></button>' +
+        '</div>' +
+        '<div>' +
+        '<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-2">Change icon</div>' +
+        '<div class="flex flex-wrap gap-2">' + iconGrid + '</div>' +
+        '</div>' +
+        '<div class="text-[10px] text-emerald-300 hidden" id="pillar-save-state-' + i + '">Saved</div>' +
         '</div>';
     }).join("");
   }
@@ -31417,9 +31657,55 @@ function renderBrandOSPillarEditor() {
 }
 
 var BRAND_OS_PILLAR_EDIT_BUFFER = null;
+var BRAND_OS_PILLAR_LAST_SAVED_LABEL = "";
+
+const PILLAR_ICON_OPTIONS = [
+  "ph-sparkle",
+  "ph-magic-wand",
+  "ph-megaphone",
+  "ph-target",
+  "ph-rocket-launch",
+  "ph-lightbulb",
+  "ph-book-open",
+  "ph-chart-line-up",
+  "ph-users-three",
+  "ph-hands-clapping",
+  "ph-heart",
+  "ph-globe",
+  "ph-leaf",
+  "ph-fire",
+  "ph-compass",
+  "ph-planet",
+  "ph-stars",
+  "ph-pencil-simple",
+  "ph-broadcast",
+  "ph-network",
+  "ph-funnel",
+  "ph-calendar-star",
+  "ph-quotes",
+  "ph-chat-circle-text"
+];
+
+function buildPillarIconMapFromPillars(pillars = []) {
+  var map = {};
+  (Array.isArray(pillars) ? pillars : []).forEach(function(pillar) {
+    var slug = normalizePillarToken(pillar?.slug || pillar?.name || "");
+    var icon = normalizePillarIconClass(pillar?.icon) || getDeterministicPillarIcon(slug || pillar?.name);
+    if (slug && icon) map[slug] = icon;
+  });
+  return map;
+}
 
 function getPillarEditBuffer() {
-  if (!BRAND_OS_PILLAR_EDIT_BUFFER) BRAND_OS_PILLAR_EDIT_BUFFER = JSON.parse(JSON.stringify(getWorkspacePillars()));
+  if (!BRAND_OS_PILLAR_EDIT_BUFFER) BRAND_OS_PILLAR_EDIT_BUFFER = JSON.parse(JSON.stringify(getWorkspacePillars())).map(function(pillar) {
+    var slug = normalizePillarToken(pillar.slug || pillar.name || "");
+    return {
+      ...pillar,
+      slug,
+      icon: normalizePillarIconClass(pillar.icon) || getDeterministicPillarIcon(slug || pillar.name),
+      description: pillar.description || pillar.summary || ""
+    };
+  });
   return BRAND_OS_PILLAR_EDIT_BUFFER;
 }
 
@@ -31430,9 +31716,17 @@ function updateBrandOSPillarField(idx, field, value) {
   if (field === "name" && value) buf[idx].slug = String(value).trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || buf[idx].slug;
 }
 
+function setBrandOSPillarIcon(idx, icon) {
+  var buf = getPillarEditBuffer();
+  if (!buf[idx]) return;
+  buf[idx].icon = normalizePillarIconClass(icon) || getDeterministicPillarIcon(buf[idx].slug || buf[idx].name);
+  renderBrandOSPillarEditor();
+}
+
 function addBrandOSPillar() {
   var buf = getPillarEditBuffer();
-  buf.push({ name: "New Pillar", slug: "new-pillar", icon: "ph-sparkle", enabled: true });
+  var suffix = buf.length + 1;
+  buf.push({ name: "New Pillar", slug: "new-pillar-" + suffix, icon: "ph-sparkle", description: "", enabled: true });
   renderBrandOSPillarEditor();
 }
 
@@ -31455,43 +31749,92 @@ function moveBrandOSPillar(idx, dir) {
 async function saveBrandOSPillars() {
   console.log("[pillars] saved workspace pillars");
   var buf = getPillarEditBuffer();
-  var payload = { default_pillars: buf.map(function(p) { return { name: String(p.name || "").trim(), slug: String(p.slug || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, ""), icon: p.icon || "ph-sparkle", color: p.color || "", enabled: p.enabled !== false }; }).filter(function(p) { return p.name && p.slug; }) };
+  var defaultPillars = buf.map(function(p) {
+    var name = String(p.name || "").trim();
+    var slug = normalizePillarToken(p.slug || name);
+    return {
+      name,
+      slug,
+      icon: normalizePillarIconClass(p.icon) || getDeterministicPillarIcon(slug || name),
+      description: String(p.description || "").trim(),
+      enabled: p.enabled !== false
+    };
+  }).filter(function(p) { return p.name && p.slug; });
+  var payload = { default_pillars: defaultPillars, pillar_icons: buildPillarIconMapFromPillars(defaultPillars) };
+  function applyPillarPayloadLocally() {
+    var hydrated = applyPillarIconsToDefinitions(payload.default_pillars, payload.pillar_icons);
+    var slugs = hydrated.map(function(p) { return p.slug; }).filter(Boolean);
+    if (appState?.settings) {
+      appState.settings.default_pillars = hydrated;
+      appState.settings.pillars = slugs.slice();
+      appState.settings.pillar_icons = payload.pillar_icons;
+    }
+    appState.workspaceSettings = {
+      ...(appState.workspaceSettings && typeof appState.workspaceSettings === "object" ? appState.workspaceSettings : {}),
+      pillar_icons: payload.pillar_icons
+    };
+    if (appState?.workspace) {
+      appState.workspace.default_pillars = hydrated;
+      appState.workspace.pillars = slugs.slice();
+      appState.workspace.pillar_icons = payload.pillar_icons;
+    }
+    if (appState?.brandOS) {
+      appState.brandOS.default_pillars = hydrated;
+      appState.brandOS.pillars = slugs.slice();
+      appState.brandOS.pillar_icons = payload.pillar_icons;
+    }
+    if (WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active) {
+      WORKSPACE_RUNTIME_CONFIG.active.default_pillars = hydrated;
+      WORKSPACE_RUNTIME_CONFIG.active.pillars = slugs.slice();
+      WORKSPACE_RUNTIME_CONFIG.active.pillar_icons = payload.pillar_icons;
+      WORKSPACE_RUNTIME_CONFIG.active.brandOS = {
+        ...(WORKSPACE_RUNTIME_CONFIG.active.brandOS || {}),
+        default_pillars: hydrated,
+        pillars: slugs.slice(),
+        pillar_icons: payload.pillar_icons
+      };
+      storeActiveWorkspaceConfig(WORKSPACE_RUNTIME_CONFIG.active);
+    }
+    persistLocalState();
+    rerenderAll();
+    refreshSettingsSheetMirrorCard();
+  }
+  var loadingId = null;
   try {
-    var loadingId = showLoadingToast("Saving pillars", "Saving workspace pillar taxonomy...");
+    loadingId = showLoadingToast("Saving pillars", "Saving workspace pillar icons...");
     var wsId = appState?.workspace?.workspace_id || appState?.workspace?.id || "";
     if (!wsId) throw new Error("No workspace ID");
-    if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase client not available");
-    var existing = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").select("id").eq("workspace_id", wsId).maybeSingle();
-    var result;
-    if (existing?.data?.id) {
-      result = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").update({ default_pillars: payload.default_pillars }).eq("id", existing.data.id);
-    } else {
-      result = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").insert({ workspace_id: wsId, default_pillars: payload.default_pillars });
+    applyPillarPayloadLocally();
+    if (STELLARSYNC_SUPABASE_CLIENT) {
+      await upsertWorkspaceSettings(wsId, { workspace_id: wsId, default_pillars: payload.default_pillars, pillar_icons: payload.pillar_icons });
+      try {
+        var wsColumns = await getWorkspaceSettingsColumns();
+        var reloadFields = filterWorkspaceSettingsFieldsForKnownSchema(["workspace_id", "default_pillars", "pillar_icons"], wsColumns, "pillar verification");
+        var reloaded = await selectWorkspaceSettingsWithMissingColumnRetry(wsId, reloadFields);
+        if (STELLARSYNC_DEBUG) console.log("[pillars] reload check", reloaded?.data || null);
+      } catch (verifyErr) {
+        if (STELLARSYNC_DEBUG) console.warn("[pillars] reload verification skipped", verifyErr?.message || verifyErr);
+      }
     }
-    if (result.error) throw result.error;
+    var backendMode = getActiveWorkspaceBackendMode();
+    if (isGoogleSheetsFrontendMode(backendMode.mode) && isRemoteConfigured()) {
+      try {
+        await apiSaveWorkspaceSettingsToSheets({ workspace_id: wsId, default_pillars: payload.default_pillars, pillar_icons: payload.pillar_icons });
+        await refreshSheetsTabsQuietly(["SETTINGS", "BRAND_FRAMEWORK"]);
+        applyPillarPayloadLocally();
+      } catch (sheetErr) {
+        if (STELLARSYNC_DEBUG) console.log("[pillars] sheets route skipped", sheetErr?.message || sheetErr);
+      }
+    }
     BRAND_OS_PILLAR_EDIT_BUFFER = null;
-    if (appState?.settings) appState.settings.default_pillars = payload.default_pillars;
-    if (appState?.workspace) appState.workspace.default_pillars = payload.default_pillars;
-    if (appState?.brandOS) appState.brandOS.default_pillars = payload.default_pillars;
-    if (WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active) {
-      WORKSPACE_RUNTIME_CONFIG.active.default_pillars = payload.default_pillars;
-      storeActiveWorkspaceConfig(WORKSPACE_RUNTIME_CONFIG.active);
-    }
-    persistLocalState();
-    updateToast(loadingId, "success", "Pillars saved", "Workspace pillar taxonomy updated.");
+    BRAND_OS_PILLAR_LAST_SAVED_LABEL = "Saved " + new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    updateToast(loadingId, "success", "Pillars saved", "Workspace pillar icons updated.");
     renderBrandFrameworkEditor();
-    refreshSettingsSheetMirrorCard();
   } catch (err) {
-    if (appState?.settings) appState.settings.default_pillars = payload.default_pillars;
-    if (appState?.workspace) appState.workspace.default_pillars = payload.default_pillars;
-    if (appState?.brandOS) appState.brandOS.default_pillars = payload.default_pillars;
-    if (WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active) {
-      WORKSPACE_RUNTIME_CONFIG.active.default_pillars = payload.default_pillars;
-      storeActiveWorkspaceConfig(WORKSPACE_RUNTIME_CONFIG.active);
-    }
-    persistLocalState();
+    applyPillarPayloadLocally();
+    BRAND_OS_PILLAR_LAST_SAVED_LABEL = "Saved locally " + new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
     if (STELLARSYNC_DEBUG) console.warn("[pillars] backend save skipped", err?.message || err);
-    updateToast(loadingId, "success", "Pillars saved locally", "Workspace pillar taxonomy updated locally.");
+    if (loadingId) updateToast(loadingId, "success", "Pillars saved locally", "Workspace pillar icons updated locally.");
     renderBrandFrameworkEditor();
   }
 }
@@ -31926,6 +32269,10 @@ function normalizeRemoteBoolean(value) {
 
 function normalizeRemoteSettings(settings) {
   const defaults = getDefaultSettings();
+  const normalizedPillarIcons = {
+    ...normalizePillarIconMap(defaults.pillar_icons || defaults.pillarIcons),
+    ...normalizePillarIconMap(settings?.pillar_icons || settings?.pillarIcons)
+  };
   const normalizeList = (values, fallback, formatter) => {
     const source = Array.isArray(values) ? values : fallback;
     return source
@@ -31934,16 +32281,18 @@ function normalizeRemoteSettings(settings) {
       .filter((value, index, list) => list.indexOf(value) === index);
   };
   const normalizedDefaultPillars = Array.isArray(settings?.default_pillars)
-    ? settings.default_pillars.map(function(pillar) {
-        return typeof pillar === "object" && pillar !== null
-          ? getDefaultPillarObject(pillar.slug || pillar.name || "")
-          : getDefaultPillarObject(pillar);
-      }).filter(Boolean)
-    : normalizeList(settings?.pillars, defaults.pillars, (value) => {
+    ? applyPillarIconsToDefinitions(settings.default_pillars.map(function(pillar) {
+        if (typeof pillar === "object" && pillar !== null) {
+          var slug = normalizePillarToken(pillar.slug || pillar.name || "");
+          return { ...pillar, slug, name: String(pillar.name || toTitleCase(slug.replace(/[_-]+/g, " "))).trim() };
+        }
+        return getDefaultPillarObject(pillar);
+      }).filter(Boolean), normalizedPillarIcons)
+    : applyPillarIconsToDefinitions(normalizeList(settings?.pillars, defaults.pillars, (value) => {
         return String(typeof value === "object" && value !== null ? value.slug || value.name || "" : value || "").trim().toLowerCase();
       }).map(function(pillar) {
         return getDefaultPillarObject(normalizePillarToken(pillar));
-      }).filter(Boolean);
+      }).filter(Boolean), normalizedPillarIcons);
   const normalizedPillars = normalizeList(settings?.pillars, defaults.pillars, (value) => {
     return String(typeof value === "object" && value !== null ? value.slug || value.name || "" : value || "").trim().toLowerCase();
   }).map(function(pillar) {
@@ -31968,6 +32317,7 @@ function normalizeRemoteSettings(settings) {
     postTypes: normalizeList(settings?.postTypes || settings?.post_types, defaults.postTypes, (value) => String(value || "").trim().toLowerCase()),
     campaigns: normalizeList(settings?.campaigns, [], (value) => normalizeCampaignDisplayName(value)),
     campaignColors: { ...(defaults.campaignColors || {}), ...(settings?.campaignColors || settings?.campaign_colors || {}) },
+    pillar_icons: normalizedPillarIcons,
     months: Array.isArray(settings?.months) ? settings.months.map((value) => String(value || "").trim()).filter(Boolean) : defaults.months.slice(),
     queueLimit: settings?.queueLimit || settings?.queue_limit || defaults.queueLimit,
     currentMonth: settings?.currentMonth || settings?.current_month || defaults.currentMonth,
@@ -35071,6 +35421,7 @@ async function savePWWorkspace() {
   console.log("[icon-save] workspace path", { action: "savePWWorkspace" });
   const activeWorkspace = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active || {};
   const selectedWorkspaceIcon = (document.querySelector("#pw-workspace-icon-grid .pw-ws-icon-btn.active") || {}).dataset?.icon || "none";
+  const existingPillarIcons = getWorkspacePillarIconMap(appState || {}, activeWorkspace || {});
   const payload = {
     workspace_id: activeWorkspace.workspace_id || activeWorkspace.id || "",
     display_name: (document.getElementById("pw-workspace-name") || {}).value || "",
@@ -35086,7 +35437,8 @@ async function savePWWorkspace() {
     media_prefix: (document.getElementById("pw-workspace-media-prefix") || {}).value || (activeWorkspace.workspace_slug || activeWorkspace.slug || "") + "/",
     brand_voice: (document.getElementById("pw-workspace-brand-voice") || {}).value || "",
     default_platforms: String((document.getElementById("pw-workspace-default-platforms") || {}).value || "").split(/[|,\n]/).map((v) => v.trim()).filter(Boolean),
-    default_pillars: String((document.getElementById("pw-workspace-default-pillars") || {}).value || "").split(/[|,\n]/).map(function(v) { return getDefaultPillarObject(String(v || "").trim()); }).filter(Boolean),
+    default_pillars: applyPillarIconsToDefinitions(String((document.getElementById("pw-workspace-default-pillars") || {}).value || "").split(/[|,\n]/).map(function(v) { return getDefaultPillarObject(String(v || "").trim()); }).filter(Boolean), existingPillarIcons),
+    pillar_icons: existingPillarIcons,
     default_statuses: String((document.getElementById("pw-workspace-default-statuses") || {}).value || "").split(/[|,\n]/).map((v) => v.trim()).filter(Boolean),
     default_post_types: String((document.getElementById("pw-workspace-default-post-types") || {}).value || "").split(/[|,\n]/).map((v) => v.trim()).filter(Boolean),
     updated_at: new Date().toISOString()
