@@ -5999,7 +5999,7 @@ function resolveWorkspaceBackendConfig(workspace, settings) {
 function mergeWorkspaceSettings(workspace, settings) {
   if (!workspace || !settings) return workspace;
   const backendConfig = resolveWorkspaceBackendConfig(workspace, settings);
-  const displayName = String(settings.display_name || settings.displayName || "").trim();
+  const displayName = String(settings.brand_name || settings.brandName || settings.display_name || settings.displayName || "").trim();
   const shortName = String(settings.short_name || settings.shortName || "").trim();
   const avatarInitials = String(settings.avatar_initials || settings.avatarInitials || "").trim();
   const avatarMode = String(settings.avatar_mode || settings.avatarMode || "").trim();
@@ -6034,7 +6034,7 @@ function mergeWorkspaceSettings(workspace, settings) {
     default_statuses: Array.isArray(settings.default_statuses) ? settings.default_statuses : (workspace.default_statuses || []),
     default_post_types: Array.isArray(settings.default_post_types) ? settings.default_post_types : (workspace.default_post_types || []),
     current_month: String(settings.current_month || settings.currentMonth || workspace.current_month || workspace.currentMonth || "").trim(),
-    current_year: String(settings.current_year || settings.currentYear || workspace.current_year || workspace.currentYear || "").trim(),
+    current_year: String(workspace.current_year || workspace.currentYear || "").trim(),
     backend_type: backendConfig.backendType,
     google_sheet_id: backendConfig.sheetId,
     sheet_id: backendConfig.sheetId,
@@ -6058,7 +6058,7 @@ async function loadWorkspaceBrandingSettings(workspaceId, workspace = {}) {
   const primaryFields = [
     "id",
     "workspace_id",
-    "display_name",
+    "brand_name",
     "plan",
     "plan_slug",
     "subscription_tier",
@@ -6094,10 +6094,9 @@ async function loadWorkspaceBrandingSettings(workspaceId, workspace = {}) {
     "default_pillars",
     "default_statuses",
     "default_post_types",
-    "current_month",
-    "current_year"
+    "current_month"
   ].join(",");
-  const minimalFields = "id,workspace_id,workspace_slug,display_name,plan,plan_slug,subscription_tier,managed_account,is_admin_workspace,feature_flags,backend_type";
+  const minimalFields = "id,workspace_id,workspace_slug,brand_name,plan_slug,subscription_tier,managed_account,feature_flags,backend_type";
 
   async function runSettingsSelect(fields) {
     const wsColumns = await getWorkspaceSettingsColumns();
@@ -8219,6 +8218,17 @@ function normalizePostPlanningFields(post = {}, fallback = {}) {
   return planning;
 }
 
+if (typeof window !== "undefined" && typeof window.buildScheduledAtFromPlanningFields !== "function") {
+  window.buildScheduledAtFromPlanningFields = function(post) {
+    try {
+      return buildScheduledAtFromPlanningFields.apply(null, arguments);
+    } catch (err) {
+      if (STELLARSYNC_DEBUG) console.warn("[modal-date-helper] failed", err);
+      return "";
+    }
+  };
+}
+
 function hydratePostCampaign(post) {
   if (!post || typeof post !== "object") return post;
   const campaign = getCampaignById(post.campaignId) || getCampaignByName(post.campaignName);
@@ -8591,16 +8601,91 @@ function renderPlatformIconsOnly(postOrPlatforms, options = {}) {
 }
 
 function getCalendarStatusDotColor(post) {
+  return resolvePostPublishingStatus(post).color;
+}
+
+function resolvePostPublishingStatus(post = {}) {
+  const rawFields = {
+    status: post?.status,
+    publishStatus: post?.publishStatus,
+    publish_status: post?.publish_status,
+    statusLabel: post?.statusLabel,
+    status_label: post?.status_label,
+    workflowStatus: post?.workflowStatus,
+    workflow_status: post?.workflow_status,
+    approvalStatus: post?.approvalStatus,
+    approval_status: post?.approval_status,
+    flowState: post?.flowState,
+    flow_state: post?.flow_state,
+    publishedAt: post?.publishedAt,
+    published_at: post?.published_at,
+    publishedUrl: post?.publishedUrl,
+    published_url: post?.published_url,
+    scheduledAt: post?.scheduledAt,
+    scheduled_at: post?.scheduled_at,
+    date: post?.date,
+    publishDate: post?.publishDate,
+    publish_date: post?.publish_date,
+    publishTime: post?.publishTime,
+    publish_time: post?.publish_time,
+    queueDateLabel: post?.queueDateLabel,
+    queue_date_label: post?.queue_date_label
+  };
+  const rawStatuses = [
+    post?.status,
+    post?.publishStatus,
+    post?.publish_status,
+    post?.statusLabel,
+    post?.status_label,
+    post?.workflowStatus,
+    post?.workflow_status,
+    post?.approvalStatus,
+    post?.approval_status,
+    post?.flowState,
+    post?.flow_state
+  ].map((value) => String(value || "").trim().toLowerCase()).filter(Boolean);
+  const hasPublishedStatus = rawStatuses.some((value) => ["published", "posted", "live", "complete", "completed"].includes(value));
+  const hasScheduledStatus = rawStatuses.some((value) => ["scheduled", "queued", "planned", "ready"].includes(value));
+  const hasDraftStatus = rawStatuses.some((value) => ["draft", "idea", "needs review", "needs_review", "in progress", "in_progress"].includes(value));
+  const dateEvidence = String(post?.scheduledAt || post?.scheduled_at || post?.publishDate || post?.publish_date || post?.date || "").trim();
+  const timeEvidence = String(post?.publishTime || post?.publish_time || post?.queueTimeLabel || post?.queue_time_label || "").trim();
+  const parsedDate = parsePostDate(dateEvidence);
+  const hasFutureSchedule = parsedDate && !Number.isNaN(parsedDate.getTime()) && parsedDate.getTime() >= Date.now() - 60000;
+  let status = "draft";
+  if (hasPublishedStatus || String(post?.publishedAt || post?.published_at || post?.publishedUrl || post?.published_url || "").trim()) {
+    status = "published";
+  } else if (hasScheduledStatus || hasFutureSchedule || (!hasDraftStatus && String(dateEvidence || timeEvidence).trim() && !rawStatuses.length)) {
+    status = "scheduled";
+  }
+  const color = status === "published" ? "#22c55e" : status === "scheduled" ? "#facc15" : "#38bdf8";
+  if (STELLARSYNC_DEBUG) {
+    const workspace = WORKSPACE_RUNTIME_CONFIG?.active || {};
+    console.log("[status-resolver]", {
+      workspace: workspace.workspace_slug || workspace.slug || "",
+      rawStatusFields: rawFields,
+      resolvedStatus: status,
+      color
+    });
+  }
+  return { status, color };
+}
+
+function resolveCalendarStatus(post = {}) {
+  return resolvePostPublishingStatus(post);
+}
+
+function renderCalendarStatusDot(post) {
+  const resolved = resolvePostPublishingStatus(post);
+  const color = resolved.color;
+  const status = resolved.status;
+  return `<span class="calendar-status-dot" style="background:${escapeHtml(color)};box-shadow:0 0 8px ${escapeHtml(color)}66;" title="${escapeHtml(toTitleCase(status))}" aria-label="${escapeHtml(toTitleCase(status))} status"></span>`;
+}
+
+function getLegacyCalendarStatusDotColor(post) {
   const status = String(post?.publishStatus || post?.publish_status || post?.status || "draft").trim().toLowerCase();
   if (status === "published" || status === "live") return "#22c55e";
   if (status === "scheduled" || status === "queued") return "#facc15";
   return "#38bdf8";
-}
-
-function renderCalendarStatusDot(post) {
-  const color = getCalendarStatusDotColor(post);
-  const status = String(post?.publishStatus || post?.publish_status || post?.status || "draft").trim().toLowerCase() || "draft";
-  return `<span class="calendar-status-dot" style="background:${escapeHtml(color)};box-shadow:0 0 8px ${escapeHtml(color)}66;" title="${escapeHtml(toTitleCase(status))}" aria-label="${escapeHtml(toTitleCase(status))} status"></span>`;
 }
 
 function getPostTypeDetailText(post) {
@@ -13120,7 +13205,7 @@ function renderMobileDayCalendar() {
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-1.5 mb-2">${renderPlatformIconsOnly(post)}</div>
             <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${escapeHtml(post.queueTimeLabel || "No time")}</div>
-            <h4 class="text-white text-sm font-bold wrap-safe mt-1">${escapeHtml(getPostDisplayTitle(post, "Untitled post"))}</h4>
+            <h4 class="calendar-pill-title text-white text-sm font-bold wrap-safe mt-1">${escapeHtml(getPostDisplayTitle(post, "Untitled post"))}</h4>
             <div class="text-[10px] uppercase tracking-wider text-gray-500 mt-1">${escapeHtml(postTypeDetail)}</div>
           </div>
           ${renderCalendarStatusDot(post)}
@@ -13134,6 +13219,15 @@ function renderMobileDayCalendar() {
 
 function renderCalendarPill(post, isWeekMode = false, postIndex = 0) {
   const compactMonth = window.innerWidth <= 768 && calendarMode === "month" && !isWeekMode;
+  if (STELLARSYNC_DEBUG) {
+    const workspace = WORKSPACE_RUNTIME_CONFIG?.active || {};
+    console.log("[calendar-render-branch]", {
+      workspaceSlug: workspace.workspace_slug || workspace.slug || "",
+      backend_type: workspace.backend_type || workspace.backendType || "",
+      branchName: compactMonth ? "shared-compact-month" : "shared-standard",
+      postId: getPostLookupId(post, postIndex)
+    });
+  }
   const iconBlock = `<span class="flex items-center gap-1">${renderPlatformIconsOnly(post, { compact: true })}</span>`;
 
   const displayTitle = getPostDisplayTitle(post);
@@ -13162,7 +13256,7 @@ function renderCalendarPill(post, isWeekMode = false, postIndex = 0) {
           ${iconBlock}
         </span>
         <span class="absolute top-1.5 right-1.5">${renderCalendarStatusDot(post)}</span>
-	      <span class="compact-month-text calendar-pill-title">${escapeHtml(displayTitle)}</span>
+	      <span class="compact-month-text calendar-pill-title text-[9px] text-gray-300 flex-1 min-w-0">${escapeHtml(displayTitle)}</span>
         ${renderCalendarPillarIcon(post, { compact: true })}
       </button>
     `;
@@ -22930,14 +23024,21 @@ function buildScheduledAtFromPlanningFields(post) {
     const directValue = source.scheduled_at || source.scheduledAt || source.date || "";
     if (String(directValue || "").trim()) {
       const directDate = parseDateValue(directValue);
-      if (directDate && !Number.isNaN(directDate.getTime())) return formatLocalIso(directDate);
+      if (directDate && !Number.isNaN(directDate.getTime())) {
+        const resolved = formatLocalIso(directDate);
+        if (STELLARSYNC_DEBUG) console.log("[modal-date-helper]", { rawFields: source, resolvedScheduledAt: resolved, source: "direct" });
+        return resolved;
+      }
     }
 
     const publishDate = source.publish_date || source.publishDate || source.queueDateLabel || source.queue_date_label || "";
     const publishTime = source.publish_time || source.publishTime || source.queueTimeLabel || source.queue_time_label || "";
     if (String(publishDate || publishTime || "").trim()) {
       const combinedPublish = combineDateAndTime(publishDate, publishTime);
-      if (combinedPublish) return combinedPublish;
+      if (combinedPublish) {
+        if (STELLARSYNC_DEBUG) console.log("[modal-date-helper]", { rawFields: source, resolvedScheduledAt: combinedPublish, source: "publish" });
+        return combinedPublish;
+      }
     }
 
     const calendarYear = source.calendarYear || source.calendar_year || "";
@@ -22946,16 +23047,20 @@ function buildScheduledAtFromPlanningFields(post) {
     if (String(calendarYear || calendarMonth || calendarDay || "").trim()) {
       const calendarDate = `${calendarYear}-${String(calendarMonth).padStart(2, "0")}-${String(calendarDay).padStart(2, "0")}`;
       const combinedCalendar = combineDateAndTime(calendarDate, source.queueTimeLabel || source.queue_time_label || "");
-      if (combinedCalendar) return combinedCalendar;
+      if (combinedCalendar) {
+        if (STELLARSYNC_DEBUG) console.log("[modal-date-helper]", { rawFields: source, resolvedScheduledAt: combinedCalendar, source: "calendar-fields" });
+        return combinedCalendar;
+      }
     }
 
-    if (hasInput) console.warn("[post-modal] scheduled_at parse failed", source);
+    if (STELLARSYNC_DEBUG) console.log("[modal-date-helper]", { rawFields: source, resolvedScheduledAt: "", source: hasInput ? "unresolved" : "empty" });
     return "";
   } catch (err) {
-    console.warn("[post-modal] scheduled_at parse failed", err);
+    if (STELLARSYNC_DEBUG) console.warn("[modal-date-helper] failed", err);
     return "";
   }
 }
+if (typeof window !== "undefined") window.buildScheduledAtFromPlanningFields = buildScheduledAtFromPlanningFields;
 function postModalPerfLog(step, detail = {}) {
   if (!STELLARSYNC_DEBUG) return;
   console.log("[post-modal-perf] " + step, detail);
@@ -23082,7 +23187,10 @@ function openPostModal(
   const modalTargets = setModalTargetPlatforms(getPostTargetPlatforms(matched || { platform }));
   if (platSelect) platSelect.value = modalTargets[0] || matched?.platform || platform || "linkedin";
   if (dateInput) dateInput.value = formatDateInputValue(initialDateValue);
-  if (timeInput) timeInput.value = planning.hasUserSelectedTime ? formatTimeInputValue(buildScheduledAtFromPlanningFields(planning.queueDateLabel, planning.queueTimeLabel)) : "";
+  const scheduledAtForTimeInput = typeof buildScheduledAtFromPlanningFields === "function"
+    ? buildScheduledAtFromPlanningFields(planning.queueDateLabel, planning.queueTimeLabel)
+    : "";
+  if (timeInput) timeInput.value = planning.hasUserSelectedTime ? formatTimeInputValue(scheduledAtForTimeInput) : "";
   if (statusSelect) statusSelect.value = matched?.status || status || "draft";
   if (postTypeSelect) postTypeSelect.value = matched?.postType || matched?.post_type || postType || "text";
   if (descInput) descInput.value = matched?.description || description || "";
@@ -28110,19 +28218,7 @@ var POSTS_TABLE_COLUMNS_CACHE = null;
 
 async function getPostsTableColumns() {
   if (POSTS_TABLE_COLUMNS_CACHE) return POSTS_TABLE_COLUMNS_CACHE;
-  try {
-    if (!STELLARSYNC_SUPABASE_CLIENT) return null;
-    var colResult = await STELLARSYNC_SUPABASE_CLIENT
-      .from("information_schema")
-      .select("column_name")
-      .eq("table_schema", "public")
-      .eq("table_name", "posts");
-    if (colResult.error || !Array.isArray(colResult.data)) return null;
-    var cols = colResult.data.map(function(r) { return r.column_name; });
-    POSTS_TABLE_COLUMNS_CACHE = cols;
-    console.log("[mirror] posts table columns", cols);
-    return cols;
-  } catch (_) { return null; }
+  return null;
 }
 
 function filterPostRowToKnownColumns(row, columnNames) {
@@ -31881,42 +31977,7 @@ function renderQueue(queueItems) {
   const allItems = queueItems || [];
   const items = allItems.slice(0, 3);
 
-  queueList.innerHTML = items.map(item => {
-    const hydrated = hydratePostCampaign(item);
-    const color = getCampaignColorForPost(item);
-    const pillarColor = getPillarTheme(hydrated.pillar);
-
-    const platformIcons = `<div class="flex gap-1 text-gray-400">${renderPlatformChips(item, { compact: true })}</div>`;
-
-    const badgeDate = getQueueBadgeParts(item.queueDateLabel, item.scheduledAt);
-    const month = badgeDate.month;
-    const day = badgeDate.day;
-    const postOpenId = item.id || item.postId || item.post_id || item.frontendId || "";
-    const carouselCover = derivePostFormatFromMedia(hydrated).isCarousel ? getCarouselCoverAsset(hydrated) : null;
-    const carouselCoverUrl = carouselCover ? getMediaPreviewUrl(carouselCover) : "";
-
-    return `
-      <div class="bg-[#181125] border border-white/5 rounded-xl p-4 flex gap-4 items-center cursor-pointer hover:border-white/10 transition-colors"
-           onclick="openModalById('${escapeHtml(postOpenId)}')"
-           title="${escapeHtml(item.title || "")}">
-        <div class="bg-[#120c1d] rounded-lg w-12 h-12 flex flex-col items-center justify-center shrink-0"
-             style="color:${color}; border:1px solid ${color}33;">
-          ${carouselCoverUrl
-            ? `<img src="${escapeHtml(carouselCoverUrl)}" alt="${escapeHtml(getMediaDisplayTitle(carouselCover, null, "Carousel cover"))}" class="w-full h-full object-cover rounded-lg" onerror="handleBrokenMediaPreview(this)">`
-            : `<span class="text-[9px] font-bold uppercase">${month}</span><span class="text-sm font-bold">${day}</span>`}
-        </div>
-        <div class="min-w-0">
-          <p class="text-white text-sm font-bold wrap-safe mb-1">${escapeHtml(item.displayTitle || getDisplayTitle(item.title))}</p>
-          <div class="flex items-center gap-2 text-[10px] text-gray-500 font-medium">
-            ${renderPillarShape(hydrated.pillar, "", pillarColor)}
-            ${platformIcons}
-            <span>${escapeHtml(item.queueTimeLabel || "")}</span>
-            <span>${escapeHtml(renderPostMediaTypeBadge(hydrated))}</span>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join("");
+  queueList.innerHTML = items.map((item, index) => renderCalendarPill(item, false, index)).join("");
 
   if (badge) {
     badge.textContent = `${allItems.length} Scheduled`;
@@ -33481,61 +33542,89 @@ async function savePWProfile() {
 }
 
 var WORKSPACE_SETTINGS_COLUMNS_CACHE = null;
-var WORKSPACE_SETTINGS_OPTIONAL_FIELDS = ["brand_accent", "icon", "avatar_mode", "avatar_initials", "constellation_shape", "short_name", "media_prefix", "media_bucket", "brand_voice", "current_month", "current_year", "default_platforms", "default_pillars", "default_statuses", "default_post_types", "sheet_sync_enabled", "sheet_id", "google_sheet_id", "apps_script_url", "script_url", "web_app_url", "sheet_sync_direction", "sheet_last_pushed_at", "sheet_last_pulled_at", "monday_board_id", "monday_sync_enabled", "monday_sync_direction", "monday_last_pushed_at", "monday_last_pulled_at", "plan_slug", "subscription_tier", "managed_account", "is_admin_workspace", "feature_flags", "workspace_slug"];
-var WORKSPACE_SETTINGS_REQUIRE_CONFIRMED_FIELDS = ["brand_accent", "current_month", "default_platforms", "default_pillars", "icon", "avatar_mode", "avatar_initials", "constellation_shape", "short_name", "media_prefix", "media_bucket", "plan_slug", "subscription_tier", "managed_account", "is_admin_workspace", "feature_flags", "workspace_slug"];
+var WORKSPACE_SETTINGS_ALLOWED_FIELDS = [
+  "id",
+  "workspace_id",
+  "workspace_slug",
+  "brand_name",
+  "brand_voice",
+  "mission",
+  "website",
+  "timezone",
+  "primary_color",
+  "secondary_color",
+  "icon",
+  "avatar_initials",
+  "short_name",
+  "default_pillars",
+  "feature_flags",
+  "managed_account",
+  "plan_slug",
+  "subscription_tier",
+  "backend_type",
+  "sheet_id",
+  "google_sheet_id",
+  "apps_script_url",
+  "script_url",
+  "web_app_url",
+  "sheet_sync_enabled",
+  "updated_at",
+  "created_at"
+];
+var WORKSPACE_SETTINGS_OPTIONAL_FIELDS = WORKSPACE_SETTINGS_ALLOWED_FIELDS.slice();
+var WORKSPACE_SETTINGS_FIELD_ALIASES = {
+  display_name: "brand_name",
+  displayName: "brand_name",
+  name: "brand_name",
+  primaryColour: "primary_color",
+  secondaryColour: "secondary_color"
+};
 
 async function getWorkspaceSettingsColumns() {
   if (WORKSPACE_SETTINGS_COLUMNS_CACHE) return WORKSPACE_SETTINGS_COLUMNS_CACHE;
-  try {
-    if (!STELLARSYNC_SUPABASE_CLIENT) return null;
-    var colResult = await STELLARSYNC_SUPABASE_CLIENT.from("information_schema").select("column_name").eq("table_schema", "public").eq("table_name", "workspace_settings");
-    if (colResult.error || !Array.isArray(colResult.data)) return null;
-    var cols = colResult.data.map(function(r) { return r.column_name; });
-    WORKSPACE_SETTINGS_COLUMNS_CACHE = cols;
-    console.log("[workspace-save] supported columns", cols);
-    return cols;
-  } catch (_) { return null; }
+  WORKSPACE_SETTINGS_COLUMNS_CACHE = WORKSPACE_SETTINGS_ALLOWED_FIELDS.slice();
+  if (STELLARSYNC_DEBUG) console.log("[workspace-save] allowed fields", WORKSPACE_SETTINGS_COLUMNS_CACHE);
+  return WORKSPACE_SETTINGS_COLUMNS_CACHE;
+}
+
+function mapWorkspaceSettingsFieldName(field) {
+  return WORKSPACE_SETTINGS_FIELD_ALIASES[field] || field;
+}
+
+function normalizeWorkspaceSettingsPayload(payload = {}) {
+  var mapped = {};
+  Object.keys(payload || {}).forEach(function(key) {
+    if (key === "current_year" || key === "currentYear" || key === "current_month" || key === "currentMonth") return;
+    var mappedKey = mapWorkspaceSettingsFieldName(key);
+    if (WORKSPACE_SETTINGS_ALLOWED_FIELDS.indexOf(mappedKey) === -1) return;
+    mapped[mappedKey] = payload[key];
+  });
+  if (STELLARSYNC_DEBUG) console.log("[workspace-save] mapped fields", mapped);
+  return mapped;
 }
 
 function filterPayloadToExistingColumns(payload, columnNames) {
-  if (!columnNames || !Array.isArray(columnNames) || !columnNames.length) {
-    var fallbackFiltered = { ...payload };
-    WORKSPACE_SETTINGS_REQUIRE_CONFIRMED_FIELDS.forEach(function(key) {
-      if (Object.prototype.hasOwnProperty.call(fallbackFiltered, key)) {
-        delete fallbackFiltered[key];
-        console.warn("[workspace-save] removed missing column " + key);
-      }
-    });
-    return fallbackFiltered;
-  }
+  var allowed = Array.isArray(columnNames) && columnNames.length ? columnNames : WORKSPACE_SETTINGS_ALLOWED_FIELDS;
+  var normalized = normalizeWorkspaceSettingsPayload(payload);
   var filtered = {};
-  for (var key of Object.keys(payload)) {
-    if (columnNames.indexOf(key) !== -1) {
-      filtered[key] = payload[key];
-    } else if (WORKSPACE_SETTINGS_OPTIONAL_FIELDS.indexOf(key) !== -1) {
-      console.warn("[workspace-save] removed missing column " + key);
-    }
+  for (var key of Object.keys(normalized)) {
+    if (allowed.indexOf(key) !== -1) filtered[key] = normalized[key];
   }
+  if (STELLARSYNC_DEBUG) console.log("[workspace-save] allowed fields", allowed);
   return filtered;
 }
 
 function filterWorkspaceSettingsFieldsForKnownSchema(fields, columnNames, logLabel) {
   var fieldList = Array.isArray(fields) ? fields.slice() : String(fields || "").split(",").map(function(f) { return f.trim(); }).filter(Boolean);
-  if (!columnNames || !Array.isArray(columnNames) || !columnNames.length) {
-    var fallbackFields = fieldList.filter(function(field) {
-      var keep = WORKSPACE_SETTINGS_REQUIRE_CONFIRMED_FIELDS.indexOf(field) === -1;
-      if (!keep) console.warn("[workspace-save] removed missing column " + field);
-      return keep;
-    });
-    if (logLabel) console.log("[workspace-save] " + logLabel + " select filtered", fallbackFields);
-    return fallbackFields;
-  }
+  var allowed = Array.isArray(columnNames) && columnNames.length ? columnNames : WORKSPACE_SETTINGS_ALLOWED_FIELDS;
   var filtered = fieldList.filter(function(field) {
-    var keep = columnNames.indexOf(field) !== -1;
-    if (!keep && WORKSPACE_SETTINGS_OPTIONAL_FIELDS.indexOf(field) !== -1) console.warn("[workspace-save] removed missing column " + field);
-    return keep;
-  });
-  if (logLabel) console.log("[workspace-save] " + logLabel + " select filtered", filtered);
+    var mappedField = mapWorkspaceSettingsFieldName(field);
+    return allowed.indexOf(mappedField) !== -1;
+  }).map(mapWorkspaceSettingsFieldName);
+  filtered = Array.from(new Set(filtered));
+  if (logLabel && STELLARSYNC_DEBUG) {
+    console.log(logLabel === "verification" ? "[workspace-save] verification columns" : "[workspace-save] " + logLabel + " select filtered", filtered);
+  }
   return filtered;
 }
 
@@ -33564,11 +33653,11 @@ async function selectWorkspaceSettingsWithMissingColumnRetry(workspaceId, fields
       .maybeSingle();
     if (!result?.error) return { ...result, fields: remainingFields };
     var missingCol = getMissingWorkspaceSettingsColumn(result.error);
-    console.warn("[workspace-save] exact error", { message: result.error?.message || String(result.error), column: missingCol || "" });
+    if (STELLARSYNC_DEBUG) console.warn("[workspace-save] exact error", { message: result.error?.message || String(result.error), column: missingCol || "" });
     if (missingCol && remainingFields.indexOf(missingCol) !== -1) {
-      console.warn("[workspace-save] removed missing column " + missingCol);
+      if (STELLARSYNC_DEBUG) console.warn("[workspace-save] removed missing column " + missingCol);
       remainingFields = remainingFields.filter(function(field) { return field !== missingCol; });
-      console.warn("[workspace-save] retry without missing column");
+      if (STELLARSYNC_DEBUG) console.warn("[workspace-save] retry without missing column");
       continue;
     }
     return { ...result, fields: remainingFields };
@@ -33599,7 +33688,7 @@ async function selectWorkspaceSettingsByWorkspaceWithMissingColumnRetry(workspac
             var wsLookup = await STELLARSYNC_SUPABASE_CLIENT.from("workspaces").select("id").eq("slug", slug).maybeSingle();
             var widFromSlug = wsLookup?.data?.id ? String(wsLookup.data.id).trim() : "";
             if (widFromSlug) {
-              console.log("[workspace-save] slug read from workspaces", { slug, wid: widFromSlug });
+              if (STELLARSYNC_DEBUG) console.log("[workspace-save] slug read from workspaces", { slug, wid: widFromSlug });
               return await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").select(remainingFields.join(",")).eq("workspace_id", widFromSlug).maybeSingle();
             }
             return { data: null, error: null };
@@ -33608,11 +33697,11 @@ async function selectWorkspaceSettingsByWorkspaceWithMissingColumnRetry(workspac
     }
     if (!result?.error) return { ...result, fields: remainingFields };
     var missingCol = getMissingWorkspaceSettingsColumn(result.error);
-    console.warn("[workspace-save] exact error", { message: result.error?.message || String(result.error), column: missingCol || "" });
+    if (STELLARSYNC_DEBUG) console.warn("[workspace-save] exact error", { message: result.error?.message || String(result.error), column: missingCol || "" });
     if (missingCol && remainingFields.indexOf(missingCol) !== -1) {
-      console.warn("[workspace-save] removed missing column " + missingCol);
+      if (STELLARSYNC_DEBUG) console.warn("[workspace-save] removed missing column " + missingCol);
       remainingFields = remainingFields.filter(function(field) { return field !== missingCol; });
-      console.warn("[workspace-save] retry without missing column");
+      if (STELLARSYNC_DEBUG) console.warn("[workspace-save] retry without missing column");
       continue;
     }
     return { ...result, fields: remainingFields };
@@ -33625,11 +33714,11 @@ async function upsertWorkspaceSettings(workspaceId, payload) {
   if (!workspaceId) throw new Error("Workspace ID required");
   var wsColumns = await getWorkspaceSettingsColumns();
   payload = filterPayloadToExistingColumns(payload, wsColumns);
-  console.log("[workspace-save] filtered payload", payload);
+  if (STELLARSYNC_DEBUG) console.log("[workspace-save] filtered payload", payload);
   var existing = await STELLARSYNC_SUPABASE_CLIENT.from("workspace_settings").select("id").eq("workspace_id", workspaceId).maybeSingle();
   if (existing.error) {
     var existingMissingCol = getMissingWorkspaceSettingsColumn(existing.error);
-    console.warn("[workspace-save] exact error", { message: existing.error?.message || String(existing.error), column: existingMissingCol || "" });
+    if (STELLARSYNC_DEBUG) console.warn("[workspace-save] exact error", { message: existing.error?.message || String(existing.error), column: existingMissingCol || "" });
     throw existing.error;
   }
   var attempt = 0;
@@ -33646,16 +33735,16 @@ async function upsertWorkspaceSettings(workspaceId, payload) {
       }
       if (result.error) {
         var missingCol = getMissingWorkspaceSettingsColumn(result.error);
-        console.warn("[workspace-save] exact error", { message: result.error?.message || String(result.error), column: missingCol || "" });
+        if (STELLARSYNC_DEBUG) console.warn("[workspace-save] exact error", { message: result.error?.message || String(result.error), column: missingCol || "" });
         if (missingCol && attempt < maxAttempts && Object.prototype.hasOwnProperty.call(currentPayload, missingCol)) {
-          console.warn("[workspace-save] removed missing column " + missingCol);
+          if (STELLARSYNC_DEBUG) console.warn("[workspace-save] removed missing column " + missingCol);
           delete currentPayload[missingCol];
-          console.warn("[workspace-save] retry without missing column");
+          if (STELLARSYNC_DEBUG) console.warn("[workspace-save] retry without missing column");
           continue;
         }
         throw result.error;
       }
-      console.log("[workspace-save] upsert success", { attempt, action: existing?.data?.id ? "update" : "insert" });
+      if (STELLARSYNC_DEBUG) console.log("[workspace-save] upsert success", { attempt, action: existing?.data?.id ? "update" : "insert" });
       return { ok: true, data: result.data };
     } catch (err) {
       if (attempt >= maxAttempts) throw err;
@@ -33671,6 +33760,7 @@ async function savePWWorkspace() {
   const payload = {
     workspace_id: activeWorkspace.workspace_id || activeWorkspace.id || "",
     display_name: (document.getElementById("pw-workspace-name") || {}).value || "",
+    brand_name: (document.getElementById("pw-workspace-name") || {}).value || "",
     name: (document.getElementById("pw-workspace-name") || {}).value || "",
     short_name: (document.getElementById("pw-workspace-short-name") || {}).value || "",
     avatar_initials: (document.getElementById("pw-workspace-short-name") || {}).value || getWorkspaceInitials(activeWorkspace),
@@ -33685,8 +33775,6 @@ async function savePWWorkspace() {
     default_pillars: String((document.getElementById("pw-workspace-default-pillars") || {}).value || "").split(/[|,\n]/).map(function(v) { return getDefaultPillarObject(String(v || "").trim()); }).filter(Boolean),
     default_statuses: String((document.getElementById("pw-workspace-default-statuses") || {}).value || "").split(/[|,\n]/).map((v) => v.trim()).filter(Boolean),
     default_post_types: String((document.getElementById("pw-workspace-default-post-types") || {}).value || "").split(/[|,\n]/).map((v) => v.trim()).filter(Boolean),
-    current_month: (document.getElementById("pw-workspace-current-month") || {}).value || "",
-    current_year: (document.getElementById("pw-workspace-current-year") || {}).value || "",
     updated_at: new Date().toISOString()
   };
   console.log("[icon-save] workspace payload", payload);
@@ -33711,8 +33799,12 @@ async function savePWWorkspace() {
         if (workspaceUpdate.error) throw workspaceUpdate.error;
       }
       var settingsPayload = { ...payload, workspace_id: workspaceId };
+      settingsPayload.brand_name = payload.brand_name || payload.display_name || "";
       delete settingsPayload.name;
+      delete settingsPayload.display_name;
       delete settingsPayload.workspace_slug;
+      delete settingsPayload.current_year;
+      delete settingsPayload.current_month;
       await upsertWorkspaceSettings(workspaceId, settingsPayload);
       console.log("[icon-save] response", { ok: true, workspace_slug: slug });
       console.log("[workspace-icon] save response", { ok: true, workspace_slug: slug });
@@ -33729,16 +33821,16 @@ async function savePWWorkspace() {
         }
       }
       var wsColumns = await getWorkspaceSettingsColumns();
-      var reloadFields = ["workspace_id","display_name","short_name","avatar_mode","icon","avatar_initials","constellation_shape","brand_accent","media_bucket","media_prefix","brand_voice","current_month","current_year"];
+      var reloadFields = ["workspace_id","brand_name","short_name","icon","avatar_initials","brand_voice"];
       reloadFields = filterWorkspaceSettingsFieldsForKnownSchema(reloadFields, wsColumns, "verification");
       var reloadedWorkspace = await selectWorkspaceSettingsWithMissingColumnRetry(workspaceId, reloadFields);
       console.log("[icon-save] reload check", reloadedWorkspace?.data || null);
       if (reloadedWorkspace?.error) throw reloadedWorkspace.error;
       var persisted = reloadedWorkspace?.data || {};
       var persistedFields = reloadedWorkspace?.fields || reloadFields;
-      var mismatch = ["display_name", "short_name", "avatar_mode", "icon", "avatar_initials", "constellation_shape"].filter(function(key) {
+      var mismatch = ["brand_name", "short_name", "icon", "avatar_initials"].filter(function(key) {
         if (persistedFields.indexOf(key) === -1) return false;
-        return String((persisted && persisted[key]) || "").trim() !== String((payload && payload[key]) || "").trim();
+        return String((persisted && persisted[key]) || "").trim() !== String((settingsPayload && settingsPayload[key]) || "").trim();
       });
       console.log("[icon-save] mismatch", mismatch);
       if (mismatch.length) throw new Error("Workspace save verification failed: " + mismatch.join(", "));
@@ -33753,7 +33845,7 @@ async function savePWWorkspace() {
     setTimeout(function() { if (statusEl) statusEl.classList.add("hidden"); }, 3000);
   } catch (err) {
     var missingCol = getMissingWorkspaceSettingsColumn(err);
-    console.warn("[workspace-save] exact error", { message: err?.message || String(err), column: missingCol || "" });
+    if (STELLARSYNC_DEBUG) console.warn("[workspace-save] exact error", { message: err?.message || String(err), column: missingCol || "" });
     console.log("[icon-save] response", err);
     console.log("[workspace-icon] save response", err);
     console.log("[branding-save] response", err);
