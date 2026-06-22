@@ -7669,6 +7669,27 @@ function getCleanCampaignRecords() {
   });
 }
 
+function getActiveWorkspaceCampaignRegistry(options = {}) {
+  const allowDemoFallback = options.allowDemoFallback === true;
+  const sourceRecords = Array.isArray(appState?.campaigns) ? appState.campaigns : [];
+  if (sourceRecords.length > 0) {
+    const active = sourceRecords.filter(c => !c.isArchived).sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0));
+    console.log("[campaign-registry] active count", active.length);
+    console.log("[campaign-registry] active names", active.map(c => c.campaignName || c.name || ""));
+    const ignored = sourceRecords.length - active.length;
+    if (ignored > 0) console.log("[campaign-registry] ignored archived count", ignored);
+    return active;
+  }
+  if (allowDemoFallback) {
+    const fallback = buildCanonicalCampaignRecords();
+    console.log("[campaign-registry] fallback/default count", fallback.length);
+    console.log("[campaign-registry] fallback names", fallback.map(c => c.campaignName || ""));
+    return fallback;
+  }
+  console.log("[campaign-registry] active count", 0);
+  return [];
+}
+
 function logCampaignQASummary(source = "hybrid") {
   const state = getAppStateRef() || {};
   const posts = Array.isArray(state?.posts) ? state.posts : [];
@@ -9827,7 +9848,7 @@ function validatePlatformLocally(platform, caption, postType, mediaItems, mediaU
   return { platform, errors, warnings, media };
 }
 
-function renderCampaignOptions(campaigns = getAvailableCampaignRecords(), currentValue = "") {
+function renderCampaignOptions(campaigns = getActiveWorkspaceCampaignRegistry(), currentValue = "") {
   const activeCampaigns = (Array.isArray(campaigns) ? campaigns : [])
     .filter((campaign) => !campaign.isArchived)
     .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0) || String(a.campaignName || "").localeCompare(String(b.campaignName || "")));
@@ -13549,7 +13570,7 @@ function populateCampaignDropdown() {
   if (!campaignSelect) return;
 
   const currentValue = campaignSelect.value || "";
-  const { html, selectedCampaignId } = renderCampaignOptions(getAvailableCampaignRecords(), currentValue);
+  const { html, selectedCampaignId } = renderCampaignOptions(getActiveWorkspaceCampaignRegistry(), currentValue);
   campaignSelect.innerHTML = html;
   campaignSelect.value = selectedCampaignId;
   updateModalCampaignPreview();
@@ -14545,9 +14566,10 @@ function wireLedgerActions() {
 }
 
 function buildConstellationRows() {
-  const campaignRecords = [...getCleanCampaignRecords()]
+  const campaignRecords = [...getActiveWorkspaceCampaignRegistry()]
     .filter(campaign => !campaign.isArchived)
     .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0));
+  console.log("[constellation-campaign] campaign registry count", { registry: Array.isArray(appState?.campaigns) ? appState.campaigns.length : 0, cleanRecords: campaignRecords.length });
   const hydratedPosts = [...(appState.posts || [])].map((post) => hydratePostCampaign(post, campaignRecords));
   const canonicalCampaignNames = getConstellationCanonicalCampaignNames(campaignRecords, hydratedPosts);
   campaignLaneMap = new Map();
@@ -14650,28 +14672,25 @@ function buildConstellationRows() {
         });
         if (parentName) {
           const parentRecord = campaignLookup.get(normalizeLookupValue(parentName)) || null;
-          const parentRow = parentRecord ? ensureRow(parentRecord, "registry") : ensureRow({
-            campaignId: `CMP-${normalizeLookupValue(parentName).replace(/[^a-z0-9]+/g, "").toUpperCase().slice(0, 8) || "PARENT"}`,
-            campaignName: parentName, pillar: "", color: "#6b7280",
-            sortOrder: Number.MAX_SAFE_INTEGER - 3, isArchived: false
-          }, "post");
-          parentRow.posts.push(post);
-          console.log("[constellation-campaign] fragment remapped to parent", { rawCampaign, parentName });
+          if (parentRecord) {
+            const parentRow = ensureRow(parentRecord, "registry");
+            parentRow.posts.push(post);
+            console.log("[constellation-campaign] fragment remapped to parent", { rawCampaign, parentName });
+          } else {
+            if (STELLARSYNC_DEBUG) console.log("[constellation-campaign] fragment parent not in registry, routing to Uncategorized", { rawCampaign, parentName });
+            ensureUncategorizedRow().posts.push(post);
+          }
         }
       }
       return;
     }
     const resolvedRecord = campaignLookup.get(normalizeLookupValue(targetName)) || null;
-    const targetRow = resolvedRecord
-      ? ensureRow(resolvedRecord, "registry")
-      : ensureRow({
-          campaignId: `CMP-${normalizeLookupValue(targetName).replace(/[^a-z0-9]+/g, "").toUpperCase().slice(0, 8) || "UNKNOWN"}`,
-          campaignName: targetName,
-          pillar: "",
-          color: "#6b7280",
-          sortOrder: Number.MAX_SAFE_INTEGER - 2,
-          isArchived: false
-      }, "post");
+    if (!resolvedRecord) {
+      if (STELLARSYNC_DEBUG) console.log("[constellation-campaign] unknown campaign skipped for constellation", { campaignName: targetName, postId: String(post.id || post.postId || "").trim() });
+      ensureUncategorizedRow().posts.push(post);
+      return;
+    }
+    const targetRow = ensureRow(resolvedRecord, "registry");
     targetRow.posts.push(post);
   });
 
@@ -14754,7 +14773,7 @@ function buildConstellationRows() {
   const filteredFinalMapped = finalMapped.filter((campaign) => {
     return String(campaign.campaignName || "").trim() !== "Uncategorized" || (campaign.posts || []).length > 0;
   });
-  console.log("[constellation-campaign] final nodes", filteredFinalMapped.map((campaign) => campaign.campaignName || "Uncategorized"));
+  console.log("[constellation-campaign] final nodes", filteredFinalMapped.length, filteredFinalMapped.map((campaign) => campaign.campaignName || "Uncategorized"));
   return filteredFinalMapped.map((campaign, index) => rebuildConstellationCampaignGeometry(campaign, index));
 }
 
