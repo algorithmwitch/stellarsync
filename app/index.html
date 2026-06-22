@@ -10861,6 +10861,7 @@ const statusSelect = document.getElementById("modal-status");
 const descInput = document.getElementById("modal-description");
 const pillarBtns = Array.from(document.querySelectorAll(".pillar-btn"));
 let saveButton = document.getElementById("save-post-btn");
+let savePostInFlight = false;
 const sourceUrlInput = document.getElementById("modal-source-url");
 const importCaptionFallbackInput = document.getElementById("modal-import-caption-fallback");
 const importDiagnosticsEl = document.getElementById("modal-import-diagnostics");
@@ -24617,6 +24618,15 @@ function upsertSavedPostIntoAppState(saveResult, fallbackPayload = {}) {
   return normalized;
 }
 
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(label || `Timed out after ${ms}ms`)), ms)
+    )
+  ]);
+}
+
 function setupSaveHandler() {
   const existingBtn = document.getElementById("save-post-btn");
   if (!existingBtn) return;
@@ -24629,6 +24639,8 @@ function setupSaveHandler() {
   saveButton.removeAttribute("onclick");
 
   saveButton.addEventListener("click", async () => {
+    if (savePostInFlight) return;
+    savePostInFlight = true;
     console.log("[post-save] click");
     hidePostSaveErrorBanner();
     const originalSaveButtonHtml = saveButton.innerHTML;
@@ -24648,6 +24660,7 @@ function setupSaveHandler() {
     const selectedCampaignName = selectedCampaign?.campaignName || normalizeCampaignName(selectedCampaignId);
     const requestedDate = String(dateInput?.value || "").trim();
     if ((statusSelect?.value || "draft") === "scheduled" && !requestedDate) {
+      savePostInFlight = false;
       saveButton.disabled = false;
       saveButton.innerHTML = originalSaveButtonHtml;
       showToast("Missing date", "Scheduled posts need a planning date.", "ph-warning-circle", "text-yellow-400");
@@ -24666,6 +24679,7 @@ function setupSaveHandler() {
 
     const selectedPlatforms = getSelectedModalPlatforms();
     if (!selectedPlatforms.length) {
+      savePostInFlight = false;
       saveButton.disabled = false;
       saveButton.innerHTML = originalSaveButtonHtml;
       showToast("Missing platform", "Select at least one target platform.", "ph-warning-circle", "text-yellow-400");
@@ -24813,194 +24827,155 @@ function setupSaveHandler() {
     }
 
     if (!payload.title) {
+      savePostInFlight = false;
       saveButton.disabled = false;
       saveButton.innerHTML = originalSaveButtonHtml;
       showToast("Missing title", "Please add a content title.", "ph-warning-circle", "text-yellow-400");
       return;
     }
 
-	  if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
-	      try {
-	        const wasEditingPost = !!currentEditingPostId;
-	        const backendMode = getActiveWorkspaceBackendMode();
-	        const isSupabase = backendMode.mode === "supabase_native";
-	        console.log("[post-save] backend mode", backendMode.mode);
-	        console.log("[post-save] payload", {
-            post_id: payload.post_id || payload.postId || payload.id || "",
-            workspace_id: payload.workspace_id || payload.workspaceId || "",
-            title: (payload.title || "").slice(0, 60),
-            status: payload.status,
-            platform: payload.platform,
-            campaign: (payload.campaignName || payload.campaign || "").slice(0, 40),
-            pillar: payload.pillar
-          });
-	        let result;
-	        if (noteIdToConvert && isSupabase) {
-	          result = await createSupabasePostFromNote(noteIdToConvert, payload);
-	        } else if (inspoIdToConvert && isSupabase) {
-	          result = await createSupabasePostFromInspo(inspoIdToConvert, payload);
-	        } else if (noteIdToConvert) {
-	          try {
-	            result = await apiCreatePostFromNote(noteIdToConvert, payload);
-	          } catch (noteErr) {
-            console.warn("createPostFromNote failed, falling back to savePost", noteErr);
-            result = await apiSavePost(payload);
-          }
-        } else {
-          result = await apiSavePost(payload);
+    // === STEP B: LOCAL UPSERT FIRST ===
+    console.log("[post-save] step: local upsert");
+    const savedPost = upsertSavedPostIntoAppState({ ok: true, post: payload, source: "local_first" }, payload);
+    console.log("[post-save] step: local upsert done", { post_id: getCanonicalPostId(savedPost) || payload.post_id || payload.postId || payload.id });
+
+    if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
+        try {
+            const wasEditingPost = !!currentEditingPostId;
+            const backendMode = getActiveWorkspaceBackendMode();
+            const isSupabase = backendMode.mode === "supabase_native";
+            console.log("[post-save] backend mode", backendMode.mode);
+            console.log("[post-save] payload", {
+                post_id: payload.post_id || payload.postId || payload.id || "",
+                workspace_id: payload.workspace_id || payload.workspaceId || "",
+                title: (payload.title || "").slice(0, 60),
+                status: payload.status,
+                platform: payload.platform,
+                campaign: (payload.campaignName || payload.campaign || "").slice(0, 40),
+                pillar: payload.pillar
+            });
+            let result;
+            if (noteIdToConvert && isSupabase) {
+                console.log("[post-save] step: Supabase create-from-note...");
+                result = await withTimeout(createSupabasePostFromNote(noteIdToConvert, payload), 15000, 'createSupabasePostFromNote timed out');
+            } else if (inspoIdToConvert && isSupabase) {
+                console.log("[post-save] step: Supabase create-from-inspo...");
+                result = await withTimeout(createSupabasePostFromInspo(inspoIdToConvert, payload), 15000, 'createSupabasePostFromInspo timed out');
+            } else if (noteIdToConvert) {
+                console.log("[post-save] step: Apps Script create-from-note...");
+                try {
+                    result = await withTimeout(apiCreatePostFromNote(noteIdToConvert, payload), 15000, 'apiCreatePostFromNote timed out');
+                } catch (noteErr) {
+                    console.warn("createPostFromNote failed, falling back to savePost", noteErr);
+                    result = await withTimeout(apiSavePost(payload), 15000, 'savePost (fallback) timed out');
+                }
+            } else {
+                console.log("[post-save] step: remote save via Apps Script...");
+                result = await withTimeout(apiSavePost(payload), 15000, 'savePost timed out');
+            }
+            console.log("[post-save] step: remote save completed", {
+                ok: !!result?.ok,
+                mode: backendMode.mode,
+                post_id: result?.post?.post_id || result?.postId || result?.savedPostId || ""
+            });
+
+            console.log("[post-save] step: media relation sync...");
+            const canonicalId = getCanonicalPostId(savedPost) || result?.post?.post_id || result?.postId || result?.savedPostId || payload.post_id || payload.postId || "";
+            await withTimeout(syncSelectedMediaForSavedPost(canonicalId), 15000, 'syncSelectedMediaForSavedPost timed out');
+            console.log("[post-save] step: media sync completed");
+
+            upsertSavedPostIntoAppState(result, payload);
+
+            closeModal();
+            console.log("[post-save] step: modal closed");
+
+            const backendLabel = backendMode.mode === "supabase_native" ? "Supabase" : "Google Sheets";
+            showToast("Synced", wasEditingPost ? "Post updated in " + backendLabel + "." : "Post created in " + backendLabel + ".", "ph-cloud-check", "text-[#00ffaa]");
+            console.log("[post-save] step: success toast shown");
+        } catch (err) {
+            console.error("[post-save] remote save failed", {
+                action: err?.action || "savePost",
+                message: err?.message || "Unknown error"
+            });
+            const routeStatus = err?.backend?.routeStatus || {};
+            const detail = [
+                err?.message || "Remote save failed.",
+                routeStatus.postsSheetReachable === false ? "POSTS sheet is unavailable." : "",
+                routeStatus.requiredHeadersPresent === false ? "POSTS sheet headers are incomplete." : "",
+                routeStatus.spreadsheetIdConfigured === false ? "SPREADSHEET_ID is not configured." : ""
+            ].filter(Boolean).join(" ");
+            showPostSaveErrorBanner(err, payload);
+            closeModal();
+            showToast("Saved locally", detail || "Backend sync failed; local draft changes are preserved.", "ph-warning", "text-yellow-400");
+            console.log("[post-save] step: local fallback toast shown");
+        } finally {
+            savePostInFlight = false;
+            saveButton.disabled = false;
+            if (!modal?.classList.contains("active")) saveButton.innerHTML = originalSaveButtonHtml;
         }
-          console.log("[post-save] save result", { ok: !!result?.ok, mode: backendMode.mode, post_id: result?.post?.post_id || result?.postId || result?.savedPostId || "" });
-          if (backendMode.mode === "supabase_native") {
-            console.log("[post-save] supabase mirror used", { mode: "supabase_native", post_id: result?.post?.post_id || result?.postId || result?.savedPostId || "" });
-          } else {
-            console.log("[post-save] supabase mirror skipped", { reason: backendMode.mode + " mode; no Supabase posts upsert in this mode" });
-          }
-	        const savedPost = upsertSavedPostIntoAppState(result, payload);
-	        await syncSelectedMediaForSavedPost(getCanonicalPostId(savedPost) || result?.post?.post_id || result?.postId || result?.savedPostId || payload.post_id || payload.postId || "");
-	        if (inspoIdToConvert) {
-	          if (!isSupabase) {
-	            await apiArchiveInspo(inspoIdToConvert, savedPost?.postId || result?.post?.postId || result?.postId || payload.id);
-	          } else {
-	            console.log("[savePost] skipped Apps Script inspo archive on supabase_native backend");
-	          }
-	        }
-        if (scheduleSocialEnabledInput?.checked) {
-          try {
-            const scheduledPostId = getCanonicalPostId(savedPost) || getCanonicalPostId(result?.post || {}) || String(result?.postId || result?.savedPostId || "").trim();
-            const schedulePayload = {
-              ...payload,
-              postId: scheduledPostId,
-              post_id: scheduledPostId,
-              id: scheduledPostId
-            };
-            const socialResults = await scheduleSocialPostsForTargets(schedulePayload);
-            if (socialScheduleStatusEl) socialScheduleStatusEl.textContent = `Social schedule rows created: ${socialResults.length}`;
-          } catch (socialErr) {
-            console.warn("[social] schedule failed", socialErr);
-            if (socialScheduleStatusEl) socialScheduleStatusEl.textContent = "Social scheduling failed: " + (socialErr.message || "Unknown error");
-          }
-        }
-        await syncRemoteIfConfigured();
-	        rerenderAll();
-	        if (currentView) switchView(currentView);
-	        closeModal();
-	        const backendLabel = backendMode.mode === "supabase_native" ? "Supabase" : "Google Sheets";
-	        saveButton.innerHTML = '<i class="ph-bold ph-check text-sm"></i> Saved';
-	        showToast("Synced", wasEditingPost ? "Post updated in " + backendLabel + "." : "Post created in " + backendLabel + ".", "ph-cloud-check", "text-[#00ffaa]");
-	        console.log("[post-save] complete");
-      } catch (err) {
-        console.error("savePost remote sync failed", {
-          action: err?.action || "savePost",
-          message: err?.message || "Unknown error",
-          backend: err?.backend ? {
-            action: err.backend.action,
-            routeStatus: err.backend.routeStatus,
-            error: err.backend.error
-          } : null
-        });
-        const localPost = upsertSavedPostIntoAppState({ ok: true, post: payload, source: "local_fallback" }, payload);
+
+        console.log("[post-save] step: background ops starting");
+
         if (noteIdToConvert) {
-          appState.notes = (appState.notes || []).map((note) => {
-            if ((note.noteId || note.id) !== noteIdToConvert) return note;
-            return {
-              ...note,
-              convertedPostId: localPost.id || localPost.postId || payload.id,
-              status: "converted_to_post",
-              flowState: "converted_to_post",
-              movedToPostAt: payload.movedToPostAt
-            };
-          });
+            appState.notes = (appState.notes || []).map((note) => {
+                if ((note.noteId || note.id) !== noteIdToConvert) return note;
+                return { ...note, convertedPostId: savedPost.id || savedPost.postId || payload.id, status: "converted_to_post", flowState: "converted_to_post", movedToPostAt: payload.movedToPostAt };
+            });
         }
         if (inspoIdToConvert) {
-          appState.inspo = (appState.inspo || []).map((item) => {
-            if ((item.inspoId || item.id) !== inspoIdToConvert) return item;
-            return {
-              ...item,
-              convertedPostId: localPost.id || localPost.postId || payload.id,
-              status: "archived",
-              flowState: "converted_to_post",
-              movedToPostAt: payload.movedToPostAt,
-              archivedAt: new Date().toISOString()
-            };
-          });
+            appState.inspo = (appState.inspo || []).map((item) => {
+                if ((item.inspoId || item.id) !== inspoIdToConvert) return item;
+                return { ...item, convertedPostId: savedPost.id || savedPost.postId || payload.id, status: "archived", flowState: "converted_to_post", movedToPostAt: payload.movedToPostAt, archivedAt: new Date().toISOString() };
+            });
         }
         persistLocalState();
+
+        console.log("[post-save] step: light render");
         rerenderAll();
         if (currentView) switchView(currentView);
-        if (STELLARSYNC_DEBUG) console.log("[post-save] local fallback result", { ok: true, post_id: localPost.post_id || localPost.postId || localPost.id || payload.id, reason: err?.message || err });
-        const routeStatus = err?.backend?.routeStatus || {};
-        const detail = [
-          err?.message || "Remote save failed.",
-          routeStatus.postsSheetReachable === false ? "POSTS sheet is unavailable." : "",
-          routeStatus.requiredHeadersPresent === false ? "POSTS sheet headers are incomplete." : "",
-          routeStatus.spreadsheetIdConfigured === false ? "SPREADSHEET_ID is not configured." : ""
-        ].filter(Boolean).join(" ");
-        showPostSaveErrorBanner(err, payload);
-        saveButton.innerHTML = '<i class="ph-bold ph-warning text-sm"></i> Saved locally';
+
+        if (scheduleSocialEnabledInput?.checked) {
+            withTimeout(scheduleSocialPostsForTargets(payload), 15000, 'social schedule timed out')
+                .then(results => { if (socialScheduleStatusEl) socialScheduleStatusEl.textContent = `Social schedule rows created: ${results.length}`; })
+                .catch(socialErr => { console.warn("[social] schedule failed", socialErr); if (socialScheduleStatusEl) socialScheduleStatusEl.textContent = "Social scheduling failed: " + (socialErr.message || "Unknown error"); });
+        }
+
+        withTimeout(syncRemoteIfConfigured(), 30000, 'syncRemoteIfConfigured timed out')
+            .catch(syncErr => console.warn("[post-save] background sync failed", syncErr));
+
+        const bm = getActiveWorkspaceBackendMode();
+        if (inspoIdToConvert && bm.mode !== "supabase_native") {
+            withTimeout(apiArchiveInspo(inspoIdToConvert, savedPost?.postId || payload.id), 15000, 'archive inspo timed out')
+                .catch(inspoErr => console.warn("[post-save] inspo archive failed", inspoErr));
+        }
+
         console.log("[post-save] complete");
-        closeModal();
-        showToast("Saved locally", detail || "Backend sync failed; local draft changes are preserved.", "ph-warning", "text-yellow-400");
-      } finally {
-        saveButton.disabled = false;
-        if (!modal?.classList.contains("active")) saveButton.innerHTML = originalSaveButtonHtml;
-      }
-      return;
+        return;
     }
 
-    const localPayloadIds = new Set([payload.id, payload.postId, payload.post_id, payload.frontendId, payload._frontendId].map((value) => String(value || "").trim()).filter(Boolean));
-    const existingIndex = appState.posts.findIndex((p) => {
-      return [p.id, p.postId, p.post_id, p.frontendId, p._frontendId].map((value) => String(value || "").trim()).some((id) => localPayloadIds.has(id));
-    });
-    if (existingIndex >= 0) {
-      appState.posts[existingIndex] = payload;
-    } else {
-      appState.posts.push(payload);
-    }
-
-    if (noteIdToConvert) {
-      appState.notes = (appState.notes || []).map((note) => {
-        if ((note.noteId || note.id) !== noteIdToConvert) return note;
-        return {
-          ...note,
-          convertedPostId: payload.id,
-          status: "converted_to_post",
-          flowState: "converted_to_post",
-          movedToPostAt: payload.movedToPostAt
-        };
-      });
-    }
-    if (inspoIdToConvert) {
-      appState.inspo = (appState.inspo || []).map((item) => {
-        if ((item.inspoId || item.id) !== inspoIdToConvert) return item;
-        return {
-          ...item,
-          convertedPostId: payload.id,
-          status: "archived",
-          flowState: "converted_to_post",
-          movedToPostAt: payload.movedToPostAt,
-          archivedAt: new Date().toISOString()
-        };
-      });
-    }
-
-    persistLocalState();
     if (STELLARSYNC_DEBUG) console.log("[post-save] backend path", "localStorage");
-    if (scheduleSocialEnabledInput?.checked) {
-      try {
-        const socialResults = await scheduleSocialPostsForTargets(payload);
-        if (socialScheduleStatusEl) socialScheduleStatusEl.textContent = `Social schedule rows created: ${socialResults.length}`;
-      } catch (socialErr) {
-        console.warn("[social] schedule failed", socialErr);
-        if (socialScheduleStatusEl) socialScheduleStatusEl.textContent = "Social scheduling failed: " + (socialErr.message || "Unknown error");
-      }
-    }
-    rerenderAll();
-    if (STELLARSYNC_DEBUG) console.log("[post-save] local fallback result", { ok: true, source: "localStorage", post_id: payload.post_id || payload.postId || payload.id });
-    console.log("[post-save] complete");
-    closeModal();
+    savePostInFlight = false;
     saveButton.disabled = false;
     saveButton.innerHTML = originalSaveButtonHtml;
+    closeModal();
     showToast("Saved locally", "Backend sync is not configured; this post is stored in local browser data only.", "ph-check", "text-[#00ffaa]");
+    console.log("[post-save] step: local-only save done");
+    if (noteIdToConvert) {
+        appState.notes = (appState.notes || []).map((note) => {
+            if ((note.noteId || note.id) !== noteIdToConvert) return note;
+            return { ...note, convertedPostId: savedPost.id || savedPost.postId || payload.id, status: "converted_to_post", flowState: "converted_to_post", movedToPostAt: payload.movedToPostAt };
+        });
+    }
+    if (inspoIdToConvert) {
+        appState.inspo = (appState.inspo || []).map((item) => {
+            if ((item.inspoId || item.id) !== inspoIdToConvert) return item;
+            return { ...item, convertedPostId: savedPost.id || savedPost.postId || payload.id, status: "archived", flowState: "converted_to_post", movedToPostAt: payload.movedToPostAt, archivedAt: new Date().toISOString() };
+        });
+    }
+    persistLocalState();
+    rerenderAll();
+    if (currentView) switchView(currentView);
+    console.log("[post-save] complete");
   });
 }
 
