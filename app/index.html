@@ -2446,7 +2446,7 @@
                   <span class="flex items-center gap-3"><i class="ph-bold ph-puzzle-piece text-[#c77dff]"></i> Install Plugin</span>
                   <i class="ph-bold ph-caret-right text-gray-500"></i>
                 </button>
-                <button type="button" class="workspace-menu-btn hidden" data-workspace-action="install">
+                <button type="button" class="workspace-menu-btn" data-workspace-action="install">
                   <span class="flex items-center gap-3"><i class="ph-bold ph-download-simple text-[#38bdf8]"></i> Install App</span>
                   <i class="ph-bold ph-caret-right text-gray-500"></i>
                 </button>
@@ -17922,7 +17922,7 @@ async function refreshSocialImportContext() {
     });
     if (!workspaceHubModal?.classList.contains("opacity-0")) renderWorkspaceHub();
   } catch (err) {
-    console.error(err);
+    console.error("[connected-accounts] status fetch failed", err);
     setSocialConnectedAccounts([]);
   } finally {
     connectedAccountsStatusLoading = false;
@@ -18024,7 +18024,7 @@ async function openWorkspaceHub(tab = "settings") {
     if (nextTab === "accounts") connectedAccountsStatusLoading = true;
     if (nextTab === "settings") refreshSettingsSheetMirrorCard();
     renderWorkspaceHub();
-    await refreshSocialImportContext();
+    refreshSocialImportContext().catch((err) => console.warn("[connected-accounts] background hydration failed", err));
   } catch (err) {
     window.__workspaceHubHealth.lastError = err && err.message ? err.message : String(err);
     console.error(err);
@@ -18331,6 +18331,11 @@ function getSimpleConnectedAccountCard(platform, account, planFeatures) {
 }
 
 function getConnectedAccountsMarkup(options = {}) {
+  const userCanSeeAdminDetails = (function() {
+    const role = getPWMembersCallerRole();
+    return role === "owner" || role === "admin";
+  })();
+  console.log("[connected-accounts] can see admin details", userCanSeeAdminDetails);
   if (connectedAccountsStatusLoading) {
     return CONNECTED_ACCOUNT_PLATFORMS.map((platform) => `
       <div class="platform-card">
@@ -19467,16 +19472,16 @@ function refreshConnectionCards() {
 }
 
 function renderConnectedAccounts() {
-  console.log("[render] renderConnectedAccounts start", { loading: connectedAccountsStatusLoading, accountCount: (connectedAccounts || []).length });
-  const accountsPanel = document.querySelector('[data-settings-panel="accounts"]');
-  if (accountsPanel) accountsPanel.innerHTML = getConnectedAccountsMarkup();
-  const inlineTarget = document.getElementById("settings-connected-accounts-inline");
-  if (inlineTarget) inlineTarget.innerHTML = getConnectedAccountsMarkup({ compact: true });
-  console.log("[render] renderConnectedAccounts done", {
-    accountsPanelFound: !!accountsPanel,
-    accountsHtmlLength: accountsPanel ? accountsPanel.innerHTML.length : 0,
-    inlineFound: !!inlineTarget
-  });
+  console.log("[connected-accounts] render start", { loading: connectedAccountsStatusLoading, accountCount: (connectedAccounts || []).length });
+  try {
+    const accountsPanel = document.querySelector('[data-settings-panel="accounts"]');
+    if (accountsPanel) accountsPanel.innerHTML = getConnectedAccountsMarkup();
+    const inlineTarget = document.getElementById("settings-connected-accounts-inline");
+    if (inlineTarget) inlineTarget.innerHTML = getConnectedAccountsMarkup({ compact: true });
+  } catch (err) {
+    console.error("[connected-accounts] render failed", err);
+  }
+  console.log("[connected-accounts] render complete");
 }
 
 // ===== AI PROVIDERS UI =====
