@@ -5722,6 +5722,7 @@ function getSessionWorkspaceConfig() {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object") return null;
+    const backendConfig = resolveWorkspaceBackendConfig(parsed, parsed);
 	    return {
 	      id: String(parsed.id || "").trim(),
 	      slug: String(parsed.slug || "").trim(),
@@ -5730,10 +5731,10 @@ function getSessionWorkspaceConfig() {
 	      created_at: parsed.created_at || null,
 	      updated_at: parsed.updated_at || null,
 	      subscription_status: String(parsed.subscription_status || "").trim(),
-	      backend_type: String(parsed.backend_type || "").trim(),
-	      apps_script_url: String(parsed.apps_script_url || "").trim(),
-	      sheet_id: String(parsed.google_sheet_id || parsed.sheet_id || "").trim(),
-	      google_sheet_id: String(parsed.google_sheet_id || parsed.sheet_id || "").trim(),
+	      backend_type: backendConfig.backendType,
+	      apps_script_url: backendConfig.appsScriptUrl,
+	      sheet_id: backendConfig.sheetId,
+	      google_sheet_id: backendConfig.sheetId,
 	      monday_board_id: String(parsed.monday_board_id || "").trim(),
 	      monday_sync_enabled: parsed.monday_sync_enabled !== undefined ? Boolean(parsed.monday_sync_enabled) : false,
 	      monday_sync_direction: String(parsed.monday_sync_direction || "bidirectional").trim(),
@@ -5748,7 +5749,7 @@ function getSessionWorkspaceConfig() {
 	      avatar_mode: String(parsed.avatar_mode || parsed.avatarMode || "").trim(),
 	      icon: String(parsed.icon || parsed.avatar_icon || "").trim(),
 	      constellation_shape: String(parsed.constellation_shape || parsed.constellationShape || "star").trim() || "star",
-	      sheet_sync_enabled: Boolean(parsed.sheet_sync_enabled),
+	      sheet_sync_enabled: backendConfig.sheetSyncEnabled,
 	      sheet_sync_direction: String(parsed.sheet_sync_direction || "bidirectional").trim(),
 	      sheet_last_pushed_at: parsed.sheet_last_pushed_at || null,
 	      sheet_last_pulled_at: parsed.sheet_last_pulled_at || null
@@ -5782,6 +5783,7 @@ function loadWorkspaceConfig() {
   // Priority 1: sessionStorage config when slug matches URL workspace param, or no URL param exists.
   const sessionConfig = getSessionWorkspaceConfig();
   if (sessionConfig && sessionConfig.slug && (!requestedSlug || sessionConfig.slug === requestedSlug)) {
+    const backendConfig = resolveWorkspaceBackendConfig(sessionConfig, sessionConfig);
 	    const active = {
 	      ...masterConfig,
 	      workspace_slug: sessionConfig.slug,
@@ -5792,10 +5794,10 @@ function loadWorkspaceConfig() {
 	      created_at: sessionConfig.created_at || null,
 	      updated_at: sessionConfig.updated_at || null,
 	      subscription_status: sessionConfig.subscription_status || "",
-	      backend_type: sessionConfig.backend_type || "",
-	      apps_script_url: sessionConfig.apps_script_url || "",
-	      sheet_id: sessionConfig.google_sheet_id || sessionConfig.sheet_id || "",
-	      google_sheet_id: sessionConfig.google_sheet_id || sessionConfig.sheet_id || "",
+	      backend_type: backendConfig.backendType || "",
+	      apps_script_url: backendConfig.appsScriptUrl || "",
+	      sheet_id: backendConfig.sheetId || "",
+	      google_sheet_id: backendConfig.sheetId || "",
 	      monday_board_id: sessionConfig.monday_board_id || "",
 	      monday_sync_enabled: sessionConfig.monday_sync_enabled !== undefined ? Boolean(sessionConfig.monday_sync_enabled) : false,
 	      monday_sync_direction: String(sessionConfig.monday_sync_direction || "bidirectional").trim(),
@@ -5823,15 +5825,16 @@ function loadWorkspaceConfig() {
 
   // Priority 2: hardcoded workspace config.
   const workspaceConfig = WORKSPACE_RUNTIME_CONFIG.workspaces[slug] || {};
+  const backendConfig = resolveWorkspaceBackendConfig(workspaceConfig, masterConfig);
   const active = {
     ...masterConfig,
     ...workspaceConfig,
     workspace_slug: String(workspaceConfig.workspace_slug || slug || masterConfig.workspace_slug || "master").trim(),
     workspace_id: String(workspaceConfig.workspace_id || workspaceConfig.workspace_slug || slug || masterConfig.workspace_id || "master").trim(),
-    backend_type: String(workspaceConfig.backend_type || masterConfig.backend_type || "supabase_native").trim(),
-    apps_script_url: String(workspaceConfig.apps_script_url || masterConfig.apps_script_url || APP_CONFIG.APP_SCRIPT_URL || "").trim(),
-    sheet_id: String(workspaceConfig.google_sheet_id || workspaceConfig.sheet_id || masterConfig.google_sheet_id || masterConfig.sheet_id || "").trim(),
-    google_sheet_id: String(workspaceConfig.google_sheet_id || workspaceConfig.sheet_id || masterConfig.google_sheet_id || masterConfig.sheet_id || "").trim(),
+    backend_type: String(backendConfig.backendType || "supabase_native").trim(),
+    apps_script_url: String(backendConfig.appsScriptUrl || APP_CONFIG.APP_SCRIPT_URL || "").trim(),
+    sheet_id: String(backendConfig.sheetId || "").trim(),
+    google_sheet_id: String(backendConfig.sheetId || "").trim(),
     monday_board_id: String(workspaceConfig.monday_board_id || masterConfig.monday_board_id || "").trim(),
     monday_sync_enabled: workspaceConfig.monday_sync_enabled !== undefined ? Boolean(workspaceConfig.monday_sync_enabled) : Boolean(masterConfig.monday_sync_enabled),
     monday_sync_direction: String(workspaceConfig.monday_sync_direction || masterConfig.monday_sync_direction || "bidirectional").trim(),
@@ -5865,6 +5868,7 @@ function loadWorkspaceConfig() {
 
 function normalizeSupabaseWorkspaceConfig(workspace) {
   const source = workspace || {};
+  const backendConfig = resolveWorkspaceBackendConfig(source, {});
   const id = String(source.id || source.workspace_id || "").trim();
   const slug = String(source.slug || source.workspace_slug || id || "").trim();
   return {
@@ -5874,11 +5878,11 @@ function normalizeSupabaseWorkspaceConfig(workspace) {
     plan: String(source.plan || "").trim(),
     subscription_status: String(source.subscription_status || "").trim(),
     role: String(source.role || "").trim(),
-    apps_script_url: String(source.apps_script_url || "").trim(),
-    sheet_id: String(source.google_sheet_id || source.sheet_id || "").trim(),
-    google_sheet_id: String(source.google_sheet_id || source.sheet_id || "").trim(),
+    apps_script_url: backendConfig.appsScriptUrl,
+    sheet_id: backendConfig.sheetId,
+    google_sheet_id: backendConfig.sheetId,
     monday_board_id: String(source.monday_board_id || "").trim(),
-    backend_type: String(source.backend_type || "").trim(),
+    backend_type: backendConfig.backendType,
     supabase_media_enabled: Boolean(source.supabase_media_enabled),
     media_bucket: String(source.media_bucket || source.storage_bucket || "media").trim(),
     short_name: String(source.short_name || source.shortName || "").trim(),
@@ -5896,10 +5900,10 @@ function normalizeSupabaseWorkspaceConfig(workspace) {
     default_post_types: Array.isArray(source.default_post_types) ? source.default_post_types : String(source.default_post_types || "").split(/[|,\n]/).map((value) => String(value || "").trim()).filter(Boolean),
     current_month: String(source.current_month || source.currentMonth || "").trim(),
     current_year: String(source.current_year || source.currentYear || "").trim(),
-    google_sheet_id: String(source.google_sheet_id || source.sheet_id || "").trim(),
-    sheet_id: String(source.google_sheet_id || source.sheet_id || "").trim(),
-    apps_script_url: String(source.apps_script_url || "").trim(),
-    sheet_sync_enabled: Boolean(source.sheet_sync_enabled),
+    google_sheet_id: backendConfig.sheetId,
+    sheet_id: backendConfig.sheetId,
+    apps_script_url: backendConfig.appsScriptUrl,
+    sheet_sync_enabled: backendConfig.sheetSyncEnabled,
     sheet_sync_direction: String(source.sheet_sync_direction || "bidirectional").trim(),
     sheet_last_pushed_at: source.sheet_last_pushed_at || null,
     sheet_last_pulled_at: source.sheet_last_pulled_at || null,
@@ -5918,8 +5922,83 @@ function normalizeSupabaseWorkspaceConfig(workspace) {
   };
 }
 
+function resolveWorkspaceBackendConfig(workspace, settings) {
+  const active = workspace || {};
+  const prefs = settings || {};
+  const slug = String(
+    active.workspace_slug || active.slug ||
+    prefs.workspace_slug || prefs.slug ||
+    active.id || prefs.workspace_id || ""
+  ).trim();
+  function firstPresent(entries) {
+    for (const entry of entries) {
+      const value = String(entry.value ?? "").trim();
+      if (value) return { value, source: entry.source };
+    }
+    return { value: "", source: "" };
+  }
+  function firstBoolean(entries) {
+    for (const entry of entries) {
+      if (entry.value === undefined || entry.value === null || entry.value === "") continue;
+      return { value: entry.value === true || String(entry.value).trim().toLowerCase() === "true", source: entry.source };
+    }
+    return { value: false, source: "" };
+  }
+  const backendType = firstPresent([
+    { source: "workspace_settings.backend_type", value: prefs.backend_type },
+    { source: "workspaces.backend_type", value: active.backend_type }
+  ]);
+  const sheetId = firstPresent([
+    { source: "workspace_settings.google_sheet_id", value: prefs.google_sheet_id },
+    { source: "workspace_settings.sheet_id", value: prefs.sheet_id },
+    { source: "workspaces.google_sheet_id", value: active.google_sheet_id },
+    { source: "workspaces.sheet_id", value: active.sheet_id }
+  ]);
+  const appsScriptUrl = firstPresent([
+    { source: "workspace_settings.apps_script_url", value: prefs.apps_script_url },
+    { source: "workspace_settings.script_url", value: prefs.script_url },
+    { source: "workspace_settings.web_app_url", value: prefs.web_app_url },
+    { source: "workspaces.apps_script_url", value: active.apps_script_url },
+    { source: "workspaces.script_url", value: active.script_url },
+    { source: "workspaces.web_app_url", value: active.web_app_url }
+  ]);
+  const sheetSyncEnabled = firstBoolean([
+    { source: "workspace_settings.sheet_sync_enabled", value: prefs.sheet_sync_enabled },
+    { source: "workspaces.sheet_sync_enabled", value: active.sheet_sync_enabled }
+  ]);
+  const resolved = {
+    slug,
+    backendType: backendType.value,
+    backend_type: backendType.value,
+    sheetId: sheetId.value,
+    sheet_id: sheetId.value,
+    google_sheet_id: sheetId.value,
+    appsScriptUrl: appsScriptUrl.value,
+    apps_script_url: appsScriptUrl.value,
+    sheetSyncEnabled: sheetSyncEnabled.value,
+    sheet_sync_enabled: sheetSyncEnabled.value,
+    sourceFields: {
+      backendType: backendType.source,
+      sheetId: sheetId.source,
+      appsScriptUrl: appsScriptUrl.source,
+      sheetSyncEnabled: sheetSyncEnabled.source
+    }
+  };
+  if (STELLARSYNC_DEBUG) {
+    console.log("[workspace-backend-config]", {
+      slug: resolved.slug,
+      backendType: resolved.backendType || "",
+      hasSheetId: !!resolved.sheetId,
+      hasAppsScriptUrl: !!resolved.appsScriptUrl,
+      sourceFields: resolved.sourceFields
+    });
+  }
+  return resolved;
+}
+
 function mergeWorkspaceSettings(workspace, settings) {
   if (!workspace || !settings) return workspace;
+  const backendConfig = resolveWorkspaceBackendConfig(workspace, settings);
   const displayName = String(settings.display_name || settings.displayName || "").trim();
   const shortName = String(settings.short_name || settings.shortName || "").trim();
   const avatarInitials = String(settings.avatar_initials || settings.avatarInitials || "").trim();
@@ -5956,11 +6035,11 @@ function mergeWorkspaceSettings(workspace, settings) {
     default_post_types: Array.isArray(settings.default_post_types) ? settings.default_post_types : (workspace.default_post_types || []),
     current_month: String(settings.current_month || settings.currentMonth || workspace.current_month || workspace.currentMonth || "").trim(),
     current_year: String(settings.current_year || settings.currentYear || workspace.current_year || workspace.currentYear || "").trim(),
-    backend_type: String(settings.backend_type || workspace.backend_type || "").trim(),
-    google_sheet_id: String(settings.google_sheet_id || settings.sheet_id || workspace.google_sheet_id || workspace.sheet_id || "").trim(),
-    sheet_id: String(settings.google_sheet_id || settings.sheet_id || workspace.google_sheet_id || workspace.sheet_id || "").trim(),
-    apps_script_url: String(settings.apps_script_url || workspace.apps_script_url || "").trim(),
-    sheet_sync_enabled: settings.sheet_sync_enabled !== undefined ? Boolean(settings.sheet_sync_enabled) : Boolean(workspace.sheet_sync_enabled),
+    backend_type: backendConfig.backendType,
+    google_sheet_id: backendConfig.sheetId,
+    sheet_id: backendConfig.sheetId,
+    apps_script_url: backendConfig.appsScriptUrl,
+    sheet_sync_enabled: backendConfig.sheetSyncEnabled,
     sheet_sync_direction: String(settings.sheet_sync_direction || workspace.sheet_sync_direction || "bidirectional").trim(),
     sheet_last_pushed_at: settings.sheet_last_pushed_at || workspace.sheet_last_pushed_at || null,
     sheet_last_pulled_at: settings.sheet_last_pulled_at || workspace.sheet_last_pulled_at || null,
@@ -5999,6 +6078,8 @@ async function loadWorkspaceBrandingSettings(workspaceId, workspace = {}) {
     "google_sheet_id",
     "sheet_id",
     "apps_script_url",
+    "script_url",
+    "web_app_url",
     "sheet_sync_enabled",
     "sheet_sync_direction",
     "sheet_last_pushed_at",
@@ -6126,6 +6207,7 @@ async function fetchWorkspaceMembershipsByUserId(userId, userEmail) {
     subscription_status,
     apps_script_url,
     google_sheet_id,
+    sheet_id,
     monday_board_id,
     backend_type,
     supabase_media_enabled,
@@ -6493,7 +6575,7 @@ async function ensureSupabaseWorkspaceBeforeBoot() {
   if (backendMode.appsScriptUrl) {
     activeWorkspace.apps_script_url = backendMode.appsScriptUrl;
     APP_CONFIG.APP_SCRIPT_URL = backendMode.appsScriptUrl;
-  } else {
+  } else if (backendMode.mode === "supabase_native") {
     activeWorkspace.apps_script_url = "";
   }
   ACTIVE_PLAN_FEATURES = getWorkspacePlanFeatures(activeWorkspace);
@@ -6512,7 +6594,8 @@ async function ensureSupabaseWorkspaceBeforeBoot() {
 
 function getWorkspaceApiUrl() {
   const config = WORKSPACE_RUNTIME_CONFIG.active || loadWorkspaceConfig();
-  return String(config.apps_script_url || APP_CONFIG.APP_SCRIPT_URL || "").trim();
+  const backendConfig = resolveWorkspaceBackendConfig(config, config);
+  return String(backendConfig.appsScriptUrl || APP_CONFIG.APP_SCRIPT_URL || "").trim();
 }
 
 function isRunningInsideAppsScript() {
@@ -6856,6 +6939,7 @@ function getWorkspaceRequestMetadata() {
   const config = WORKSPACE_RUNTIME_CONFIG.active || loadWorkspaceConfig();
   const user = STELLARSYNC_AUTH_USER || {};
   const backendMode = getActiveWorkspaceBackendMode();
+  const backendConfig = resolveWorkspaceBackendConfig(config, config);
   return {
     workspace_id: config.workspace_id || config.workspace_slug || "master",
     workspace_slug: config.workspace_slug || "master",
@@ -6866,8 +6950,8 @@ function getWorkspaceRequestMetadata() {
     role: config.role || "",
     backend_type: backendMode.mode || config.backend_type || "supabase_native",
     backend_mode: backendMode.mode || config.backend_type || "supabase_native",
-    sheet_id: config.google_sheet_id || config.sheet_id || "",
-    google_sheet_id: config.google_sheet_id || config.sheet_id || "",
+    sheet_id: backendConfig.sheetId || "",
+    google_sheet_id: backendConfig.sheetId || "",
     monday_board_id: getMondayBoardId(config, WORKSPACE_CONNECTIONS) || "",
     supabase_media_enabled: !!config.supabase_media_enabled,
     connection_provider: backendMode.provider || "supabase"
@@ -7151,6 +7235,7 @@ function getAvailableContentPillars() {
 }
 
 function logCampaignFinalSource(detail = {}) {
+  if (!STELLARSYNC_DEBUG) return;
   console.log("[campaign-final-source]", {
     finalCampaignName: detail.finalCampaignName || detail.finalName || "",
     sourceFunction: detail.sourceFunction || "",
@@ -9060,6 +9145,7 @@ let offlineMode = false;
 let lastSyncError = "";
 let currentModalSourceContext = { type: "manual", label: "Create Post from Calendar", detail: "This post starts as a manual draft.", sourceId: "" };
 let currentModalCarouselAssets = [];
+let modalMediaPickerExpanded = false;
 let currentCarouselDragIndex = null;
 let modalCarouselDetachSelectMode = false;
 let selectedCarouselDetachAssetIds = new Set();
@@ -9244,15 +9330,16 @@ function normalizeWorkspacePlan(value) {
 }
 
 function getWorkspacePlanFeatures(workspace = {}) {
+  const backendConfig = resolveWorkspaceBackendConfig(workspace, workspace);
   const rawPlan = String(workspace.plan_slug || workspace.plan || workspace.subscription_tier || workspace.workspace_plan || workspace.settings_plan || "").trim();
   const plan = normalizeWorkspacePlan(rawPlan);
   const planCaps = getPlanCapabilities(plan || "starter");
   const subscriptionStatus = String(workspace.subscription_status || workspace.subscriptionStatus || "").trim().toLowerCase();
-  const backendType = String(workspace.backend_type || "").trim().toLowerCase();
+  const backendType = String(backendConfig.backendType || "").trim().toLowerCase();
   const gsConn = typeof getWorkspaceConnection === "function" ? getWorkspaceConnection("google_sheets") : null;
   const explicitHybrid = ["google_sheets_hybrid", "managed_hybrid", "client_google_sheets", "master_google_sheets", "hybrid"].includes(backendType);
   const managedHybrid = typeof isManagedHybridWorkspace === "function" ? isManagedHybridWorkspace(workspace, WORKSPACE_CONNECTIONS || []) : false;
-  const hybridEnabled = managedHybrid || explicitHybrid || (!!String(workspace.apps_script_url || "").trim() && !!gsConn && isWorkspaceConnectionEnabled(gsConn));
+  const hybridEnabled = managedHybrid || explicitHybrid || (!!String(backendConfig.appsScriptUrl || "").trim() && !!gsConn && isWorkspaceConnectionEnabled(gsConn));
   const customActive = plan === "custom" && subscriptionStatus === "active";
   const managedAccess = plan === "managed" || plan === "custom" || customActive || managedHybrid;
   const growthAccess = managedAccess || plan === "growth";
@@ -11020,6 +11107,8 @@ function setupWorkspaceReturnButtons() {
 }
 
 function setupWorkspaceUI() {
+  if (STELLARSYNC_DEBUG && !profileMenuTrigger) console.error("[profile-menu] missing trigger");
+  if (STELLARSYNC_DEBUG && !profileMenu) console.error("[profile-menu] missing menu");
   document.getElementById("settings-open-btn")?.addEventListener("click", () => { console.log("[button] fired settings-open-btn"); openWorkspaceHub("settings"); });
   document.addEventListener("click", (event) => {
     const installPluginBtn = event.target.closest("#dropdown-install-plugin-btn");
@@ -11037,26 +11126,34 @@ function setupWorkspaceUI() {
     if (!opener) return;
     const nextTab = opener.dataset.workspaceOpenTab || "settings";
     if (["settings", "accounts", "diagnostics", "providers"].includes(nextTab)) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (STELLARSYNC_DEBUG) console.log("[profile-menu] workspace tab opener", { tab: nextTab });
       openWorkspaceHub(nextTab);
     }
   });
   profileMenuTrigger?.addEventListener("click", (event) => {
+    event.preventDefault();
     event.stopPropagation();
+    if (STELLARSYNC_DEBUG) console.log("[profile-menu] trigger click", { open: !profileMenu?.classList.contains("hidden") });
     toggleProfileMenu();
   });
   profileMenu?.addEventListener("click", (event) => {
     const button = event.target.closest("[data-workspace-action]");
     if (!button) return;
+    event.preventDefault();
+    event.stopPropagation();
     const action = button.dataset.workspaceAction;
+    if (STELLARSYNC_DEBUG) console.log("[profile-menu] action", { action });
     if (action === "workspace") {
       console.log("[button] fired profile-menu-workspace");
       toggleProfileMenu(false);
       openProfileWorkspaceModal();
       return;
     }
-    if (action === "settings") { console.log("[button] fired profile-menu-settings"); return openWorkspaceHub("settings"); }
-    if (action === "accounts") { console.log("[button] fired profile-menu-accounts"); return openWorkspaceHub("accounts"); }
-    if (action === "diagnostics") { console.log("[button] fired profile-menu-diagnostics"); return openWorkspaceHub("diagnostics"); }
+    if (action === "settings") { console.log("[button] fired profile-menu-settings"); toggleProfileMenu(false); return openWorkspaceHub("settings"); }
+    if (action === "accounts") { console.log("[button] fired profile-menu-accounts"); toggleProfileMenu(false); return openWorkspaceHub("accounts"); }
+    if (action === "diagnostics") { console.log("[button] fired profile-menu-diagnostics"); toggleProfileMenu(false); return openWorkspaceHub("diagnostics"); }
     if (action === "install") {
       console.log("[button] fired profile-menu-install");
       console.log("[install-app] dropdown clicked");
@@ -11082,9 +11179,10 @@ function setupWorkspaceUI() {
   });
 
   document.addEventListener("click", (event) => {
-    var postEl = event.target.closest('[data-calendar-post-id], [data-post-id], .calendar-post, .calendar-pill, .calendar-post-pill, .mobile-calendar-post');
+    var postEl = event.target.closest('[data-calendar-post-id], .calendar-post, .calendar-pill, .calendar-post-pill, .mobile-calendar-post, .post-pill, .mobile-day-post');
     if (!postEl) return;
-    console.log("[calendar] clicked", { source: "document-delegated", dataset: Object.assign({}, postEl.dataset || {}) });
+    if (!postEl.closest("#view-calendar, #calendar-grid, #mobile-day-list")) return;
+    calendarClickDebug("dataset", Object.assign({ source: "document-delegated" }, postEl.dataset || {}));
     event.preventDefault();
     event.stopPropagation();
     var postId = postEl.dataset.calendarPostId || postEl.dataset.postId || "";
@@ -11096,13 +11194,13 @@ function setupWorkspaceUI() {
       post = (appState.posts || []).find(function(p) {
         return String(p.id || p.postId || p.post_id || p.frontendId || p._frontendId || "") === directId;
       }) || null;
-      console.log("[calendar] resolved", { method: "direct-id", ok: !!post, postId: directId });
+      calendarClickDebug("resolved id", { method: "direct-id", ok: !!post, postId: directId });
     }
     if (post) {
-      console.log("[calendar] opened", { postId: post.id || post.postId || post.post_id || post.frontendId || "" });
       openPostObjectModal(post, "calendar-document-delegated");
     } else {
-      console.error("[calendar] failed", { postId, title: postTitle, date: postDateKey });
+      calendarClickDebug("failed reason", { reason: "post not found", postId, title: postTitle, date: postDateKey });
+      if (STELLARSYNC_DEBUG) console.error("[calendar] failed", { postId, title: postTitle, date: postDateKey });
     }
   });
 
@@ -13193,7 +13291,7 @@ function renderLedger() {
     const mediaLabel = renderPostMediaTypeBadge(hydrated);
 
     return `
-      <div class="ledger-card glass-card p-5" data-post-id="${escapeHtml(post.id)}">
+      <div class="ledger-card glass-card p-5" ${renderPostIdentityDataAttributes(post)}>
         <div class="flex items-start gap-5">
           <div class="w-14 h-14 rounded-xl bg-[#120c1d] border border-white/5 flex items-center justify-center shrink-0 overflow-hidden">
             ${mediaKind === "carousel"
@@ -13242,7 +13340,7 @@ function renderLedger() {
 
 function wireLedgerActions() {
   document.querySelectorAll(".ledger-card").forEach(card => {
-    const postId = card.dataset.postId;
+    const postId = card.dataset.postLookupId || card.dataset.postId || card.dataset.id || "";
     if (!postId) return;
 
     card.addEventListener("click", () => openModalById(postId));
@@ -13481,9 +13579,11 @@ function getConstellationCanonicalCampaignNames(campaignRecords = getAvailableCa
   const sourceRecords = Array.isArray(campaignRecords) ? campaignRecords : [];
   const filtered = discardCampaignNameFragments(canonicalNames, sourceRecords);
   const removed = canonicalNames.filter((n) => !filtered.includes(n));
-  console.log("[campaign-final-source] initial", debugSources);
-  console.log("[campaign-final-source] filtered names", filtered);
-  if (removed.length) console.log("[campaign-final-source] removed fragments", removed);
+  if (STELLARSYNC_DEBUG) {
+    console.log("[campaign-final-source] initial", debugSources);
+    console.log("[campaign-final-source] filtered names", filtered);
+    if (removed.length) console.log("[campaign-final-source] removed fragments", removed);
+  }
   return filtered;
 }
 
@@ -13506,7 +13606,16 @@ function resolveConstellationCampaignCandidate(rawCampaignName = "", canonicalNa
     return normalizeLookupValue(other).indexOf(rawLookup) !== -1;
   });
   if (isFragmentOf && !sourceKeys.has(rawLookup)) {
-    console.log("[campaign-final-source] discarded fragment", { name: raw, rawLookup });
+    logCampaignFinalSource({
+      finalCampaignName: raw,
+      sourceFunction: "resolveConstellationCampaignCandidate",
+      sourceSheet: "POSTS/appState.posts",
+      sourceRow: "",
+      sourcePostId: "",
+      rawValue: raw,
+      parsedParts: splitExplicitCampaignValues(raw),
+      retainedReason: "discarded fragment"
+    });
     return { keep: false, raw, canonicalName: "", reason: "fragment" };
   }
   return { keep: true, raw, canonicalName: raw, reason: "standalone" };
@@ -13533,12 +13642,13 @@ function discardCampaignNameFragments(names = [], sourceRecords = [], sourceFunc
         finalCampaignName: name,
         sourceFunction,
         sourceSheet: "CAMPAIGNS/appState.campaigns",
-        sourceRow: "",
+        sourceRow: (sourceRecords.find((r) => normalizeLookupValue(r.campaignName || r.campaign_name || r.name || "") === key) || {}).row_number || "",
         sourcePostId: "",
         rawValue: name,
         parsedParts,
-        retainedReason: "standalone fragment source record found; discarded because combined parent exists"
+        retainedReason: "retained exact standalone source record"
       });
+      return true;
     }
     logCampaignFinalSource({
       finalCampaignName: name,
@@ -14034,6 +14144,15 @@ function selectConstellationPost(post, color, campaignName = "") {
   constellationSelectionDayBtn.onclick = () => openCalendarDate(normalizePostCalendarDateKey(post) || toDateKey(new Date()), true);
 }
 
+function openConstellationPost(post, color, campaignName = "") {
+  if (!post) {
+    modalOpenDebug("failed reason", { source: "constellation", reason: "missing post" });
+    return;
+  }
+  selectConstellationPost(post, color, campaignName);
+  openModalById(getPostLookupId(post));
+}
+
 function renderConstellation() {
   console.log("[render] renderConstellation start", {
     viewportFound: !!viewport,
@@ -14213,13 +14332,15 @@ function renderConstellation() {
       });
       const postLookupId = getPostLookupId(post);
       dot.dataset.constellationPostId = postLookupId;
-      dot.addEventListener("click", () => selectConstellationPost(post, color, campaign.campaignName));
+      Object.assign(dot.dataset, getPostIdentityDataset(post, postIndex));
+      dot.addEventListener("click", () => openConstellationPost(post, color, campaign.campaignName));
       dot.addEventListener("dblclick", () => { openModalById(postLookupId); });
 
       const dotLabel = document.createElement("button");
       dotLabel.type = "button";
       dotLabel.className = "constellation-label-btn";
       dotLabel.dataset.constellationPostId = postLookupId;
+      Object.assign(dotLabel.dataset, getPostIdentityDataset(post, postIndex));
       dotLabel.style.left = `${Math.min(dotX + 24, worldWidth - 260)}px`;
       dotLabel.style.top = `${dotY}px`;
       dotLabel.style.borderColor = `${color}40`;
@@ -14228,7 +14349,7 @@ function renderConstellation() {
       dotLabel.style.alignItems = "center";
       dotLabel.style.gap = "8px";
       dotLabel.title = getPostDisplayTitle(post, "Open post");
-      dotLabel.addEventListener("click", () => selectConstellationPost(post, color, campaign.campaignName));
+      dotLabel.addEventListener("click", () => openConstellationPost(post, color, campaign.campaignName));
       dotLabel.addEventListener("dblclick", () => { openModalById(postLookupId); });
 
       rowGroup.appendChild(dot);
@@ -14920,22 +15041,25 @@ function renderModalExistingMediaPicker(selectedAssetId = "") {
     return;
   }
   const recent = media.slice(0, 8);
+  const attachedKeys = new Set((currentModalCarouselAssets || []).map((item) => String(getMediaItemKey(item) || item.assetId || item.id || "").trim()).filter(Boolean));
+  const renderAssetButton = (asset, compact = false) => {
+    const assetId = asset.assetId || asset.id || "";
+    const assetKey = String(getMediaItemKey(asset) || assetId || "").trim();
+    const thumbUrl = getMediaPreviewUrl(asset);
+    const title = getMediaTitle(asset);
+    const isSelected = String(assetId) === String(selectedAssetId || "") || attachedKeys.has(assetKey);
+    return `<button type="button" onclick="selectModalMediaAsset('${escapeHtml(assetId)}')" class="relative ${compact ? "h-16" : "h-20"} rounded-lg overflow-hidden border ${isSelected ? "border-purple-500" : "border-white/10"} hover:border-purple-400/50 transition-colors bg-[#120c1d]" title="${escapeHtml(title)}">
+      ${thumbUrl ? `<img src="${escapeHtml(thumbUrl)}" alt="${escapeHtml(title)}" class="w-full h-full object-contain bg-black/20" loading="lazy" onerror="handleBrokenMediaPreview(this)">` : `<div class="w-full h-full flex items-center justify-center text-gray-600"><i class="ph-bold ph-file text-lg"></i></div>`}
+      ${isSelected ? '<span class="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-purple-500 text-white"><i class="ph-bold ph-check text-[10px]"></i></span>' : ''}
+    </button>`;
+  };
   target.innerHTML = `
     <div class="flex items-center justify-between mb-2">
       <label class="block text-[9px] uppercase font-bold tracking-widest text-gray-500">Recent Media</label>
-      <button type="button" onclick="openModalMediaVaultPanel()" class="text-[9px] uppercase tracking-widest font-bold text-purple-400 hover:text-white transition-colors">Open Vault</button>
+      <button type="button" onclick="openModalMediaVaultPanel()" class="text-[9px] uppercase tracking-widest font-bold text-purple-400 hover:text-white transition-colors">${modalMediaPickerExpanded ? "Hide Vault" : "Open Vault"}</button>
     </div>
     <div class="grid grid-cols-4 gap-1.5 mb-2 max-h-32 overflow-y-auto">
-      ${recent.map(asset => {
-        const assetId = asset.assetId || asset.id || "";
-        const thumbUrl = getMediaPreviewUrl(asset);
-        const title = getMediaTitle(asset);
-        const isSelected = String(assetId) === String(selectedAssetId || "");
-        return `<button type="button" onclick="selectModalMediaAsset('${escapeHtml(assetId)}')" class="relative aspect-square rounded-lg overflow-hidden border-2 ${isSelected ? 'border-purple-500' : 'border-white/5'} hover:border-purple-400/50 transition-colors bg-[#120c1d]" title="${escapeHtml(title)}">
-          ${thumbUrl ? `<img src="${escapeHtml(thumbUrl)}" alt="${escapeHtml(title)}" class="w-full h-full object-cover" loading="lazy" onerror="handleBrokenMediaPreview(this)">` : `<div class="w-full h-full flex items-center justify-center text-gray-600"><i class="ph-bold ph-file text-lg"></i></div>`}
-          ${isSelected ? '<span class="absolute inset-0 flex items-center justify-center bg-purple-500/20 rounded-lg"><i class="ph-bold ph-check text-xl text-white"></i></span>' : ''}
-        </button>`;
-      }).join("")}
+      ${recent.map(asset => renderAssetButton(asset, true)).join("")}
     </div>
     <div class="flex gap-2">
       <select id="modal-existing-media-select" class="form-input text-xs flex-1">
@@ -14947,41 +15071,25 @@ function renderModalExistingMediaPicker(selectedAssetId = "") {
       </select>
       <button type="button" onclick="selectExistingMediaForPost()" class="px-3 py-2 rounded-lg bg-transparent border border-white/10 text-[9px] uppercase tracking-widest font-bold text-gray-300 hover:text-white flex items-center justify-center" title="Attach selected media to post"><i class="ph-bold ph-link"></i></button>
     </div>
+    <div id="modal-media-picker-panel" class="${modalMediaPickerExpanded ? "" : "hidden"} mt-3 rounded-xl border border-white/10 bg-[#100a1a] p-3">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-[9px] uppercase tracking-widest font-bold text-gray-500">Media Vault</span>
+        <button type="button" onclick="closeModalMediaVaultPanel()" class="text-gray-500 hover:text-white" title="Close media picker"><i class="ph-bold ph-x"></i></button>
+      </div>
+      <div id="modal-media-picker-assets" class="max-h-64 overflow-y-auto"></div>
+    </div>
   `;
+  if (modalMediaPickerExpanded) renderMediaPickerAssets("modal");
 }
 
 function openModalMediaVaultPanel() {
-  const modal = document.getElementById("media-picker-drawer");
-  if (modal) {
-    modal.classList.remove("hidden");
-    modal.style.transform = "translateX(0)";
-    renderMediaPickerAssets("modal");
-    return;
-  }
-  const panel = document.createElement("div");
-  panel.id = "media-picker-drawer";
-  panel.className = "fixed inset-y-0 right-0 w-96 bg-[#0a0612] border-l border-white/10 shadow-2xl z-[100] transform translate-x-full transition-transform duration-200 flex flex-col";
-  panel.innerHTML = `
-    <div class="p-4 border-b border-white/5 flex items-center justify-between">
-      <h3 class="text-sm font-bold text-white">Media Vault</h3>
-      <button type="button" onclick="closeModalMediaVaultPanel()" class="text-gray-400 hover:text-white"><i class="ph-bold ph-x"></i></button>
-    </div>
-    <div id="modal-media-picker-assets" class="flex-1 overflow-y-auto p-4 grid grid-cols-3 gap-2"></div>
-    <div class="p-4 border-t border-white/5">
-      <button type="button" onclick="closeModalMediaVaultPanel()" class="w-full px-3 py-2 rounded-lg bg-[#181125] border border-white/5 text-[9px] uppercase tracking-widest font-bold text-gray-300 hover:text-white">Close</button>
-    </div>
-  `;
-  document.body.appendChild(panel);
-  setTimeout(() => panel.style.transform = "translateX(0)", 10);
-  renderMediaPickerAssets("modal");
+  modalMediaPickerExpanded = !modalMediaPickerExpanded;
+  renderModalExistingMediaPicker(currentModalAsset?.assetId || currentModalAsset?.id || "");
 }
 
 function closeModalMediaVaultPanel() {
-  const modal = document.getElementById("media-picker-drawer");
-  if (modal) {
-    modal.style.transform = "translateX(100%)";
-    setTimeout(() => modal.remove(), 200);
-  }
+  modalMediaPickerExpanded = false;
+  renderModalExistingMediaPicker(currentModalAsset?.assetId || currentModalAsset?.id || "");
 }
 
 function renderMediaPickerAssets(target = "modal") {
@@ -14993,16 +15101,25 @@ function renderMediaPickerAssets(target = "modal") {
     return;
   }
   container.innerHTML = `
-    <div class="grid grid-cols-3 gap-2 p-2">
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
       ${media.map(asset => {
         const assetId = asset.assetId || asset.id || "";
         const thumbUrl = getMediaPreviewUrl(asset);
         const title = getMediaTitle(asset);
-        const isSelected = currentModalCarouselAssets.some(a => String(a.assetId || a.id || "") === String(assetId));
-        return `<button type="button" onclick="attachMediaToCurrentPost('${escapeHtml(assetId)}')" class="relative aspect-square rounded-lg overflow-hidden border-2 ${isSelected ? 'border-purple-500' : 'border-white/5'} hover:border-purple-400/50 transition-colors bg-[#120c1d]" title="${escapeHtml(title)}">
-          ${thumbUrl ? `<img src="${escapeHtml(thumbUrl)}" alt="${escapeHtml(title)}" class="w-full h-full object-cover" loading="lazy" onerror="handleBrokenMediaPreview(this)">` : `<div class="w-full h-full flex items-center justify-center text-gray-600"><i class="ph-bold ph-file text-xl"></i></div>`}
-          ${isSelected ? '<span class="absolute inset-0 flex items-center justify-center bg-purple-500/20 rounded-lg"><i class="ph-bold ph-check text-lg text-white"></i></span>' : ''}
-        </button>`;
+        const isSelected = currentModalCarouselAssets.some(a => String(getMediaItemKey(a) || a.assetId || a.id || "") === String(getMediaItemKey(asset) || assetId || ""));
+        return `<div class="rounded-lg border ${isSelected ? 'border-purple-500/80' : 'border-white/10'} bg-[#120c1d] overflow-hidden">
+          <button type="button" onclick="attachMediaToCurrentPost('${escapeHtml(assetId)}')" class="relative h-20 w-full bg-black/20" title="${escapeHtml(title)}">
+            ${thumbUrl ? `<img src="${escapeHtml(thumbUrl)}" alt="${escapeHtml(title)}" class="w-full h-full object-contain" loading="lazy" onerror="handleBrokenMediaPreview(this)">` : `<div class="w-full h-full flex items-center justify-center text-gray-600"><i class="ph-bold ph-file text-xl"></i></div>`}
+            ${isSelected ? '<span class="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-purple-500 text-white"><i class="ph-bold ph-check text-[10px]"></i></span>' : ''}
+          </button>
+          <div class="p-2 space-y-1">
+            <div class="truncate text-[10px] text-gray-300" title="${escapeHtml(title)}">${escapeHtml(title)}</div>
+            <div class="flex gap-1">
+              ${isSelected ? `<button type="button" onclick="detachMediaFromCurrentPost('${escapeHtml(assetId)}')" class="flex-1 px-2 py-1 rounded bg-[#30121b] border border-red-400/20 text-[8px] uppercase tracking-widest font-bold text-red-200">Detach</button>` : `<button type="button" onclick="attachMediaToCurrentPost('${escapeHtml(assetId)}')" class="flex-1 px-2 py-1 rounded bg-[#181125] border border-white/10 text-[8px] uppercase tracking-widest font-bold text-gray-300 hover:text-white">Attach</button>`}
+              ${thumbUrl ? `<button type="button" onclick="downloadMediaAssetFromPicker('${escapeHtml(assetId)}')" class="px-2 py-1 rounded bg-[#181125] border border-white/10 text-[10px] text-gray-300 hover:text-white" title="Download media"><i class="ph-bold ph-download-simple"></i></button>` : ""}
+            </div>
+          </div>
+        </div>`;
       }).join("")}
     </div>
   `;
@@ -15022,6 +15139,48 @@ function attachMediaToCurrentPost(assetId) {
   renderModalCarouselPreview();
   renderModalExistingMediaPicker();
   renderMediaPickerAssets();
+}
+
+async function detachMediaFromCurrentPost(assetId) {
+  const targetId = String(assetId || "").trim();
+  if (!targetId) return;
+  const index = (currentModalCarouselAssets || []).findIndex((item) => {
+    return [
+      getCanonicalMediaAssetId(item),
+      getMediaItemKey(item),
+      item.assetId,
+      item.id,
+      item.media_asset_id
+    ].map((value) => String(value || "").trim()).includes(targetId);
+  });
+  if (index < 0) return;
+  await removeCarouselAssetById(targetId, index);
+  renderModalExistingMediaPicker(currentModalAsset?.assetId || currentModalAsset?.id || "");
+  renderMediaPickerAssets("modal");
+}
+
+function downloadMediaAssetFromPicker(assetId) {
+  const targetId = String(assetId || "").trim();
+  const asset = (appState.media || []).find((item) => {
+    return [
+      getCanonicalMediaAssetId(item),
+      getMediaItemKey(item),
+      item.assetId,
+      item.id,
+      item.media_asset_id
+    ].map((value) => String(value || "").trim()).includes(targetId);
+  });
+  if (!asset) {
+    showToast("Media not found", "Could not find the selected media asset.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  const url = getMediaPreviewUrl(asset) || asset.storagePath || asset.storage_path || "";
+  if (!url) {
+    showToast("No media URL", "This media item has no downloadable URL.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  const title = String(getMediaTitle(asset) || "stellarsync-media").replace(/[^a-z0-9_-]+/gi, "-").replace(/^-+|-+$/g, "").slice(0, 80) || "stellarsync-media";
+  downloadUrlWithBrowser(url, title);
 }
 
 function selectModalMediaAsset(assetId) {
@@ -15695,15 +15854,16 @@ function isWorkspaceConnectionEnabled(conn) {
   return true;
 }
 
-function getGoogleSheetsConnectionSource() {
+function getGoogleSheetsConnectionSource(workspace = WORKSPACE_RUNTIME_CONFIG?.active || {}, settings = workspace) {
   const conn = getWorkspaceConnection("google_sheets");
   const connUrl = String(conn?.config?.apps_script_url || "").trim();
   if (connUrl) return { source: "workspace_connections.google_sheets.config.apps_script_url", url: connUrl, connection: conn };
   const connMetaUrl = String(conn?.metadata?.apps_script_url || "").trim();
   if (connMetaUrl) return { source: "workspace_connections.google_sheets.metadata.apps_script_url", url: connMetaUrl, connection: conn };
-  const workspaceUrl = String(WORKSPACE_RUNTIME_CONFIG?.active?.apps_script_url || "").trim();
-  if (workspaceUrl) return { source: "workspaces.apps_script_url", url: workspaceUrl, connection: conn || null };
-  const activeUrl = String(WORKSPACE_RUNTIME_CONFIG?.active?.api_url || WORKSPACE_RUNTIME_CONFIG?.active?.backend_url || "").trim();
+  const backendConfig = resolveWorkspaceBackendConfig(workspace || {}, settings || {});
+  const workspaceUrl = String(backendConfig.appsScriptUrl || "").trim();
+  if (workspaceUrl) return { source: backendConfig.sourceFields.appsScriptUrl || "workspace backend config", url: workspaceUrl, connection: conn || null };
+  const activeUrl = String(workspace?.api_url || workspace?.backend_url || "").trim();
   if (activeUrl) return { source: "active backend config", url: activeUrl, connection: conn || null };
   return { source: "none", url: "", connection: conn || null };
 }
@@ -15711,16 +15871,14 @@ function getGoogleSheetsConnectionSource() {
 function getGoogleSheetsConnectionStatus(workspace = WORKSPACE_RUNTIME_CONFIG?.active, workspaceSettings = {}, workspaceConnections = WORKSPACE_CONNECTIONS) {
   const active = workspace || {};
   const settings = workspaceSettings || {};
+  const backendConfig = resolveWorkspaceBackendConfig(active, settings);
   const list = Array.isArray(workspaceConnections) ? workspaceConnections : [];
   const conn = list.find((item) => item && item.provider === "google_sheets") || {};
   const connConfig = conn.config || {};
   const connMeta = conn.metadata || {};
   const sources = {
     sheet_id: [
-      ["workspace_settings.google_sheet_id", settings.google_sheet_id],
-      ["workspace_settings.sheet_id", settings.sheet_id],
-      ["workspace.google_sheet_id", active.google_sheet_id],
-      ["workspace.sheet_id", active.sheet_id],
+      [backendConfig.sourceFields.sheetId || "workspace backend config", backendConfig.sheetId],
       ["workspace_connections.google_sheets.config.google_sheet_id", connConfig.google_sheet_id],
       ["workspace_connections.google_sheets.config.sheet_id", connConfig.sheet_id],
       ["workspace_connections.google_sheets.config.spreadsheet_id", connConfig.spreadsheet_id],
@@ -15729,14 +15887,12 @@ function getGoogleSheetsConnectionStatus(workspace = WORKSPACE_RUNTIME_CONFIG?.a
       ["workspace_connections.google_sheets.metadata.spreadsheet_id", connMeta.spreadsheet_id]
     ],
     apps_script_url: [
-      ["workspace_settings.apps_script_url", settings.apps_script_url],
-      ["workspace.apps_script_url", active.apps_script_url],
+      [backendConfig.sourceFields.appsScriptUrl || "workspace backend config", backendConfig.appsScriptUrl],
       ["workspace_connections.google_sheets.config.apps_script_url", connConfig.apps_script_url],
       ["workspace_connections.google_sheets.metadata.apps_script_url", connMeta.apps_script_url]
     ],
     sheet_sync_enabled: [
-      ["workspace_settings.sheet_sync_enabled", settings.sheet_sync_enabled],
-      ["workspace.sheet_sync_enabled", active.sheet_sync_enabled],
+      [backendConfig.sourceFields.sheetSyncEnabled || "workspace backend config", backendConfig.sourceFields.sheetSyncEnabled ? backendConfig.sheetSyncEnabled : undefined],
       ["workspace_connections.google_sheets.config.sheet_sync_enabled", connConfig.sheet_sync_enabled],
       ["workspace_connections.google_sheets.metadata.sheet_sync_enabled", connMeta.sheet_sync_enabled]
     ]
@@ -15794,10 +15950,11 @@ function getMondayBoardId(workspace = WORKSPACE_RUNTIME_CONFIG?.active, connecti
 
 function isManagedHybridWorkspace(workspace = {}, connections = []) {
   const activeWorkspace = workspace || {};
+  const backendConfig = resolveWorkspaceBackendConfig(activeWorkspace, activeWorkspace);
   const list = Array.isArray(connections) ? connections : [];
 	  const plan = normalizeWorkspacePlan(activeWorkspace.plan_slug || activeWorkspace.plan || activeWorkspace.workspace_plan || activeWorkspace.settings_plan || activeWorkspace.subscription_tier || "");
-  const backendType = String(activeWorkspace.backend_type || "").trim().toLowerCase();
-  const workspaceUrl = String(activeWorkspace.apps_script_url || "").trim();
+  const backendType = String(backendConfig.backendType || "").trim().toLowerCase();
+  const workspaceUrl = String(backendConfig.appsScriptUrl || "").trim();
   const featureFlags = activeWorkspace.feature_flags && typeof activeWorkspace.feature_flags === "object" ? activeWorkspace.feature_flags : {};
   const gsConn = list.find((item) => item && item.provider === "google_sheets") || null;
   const connUrl = String(gsConn?.config?.apps_script_url || "").trim();
@@ -15809,7 +15966,7 @@ function isManagedHybridWorkspace(workspace = {}, connections = []) {
     activeWorkspace.managed_account === true ||
     featureFlags.show_advanced_integrations === true ||
     featureFlags.managed_integrations === true ||
-    backendType === "google_sheets_hybrid" ||
+    isGoogleSheetsFrontendMode(backendType) ||
     backendType === "managed" ||
     backendType === "managed_hybrid" ||
     workspaceUrl ||
@@ -15820,13 +15977,14 @@ function isManagedHybridWorkspace(workspace = {}, connections = []) {
 
 function isManagedWorkspace(workspaceConfig = {}) {
   const workspace = workspaceConfig || {};
+  const backendConfig = resolveWorkspaceBackendConfig(workspace, workspace);
   const plan = normalizeWorkspacePlan(workspace.plan_slug || workspace.plan || workspace.workspace_plan || workspace.settings_plan || workspace.subscription_tier || "");
-  const backendType = String(workspace.backend_type || "").trim().toLowerCase();
+  const backendType = String(backendConfig.backendType || "").trim().toLowerCase();
   const featureFlags = workspace.feature_flags && typeof workspace.feature_flags === "object" ? workspace.feature_flags : {};
   return !!(
     plan === "managed" ||
     plan === "admin_master" ||
-    backendType === "google_sheets_hybrid" ||
+    isGoogleSheetsFrontendMode(backendType) ||
     backendType === "managed" ||
     Boolean(workspace.managed_account) ||
     featureFlags.show_advanced_integrations === true ||
@@ -15843,19 +16001,20 @@ function isAdminMasterWorkspaceUser(workspaceConfig = {}) {
 
 function getWorkspaceBackendMode(workspace = {}, connections = []) {
   const activeWorkspace = workspace || {};
+  const backendConfig = resolveWorkspaceBackendConfig(activeWorkspace, activeWorkspace);
   const gsConn = (connections || []).find((item) => item && item.provider === "google_sheets") || null;
-  const source = getGoogleSheetsConnectionSource();
-  const appsScriptUrl = String(source.url || activeWorkspace.apps_script_url || "").trim();
+  const source = getGoogleSheetsConnectionSource(activeWorkspace, activeWorkspace);
+  const appsScriptUrl = String(source.url || backendConfig.appsScriptUrl || "").trim();
   const rawPlan = String(activeWorkspace.plan || activeWorkspace.settings_plan || "").trim();
   const plan = normalizeWorkspacePlan(rawPlan);
-  const backendType = String(activeWorkspace.backend_type || "").trim().toLowerCase();
+  const backendType = String(backendConfig.backendType || "").trim().toLowerCase();
   const connAppsScriptUrl = String(gsConn?.config?.apps_script_url || "").trim();
   let mode = "supabase_native";
   if (backendType) {
     mode = backendType;
   } else if (connAppsScriptUrl) {
     mode = "google_sheets_hybrid";
-  } else if (String(activeWorkspace.apps_script_url || "").trim()) {
+  } else if (String(backendConfig.appsScriptUrl || "").trim()) {
     mode = "google_sheets_hybrid";
   }
   if (mode === "supabase_native" && appsScriptUrl) {
@@ -15885,6 +16044,16 @@ function getWorkspaceBackendMode(workspace = {}, connections = []) {
 
 function getActiveWorkspaceBackendMode() {
   return getWorkspaceBackendMode(WORKSPACE_RUNTIME_CONFIG?.active || {}, WORKSPACE_CONNECTIONS || []);
+}
+
+function isGoogleSheetsFrontendMode(mode) {
+  return [
+    "google_sheets_hybrid",
+    "client_google_sheets",
+    "managed_hybrid",
+    "master_google_sheets",
+    "hybrid"
+  ].includes(String(mode || "").trim().toLowerCase());
 }
 
 function inferSocialImportMode(state) {
@@ -17178,7 +17347,7 @@ function renderWorkspaceConnectionCards(options = {}) {
       var sheetsStatus = GOOGLE_SHEETS_CONNECTION_STATUS || {};
       var hasUrl = !!sheetsSource.url;
       var gsConnStatus = String(conn?.status || "").trim().toLowerCase();
-      var configuredSheetId = String((WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active && (WORKSPACE_RUNTIME_CONFIG.active.google_sheet_id || WORKSPACE_RUNTIME_CONFIG.active.sheet_id)) || "").trim();
+      var configuredSheetId = resolveWorkspaceBackendConfig(WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active || {}, WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active || {}).sheetId;
       console.log("[sheets] connection source", sheetsSource.source);
       console.log("[sheets] connected", !!sheetsStatus.connected);
       console.log("[sheets] last sync", sheetsStatus.lastSync || "none");
@@ -20459,7 +20628,9 @@ async function editCampaignById(campaignId) {
 function setupModalMediaUpload() {
   if (!modalMediaUploadTrigger || !modalMediaUploadInput) return;
 
-  modalMediaUploadTrigger.addEventListener("click", () => {
+  modalMediaUploadTrigger.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
     console.log("[button] fired modal-media-upload-trigger");
     console.log("[post-upload] clicked");
     openUploadStagingModal({ targetPostId: currentEditingPostId || getCanonicalPostId(window.__currentModalPostData || {}) || "", source: "post-modal" });
@@ -22388,6 +22559,11 @@ function calendarClickDebug(label, detail = {}) {
   console.log("[calendar-click] " + label, detail);
 }
 
+function modalOpenDebug(label, detail = {}) {
+  if (!STELLARSYNC_DEBUG) return;
+  console.log("[modal-open] " + label, detail);
+}
+
 function getPostIdentityCandidates(post, index = 0) {
   if (!post) return [];
   return [
@@ -22485,10 +22661,13 @@ function openCalendarPost(btn) {
 }
 
 function openPostObjectModal(post, source = "unknown") {
-  console.log("[post-modal] open requested", source);
-  console.log("[post-modal] post id", post?.id || post?.postId || post?.post_id || post?.frontendId || "");
-  console.log("[post-modal] modal element found", !!getPostModalElement());
-  if (!post) return;
+  modalOpenDebug("source", { source });
+  modalOpenDebug("resolved post", { ok: !!post, postId: post?.id || post?.postId || post?.post_id || post?.frontendId || "" });
+  if (STELLARSYNC_DEBUG) console.log("[post-modal] modal element found", !!getPostModalElement());
+  if (!post) {
+    modalOpenDebug("failed reason", { source, reason: "missing post object" });
+    return;
+  }
   openPostModal(
     post.title || getPostDisplayTitle(post, ""),
     post.platform || "linkedin",
@@ -22503,13 +22682,16 @@ function openPostObjectModal(post, source = "unknown") {
 }
 
 function openModalById(postId) {
+  modalOpenDebug("source", { source: "openModalById" });
+  modalOpenDebug("dataset", { postId });
   const matched = findPostByAnyId(postId);
   if (!matched) {
-    console.log("[post-modal] open requested", "openModalById");
-    console.log("[post-modal] post id", postId || "");
-    console.log("[post-modal] modal element found", !!getPostModalElement());
+    modalOpenDebug("resolved post", { ok: false, postId: postId || "" });
+    modalOpenDebug("failed reason", { source: "openModalById", reason: "post not found", postId: postId || "" });
+    if (STELLARSYNC_DEBUG) console.log("[post-modal] modal element found", !!getPostModalElement());
     return;
   }
+  modalOpenDebug("resolved post", { ok: true, postId: matched.id || matched.postId || matched.post_id || "" });
   openPostObjectModal(matched, "openModalById");
 }
 
@@ -23063,6 +23245,8 @@ function closeModal() {
   currentModalInspoId = null;
   currentModalNoteId = null;
   currentModalCarouselAssets = [];
+  modalMediaPickerExpanded = false;
+  document.getElementById("media-picker-drawer")?.remove();
   currentAIGenerationResult = null;
   setModalSourceContext("manual", "Create Post from Calendar", "This post starts as a manual draft.", "");
   if (modalMediaStatus) modalMediaStatus.textContent = "No media linked";
@@ -26100,7 +26284,7 @@ async function syncRemoteIfConfigured() {
   console.log("[data] backend_type", activeCfg ? (activeCfg.backend_type || "unknown") : "unknown");
   var backendMode = getActiveWorkspaceBackendMode();
   console.log("[data] backend_mode", backendMode.mode);
-  var gsUrl = activeCfg ? (activeCfg.apps_script_url || "") : "";
+  var gsUrl = activeCfg ? resolveWorkspaceBackendConfig(activeCfg, activeCfg).appsScriptUrl : "";
   console.log("[data] google_sheets apps_script_url present", gsUrl ? "true" : "false");
   if (!APP_CONFIG.ENABLE_REMOTE_SYNC || !isRemoteConfigured()) {
     offlineMode = true;
@@ -26798,7 +26982,7 @@ function renderSheetMirrorCard() {
   var sheetsStatus = getGoogleSheetsConnectionStatus(active, active, WORKSPACE_CONNECTIONS);
   console.log("[sheets-status] card render", sheetsStatus);
   var backendMode = getActiveWorkspaceBackendMode();
-  var isLegacySource = backendMode.mode === "google_sheets_hybrid";
+  var isLegacySource = isGoogleSheetsFrontendMode(backendMode.mode);
   if (sheetsStatus.status === "not_configured") {
     return '<div class="platform-card" data-mirror-card="sheet-mirror">' +
       '<div class="flex items-center justify-between gap-3 mb-3">' +
@@ -33069,6 +33253,7 @@ function initApp() {
   guardedCall(setupMediaUpload, "setupMediaUpload");
   guardedCall(setupMediaLinkModal, "setupMediaLinkModal");
   guardedCall(setupModalControls, "setupModalControls");
+  guardedCall(setupModalMediaUpload, "setupModalMediaUpload");
   guardedCall(setupInspoModal, "setupInspoModal");
   guardedCall(setupNoteModal, "setupNoteModal");
   guardedCall(setupImportModals, "setupImportModals");
@@ -33296,7 +33481,7 @@ async function savePWProfile() {
 }
 
 var WORKSPACE_SETTINGS_COLUMNS_CACHE = null;
-var WORKSPACE_SETTINGS_OPTIONAL_FIELDS = ["brand_accent", "icon", "avatar_mode", "avatar_initials", "constellation_shape", "short_name", "media_prefix", "media_bucket", "brand_voice", "current_month", "current_year", "default_platforms", "default_pillars", "default_statuses", "default_post_types", "sheet_sync_enabled", "sheet_id", "google_sheet_id", "apps_script_url", "sheet_sync_direction", "sheet_last_pushed_at", "sheet_last_pulled_at", "monday_board_id", "monday_sync_enabled", "monday_sync_direction", "monday_last_pushed_at", "monday_last_pulled_at", "plan_slug", "subscription_tier", "managed_account", "is_admin_workspace", "feature_flags", "workspace_slug"];
+var WORKSPACE_SETTINGS_OPTIONAL_FIELDS = ["brand_accent", "icon", "avatar_mode", "avatar_initials", "constellation_shape", "short_name", "media_prefix", "media_bucket", "brand_voice", "current_month", "current_year", "default_platforms", "default_pillars", "default_statuses", "default_post_types", "sheet_sync_enabled", "sheet_id", "google_sheet_id", "apps_script_url", "script_url", "web_app_url", "sheet_sync_direction", "sheet_last_pushed_at", "sheet_last_pulled_at", "monday_board_id", "monday_sync_enabled", "monday_sync_direction", "monday_last_pushed_at", "monday_last_pulled_at", "plan_slug", "subscription_tier", "managed_account", "is_admin_workspace", "feature_flags", "workspace_slug"];
 var WORKSPACE_SETTINGS_REQUIRE_CONFIRMED_FIELDS = ["brand_accent", "current_month", "default_platforms", "default_pillars", "icon", "avatar_mode", "avatar_initials", "constellation_shape", "short_name", "media_prefix", "media_bucket", "plan_slug", "subscription_tier", "managed_account", "is_admin_workspace", "feature_flags", "workspace_slug"];
 
 async function getWorkspaceSettingsColumns() {
@@ -34644,7 +34829,7 @@ async function bootAppWithWorkspaceRouter() {
     console.log("[boot] backend_type", cfg ? (cfg.backend_type || "unknown") : "unknown");
     console.log("[data] active workspace", cfg ? (cfg.workspace_slug || cfg.slug) : "none");
     console.log("[data] backend_type", cfg ? (cfg.backend_type || "unknown") : "unknown");
-    console.log("[data] google_sheets apps_script_url present", (cfg && cfg.apps_script_url) ? "true" : "false");
+    console.log("[data] google_sheets apps_script_url present", (cfg && resolveWorkspaceBackendConfig(cfg, cfg).appsScriptUrl) ? "true" : "false");
     renderWorkspaceBranding();
     initApp();
 
