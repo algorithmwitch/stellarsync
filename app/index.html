@@ -6016,12 +6016,13 @@ function resolveWorkspaceBackendConfig(workspace, settings) {
     { source: "workspaces.google_sheet_id", value: active.google_sheet_id },
     { source: "workspaces.sheet_id", value: active.sheet_id }
   ]);
-  const appsScriptUrl = firstPresent([
+  const rawAppsScriptUrl = firstPresent([
     { source: "workspace_settings.apps_script_url", value: prefs.apps_script_url },
     { source: "workspaces.apps_script_url", value: active.apps_script_url },
     { source: "workspaces.script_url", value: active.script_url },
     { source: "workspaces.web_app_url", value: active.web_app_url }
   ]);
+  const normalizedAppsScriptUrl = normalizeAppsScriptExecUrl(rawAppsScriptUrl.value);
   const sheetSyncEnabled = firstBoolean([
     { source: "workspace_settings.sheet_sync_enabled", value: prefs.sheet_sync_enabled },
     { source: "workspaces.sheet_sync_enabled", value: active.sheet_sync_enabled }
@@ -6033,14 +6034,14 @@ function resolveWorkspaceBackendConfig(workspace, settings) {
     sheetId: sheetId.value,
     sheet_id: sheetId.value,
     google_sheet_id: sheetId.value,
-    appsScriptUrl: appsScriptUrl.value,
-    apps_script_url: appsScriptUrl.value,
+    appsScriptUrl: normalizedAppsScriptUrl || "",
+    apps_script_url: normalizedAppsScriptUrl || "",
     sheetSyncEnabled: sheetSyncEnabled.value,
     sheet_sync_enabled: sheetSyncEnabled.value,
     sourceFields: {
       backendType: backendType.source,
       sheetId: sheetId.source,
-      appsScriptUrl: appsScriptUrl.source,
+      appsScriptUrl: rawAppsScriptUrl.source,
       sheetSyncEnabled: sheetSyncEnabled.source
     }
   };
@@ -6676,7 +6677,7 @@ async function ensureSupabaseWorkspaceBeforeBoot() {
 
   // Prefer google_sheets connection apps_script_url only when hybrid mode is selected.
   const gsConn = WORKSPACE_CONNECTIONS.find(c => c && c.provider === "google_sheets");
-  const connAppsScriptUrl = String((gsConn && gsConn.config && gsConn.config.apps_script_url) || (gsConn && gsConn.metadata && gsConn.metadata.apps_script_url) || "").trim();
+  const connAppsScriptUrl = normalizeAppsScriptExecUrl((gsConn && gsConn.config && gsConn.config.apps_script_url) || (gsConn && gsConn.metadata && gsConn.metadata.apps_script_url) || "");
   if (connAppsScriptUrl) {
     activeWorkspace.apps_script_url = connAppsScriptUrl;
     console.log("[app-router] using google_sheets connection apps_script_url");
@@ -6703,10 +6704,150 @@ async function ensureSupabaseWorkspaceBeforeBoot() {
   return activeWorkspace;
 }
 
+var LAST_VALID_APPS_SCRIPT_EXEC_URL = "";
+var LOGGED_SHEETS_URLS = new Set();
+var LOGGED_SUPABASE_MIRROR_SKIP = false;
+var SUPABASE_MISSING_TABLES = new Set();
+var SUPABASE_DISABLED_MIRRORS = new Set();
+
+function logSheetsUrlOnce(label, value) {
+  var key = label + ":" + String(value || "");
+  if (LOGGED_SHEETS_URLS.has(key)) return;
+  LOGGED_SHEETS_URLS.add(key);
+  console.log(label, value);
+}
+
+function normalizeAppsScriptExecUrl(url) {
+  var raw = String(url || "").trim();
+  if (raw) logSheetsUrlOnce("[sheets-url] raw", raw);
+  if (!raw) return null;
+  if (/script\.googleusercontent\.com\/macros\/echo/i.test(raw)) {
+    console.log("[sheets-url] rejected googleusercontent echo url", raw);
+    return LAST_VALID_APPS_SCRIPT_EXEC_URL || null;
+  }
+  raw = raw.replace(/\s+/g, "");
+  raw = raw.replace(/\/exec[A-Za-z]+(?=([?#]|$))/i, "/exec");
+  raw = raw.replace(/\/exec\/+$/i, "/exec");
+  try {
+    var parsed = new URL(raw);
+    if (parsed.hostname !== "script.google.com") return null;
+    if (!/^\/macros\/s\/[^/]+\/exec$/i.test(parsed.pathname)) return null;
+    var normalized = parsed.origin + parsed.pathname + (parsed.search && parsed.search !== "?" ? parsed.search : "");
+    LAST_VALID_APPS_SCRIPT_EXEC_URL = normalized;
+    logSheetsUrlOnce("[sheets-url] normalized", normalized);
+    return normalized;
+  } catch (_) {
+    return null;
+  }
+}
+
 function getWorkspaceApiUrl() {
   const config = WORKSPACE_RUNTIME_CONFIG.active || loadWorkspaceConfig();
   const backendConfig = resolveWorkspaceBackendConfig(config, config);
-  return String(backendConfig.appsScriptUrl || APP_CONFIG.APP_SCRIPT_URL || "").trim();
+  return normalizeAppsScriptExecUrl(backendConfig.appsScriptUrl || APP_CONFIG.APP_SCRIPT_URL || "");
+}
+
+async function callAppsScript(action, payloadOrParams = {}, method = "GET") {
+  const apiUrl = normalizeAppsScriptExecUrl(getWorkspaceApiUrl());
+  if (!apiUrl) throw new Error("Workspace setup needed: missing valid Apps Script exec URL.");
+  const verb = String(method || "GET").trim().toUpperCase() === "POST" ? "POST" : "GET";
+  const payload = withWorkspaceRequestMetadata(payloadOrParams || {});
+  let url = apiUrl;
+  const options = { method: verb, mode: "cors" };
+  if (verb === "GET") {
+    const search = new URLSearchParams({ action });
+    Object.entries(payload).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") search.set(key, String(value));
+    });
+    url = apiUrl + "?" + search.toString();
+  } else {
+    options.headers = { "Content-Type": "text/plain;charset=utf-8" };
+    options.body = JSON.stringify({ action, route: action, payload, ...payload });
+  }
+  const response = await fetch(url, options);
+  const rawText = await response.text().catch(() => "");
+  const preview = String(rawText || "").slice(0, 160);
+  if (STELLARSYNC_DEBUG) {
+    console.log("[apps-script]", {
+      action,
+      method: verb,
+      status: response.status,
+      contentType: response.headers.get("content-type") || "",
+      preview
+    });
+  }
+  if (/^\s*<!doctype/i.test(rawText) || /^\s*<html/i.test(rawText)) {
+    const err = new Error("Apps Script returned HTML instead of JSON");
+    err.action = action;
+    err.status = response.status;
+    err.responseText = preview;
+    err.backend = { ok: false, error: err.message, responseText: preview };
+    throw err;
+  }
+  let result = {};
+  try {
+    result = rawText ? JSON.parse(rawText) : {};
+  } catch (_) {
+    const err = new Error("Apps Script returned non-JSON response");
+    err.action = action;
+    err.status = response.status;
+    err.responseText = preview;
+    err.backend = { ok: false, error: err.message, responseText: preview };
+    throw err;
+  }
+  if (!response.ok || result.ok === false) {
+    const err = new Error(result.error || `Request failed: ${response.status}`);
+    err.backend = result;
+    err.action = action;
+    err.status = response.status;
+    err.responseText = preview;
+    throw err;
+  }
+  return result;
+}
+
+function isSupabaseMissingTableError(err) {
+  var status = Number(err?.status || err?.code || 0);
+  var msg = String(err?.message || err?.details || err?.hint || err || "").toLowerCase();
+  return status === 404 || msg.includes("could not find the table") || msg.includes("relation") && msg.includes("does not exist") || msg.includes("not found");
+}
+
+function isGoogleSheetsHybridSheetConnected() {
+  var backendMode = getActiveWorkspaceBackendMode();
+  if (!isGoogleSheetsFrontendMode(backendMode.mode)) return false;
+  var status = getGoogleSheetsConnectionStatus();
+  return !!(status.connected && status.sheetId && status.appsScriptUrl);
+}
+
+function shouldSkipSupabaseMirror(tableName) {
+  if (isGoogleSheetsHybridSheetConnected()) {
+    if (!LOGGED_SUPABASE_MIRROR_SKIP) {
+      LOGGED_SUPABASE_MIRROR_SKIP = true;
+      console.log("[supabase-mirror] skipped for google_sheets_hybrid");
+    }
+    return true;
+  }
+  var table = String(tableName || "").trim();
+  return !!(table && (SUPABASE_MISSING_TABLES.has(table) || SUPABASE_DISABLED_MIRRORS.has(table)));
+}
+
+function markSupabaseMirrorError(tableName, err) {
+  var table = String(tableName || "").trim();
+  if (!table) return;
+  if (isSupabaseMissingTableError(err)) {
+    if (!SUPABASE_MISSING_TABLES.has(table)) {
+      SUPABASE_MISSING_TABLES.add(table);
+      console.log("[supabase-mirror] table missing, skipping for session", { table, error: err?.message || err });
+    }
+    return;
+  }
+  if (table === "posts" && (Number(err?.status || 0) === 400 || String(err?.code || "") === "400")) {
+    if (!SUPABASE_DISABLED_MIRRORS.has(table)) {
+      SUPABASE_DISABLED_MIRRORS.add(table);
+      console.log("[supabase-mirror] posts mirror disabled for session", err?.message || err);
+      if (err?.details || err?.hint) console.log("[supabase-mirror] posts response", { details: err.details, hint: err.hint });
+    }
+  }
 }
 
 function isRunningInsideAppsScript() {
@@ -7523,6 +7664,23 @@ function getWorkspaceStorageKeyFragment() {
   ).trim().toLowerCase() || "master";
 }
 
+function hasResolvedWorkspace() {
+  var active = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active || {};
+  return !!String(active.workspace_slug || active.slug || active.workspace_id || active.id || "").trim();
+}
+
+function isGPEWorkspace(workspace = WORKSPACE_RUNTIME_CONFIG?.active || {}) {
+  var text = [
+    workspace.workspace_slug,
+    workspace.slug,
+    workspace.name,
+    workspace.workspace_name,
+    workspace.brand_name,
+    workspace.display_name
+  ].map(function(value) { return String(value || "").toLowerCase(); }).join(" ");
+  return /\bgpe\b/.test(text) || text.includes("girl plus environment") || text.includes("girl+environment") || text.includes("girl environment");
+}
+
 function getCampaignColorStorageKey() {
   return "campaignColorsByWorkspace";
 }
@@ -7590,8 +7748,18 @@ function getWorkspaceCampaignColorOverrides(state = getAppStateRef() || {}) {
 function getStableCampaignColorByName(name) {
   var normalized = normalizeLookupValue(name || "");
   if (!normalized) return "#c77dff";
-  if (GPE_STABLE_CAMPAIGN_COLORS[normalized]) return GPE_STABLE_CAMPAIGN_COLORS[normalized];
-  if (ALGORITHM_WITCH_STABLE_CAMPAIGN_COLORS[normalized]) return ALGORITHM_WITCH_STABLE_CAMPAIGN_COLORS[normalized];
+  var active = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active || {};
+  var workspaceText = [
+    active.workspace_slug,
+    active.slug,
+    active.name,
+    active.workspace_name,
+    active.brand_name,
+    active.display_name
+  ].map(function(value) { return String(value || "").toLowerCase(); }).join(" ");
+  var isAlgorithmWitch = workspaceText.includes("algorithm-witch") || workspaceText.includes("algorithm witch");
+  if (isGPEWorkspace(active) && GPE_STABLE_CAMPAIGN_COLORS[normalized]) return GPE_STABLE_CAMPAIGN_COLORS[normalized];
+  if (isAlgorithmWitch && ALGORITHM_WITCH_STABLE_CAMPAIGN_COLORS[normalized]) return ALGORITHM_WITCH_STABLE_CAMPAIGN_COLORS[normalized];
   var hash = 0;
   for (var i = 0; i < normalized.length; i++) {
     hash = ((hash << 5) - hash) + normalized.charCodeAt(i);
@@ -7605,6 +7773,8 @@ function getDirectCampaignColor(item) {
   if (!item || typeof item !== "object") return "";
   return String(
     item.color ||
+    item.accent_color ||
+    item.accentColor ||
     item.campaignColor ||
     item.campaign_color ||
     item.hexColor ||
@@ -7645,19 +7815,22 @@ function resolveCampaignColor(campaignOrName) {
     if (STELLARSYNC_DEBUG) console.log("[constellation-color]", { campaign: campaignName || String(campaignOrName || ""), source: "appState.campaigns", color: stateColor });
     return stateColor;
   }
-  var stored = getStoredCampaignColorMap();
-  if (campaignKey && stored[campaignKey]) {
-    if (STELLARSYNC_DEBUG) console.log("[constellation-color]", { campaign: campaignName || String(campaignOrName || ""), source: "localStorage", color: stored[campaignKey] });
-    return stored[campaignKey];
-  }
   var overrides = getWorkspaceCampaignColorOverrides(state);
   var overrideKey = campaignKey;
   if (overrideKey && overrides[overrideKey]) {
     if (STELLARSYNC_DEBUG) console.log("[constellation-color]", { campaign: campaignName || String(campaignOrName || ""), source: "workspace_settings", color: overrides[overrideKey] });
     return overrides[overrideKey];
   }
+  var stored = getStoredCampaignColorMap();
+  if (campaignKey && stored[campaignKey]) {
+    if (STELLARSYNC_DEBUG) console.log("[constellation-color]", { campaign: campaignName || String(campaignOrName || ""), source: "localStorage", color: stored[campaignKey] });
+    return stored[campaignKey];
+  }
   var stable = campaignName ? getStableCampaignColorByName(campaignName) : "#c77dff";
-  if (STELLARSYNC_DEBUG) console.log("[constellation-color]", { campaign: campaignName || String(campaignOrName || ""), source: (GPE_STABLE_CAMPAIGN_COLORS[overrideKey] || ALGORITHM_WITCH_STABLE_CAMPAIGN_COLORS[overrideKey]) ? "hardcoded-stable" : (campaignName ? "stable-fallback" : "default"), color: stable });
+  var active = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active || {};
+  var workspaceText = [active.workspace_slug, active.slug, active.name, active.workspace_name, active.brand_name, active.display_name].map(function(value) { return String(value || "").toLowerCase(); }).join(" ");
+  var namedFallback = (isGPEWorkspace(active) && GPE_STABLE_CAMPAIGN_COLORS[overrideKey]) || ((workspaceText.includes("algorithm-witch") || workspaceText.includes("algorithm witch")) && ALGORITHM_WITCH_STABLE_CAMPAIGN_COLORS[overrideKey]);
+  if (STELLARSYNC_DEBUG) console.log("[constellation-color]", { campaign: campaignName || String(campaignOrName || ""), source: namedFallback ? "hardcoded-stable" : (campaignName ? "stable-fallback" : "default"), color: stable });
   return stable;
 }
 
@@ -8442,10 +8615,10 @@ function resolveHybridWorkspaceSettings(sheetSettings = {}, supabaseSettings = {
     pillars: sheet.pillars.length ? sheet.pillars : (supabase.pillars.length ? supabase.pillars : defaults.pillars),
     statuses: sheet.statuses.length ? sheet.statuses : (supabase.statuses.length ? supabase.statuses : defaults.statuses),
     postTypes: sheet.postTypes.length ? sheet.postTypes : (supabase.postTypes.length ? supabase.postTypes : defaults.postTypes),
-    campaigns: sheet.campaigns.length ? sheet.campaigns : (supabase.campaigns.length ? supabase.campaigns : defaults.campaigns),
+    campaigns: sheet.campaigns.length ? sheet.campaigns : (supabase.campaigns.length ? supabase.campaigns : (hasResolvedWorkspace() ? [] : defaults.campaigns)),
     months: sheet.months.length ? sheet.months : (supabase.months.length ? supabase.months : defaults.months),
     campaignColors: {
-      ...(defaults.campaignColors || {}),
+      ...(hasResolvedWorkspace() ? {} : (defaults.campaignColors || {})),
       ...(supabase.campaignColors || {}),
       ...(sheet.campaignColors || {})
     },
@@ -12828,7 +13001,8 @@ async function runAssistantFollowup(action) {
       };
       if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
         await apiSavePost(postPayload);
-        await syncRemoteIfConfigured();
+        if (isGoogleSheetsFrontendMode(backendMode.mode)) await refreshSheetsTabsQuietly(["POSTS"]);
+        else await syncRemoteIfConfigured();
       } else {
         appState.posts.unshift(normalizeRemotePost({ ...postPayload, id: generateId("post") }, getAvailableCampaignRecords(), appState.media || []));
         persistLocalState();
@@ -13503,9 +13677,15 @@ async function saveCampaignFromModal() {
         backendResult = await saveCampaignToSupabaseFallback(normalized);
       }
       if (STELLARSYNC_DEBUG) console.log("[campaign-save] backend result", backendResult || { ok: true, skipped: true });
+      if (isGoogleSheetsFrontendMode(backendMode.mode)) {
+        await refreshSheetsTabsQuietly(["CAMPAIGNS"]);
+        upsertCampaignIntoLocalState(normalized);
+        persistLocalState();
+        rerenderAll();
+      }
     } catch (backendErr) {
       if (STELLARSYNC_DEBUG) console.log("[campaign-save] backend result", { ok: false, error: backendErr?.message || backendErr });
-      if (isGoogleSheetsFrontendMode(backendMode.mode) && STELLARSYNC_SUPABASE_CLIENT) {
+      if (backendMode.mode === "supabase_native" && STELLARSYNC_SUPABASE_CLIENT) {
         try {
           const supabaseFallback = await saveCampaignToSupabaseFallback(normalized);
           if (STELLARSYNC_DEBUG) console.log("[campaign-save] fallback result", supabaseFallback);
@@ -16730,14 +16910,14 @@ function isWorkspaceConnectionEnabled(conn) {
 
 function getGoogleSheetsConnectionSource(workspace = WORKSPACE_RUNTIME_CONFIG?.active || {}, settings = workspace) {
   const conn = getWorkspaceConnection("google_sheets");
-  const connUrl = String(conn?.config?.apps_script_url || "").trim();
+  const connUrl = normalizeAppsScriptExecUrl(conn?.config?.apps_script_url || "");
   if (connUrl) return { source: "workspace_connections.google_sheets.config.apps_script_url", url: connUrl, connection: conn };
-  const connMetaUrl = String(conn?.metadata?.apps_script_url || "").trim();
+  const connMetaUrl = normalizeAppsScriptExecUrl(conn?.metadata?.apps_script_url || "");
   if (connMetaUrl) return { source: "workspace_connections.google_sheets.metadata.apps_script_url", url: connMetaUrl, connection: conn };
   const backendConfig = resolveWorkspaceBackendConfig(workspace || {}, settings || {});
-  const workspaceUrl = String(backendConfig.appsScriptUrl || "").trim();
+  const workspaceUrl = normalizeAppsScriptExecUrl(backendConfig.appsScriptUrl || "");
   if (workspaceUrl) return { source: backendConfig.sourceFields.appsScriptUrl || "workspace backend config", url: workspaceUrl, connection: conn || null };
-  const activeUrl = String(workspace?.api_url || workspace?.backend_url || "").trim();
+  const activeUrl = normalizeAppsScriptExecUrl(workspace?.api_url || workspace?.backend_url || "");
   if (activeUrl) return { source: "active backend config", url: activeUrl, connection: conn || null };
   return { source: "none", url: "", connection: conn || null };
 }
@@ -16773,12 +16953,19 @@ function getGoogleSheetsConnectionStatus(workspace = WORKSPACE_RUNTIME_CONFIG?.a
   };
   function firstPresent(entries) {
     for (const pair of entries) {
+      const value = normalizeAppsScriptExecUrl(pair[1] ?? "") || "";
+      if (value) return { source: pair[0], value };
+    }
+    return { source: "", value: "" };
+  }
+  function firstSheetId(entries) {
+    for (const pair of entries) {
       const value = String(pair[1] ?? "").trim();
       if (value) return { source: pair[0], value };
     }
     return { source: "", value: "" };
   }
-  const sheet = firstPresent(sources.sheet_id);
+  const sheet = firstSheetId(sources.sheet_id);
   const apps = firstPresent(sources.apps_script_url);
   const disabled = sources.sheet_sync_enabled.some(function(pair) {
     return pair[1] === false || String(pair[1]).trim().toLowerCase() === "false";
@@ -16878,11 +17065,11 @@ function getWorkspaceBackendMode(workspace = {}, connections = []) {
   const backendConfig = resolveWorkspaceBackendConfig(activeWorkspace, activeWorkspace);
   const gsConn = (connections || []).find((item) => item && item.provider === "google_sheets") || null;
   const source = getGoogleSheetsConnectionSource(activeWorkspace, activeWorkspace);
-  const appsScriptUrl = String(source.url || backendConfig.appsScriptUrl || "").trim();
+  const appsScriptUrl = normalizeAppsScriptExecUrl(source.url || backendConfig.appsScriptUrl || "") || "";
   const rawPlan = String(activeWorkspace.plan || activeWorkspace.settings_plan || "").trim();
   const plan = normalizeWorkspacePlan(rawPlan);
   const backendType = String(backendConfig.backendType || "").trim().toLowerCase();
-  const connAppsScriptUrl = String(gsConn?.config?.apps_script_url || "").trim();
+  const connAppsScriptUrl = normalizeAppsScriptExecUrl(gsConn?.config?.apps_script_url || "") || "";
   let mode = "supabase_native";
   if (backendType) {
     mode = backendType;
@@ -27301,7 +27488,7 @@ async function syncRemoteIfConfigured() {
   }
 
   let postsData = Array.isArray(sheetHydration?.posts) ? sheetHydration.posts : [];
-  if (postsData.length > 0 && !postsLoadError) {
+  if (sheetHydration && typeof sheetHydration === "object" && !postsLoadError) {
     hydrateHybridSheetData(sheetHydration || {});
     appState.posts = postsData.map(function(post, index) {
       return normalizeRemotePost(post, getAvailableCampaignRecords(), appState.media || [], index);
@@ -27323,16 +27510,8 @@ async function syncRemoteIfConfigured() {
     if (loadingEl) loadingEl.classList.add("hidden");
     console.log("[boot] loading overlay hidden");
     console.log("[boot] first render complete");
-    mirrorGoogleSheetPostsToSupabase(appState.posts).then(function(count) {
-      console.log("[mirror] background posts mirrored count", count);
-    }).catch(function(err) {
-      console.log("[mirror] background posts mirror failed", err?.message || err);
-    });
-    mirrorGoogleSheetCampaignsToSupabase(appState.campaigns || []).then(function(count) {
-      console.log("[mirror-campaigns] background mirrored count", count);
-    }).catch(function(err) {
-      console.log("[mirror-campaigns] background mirror failed", err?.message || err);
-    });
+    shouldSkipSupabaseMirror("posts");
+    shouldSkipSupabaseMirror("campaigns");
   } else if (postsLoadError) {
     // Show visible error overlay with retry
     offlineMode = true;
@@ -27508,12 +27687,14 @@ async function pushSupabaseToSheets() {
     var tab = tabMap[table];
     var idField = idFieldMap[table];
     try {
+      if (SUPABASE_MISSING_TABLES.has(table) || SUPABASE_DISABLED_MIRRORS.has(table)) {
+        results[table] = { ok: false, skipped: true, reason: "supabase_table_disabled_for_session" };
+        continue;
+      }
       if (table === "media_assets") {
         var mediaRows = await loadMediaAssetMirrorRows(workspaceId);
         console.log("[sheets-sync] media assets count", mediaRows.length);
-        var mediaBody = { action: "write_tab", sheet_id: config.sheetId, tab: tab, rows: mediaRows, id_field: idField };
-        var mediaResp = await fetch(config.appsScriptUrl, { method: "POST", mode: "cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(mediaBody) });
-        var mediaData = await mediaResp.json();
+        var mediaData = await callAppsScript("write_tab", { sheet_id: config.sheetId, tab: tab, rows: mediaRows, id_field: idField }, "POST");
         console.log("[sheets-sync] media write response", mediaData);
         if (mediaData.ok) { results[table] = { ok: true, count: mediaRows.length }; totalCount += mediaRows.length; mediaAssetsPushed += mediaRows.length; }
         else { results[table] = { ok: false, error: mediaData.error || "Write failed" }; errorCount++; }
@@ -27522,9 +27703,7 @@ async function pushSupabaseToSheets() {
       if (table === "media_attachments") {
         var attachmentRows = await loadMediaAttachmentMirrorRows(workspaceId);
         console.log("[sheets-sync] media attachments count", attachmentRows.length);
-        var body = { action: "write_tab", sheet_id: config.sheetId, tab: tab, rows: attachmentRows, id_field: idField };
-        var attachmentResp = await fetch(config.appsScriptUrl, { method: "POST", mode: "cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(body) });
-        var attachmentData = await attachmentResp.json();
+        var attachmentData = await callAppsScript("write_tab", { sheet_id: config.sheetId, tab: tab, rows: attachmentRows, id_field: idField }, "POST");
         console.log("[sheets-sync] attachments write response", attachmentData);
         if (attachmentData.ok) { results[table] = { ok: true, count: attachmentRows.length }; totalCount += attachmentRows.length; mediaAttachmentsPushed += attachmentRows.length; }
         else { results[table] = { ok: false, error: attachmentData.error || "Write failed" }; errorCount++; }
@@ -27532,7 +27711,12 @@ async function pushSupabaseToSheets() {
       }
       var query = STELLARSYNC_SUPABASE_CLIENT.from(table).select("*").eq("workspace_id", workspaceId);
       var { data, error } = await query;
-      if (error) { results[table] = { ok: false, error: error.message }; errorCount++; continue; }
+      if (error) {
+        markSupabaseMirrorError(table, error);
+        results[table] = { ok: false, error: error.message };
+        errorCount++;
+        continue;
+      }
       if (!Array.isArray(data)) { results[table] = { ok: false, error: "No data returned" }; errorCount++; continue; }
       var rows = data.map(function(row) {
         var r = {};
@@ -27544,9 +27728,7 @@ async function pushSupabaseToSheets() {
         r.synced_at = new Date().toISOString();
         return r;
       });
-      var body = { action: "write_tab", sheet_id: config.sheetId, tab: tab, rows: rows, id_field: idField };
-      var resp = await fetch(config.appsScriptUrl, { method: "POST", mode: "cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(body) });
-      var respData = await resp.json();
+      var respData = await callAppsScript("write_tab", { sheet_id: config.sheetId, tab: tab, rows: rows, id_field: idField }, "POST");
       if (respData.ok) { results[table] = { ok: true, count: rows.length }; totalCount += rows.length; }
       else { results[table] = { ok: false, error: respData.error || "Write failed" }; errorCount++; }
     } catch (err) {
@@ -27570,6 +27752,25 @@ async function pullSheetsToSupabase() {
   if (!config.sheetId || !config.appsScriptUrl) {
     showToast("Sheet mirror not configured", "No Google Sheet ID or Apps Script URL.", "ph-warning", "text-yellow-400");
     return null;
+  }
+  if (isGoogleSheetsHybridSheetConnected()) {
+    var tabsToPull = ["POSTS","CAMPAIGNS","NOTES","INSPO","AI_DRAFTS","MEDIA","SETTINGS","BRAND_FRAMEWORK"];
+    var sheetData = await loadSheetsWorkspaceDataForHybrid(tabsToPull);
+    if (sheetData && typeof sheetData === "object") {
+      hydrateHybridSheetData(sheetData, { preserveCampaignRegistry: !Array.isArray(sheetData.campaigns) });
+      if (Array.isArray(sheetData.posts)) appState.posts = sheetData.posts.map((post, index) => normalizeRemotePost(post, getAvailableCampaignRecords(), appState.media || [], index));
+      if (Array.isArray(sheetData.notes)) appState.notes = filterRenderableArtifacts(sheetData.notes.map(function(item) { return normalizeRemoteNote(item); }), "note");
+      if (Array.isArray(sheetData.inspo)) appState.inspo = filterRenderableArtifacts(sheetData.inspo.map(function(item) { return normalizeRemoteInspo(item); }), "inspo");
+      if (Array.isArray(sheetData.aiDrafts)) appState.aiDrafts = filterRenderableArtifacts(sheetData.aiDrafts.map(function(item) { return normalizeRemoteAIDraft(item); }), "aiDraft");
+      if (Array.isArray(sheetData.brandFramework)) appState.brandFramework = sheetData.brandFramework.map(function(item) { return normalizeRemoteBrandFrameworkItem(item); });
+      if (Array.isArray(sheetData.media)) appState.media = filterRenderableArtifacts(sheetData.media.map(function(item) { return normalizeRemoteMedia(item); }), "media");
+      persistLocalState();
+      rerenderAll();
+      updateSheetMirrorTimestamps({ sheet_last_pulled_at: new Date().toISOString() });
+      console.log("[sheet-mirror] pull complete", { source: "google_sheets_hybrid", counts: getAppStateCounts() });
+      showToast("Sheet pull complete", "Google Sheets data loaded into this workspace.", "ph-check", "text-[#00ffaa]");
+      return { ok: true, source: "google_sheets_hybrid", counts: getAppStateCounts() };
+    }
   }
   var meta = getWorkspaceRequestMetadata();
   var workspaceId = meta.workspace_id || "";
@@ -27595,6 +27796,10 @@ async function pullSheetsToSupabase() {
     var tab = tables[t];
     var supabaseTable = tableMap[tab];
     try {
+      if (SUPABASE_MISSING_TABLES.has(supabaseTable) || SUPABASE_DISABLED_MIRRORS.has(supabaseTable)) {
+        results[tab] = { ok: false, skipped: true, reason: "supabase_table_disabled_for_session" };
+        continue;
+      }
       var pulledRows = pullData ? extractSheetRowsFromPullResult(pullData, tab) : null;
       if (tab === "MEDIA_ATTACHMENTS") {
         var attachmentRows = Array.isArray(pulledRows) ? pulledRows : [];
@@ -27635,7 +27840,9 @@ async function pullSheetsToSupabase() {
           if (upsertError) throw upsertError;
           inserted++;
         } catch (err) {
+          markSupabaseMirrorError(supabaseTable, err);
           errorCount++;
+          if (SUPABASE_MISSING_TABLES.has(supabaseTable) || SUPABASE_DISABLED_MIRRORS.has(supabaseTable)) break;
         }
       }
       results[tab] = { ok: true, inserted: inserted, skipped: skipped };
@@ -27662,17 +27869,7 @@ async function readSheetTabFromAppsScript(config, tab) {
   if (!config || !config.appsScriptUrl || !config.sheetId) {
     throw new Error("Sheet mirror not configured");
   }
-  var resp = await fetch(config.appsScriptUrl, {
-    method: "POST",
-    mode: "cors",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify({ action: "read_tab", sheet_id: config.sheetId, tab: tab })
-  });
-  var data = await resp.json();
-  if (!resp.ok) {
-    throw new Error((data && data.error) || ("Request failed: " + resp.status));
-  }
-  return data;
+  return callAppsScript("read_tab", { sheet_id: config.sheetId, tab: tab }, "POST");
 }
 
 async function pullWorkspaceTabsFromAppsScript(config, tabs = []) {
@@ -27680,18 +27877,7 @@ async function pullWorkspaceTabsFromAppsScript(config, tabs = []) {
     throw new Error("Sheet mirror not configured");
   }
   var requestedTabs = Array.isArray(tabs) ? tabs.map(function(tab) { return String(tab || "").trim().toUpperCase(); }).filter(Boolean) : [];
-  var payload = { action: "pull_workspace_tabs", sheet_id: config.sheetId, tabs: requestedTabs };
-  var resp = await fetch(config.appsScriptUrl, {
-    method: "POST",
-    mode: "cors",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify(payload)
-  });
-  var data = await resp.json();
-  if (!resp.ok || !data || data.ok !== true) {
-    throw new Error((data && data.error) || ("Request failed: " + resp.status));
-  }
-  return data;
+  return callAppsScript("pull_workspace_tabs", { sheet_id: config.sheetId, tabs: requestedTabs }, "POST");
 }
 
 function updateSheetMirrorTimestamps(updates) {
@@ -28070,24 +28256,7 @@ async function loadSheetsPostsForHybrid() {
   // Try 2: Direct getPosts via GET with 60s timeout
   try {
     console.log("[posts] direct fallback request started");
-    const meta = getWorkspaceRequestMetadata();
-    const params = new URLSearchParams({ action: "getPosts" });
-    Object.entries(meta).forEach(function(entry) {
-      var key = entry[0], value = entry[1];
-      if (value !== undefined && value !== null && value !== "") params.set(key, String(value));
-    });
-    const url = apiUrl + "?" + params.toString();
-    var response = await fetchWithTimeout(url, { method: "GET", mode: "cors" }, 60000);
-    if (!response.ok) throw new Error("Google Sheets request failed: " + response.status);
-    var text = null;
-    try { text = await response.text(); } catch (_) { text = null; }
-    if (text === null || text === "") throw new Error("Google Sheets returned empty response");
-    var result = null;
-    try { result = JSON.parse(text); } catch (_) {
-      console.log("[posts] direct fallback raw text", text.slice(0, 500));
-      throw new Error("Google Sheets returned non-JSON response");
-    }
-    if (!result.ok) throw new Error(result.error || "Unknown Apps Script error");
+    var result = await apiGet("getPosts");
     console.log("[posts] direct fallback result keys", Object.keys(result));
     const rawPosts = extractPostsFromGetPostsResult(result);
     const filteredPosts = filterBlankPostsForRender(rawPosts);
@@ -28101,6 +28270,44 @@ async function loadSheetsPostsForHybrid() {
   }
 }
 
+async function fetchSheetsTabsIndividually(tabs = []) {
+  var requested = Array.isArray(tabs) ? tabs.map(function(tab) { return String(tab || "").trim().toUpperCase(); }).filter(Boolean) : [];
+  var actionMap = {
+    POSTS: "getPosts",
+    CAMPAIGNS: "getCampaigns",
+    NOTES: "getNotes",
+    INSPO: "getInspo",
+    AI_DRAFTS: "getAIDrafts",
+    MEDIA: "getMedia",
+    SETTINGS: "getSettings",
+    BRAND_FRAMEWORK: "getBrandFramework"
+  };
+  var results = {};
+  for (var i = 0; i < requested.length; i++) {
+    var tab = requested[i];
+    var action = actionMap[tab];
+    if (!action) continue;
+    try {
+      if (STELLARSYNC_DEBUG) console.log("[sheets-pull] action", action);
+      var result = await apiGet(action);
+      if (tab === "POSTS") results.posts = filterBlankPostsForRender(extractPostsFromGetPostsResult(result));
+      else if (tab === "CAMPAIGNS") results.campaigns = result.items || result.campaigns || result.data || [];
+      else if (tab === "NOTES") results.notes = result.items || result.notes || result.data || [];
+      else if (tab === "INSPO") results.inspo = result.items || result.inspo || result.data || [];
+      else if (tab === "AI_DRAFTS") results.aiDrafts = result.items || result.aiDrafts || result.data || [];
+      else if (tab === "MEDIA") results.media = result.items || result.media || result.data || [];
+      else if (tab === "SETTINGS") {
+        results.settings = result.settings || result.data || result.items || {};
+        results.workspace_settings = results.settings;
+      } else if (tab === "BRAND_FRAMEWORK") results.brandFramework = result.items || result.data || [];
+    } catch (err) {
+      console.log("[sheets-pull] preserved local because pull failed", { tab, action, error: err?.message || err });
+      results[tab.toLowerCase()] = null;
+    }
+  }
+  return results;
+}
+
 async function loadSheetsWorkspaceDataForHybrid(requestedTabs) {
   var config = getSheetMirrorConfig();
   var tabs = Array.isArray(requestedTabs) && requestedTabs.length ? requestedTabs : ["POSTS", "CAMPAIGNS", "MEDIA", "NOTES", "INSPO", "AI_DRAFTS", "SETTINGS", "BRAND_FRAMEWORK"];
@@ -28109,9 +28316,11 @@ async function loadSheetsWorkspaceDataForHybrid(requestedTabs) {
     throw new Error("Google Sheets backend is not configured. Set apps_script_url in workspace settings.");
   }
 
+  console.log("[sheets-pull] start", { tabs });
   console.log("[posts] boot using manual pull action");
   try {
     var pullPayload = { action: "pull_workspace_tabs", sheet_id: config.sheetId, tabs: tabs };
+    if (STELLARSYNC_DEBUG) console.log("[sheets-pull] action", "pull_workspace_tabs");
     console.log("[posts] boot pull payload", pullPayload);
     result = await pullWorkspaceTabsFromAppsScript(config, tabs);
     console.log("[posts] boot pull result keys", Object.keys(result || {}));
@@ -28142,93 +28351,126 @@ async function loadSheetsWorkspaceDataForHybrid(requestedTabs) {
       pillars: resolvedPillars,
       default_pillars: clonePillarDefinitions(resolvedPillars)
     };
+    console.log("[sheets-pull] tab result counts", {
+      posts: payload.posts.length,
+      campaigns: payload.campaigns.length,
+      notes: payload.notes.length,
+      inspo: payload.inspo.length,
+      aiDrafts: payload.aiDrafts.length,
+      media: payload.media.length,
+      brandFramework: payload.brandFramework.length
+    });
     if (!tabs.includes("POSTS") || primaryPosts.length > 0) return payload;
   } catch (err) {
     console.log("[posts] boot pull failed", err && err.message ? err.message : String(err));
+    console.log("[sheets-pull] preserved local because pull failed", { action: "pull_workspace_tabs", error: err?.message || err });
   }
 
+  var individual = await fetchSheetsTabsIndividually(tabs);
   if (!tabs.includes("POSTS")) {
     return {
-      tabsReturned: [],
-      posts: [],
-      campaigns: [],
-      media: [],
-      notes: [],
-      inspo: [],
-      aiDrafts: [],
-      settings: {},
-      workspace_settings: {},
-      brand_os: {},
-      brand: {},
-      brandFramework: []
+      tabsReturned: Object.keys(individual),
+      posts: null,
+      campaigns: individual.campaigns ?? null,
+      media: individual.media ?? null,
+      notes: individual.notes ?? null,
+      inspo: individual.inspo ?? null,
+      aiDrafts: individual.aiDrafts ?? null,
+      settings: individual.settings ?? null,
+      workspace_settings: individual.workspace_settings ?? null,
+      brand_os: individual.settings ?? null,
+      brand: individual.settings ?? null,
+      brandFramework: individual.brandFramework ?? null
     };
   }
 
-  var fallbackPosts = await loadSheetsPostsForHybrid();
+  var fallbackPosts = Array.isArray(individual.posts) ? individual.posts : await loadSheetsPostsForHybrid();
   return {
     tabsReturned: ["POSTS"],
     posts: fallbackPosts,
-    campaigns: [],
-    media: [],
-    notes: [],
-    inspo: [],
-    aiDrafts: [],
-    settings: {},
-    workspace_settings: {},
-    brand_os: {},
-    brand: {},
-    brandFramework: []
+    campaigns: individual.campaigns ?? null,
+    media: individual.media ?? null,
+    notes: individual.notes ?? null,
+    inspo: individual.inspo ?? null,
+    aiDrafts: individual.aiDrafts ?? null,
+    settings: individual.settings ?? null,
+    workspace_settings: individual.workspace_settings ?? null,
+    brand_os: individual.settings ?? null,
+    brand: individual.settings ?? null,
+    brandFramework: individual.brandFramework ?? null
   };
 }
 
-async function apiGet(action, params = {}) {
-  const apiUrl = getWorkspaceApiUrl();
-  if (!apiUrl) throw new Error("Workspace setup needed: missing Apps Script backend URL.");
-  const search = new URLSearchParams({ action });
-  Object.entries(withWorkspaceRequestMetadata(params || {})).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== "") search.set(key, String(value));
-  });
-  const response = await fetch(`${apiUrl}?${search.toString()}`, {
-    method: "GET",
-    mode: "cors"
-  });
+async function refreshSheetsTabsQuietly(tabs = []) {
+  var backendMode = getActiveWorkspaceBackendMode();
+  if (!isGoogleSheetsFrontendMode(backendMode.mode) || !isRemoteConfigured()) return null;
+  var requested = Array.isArray(tabs) ? tabs.map(function(tab) { return String(tab || "").trim().toUpperCase(); }).filter(Boolean) : [];
+  if (!requested.length) return null;
+  try {
+    var sheetData = await loadSheetsWorkspaceDataForHybrid(requested);
+    if (!sheetData || typeof sheetData !== "object") return null;
+    if (requested.includes("CAMPAIGNS") && Array.isArray(sheetData.campaigns)) {
+      if (shouldSkipEmptyOverwrite(appState.campaigns, sheetData.campaigns)) {
+        console.log("[sheets-pull] preserved local because pull failed", { tabs: ["CAMPAIGNS"], reason: "empty quiet campaign refresh" });
+      } else {
+        hydrateHybridSheetData({ campaigns: sheetData.campaigns, settings: sheetData.settings || null }, { preserveCampaignRegistry: false });
+      }
+    }
+    if (requested.includes("POSTS") && Array.isArray(sheetData.posts)) {
+      var refreshedPosts = sheetData.posts.map(function(post, index) {
+        return normalizeRemotePost(post, getAvailableCampaignRecords(), appState.media || [], index);
+      });
+      if (shouldSkipEmptyOverwrite(appState.posts, refreshedPosts)) {
+        console.log("[sheets-pull] preserved local because pull failed", { tabs: ["POSTS"], reason: "empty quiet post refresh" });
+      } else {
+        appState.posts = refreshedPosts;
+      }
+    }
+    if (requested.includes("NOTES") && Array.isArray(sheetData.notes)) appState.notes = filterRenderableArtifacts(sheetData.notes.map(function(item) { return normalizeRemoteNote(item); }), "note");
+    if (requested.includes("INSPO") && Array.isArray(sheetData.inspo)) appState.inspo = filterRenderableArtifacts(sheetData.inspo.map(function(item) { return normalizeRemoteInspo(item); }), "inspo");
+    if (requested.includes("AI_DRAFTS") && Array.isArray(sheetData.aiDrafts)) appState.aiDrafts = filterRenderableArtifacts(sheetData.aiDrafts.map(function(item) { return normalizeRemoteAIDraft(item); }), "aiDraft");
+    if (requested.includes("MEDIA") && Array.isArray(sheetData.media)) appState.media = filterRenderableArtifacts(sheetData.media.map(function(item) { return normalizeRemoteMedia(item); }), "media");
+    if (requested.includes("SETTINGS") || requested.includes("BRAND_FRAMEWORK")) {
+      hydrateHybridSheetData(sheetData, { preserveCampaignRegistry: !Array.isArray(sheetData.campaigns) });
+    }
+    persistLocalState();
+    rerenderAll();
+    return sheetData;
+  } catch (err) {
+    console.log("[sheets-pull] preserved local because pull failed", { tabs: requested, error: err?.message || err });
+    return null;
+  }
+}
 
-  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
-  const result = await response.json();
+var SHEET_AUTO_PULL_INTERVAL_ID = null;
+var SHEET_AUTO_PULL_IN_FLIGHT = false;
+
+function startSheetAutoPullLoop() {
+  if (SHEET_AUTO_PULL_INTERVAL_ID) return;
+  SHEET_AUTO_PULL_INTERVAL_ID = setInterval(function() {
+    if (SHEET_AUTO_PULL_IN_FLIGHT) return;
+    var backendMode = getActiveWorkspaceBackendMode();
+    if (!isGoogleSheetsFrontendMode(backendMode.mode) || !isRemoteConfigured()) return;
+    if (typeof document !== "undefined" && document.hidden) return;
+    SHEET_AUTO_PULL_IN_FLIGHT = true;
+    refreshSheetsTabsQuietly(["POSTS", "CAMPAIGNS", "NOTES", "INSPO", "AI_DRAFTS", "SETTINGS", "BRAND_FRAMEWORK"])
+      .catch(function(err) {
+        if (STELLARSYNC_DEBUG) console.log("[sheets-pull] background pull skipped", err?.message || err);
+      })
+      .finally(function() {
+        SHEET_AUTO_PULL_IN_FLIGHT = false;
+      });
+  }, 5 * 60 * 1000);
+}
+
+async function apiGet(action, params = {}) {
+  const result = await callAppsScript(action, params || {}, "GET");
   if (!result.ok) throw new Error(result.error || "Unknown Apps Script error");
   return result;
 }
 
 async function apiPost(action, payload = {}) {
-  const apiUrl = getWorkspaceApiUrl();
-  if (!apiUrl) throw new Error("Workspace setup needed: missing Apps Script backend URL.");
-  const requestBody = { action, route: action, payload: withWorkspaceRequestMetadata(payload || {}) };
-  const response = await fetch(apiUrl, {
-    method: "POST",
-    mode: "cors",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify(requestBody)
-  });
-
-  const rawText = await response.text();
-  let result = {};
-  try {
-    result = rawText ? JSON.parse(rawText) : {};
-  } catch (parseErr) {
-    const err = new Error("Backend returned non-JSON response");
-    err.action = action;
-    err.status = response.status;
-    err.responseText = rawText.slice(0, 1000);
-    err.backend = { ok: false, error: err.message, responseText: err.responseText };
-    throw err;
-  }
-  if (!response.ok) {
-    const err = new Error(result.error || `Request failed: ${response.status}`);
-    err.backend = result;
-    err.action = action;
-    err.status = response.status;
-    throw err;
-  }
+  const result = await callAppsScript(action, payload || {}, "POST");
   if (!result.ok) {
     const err = new Error(result.error || "Unknown Apps Script error");
     err.backend = result;
@@ -28400,6 +28642,7 @@ function normalizeSupabasePostRecord(row = {}) {
 
 async function apiGetSupabasePosts() {
   if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase is not configured.");
+  if (SUPABASE_DISABLED_MIRRORS.has("posts") || SUPABASE_MISSING_TABLES.has("posts")) return [];
   const meta = getWorkspaceRequestMetadata();
   const workspaceId = meta.workspace_id || "";
   if (!workspaceId) throw new Error("Workspace ID is missing for Supabase posts.");
@@ -28408,12 +28651,17 @@ async function apiGetSupabasePosts() {
     .select("*")
     .eq("workspace_id", workspaceId)
     .order("updated_at", { ascending: false });
-  if (result.error) throw result.error;
+  if (result.error) {
+    markSupabaseMirrorError("posts", result.error);
+    if (SUPABASE_DISABLED_MIRRORS.has("posts") || SUPABASE_MISSING_TABLES.has("posts")) return [];
+    throw result.error;
+  }
   return (Array.isArray(result.data) ? result.data : []).map(normalizeSupabasePostRecord);
 }
 
 async function apiSavePostToSupabase(payload = {}) {
   if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase is not configured.");
+  if (SUPABASE_DISABLED_MIRRORS.has("posts") || SUPABASE_MISSING_TABLES.has("posts")) throw new Error("Supabase posts persistence disabled for this session.");
   const row = buildSupabasePostRow(payload);
   const workspaceId = row.workspace_id;
   if (!workspaceId) throw new Error("Workspace ID is missing for Supabase save.");
@@ -28424,13 +28672,18 @@ async function apiSavePostToSupabase(payload = {}) {
     .select("*")
     .maybeSingle();
   if (upsertResult.error) {
+    markSupabaseMirrorError("posts", upsertResult.error);
+    if (SUPABASE_DISABLED_MIRRORS.has("posts") || SUPABASE_MISSING_TABLES.has("posts")) throw upsertResult.error;
     const existing = await STELLARSYNC_SUPABASE_CLIENT
       .from("posts")
       .select("id")
       .eq("workspace_id", workspaceId)
       .eq("post_id", row.post_id)
       .maybeSingle();
-    if (existing.error && existing.error.code !== "PGRST116") throw upsertResult.error;
+    if (existing.error && existing.error.code !== "PGRST116") {
+      markSupabaseMirrorError("posts", existing.error);
+      throw upsertResult.error;
+    }
     if (existing.data && existing.data.id) {
       const updateResult = await STELLARSYNC_SUPABASE_CLIENT
         .from("posts")
@@ -28438,7 +28691,10 @@ async function apiSavePostToSupabase(payload = {}) {
         .eq("id", existing.data.id)
         .select("*")
         .maybeSingle();
-      if (updateResult.error) throw updateResult.error;
+      if (updateResult.error) {
+        markSupabaseMirrorError("posts", updateResult.error);
+        throw updateResult.error;
+      }
       saved = updateResult.data;
     } else {
       const insertResult = await STELLARSYNC_SUPABASE_CLIENT
@@ -28446,7 +28702,10 @@ async function apiSavePostToSupabase(payload = {}) {
         .insert(row)
         .select("*")
         .maybeSingle();
-      if (insertResult.error) throw insertResult.error;
+      if (insertResult.error) {
+        markSupabaseMirrorError("posts", insertResult.error);
+        throw insertResult.error;
+      }
       saved = insertResult.data;
     }
   } else {
@@ -28465,6 +28724,7 @@ async function apiSavePostToSupabase(payload = {}) {
 
 async function loadSupabaseNotes(workspaceId) {
   if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase is not configured.");
+  if (SUPABASE_MISSING_TABLES.has("notes")) return [];
   var wid = String(workspaceId || getWorkspaceRequestMetadata().workspace_id || "").trim();
   if (!wid) throw new Error("Workspace ID is missing for Supabase notes.");
   var result = await STELLARSYNC_SUPABASE_CLIENT
@@ -28472,12 +28732,17 @@ async function loadSupabaseNotes(workspaceId) {
     .select("*")
     .eq("workspace_id", wid)
     .order("updated_at", { ascending: false });
-  if (result.error) throw result.error;
+  if (result.error) {
+    markSupabaseMirrorError("notes", result.error);
+    if (SUPABASE_MISSING_TABLES.has("notes")) return [];
+    throw result.error;
+  }
   return Array.isArray(result.data) ? result.data : [];
 }
 
 async function loadSupabaseInspo(workspaceId) {
   if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase is not configured.");
+  if (SUPABASE_MISSING_TABLES.has("inspo")) return [];
   var wid = String(workspaceId || getWorkspaceRequestMetadata().workspace_id || "").trim();
   if (!wid) throw new Error("Workspace ID is missing for Supabase inspo.");
   var result = await STELLARSYNC_SUPABASE_CLIENT
@@ -28485,12 +28750,17 @@ async function loadSupabaseInspo(workspaceId) {
     .select("*")
     .eq("workspace_id", wid)
     .order("updated_at", { ascending: false });
-  if (result.error) throw result.error;
+  if (result.error) {
+    markSupabaseMirrorError("inspo", result.error);
+    if (SUPABASE_MISSING_TABLES.has("inspo")) return [];
+    throw result.error;
+  }
   return Array.isArray(result.data) ? result.data : [];
 }
 
 async function loadSupabaseAIDrafts(workspaceId) {
   if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase is not configured.");
+  if (SUPABASE_MISSING_TABLES.has("ai_drafts")) return [];
   var wid = String(workspaceId || getWorkspaceRequestMetadata().workspace_id || "").trim();
   if (!wid) throw new Error("Workspace ID is missing for Supabase AI drafts.");
   var result = await STELLARSYNC_SUPABASE_CLIENT
@@ -28498,7 +28768,11 @@ async function loadSupabaseAIDrafts(workspaceId) {
     .select("*")
     .eq("workspace_id", wid)
     .order("updated_at", { ascending: false });
-  if (result.error) throw result.error;
+  if (result.error) {
+    markSupabaseMirrorError("ai_drafts", result.error);
+    if (SUPABASE_MISSING_TABLES.has("ai_drafts")) return [];
+    throw result.error;
+  }
   return Array.isArray(result.data) ? result.data : [];
 }
 
@@ -29075,6 +29349,7 @@ function filterPostRowToKnownColumns(row, columnNames) {
 
 async function mirrorGoogleSheetPostsToSupabase(posts = []) {
   console.log("[mirror] start");
+  if (shouldSkipSupabaseMirror("posts")) return 0;
   const backendMode = getActiveWorkspaceBackendMode();
   if (backendMode.mode === "supabase_native") {
     console.log("[mirror] skip — supabase_native mode");
@@ -29162,6 +29437,7 @@ async function mirrorGoogleSheetPostsToSupabase(posts = []) {
     console.log("[mirror] upsert success count", rows.length);
     return rows.length;
   } catch (err) {
+    markSupabaseMirrorError("posts", err);
     console.log("[mirror] upsert error", err && err.message ? err.message : String(err));
     if (err && err.details) console.log("[mirror] error details", err.details);
     if (err && err.hint) console.log("[mirror] error hint", err.hint);
@@ -29172,6 +29448,7 @@ async function mirrorGoogleSheetPostsToSupabase(posts = []) {
 
 async function mirrorGoogleSheetCampaignsToSupabase(campaigns = []) {
   console.log("[mirror-campaigns] start");
+  if (shouldSkipSupabaseMirror("campaigns")) return 0;
   const backendMode = getActiveWorkspaceBackendMode();
   if (backendMode.mode === "supabase_native") {
     console.log("[mirror-campaigns] skip — supabase_native mode");
@@ -29222,6 +29499,7 @@ async function mirrorGoogleSheetCampaignsToSupabase(campaigns = []) {
     console.log("[mirror-campaigns] upsert success count", rows.length);
     return rows.length;
   } catch (err) {
+    markSupabaseMirrorError("campaigns", err);
     console.log("[mirror-campaigns] upsert error", err?.message || err);
     if (err && err.details) console.log("[mirror-campaigns] error details", err.details);
     if (err && err.hint) console.log("[mirror-campaigns] error hint", err.hint);
@@ -29266,11 +29544,7 @@ async function apiGetPosts() {
     MISSING_POST_ID_COUNT = Number(result.missing_post_id_count || result.missingPostIdCount || result.diagnostics?.missingPostIdCount || 0);
     const posts = extractPostsFromGetPostsResult(result);
     const filteredPosts = filterBlankPostsForRender(posts);
-    mirrorGoogleSheetPostsToSupabase(filteredPosts).then(function(count) {
-      console.log("[save] sheets save ok", count);
-    }).catch(function(err) {
-      console.log("[save] supabase mirror failed nonfatal", err?.message || err);
-    });
+    shouldSkipSupabaseMirror("posts");
     console.log("[data] posts count", Array.isArray(filteredPosts) ? filteredPosts.length : 0);
     GOOGLE_SHEETS_CONNECTION_STATUS = {
       source: getGoogleSheetsConnectionSource().source,
@@ -31919,7 +32193,7 @@ function normalizeRemoteCampaign(campaign) {
   const pillar = getCanonicalPillarValue(pickRemoteValue(campaign?.pillar, campaign?.hubPillarLabel, campaign?.hub_pillar_label, ""), "");
   const state = getAppStateRef() || {};
   const canonicalCampaignName = resolveCanonicalCampaignName(pickRemoteValue(campaign?.campaignName, campaign?.campaign_name, campaign?.name, campaign?.title, ""), state?.campaigns || []);
-  const directColor = String(pickRemoteValue(campaign?.color, campaign?.campaignColor, campaign?.campaign_color, campaign?.hexColor, campaign?.hex_color, campaign?.colour, "")).trim();
+  const directColor = String(pickRemoteValue(campaign?.color, campaign?.accent_color, campaign?.accentColor, campaign?.campaignColor, campaign?.campaign_color, campaign?.hexColor, campaign?.hex_color, campaign?.colour, "")).trim();
   const resolvedColor = directColor || resolveCampaignColor({
     campaignId: pickRemoteValue(campaign?.campaignId, campaign?.campaign_id, campaign?.campaignID, campaign?.id, ""),
     campaignName: canonicalCampaignName || pickRemoteValue(campaign?.campaignName, campaign?.campaign_name, campaign?.name, campaign?.title, "")
@@ -31932,6 +32206,8 @@ function normalizeRemoteCampaign(campaign) {
     name: String(canonicalCampaignName || pickRemoteValue(campaign?.name, campaign?.campaignName, campaign?.campaign_name, campaign?.title, "")).trim(),
     pillar,
     color: resolvedColor,
+    accent_color: resolvedColor,
+    accentColor: resolvedColor,
     campaignColor: resolvedColor,
     campaign_color: resolvedColor,
     hex_color: resolvedColor,
@@ -32309,6 +32585,18 @@ async function apiSaveCampaign(campaign) {
   return apiPost("saveCampaign", campaign);
 }
 
+async function apiSaveWorkspaceSettingsToSheets(payload) {
+  try {
+    return await apiPost("saveWorkspaceSettings", payload);
+  } catch (err) {
+    var message = String(err?.message || err || "").toLowerCase();
+    if (message.includes("unsupported") || message.includes("unknown") || message.includes("not found") || message.includes("no route")) {
+      return apiPost("saveSettings", payload);
+    }
+    throw err;
+  }
+}
+
 async function apiUpdateCampaignColor(payload) {
   return apiPost("updateCampaignColor", payload);
 }
@@ -32601,8 +32889,11 @@ async function syncSelectedMediaForSavedPost(savedPostId) {
 function getMondaySyncConfig() {
   var active = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active || {};
   var boardId = getMondayBoardId(active, WORKSPACE_CONNECTIONS || []);
+  var explicitPullEnabled = active.monday_pull_enabled === true || String(active.monday_pull_enabled || "").trim().toLowerCase() === "true";
+  var autoPullEnabled = Boolean(active.monday_sync_enabled) && (isGPEWorkspace(active) || explicitPullEnabled);
   return {
     enabled: Boolean(active.monday_sync_enabled),
+    autoPullEnabled,
     autoSyncOnSave: active.monday_auto_sync_on_save !== undefined ? Boolean(active.monday_auto_sync_on_save) : true,
     direction: String(active.monday_sync_direction || "bidirectional").trim() || "bidirectional",
     boardId: boardId,
@@ -32710,6 +33001,10 @@ async function autoSyncPostToMonday(post, options = {}) {
 async function maybeAutoPullMondayUpdatesForWorkspace(options = {}) {
   const config = getMondaySyncConfig();
   const force = Boolean(options.force);
+  if (!force && !config.autoPullEnabled) {
+    console.log("[monday-auto-sync] skipped reason", "auto pull disabled for workspace");
+    return { ok: false, skipped: true, reason: "auto_pull_disabled_for_workspace" };
+  }
   if (!config.enabled || !config.boardId) {
     console.log("[monday-auto-sync] skipped reason", "disabled or missing board");
     return { ok: false, skipped: true, reason: "disabled_or_missing_board" };
@@ -34363,6 +34658,7 @@ function initApp() {
       }
     });
   }
+  guardedCall(startSheetAutoPullLoop, "startSheetAutoPullLoop");
   if (typeof loadAIProviders === "function") {
     loadAIProviders().catch(function(err) {
       reportFrontendError("initApp/loadAIProviders", err);
@@ -34902,6 +35198,16 @@ async function savePWWorkspace() {
         constellation_shape: payload.constellation_shape || activeWorkspace.constellation_shape || "star",
         brand_voice: payload.brand_voice || activeWorkspace.brand_voice || ""
       }, { persist: true, render: false });
+      var backendMode = getActiveWorkspaceBackendMode();
+      if (isGoogleSheetsFrontendMode(backendMode.mode) && isRemoteConfigured()) {
+        try {
+          var sheetWorkspaceResult = await apiSaveWorkspaceSettingsToSheets({ ...payload, ...settingsPayload, workspace_id: workspaceId, workspace_slug: slug });
+          if (STELLARSYNC_DEBUG) console.log("[workspace-save] sheets result", sheetWorkspaceResult || { ok: true });
+          await refreshSheetsTabsQuietly(["SETTINGS", "BRAND_FRAMEWORK"]);
+        } catch (sheetErr) {
+          if (STELLARSYNC_DEBUG) console.log("[workspace-save] sheets route skipped", sheetErr?.message || sheetErr);
+        }
+      }
     }
     if (statusEl) { statusEl.textContent = "Workspace saved."; statusEl.className = "text-xs text-emerald-400"; statusEl.classList.remove("hidden"); }
     renderWorkspaceBranding();
