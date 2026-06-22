@@ -13876,12 +13876,16 @@ function buildConstellationRows() {
       reason: resolution.reason
     });
     if (!resolution.keep) {
-      console.log("[constellation-campaign] skipped empty campaign", {
-        source: "registry",
-        campaignId: String(campaign?.campaignId || "").trim(),
-        campaignName: candidateName,
-        reason: resolution.reason
-      });
+      if (resolution.reason === "fragment") {
+        const parentName = typeof resolution.canonicalName === "string" && resolution.canonicalName ? resolution.canonicalName : "";
+        if (STELLARSYNC_DEBUG) {
+          console.log("[constellation-campaign] dropped registry fragment", {
+            fragmentName: candidateName,
+            parentCanonicalCampaign: parentName,
+            reason: "comma-fragment of canonical campaign"
+          });
+        }
+      }
       return;
     }
     ensureRow({ ...campaign, campaignName: resolution.canonicalName || candidateName }, "registry");
@@ -14100,29 +14104,16 @@ function resolveConstellationCampaignCandidate(rawCampaignName = "", canonicalNa
   if (/[|\n]/.test(raw)) {
     return { keep: true, raw, canonicalName: raw, reason: "explicit-delimiter" };
   }
-  const exactMatch = canonicalList.find((name) => normalizeLookupValue(name) === rawLookup) || "";
-  if (exactMatch) return { keep: true, raw, canonicalName: exactMatch, reason: "exact" };
-  const sourceKeys = new Set(
-    (Array.isArray(sourceRecords) ? sourceRecords : []).map((r) => normalizeLookupValue(r.campaignName || r.campaign_name || r.name || ""))
-  );
-  const isFragmentOf = canonicalList.some((other) => {
+  const parentMatch = canonicalList.find((other) => {
     if (other === raw) return false;
     if (!other.includes(",")) return false;
     return normalizeLookupValue(other).indexOf(rawLookup) !== -1;
   });
-  if (isFragmentOf && !sourceKeys.has(rawLookup)) {
-    logCampaignFinalSource({
-      finalCampaignName: raw,
-      sourceFunction: "resolveConstellationCampaignCandidate",
-      sourceSheet: "POSTS/appState.posts",
-      sourceRow: "",
-      sourcePostId: "",
-      rawValue: raw,
-      parsedParts: splitExplicitCampaignValues(raw),
-      retainedReason: "discarded fragment"
-    });
-    return { keep: false, raw, canonicalName: "", reason: "fragment" };
+  if (parentMatch) {
+    return { keep: false, raw, canonicalName: parentMatch, reason: "fragment" };
   }
+  const exactMatch = canonicalList.find((name) => normalizeLookupValue(name) === rawLookup) || "";
+  if (exactMatch) return { keep: true, raw, canonicalName: exactMatch, reason: "exact" };
   return { keep: true, raw, canonicalName: raw, reason: "standalone" };
 }
 
