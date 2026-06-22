@@ -6253,7 +6253,7 @@ async function loadProfileSettingsForUser(user) {
         .maybeSingle();
       if (result.error) {
         if (isOptionalProfileSettingsError(result.error)) {
-          if (STELLARSYNC_DEBUG) console.warn("[icon-save] optional profile load skipped", { table: tableName, error: result.error.message || result.error });
+          if (STELLARSYNC_DEBUG) console.log("[optional-profile] table missing, using defaults", { table: tableName });
           continue;
         }
         if (STELLARSYNC_DEBUG) console.warn("[icon-save] profile load skipped", result.error.message || result.error);
@@ -6263,7 +6263,9 @@ async function loadProfileSettingsForUser(user) {
         return { ...user, user_metadata: { ...(user.user_metadata || {}), ...result.data } };
       }
     } catch (err) {
-      if (!isOptionalProfileSettingsError(err) && STELLARSYNC_DEBUG) {
+      if (isOptionalProfileSettingsError(err)) {
+        if (STELLARSYNC_DEBUG) console.log("[optional-profile] table missing, using defaults", { table: tableName });
+      } else if (STELLARSYNC_DEBUG) {
         console.warn("[icon-save] profile load skipped", err?.message || err);
       }
     }
@@ -7489,13 +7491,79 @@ function getDisplayPostContentPillar(post) {
 }
 
 var GPE_STABLE_CAMPAIGN_COLORS = {
-  [normalizeLookupValue("Girl, Take Action")]: "#f472b6",
-  [normalizeLookupValue("Rest & Resist")]: "#8b5cf6",
-  [normalizeLookupValue("Green Futures")]: "#22c55e",
-  [normalizeLookupValue("Community Powered")]: "#38bdf8"
+  [normalizeLookupValue("Girl, Take Action")]: "#c77dff",
+  [normalizeLookupValue("Rest & Resist")]: "#ff8fab",
+  [normalizeLookupValue("Green Futures")]: "#00ffaa",
+  [normalizeLookupValue("Community Powered")]: "#ffd166",
+  [normalizeLookupValue("Uncategorized")]: "#6b7280"
 };
 
-var STABLE_CAMPAIGN_COLOR_PALETTE = ["#f472b6", "#8b5cf6", "#22c55e", "#38bdf8", "#f59e0b", "#14b8a6", "#c77dff", "#ef4444"];
+var ALGORITHM_WITCH_STABLE_CAMPAIGN_COLORS = {
+  [normalizeLookupValue("Algorithm")]: "#c77dff",
+  [normalizeLookupValue("Algorithm Literacy")]: "#c77dff",
+  [normalizeLookupValue("Authority")]: "#00ffaa",
+  [normalizeLookupValue("Application")]: "#ffd166",
+  [normalizeLookupValue("Distribution")]: "#7dd3fc",
+  [normalizeLookupValue("Identity")]: "#ff8fab",
+  [normalizeLookupValue("Uncategorized")]: "#6b7280"
+};
+
+var STABLE_CAMPAIGN_COLOR_PALETTE = ["#c77dff", "#ff8fab", "#00ffaa", "#ffd166", "#7dd3fc", "#fb923c", "#94a3b8", "#ef4444"];
+
+function getWorkspaceStorageKeyFragment() {
+  var meta = typeof getWorkspaceRequestMetadata === "function" ? getWorkspaceRequestMetadata() : {};
+  var active = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active || {};
+  return String(
+    meta.workspace_slug ||
+    meta.workspace_id ||
+    active.workspace_slug ||
+    active.slug ||
+    active.id ||
+    "master"
+  ).trim().toLowerCase() || "master";
+}
+
+function getCampaignColorStorageKey() {
+  return "campaignColorsByWorkspace";
+}
+
+function getCampaignColorScopedStorageKey(workspaceKey = getWorkspaceStorageKeyFragment()) {
+  return `campaignColorsByWorkspace:${workspaceKey}`;
+}
+
+function loadCampaignColorsByWorkspace() {
+  try {
+    var parsed = JSON.parse(safeStorageGet(getCampaignColorStorageKey()) || "{}");
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch (_) {
+    return {};
+  }
+}
+
+function getStoredCampaignColorMap(workspaceKey = getWorkspaceStorageKeyFragment()) {
+  var allColors = loadCampaignColorsByWorkspace();
+  var map = allColors && typeof allColors === "object" ? allColors[workspaceKey] : null;
+  var scoped = {};
+  try {
+    var parsed = JSON.parse(safeStorageGet(getCampaignColorScopedStorageKey(workspaceKey)) || "{}");
+    scoped = parsed && typeof parsed === "object" ? parsed : {};
+  } catch (_) {
+    scoped = {};
+  }
+  return { ...(scoped || {}), ...(map && typeof map === "object" ? map : {}) };
+}
+
+function saveStoredCampaignColor(campaignName, color, workspaceKey = getWorkspaceStorageKeyFragment()) {
+  var normalizedName = normalizeLookupValue(campaignName || "");
+  var normalizedColor = String(color || "").trim();
+  if (!normalizedName || !normalizedColor) return { ok: false, skipped: true };
+  var allColors = loadCampaignColorsByWorkspace();
+  if (!allColors[workspaceKey] || typeof allColors[workspaceKey] !== "object") allColors[workspaceKey] = {};
+  allColors[workspaceKey][normalizedName] = normalizedColor;
+  safeStorageSet(getCampaignColorStorageKey(), JSON.stringify(allColors));
+  safeStorageSet(getCampaignColorScopedStorageKey(workspaceKey), JSON.stringify(allColors[workspaceKey]));
+  return { ok: true, workspaceKey, campaignName: normalizedName, color: normalizedColor };
+}
 
 function getWorkspaceCampaignColorOverrides(state = getAppStateRef() || {}) {
   var colors = {};
@@ -7523,6 +7591,7 @@ function getStableCampaignColorByName(name) {
   var normalized = normalizeLookupValue(name || "");
   if (!normalized) return "#c77dff";
   if (GPE_STABLE_CAMPAIGN_COLORS[normalized]) return GPE_STABLE_CAMPAIGN_COLORS[normalized];
+  if (ALGORITHM_WITCH_STABLE_CAMPAIGN_COLORS[normalized]) return ALGORITHM_WITCH_STABLE_CAMPAIGN_COLORS[normalized];
   var hash = 0;
   for (var i = 0; i < normalized.length; i++) {
     hash = ((hash << 5) - hash) + normalized.charCodeAt(i);
@@ -7532,34 +7601,68 @@ function getStableCampaignColorByName(name) {
   return STABLE_CAMPAIGN_COLOR_PALETTE[index] || "#c77dff";
 }
 
-function getCampaignColor(item, pillar = "") {
-  var campaignName = String(
-    typeof item === "string"
-      ? item
-      : item?.campaignName || item?.campaign_name || item?.name || item?.title || ""
+function getDirectCampaignColor(item) {
+  if (!item || typeof item !== "object") return "";
+  return String(
+    item.color ||
+    item.campaignColor ||
+    item.campaign_color ||
+    item.hexColor ||
+    item.hex_color ||
+    item.colour ||
+    ""
   ).trim();
-  var directColor = String(
-    typeof item === "object" && item
-      ? (item.color || item.campaignColor || item.campaign_color || item.hexColor || item.hex_color || "")
+}
+
+function resolveCampaignColor(campaignOrName) {
+  var campaignName = String(
+    typeof campaignOrName === "string"
+      ? campaignOrName
+      : campaignOrName?.campaignName || campaignOrName?.campaign_name || campaignOrName?.name || campaignOrName?.title || ""
+  ).trim();
+  var campaignId = String(
+    typeof campaignOrName === "object" && campaignOrName
+      ? campaignOrName.campaignId || campaignOrName.campaign_id || campaignOrName.id || ""
       : ""
   ).trim();
-  if (!directColor && typeof item === "string" && /^#|rgb|hsl/i.test(String(item || "").trim())) {
-    directColor = String(item || "").trim();
+  var directColor = getDirectCampaignColor(campaignOrName);
+  if (!directColor && typeof campaignOrName === "string" && /^#|rgb|hsl/i.test(String(campaignOrName || "").trim())) {
+    directColor = String(campaignOrName || "").trim();
   }
   if (directColor) {
-    if (STELLARSYNC_DEBUG) console.log("[constellation-color]", { campaign: campaignName || String(item || ""), source: "direct", color: directColor });
+    if (STELLARSYNC_DEBUG) console.log("[constellation-color]", { campaign: campaignName || String(campaignOrName || ""), source: "direct", color: directColor });
     return directColor;
   }
   var state = getAppStateRef() || {};
+  var campaignKey = normalizeLookupValue(campaignName || "");
+  var matchedCampaign = (Array.isArray(state?.campaigns) ? state.campaigns : []).find(function(campaign) {
+    var idMatch = campaignId && String(campaign.campaignId || campaign.campaign_id || campaign.id || "").trim() === campaignId;
+    var nameMatch = campaignKey && normalizeLookupValue(campaign.campaignName || campaign.campaign_name || campaign.name || "") === campaignKey;
+    return idMatch || nameMatch;
+  }) || null;
+  var stateColor = getDirectCampaignColor(matchedCampaign);
+  if (stateColor) {
+    if (STELLARSYNC_DEBUG) console.log("[constellation-color]", { campaign: campaignName || String(campaignOrName || ""), source: "appState.campaigns", color: stateColor });
+    return stateColor;
+  }
+  var stored = getStoredCampaignColorMap();
+  if (campaignKey && stored[campaignKey]) {
+    if (STELLARSYNC_DEBUG) console.log("[constellation-color]", { campaign: campaignName || String(campaignOrName || ""), source: "localStorage", color: stored[campaignKey] });
+    return stored[campaignKey];
+  }
   var overrides = getWorkspaceCampaignColorOverrides(state);
-  var overrideKey = normalizeLookupValue(campaignName || "");
+  var overrideKey = campaignKey;
   if (overrideKey && overrides[overrideKey]) {
-    if (STELLARSYNC_DEBUG) console.log("[constellation-color]", { campaign: campaignName || String(item || ""), source: "workspace_settings", color: overrides[overrideKey] });
+    if (STELLARSYNC_DEBUG) console.log("[constellation-color]", { campaign: campaignName || String(campaignOrName || ""), source: "workspace_settings", color: overrides[overrideKey] });
     return overrides[overrideKey];
   }
   var stable = campaignName ? getStableCampaignColorByName(campaignName) : "#c77dff";
-  if (STELLARSYNC_DEBUG) console.log("[constellation-color]", { campaign: campaignName || String(item || ""), source: GPE_STABLE_CAMPAIGN_COLORS[overrideKey] ? "gpe-stable" : (campaignName ? "stable-fallback" : "default"), color: stable });
+  if (STELLARSYNC_DEBUG) console.log("[constellation-color]", { campaign: campaignName || String(campaignOrName || ""), source: (GPE_STABLE_CAMPAIGN_COLORS[overrideKey] || ALGORITHM_WITCH_STABLE_CAMPAIGN_COLORS[overrideKey]) ? "hardcoded-stable" : (campaignName ? "stable-fallback" : "default"), color: stable });
   return stable;
+}
+
+function getCampaignColor(item, pillar = "") {
+  return resolveCampaignColor(item || "");
 }
 
 function getCampaignColorForPost(post) {
@@ -13179,7 +13282,7 @@ function openCampaignModal(options = "authority") {
 
   if (campaignNameInput) campaignNameInput.value = existingCampaign?.campaignName || "";
   renderCampaignPillarInputOptions(selectedPillar);
-  renderCampaignColorControls(existingCampaign?.color || defaultCampaignColor(existingCampaign?.campaignName || config.campaignName || "", selectedPillar));
+  renderCampaignColorControls(resolveCampaignColor(existingCampaign || config.campaignName || "") || defaultCampaignColor(existingCampaign?.campaignName || config.campaignName || "", selectedPillar));
   if (campaignPathStyleInput) campaignPathStyleInput.value = existingCampaign?.pathStyle || "";
   if (campaignSymbolInput) campaignSymbolInput.value = existingCampaign?.iconShape || "";
   if (campaignArchivedInput) campaignArchivedInput.checked = !!existingCampaign?.isArchived;
@@ -13228,6 +13331,98 @@ function closeCampaignModal() {
   }, 200);
 }
 
+function normalizeCampaignSavePayload(payload = {}, existingCampaign = null, nextSortOrder = 0) {
+  var campaignId = String(payload.campaignId || payload.campaign_id || payload.id || existingCampaign?.campaignId || existingCampaign?.campaign_id || existingCampaign?.id || "").trim();
+  var campaignName = String(payload.campaignName || payload.campaign_name || payload.name || existingCampaign?.campaignName || existingCampaign?.campaign_name || existingCampaign?.name || "").trim();
+  var generatedId = campaignName ? `CMP-${normalizeLookupValue(campaignName).replace(/[^a-z0-9]+/g, "").toUpperCase().slice(0, 10) || Date.now()}` : `CMP-${Date.now()}`;
+  if (!campaignId) campaignId = generatedId;
+  var color = String(payload.color || payload.campaign_color || payload.hex_color || payload.hexColor || payload.colour || existingCampaign?.color || "").trim();
+  return {
+    ...(existingCampaign || {}),
+    campaignId,
+    campaign_id: campaignId,
+    id: campaignId,
+    campaignName,
+    campaign_name: campaignName,
+    name: campaignName,
+    color,
+    campaignColor: color,
+    campaign_color: color,
+    hex_color: color,
+    description: String(payload.description || existingCampaign?.description || "").trim(),
+    goal: String(payload.goal || existingCampaign?.goal || "").trim(),
+    status: String(payload.status || existingCampaign?.status || "active").trim() || "active",
+    pillar: normalizePillar(payload.pillar || existingCampaign?.pillar || "authority"),
+    iconShape: String(payload.iconShape || payload.icon_shape || existingCampaign?.iconShape || "").trim().toLowerCase(),
+    icon_shape: String(payload.icon_shape || payload.iconShape || existingCampaign?.icon_shape || "").trim().toLowerCase(),
+    pathStyle: String(payload.pathStyle || payload.path_style || existingCampaign?.pathStyle || "").trim().toLowerCase(),
+    path_style: String(payload.path_style || payload.pathStyle || existingCampaign?.path_style || "").trim().toLowerCase(),
+    sortOrder: Number(payload.sortOrder ?? existingCampaign?.sortOrder ?? nextSortOrder) || nextSortOrder,
+    isArchived: normalizeRemoteBoolean(payload.isArchived ?? payload.is_archived ?? existingCampaign?.isArchived ?? false),
+    createdAt: existingCampaign?.createdAt || payload.createdAt || payload.created_at || new Date().toISOString()
+  };
+}
+
+function upsertCampaignIntoLocalState(campaign) {
+  appState.campaigns = Array.isArray(appState.campaigns) ? appState.campaigns : [];
+  var campaignId = String(campaign.campaignId || campaign.campaign_id || campaign.id || "").trim();
+  var campaignKey = normalizeLookupValue(campaign.campaignName || campaign.campaign_name || campaign.name || "");
+  var existingIndex = appState.campaigns.findIndex(function(item) {
+    var itemId = String(item.campaignId || item.campaign_id || item.id || "").trim();
+    var itemKey = normalizeLookupValue(item.campaignName || item.campaign_name || item.name || "");
+    return (campaignId && itemId === campaignId) || (campaignKey && itemKey === campaignKey);
+  });
+  if (existingIndex >= 0) appState.campaigns.splice(existingIndex, 1, { ...appState.campaigns[existingIndex], ...campaign });
+  else appState.campaigns.push(campaign);
+
+  appState.settings = appState.settings && typeof appState.settings === "object" ? appState.settings : {};
+  appState.settings.campaigns = Array.from(new Set((appState.campaigns || []).map(function(item) {
+    return normalizeCampaignDisplayName(item.campaignName || item.campaign_name || item.name || "");
+  }).filter(Boolean)));
+  appState.settings.campaignColors = appState.settings.campaignColors && typeof appState.settings.campaignColors === "object" ? appState.settings.campaignColors : {};
+  if (campaignKey && campaign.color) appState.settings.campaignColors[campaign.campaignName || campaign.name || campaignKey] = campaign.color;
+
+  appState.posts = (appState.posts || []).map(function(post) {
+    var sameCampaign = String(post.campaignId || post.campaign_id || "") === campaignId
+      || normalizeLookupValue(post.campaignName || post.campaign_name || post.campaign || "") === campaignKey;
+    if (!sameCampaign) return post;
+    return {
+      ...post,
+      campaignId,
+      campaign_id: campaignId,
+      campaignName: campaign.campaignName,
+      campaign_name: campaign.campaignName,
+      campaignColor: campaign.color,
+      campaign_color: campaign.color,
+      hubTitle: campaign.campaignName,
+      hubPillarLabel: formatContentPillarLabel(campaign.pillar)
+    };
+  });
+  if (campaignKey && campaign.color) saveStoredCampaignColor(campaign.campaignName, campaign.color);
+  persistLocalState();
+  return campaign;
+}
+
+async function saveCampaignToSupabaseFallback(campaign) {
+  if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase is not configured.");
+  var meta = getWorkspaceRequestMetadata();
+  var workspaceId = meta.workspace_id || "";
+  if (!workspaceId) throw new Error("Workspace ID is missing for Supabase campaign save.");
+  var campaigns = (Array.isArray(appState.campaigns) ? appState.campaigns : []).map(function(item) {
+    return normalizeCampaignSavePayload(item);
+  });
+  var result = await STELLARSYNC_SUPABASE_CLIENT
+    .from("workspace_settings")
+    .upsert({
+      workspace_id: workspaceId,
+      key: "campaigns",
+      value: campaigns,
+      updated_at: new Date().toISOString()
+    }, { onConflict: "workspace_id,key" });
+  if (result.error) throw result.error;
+  return { ok: true, source: "supabase_native", campaign };
+}
+
 async function saveCampaignFromModal() {
   const campaignName = campaignNameInput?.value.trim() || "";
   const pillar = normalizePillar(campaignPillarInput?.value || "authority");
@@ -13243,63 +13438,37 @@ async function saveCampaignFromModal() {
 
   const color = selectedColor || defaultCampaignColor(campaignName, pillar);
   const existingCampaign = editingCampaignId
-    ? (appState.campaigns || []).find((item) => String(item.campaignId || "") === String(editingCampaignId))
+    ? (appState.campaigns || []).find((item) => String(item.campaignId || item.campaign_id || item.id || "") === String(editingCampaignId))
     : null;
 
   const nextSortOrder = ((appState.campaigns || []).reduce((max, item) => {
     return Math.max(max, Number(item.sortOrder || 0));
   }, 0)) + 1;
 
+  const payload = {
+    id: existingCampaign?.id || existingCampaign?.campaignId || "",
+    campaignId: existingCampaign?.campaignId || existingCampaign?.campaign_id || existingCampaign?.id || "",
+    campaign_id: existingCampaign?.campaign_id || existingCampaign?.campaignId || existingCampaign?.id || "",
+    name: campaignName,
+    campaignName,
+    campaign_name: campaignName,
+    color,
+    campaign_color: color,
+    hex_color: color,
+    description: existingCampaign?.description || "",
+    goal: existingCampaign?.goal || "",
+    status: existingCampaign?.status || "active",
+    pillar,
+    sortOrder: Number(existingCampaign?.sortOrder || nextSortOrder),
+    isArchived,
+    iconShape,
+    pathStyle
+  };
+  if (STELLARSYNC_DEBUG) console.log("[campaign-save] payload", payload);
+
   try {
-    let result = await apiSaveCampaign({
-      campaignId: existingCampaign?.campaignId || "",
-      campaignName,
-      pillar,
-      color,
-      sortOrder: Number(existingCampaign?.sortOrder || nextSortOrder),
-      isArchived,
-      iconShape,
-      pathStyle
-    });
-    if (existingCampaign && String(existingCampaign.color || "").trim().toLowerCase() !== String(color || "").trim().toLowerCase()) {
-      result = await apiUpdateCampaignColor({
-        campaignId: existingCampaign.campaignId,
-        color
-      });
-      result = { campaign: result?.result?.campaign || result?.campaign || result };
-    }
-
-    const normalized = {
-      campaignId: result.campaign.campaignId,
-      campaignName: result.campaign.campaignName,
-      pillar: result.campaign.pillar || pillar,
-      color: result.campaign.color || color,
-      iconShape: String(result.campaign.iconShape || result.campaign.icon_shape || iconShape || "").trim().toLowerCase(),
-      pathStyle: String(result.campaign.pathStyle || result.campaign.path_style || pathStyle || "").trim().toLowerCase(),
-      sortOrder: Number(result.campaign.sortOrder || existingCampaign?.sortOrder || nextSortOrder),
-      isArchived: !!result.campaign.isArchived,
-      createdAt: result.campaign.createdAt || ""
-    };
-
-    const existingIndex = (appState.campaigns || []).findIndex((item) => String(item.campaignId || "") === String(normalized.campaignId || ""));
-    if (existingIndex >= 0) appState.campaigns.splice(existingIndex, 1, normalized);
-    else appState.campaigns.push(normalized);
-
-    appState.posts = (appState.posts || []).map((post) => {
-      const sameCampaign = String(post.campaignId || "") === String(normalized.campaignId || "")
-        || normalizeLookupValue(post.campaignName || "") === normalizeLookupValue(existingCampaign?.campaignName || normalized.campaignName || "");
-      if (!sameCampaign) return post;
-      return {
-        ...post,
-        campaignId: normalized.campaignId,
-        campaignName: normalized.campaignName,
-        campaignColor: normalized.color,
-        hubTitle: normalized.campaignName,
-        hubPillarLabel: formatContentPillarLabel(normalized.pillar)
-      };
-    });
-
-    persistLocalState();
+    const normalized = upsertCampaignIntoLocalState(normalizeCampaignSavePayload(payload, existingCampaign, nextSortOrder));
+    if (STELLARSYNC_DEBUG) console.log("[campaign-save] local updated", normalized);
     rerenderAll();
 
     if (campaignModalTargetSelect) {
@@ -13308,6 +13477,46 @@ async function saveCampaignFromModal() {
 
     closeCampaignModal();
     showToast(existingCampaign ? "Campaign updated" : "Campaign created", existingCampaign ? "Campaign details saved." : "New campaign added.", "ph-check", "text-[#00ffaa]");
+
+    const backendMode = getActiveWorkspaceBackendMode();
+    const backendPath = APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()
+      ? (isGoogleSheetsFrontendMode(backendMode.mode) ? "google_sheets_hybrid" : backendMode.mode === "supabase_native" ? "supabase_native" : backendMode.mode)
+      : "localStorage";
+    if (STELLARSYNC_DEBUG) console.log("[campaign-save] backend path", backendPath);
+    if (backendPath === "localStorage") {
+      if (STELLARSYNC_DEBUG) console.log("[campaign-save] fallback result", { ok: true, source: "localStorage" });
+      return;
+    }
+
+    try {
+      let backendResult = null;
+      if (isGoogleSheetsFrontendMode(backendMode.mode)) {
+        backendResult = await apiSaveCampaign(payload);
+        if (existingCampaign && String(existingCampaign.color || "").trim().toLowerCase() !== String(color || "").trim().toLowerCase()) {
+          try {
+            backendResult = await apiUpdateCampaignColor({ campaignId: normalized.campaignId, campaign_id: normalized.campaignId, color, campaign_color: color, hex_color: color });
+          } catch (colorErr) {
+            if (STELLARSYNC_DEBUG) console.log("[campaign-save] backend color route skipped", colorErr?.message || colorErr);
+          }
+        }
+      } else if (backendMode.mode === "supabase_native") {
+        backendResult = await saveCampaignToSupabaseFallback(normalized);
+      }
+      if (STELLARSYNC_DEBUG) console.log("[campaign-save] backend result", backendResult || { ok: true, skipped: true });
+    } catch (backendErr) {
+      if (STELLARSYNC_DEBUG) console.log("[campaign-save] backend result", { ok: false, error: backendErr?.message || backendErr });
+      if (isGoogleSheetsFrontendMode(backendMode.mode) && STELLARSYNC_SUPABASE_CLIENT) {
+        try {
+          const supabaseFallback = await saveCampaignToSupabaseFallback(normalized);
+          if (STELLARSYNC_DEBUG) console.log("[campaign-save] fallback result", supabaseFallback);
+          return;
+        } catch (supabaseErr) {
+          if (STELLARSYNC_DEBUG) console.log("[campaign-save] fallback result", { ok: false, source: "supabase_native", error: supabaseErr?.message || supabaseErr });
+        }
+      }
+      if (STELLARSYNC_DEBUG) console.log("[campaign-save] fallback result", { ok: true, source: "localStorage", reason: backendErr?.message || backendErr });
+      showToast("Campaign saved locally", "Backend campaign sync did not complete; local changes are preserved.", "ph-warning", "text-yellow-400");
+    }
   } catch (err) {
     console.error(err);
     showToast("Campaign failed", err.message || "Could not save campaign.", "ph-warning", "text-yellow-400");
@@ -24149,7 +24358,10 @@ function setupSaveHandler() {
       archivedAt: existing?.archivedAt || "",
       flowState: resolvedStatus === "published" ? "published" : resolvedStatus === "scheduled" && hasValidSchedule ? "scheduled" : "draft",
       campaignId: selectedCampaign?.campaignId || existing?.campaignId || "",
+      campaign_id: selectedCampaign?.campaignId || existing?.campaign_id || existing?.campaignId || "",
       campaignName: selectedCampaignName || existing?.campaignName || "",
+      campaign_name: selectedCampaignName || existing?.campaign_name || existing?.campaignName || "",
+      campaign: selectedCampaignName || existing?.campaign || existing?.campaignName || "",
       sourceUrl: sourceUrlInput?.value.trim() || existing?.sourceUrl || "",
       sourcePlatform: existing?.sourcePlatform || detectSourcePlatform(sourceUrlInput?.value || ""),
       sourceTitle: existing?.sourceTitle || titleInput?.value.trim() || "",
@@ -24261,6 +24473,36 @@ function setupSaveHandler() {
             error: err.backend.error
           } : null
         });
+        const localPost = upsertSavedPostIntoAppState({ ok: true, post: payload, source: "local_fallback" }, payload);
+        if (noteIdToConvert) {
+          appState.notes = (appState.notes || []).map((note) => {
+            if ((note.noteId || note.id) !== noteIdToConvert) return note;
+            return {
+              ...note,
+              convertedPostId: localPost.id || localPost.postId || payload.id,
+              status: "converted_to_post",
+              flowState: "converted_to_post",
+              movedToPostAt: payload.movedToPostAt
+            };
+          });
+        }
+        if (inspoIdToConvert) {
+          appState.inspo = (appState.inspo || []).map((item) => {
+            if ((item.inspoId || item.id) !== inspoIdToConvert) return item;
+            return {
+              ...item,
+              convertedPostId: localPost.id || localPost.postId || payload.id,
+              status: "archived",
+              flowState: "converted_to_post",
+              movedToPostAt: payload.movedToPostAt,
+              archivedAt: new Date().toISOString()
+            };
+          });
+        }
+        persistLocalState();
+        rerenderAll();
+        if (currentView) switchView(currentView);
+        if (STELLARSYNC_DEBUG) console.log("[post-save] local fallback result", { ok: true, post_id: localPost.post_id || localPost.postId || localPost.id || payload.id, reason: err?.message || err });
         const routeStatus = err?.backend?.routeStatus || {};
         const detail = [
           err?.message || "Remote save failed.",
@@ -24269,8 +24511,9 @@ function setupSaveHandler() {
           routeStatus.spreadsheetIdConfigured === false ? "SPREADSHEET_ID is not configured." : ""
         ].filter(Boolean).join(" ");
         showPostSaveErrorBanner(err, payload);
-        saveButton.innerHTML = '<i class="ph-bold ph-warning text-sm"></i> Error';
-        showToast("Save failed", detail || "The backend rejected the post. No local fallback was applied.", "ph-warning", "text-yellow-400");
+        saveButton.innerHTML = '<i class="ph-bold ph-warning text-sm"></i> Saved locally';
+        closeModal();
+        showToast("Saved locally", detail || "Backend sync failed; local draft changes are preserved.", "ph-warning", "text-yellow-400");
       } finally {
         saveButton.disabled = false;
         if (!modal?.classList.contains("active")) saveButton.innerHTML = originalSaveButtonHtml;
@@ -24278,7 +24521,10 @@ function setupSaveHandler() {
       return;
     }
 
-    const existingIndex = appState.posts.findIndex((p) => p.id === payload.id);
+    const localPayloadIds = new Set([payload.id, payload.postId, payload.post_id, payload.frontendId, payload._frontendId].map((value) => String(value || "").trim()).filter(Boolean));
+    const existingIndex = appState.posts.findIndex((p) => {
+      return [p.id, p.postId, p.post_id, p.frontendId, p._frontendId].map((value) => String(value || "").trim()).some((id) => localPayloadIds.has(id));
+    });
     if (existingIndex >= 0) {
       appState.posts[existingIndex] = payload;
     } else {
@@ -24312,6 +24558,7 @@ function setupSaveHandler() {
     }
 
     persistLocalState();
+    if (STELLARSYNC_DEBUG) console.log("[post-save] backend path", "localStorage");
     if (scheduleSocialEnabledInput?.checked) {
       try {
         const socialResults = await scheduleSocialPostsForTargets(payload);
@@ -24322,6 +24569,7 @@ function setupSaveHandler() {
       }
     }
     rerenderAll();
+    if (STELLARSYNC_DEBUG) console.log("[post-save] local fallback result", { ok: true, source: "localStorage", post_id: payload.post_id || payload.postId || payload.id });
     closeModal();
     saveButton.disabled = false;
     saveButton.innerHTML = originalSaveButtonHtml;
@@ -31671,6 +31919,11 @@ function normalizeRemoteCampaign(campaign) {
   const pillar = getCanonicalPillarValue(pickRemoteValue(campaign?.pillar, campaign?.hubPillarLabel, campaign?.hub_pillar_label, ""), "");
   const state = getAppStateRef() || {};
   const canonicalCampaignName = resolveCanonicalCampaignName(pickRemoteValue(campaign?.campaignName, campaign?.campaign_name, campaign?.name, campaign?.title, ""), state?.campaigns || []);
+  const directColor = String(pickRemoteValue(campaign?.color, campaign?.campaignColor, campaign?.campaign_color, campaign?.hexColor, campaign?.hex_color, campaign?.colour, "")).trim();
+  const resolvedColor = directColor || resolveCampaignColor({
+    campaignId: pickRemoteValue(campaign?.campaignId, campaign?.campaign_id, campaign?.campaignID, campaign?.id, ""),
+    campaignName: canonicalCampaignName || pickRemoteValue(campaign?.campaignName, campaign?.campaign_name, campaign?.name, campaign?.title, "")
+  }) || "#6b7280";
   return {
     campaignId: String(pickRemoteValue(campaign?.campaignId, campaign?.campaign_id, campaign?.campaignID, campaign?.id, "")).trim(),
     campaign_id: String(pickRemoteValue(campaign?.campaign_id, campaign?.campaignId, campaign?.campaignID, campaign?.id, "")).trim(),
@@ -31678,7 +31931,11 @@ function normalizeRemoteCampaign(campaign) {
     campaign_name: String(canonicalCampaignName || pickRemoteValue(campaign?.campaign_name, campaign?.campaignName, campaign?.name, campaign?.title, "")).trim(),
     name: String(canonicalCampaignName || pickRemoteValue(campaign?.name, campaign?.campaignName, campaign?.campaign_name, campaign?.title, "")).trim(),
     pillar,
-    color: String(pickRemoteValue(campaign?.color, getCampaignColor(campaign?.campaignName || campaign?.campaign_name || "", pillar), "#6b7280")).trim() || "#6b7280",
+    color: resolvedColor,
+    campaignColor: resolvedColor,
+    campaign_color: resolvedColor,
+    hex_color: resolvedColor,
+    colour: resolvedColor,
     goal: String(pickRemoteValue(campaign?.goal, "")).trim(),
     status: String(pickRemoteValue(campaign?.status, "active")).trim() || "active",
     startDate: String(pickRemoteValue(campaign?.startDate, campaign?.start_date, "")).trim(),
@@ -32196,7 +32453,10 @@ async function apiSavePost(post) {
     archivedAt: hydratedPost.archivedAt || "",
     flowState: hydratedPost.flowState || hydratedPost.status || "draft",
     campaignId: hydratedPost.campaignId || "",
+    campaign_id: hydratedPost.campaign_id || hydratedPost.campaignId || "",
     campaignName: hydratedPost.campaignName || "",
+    campaign_name: hydratedPost.campaign_name || hydratedPost.campaignName || "",
+    campaign: hydratedPost.campaign || hydratedPost.campaignName || hydratedPost.campaign_name || "",
     sourceUrl: hydratedPost.sourceUrl || "",
     sourcePlatform: hydratedPost.sourcePlatform || "",
     sourceTitle: hydratedPost.sourceTitle || "",
@@ -32231,45 +32491,56 @@ async function apiSavePost(post) {
     engagementRate: hydratedPost.engagementRate || 0
   };
   const requiredPostPayload = {
+    id: savePayload.id,
     workspace_id: savePayload.workspace_id,
-    post_id: savePayload.post_id,
+    post_id: savePayload.post_id || savePayload.postId || savePayload.id,
+    postId: savePayload.postId || savePayload.post_id || savePayload.id,
     title: savePayload.title,
+    caption: savePayload.caption || savePayload.description || "",
+    body: savePayload.body || savePayload.description || "",
     description: savePayload.description,
     status: savePayload.status,
     publish_status: savePayload.publish_status,
     publish_date: savePayload.publish_date,
+    publishDate: savePayload.publishDate,
     publish_time: savePayload.publish_time,
+    publishTime: savePayload.publishTime,
+    date: savePayload.scheduled_at || savePayload.scheduledAt || "",
     scheduled_at: savePayload.scheduled_at,
     platform: savePayload.platform,
     platforms: savePayload.platforms,
     platform_targets: savePayload.platform_targets,
-    campaign_id: savePayload.campaign_id,
-    campaign_name: savePayload.campaign_name,
+    campaign: savePayload.campaignName || savePayload.campaign_name || "",
+    campaign_id: savePayload.campaignId || savePayload.campaign_id || "",
+    campaign_name: savePayload.campaignName || savePayload.campaign_name || "",
     pillar: savePayload.pillar,
     format: savePayload.format,
-    post_type: savePayload.post_type,
-    updated_at: savePayload.updated_at,
-    created_at: savePayload.created_at
+    post_type: savePayload.postType || savePayload.post_type || "",
+    updated_at: savePayload.updated_at || "",
+    created_at: savePayload.created_at || ""
   };
   const optionalVisualPayload = {
-    media_id: savePayload.media_id,
+    media_id: savePayload.mediaId || savePayload.media_id || "",
     media_ids: savePayload.media_ids,
-    media_url: savePayload.media_url,
-    media_type: savePayload.media_type,
-    media_filename: savePayload.media_filename,
-    media_alt_text: savePayload.media_alt_text,
-    storage_path: savePayload.storage_path,
-    published_url: savePayload.published_url,
-    published_at: savePayload.published_at,
-    source_url: savePayload.source_url,
-    source_platform: savePayload.source_platform,
+    media_url: savePayload.mediaUrl || savePayload.media_url || "",
+    media_type: savePayload.mediaType || savePayload.media_type || "",
+    media_filename: savePayload.mediaFilename || savePayload.media_filename || "",
+    media_alt_text: savePayload.mediaAltText || savePayload.media_alt_text || "",
+    storage_path: savePayload.storagePath || savePayload.storage_path || "",
+    profile_icon: savePayload.profile_icon || savePayload.icon || "",
+    workspace_visual_settings: savePayload.workspace_visual_settings || "",
+    avatar_settings: savePayload.avatar_settings || "",
+    published_url: savePayload.publishedUrl || savePayload.published_url || "",
+    published_at: savePayload.publishedAt || savePayload.published_at || "",
+    source_url: savePayload.sourceUrl || savePayload.source_url || "",
+    source_platform: savePayload.sourcePlatform || savePayload.source_platform || "",
     monday_item_id: savePayload.monday_item_id,
     monday_synced_at: savePayload.monday_synced_at,
     monday_sync_status: savePayload.monday_sync_status
   };
   if (STELLARSYNC_DEBUG) {
     console.log("[post-save] required payload", requiredPostPayload);
-    console.log("[post-save] optional visual payload", optionalVisualPayload);
+    console.log("[post-save] optional payload", optionalVisualPayload);
   }
   const backendMode = getActiveWorkspaceBackendMode();
   Object.assign(savePayload, applyDerivedPostMediaFormat(savePayload));
@@ -32278,14 +32549,13 @@ async function apiSavePost(post) {
   }
   savePayload.backend_type = backendMode.mode;
   savePayload.backend_mode = backendMode.mode;
-  console.log("[savePost] backend", backendMode.mode);
+  if (STELLARSYNC_DEBUG) console.log("[post-save] backend path", backendMode.mode);
   const loadingToastId = showLoadingToast("Saving post", "Saving post...");
   try {
     const response = backendMode.mode === "supabase_native"
       ? await apiSavePostToSupabase(savePayload)
       : await apiPost("savePost", savePayload);
-    console.log("[savePost] response", response);
-    if (STELLARSYNC_DEBUG) console.log("[post-save] save result", response);
+    if (STELLARSYNC_DEBUG) console.log("[post-save] backend result", response);
     const savedPost = response?.post || response?.data || savePayload;
     if (backendMode.mode === "supabase_native") {
       try {
@@ -32303,7 +32573,7 @@ async function apiSavePost(post) {
     if (STELLARSYNC_DEBUG) console.log("[post-save] optional save skipped", { reason: "no separate optional persistence path", ok: true });
     return response;
   } catch (err) {
-    console.log("[savePost] error", err);
+    if (STELLARSYNC_DEBUG) console.log("[post-save] backend result", { ok: false, error: err?.message || err });
     updateLoadingToastError(loadingToastId, "Save failed", err);
     throw err;
   }
@@ -34246,7 +34516,11 @@ async function savePWProfile() {
         break;
       }
       lastProfileError = upsertResult.error;
-      if (!isOptionalProfileSettingsError(upsertResult.error)) throw upsertResult.error;
+      if (isOptionalProfileSettingsError(upsertResult.error)) {
+        if (STELLARSYNC_DEBUG) console.log("[optional-profile] table missing, using defaults", { table: tableName });
+      } else {
+        throw upsertResult.error;
+      }
     }
     if (!profileTable) {
       if (STELLARSYNC_DEBUG) console.warn("[icon-save] optional profile settings unavailable", lastProfileError?.message || lastProfileError || "unknown");
