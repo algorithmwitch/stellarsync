@@ -24663,6 +24663,11 @@ function setupSaveHandler() {
     const originalSaveButtonHtml = saveButton.innerHTML;
     saveButton.disabled = true;
     saveButton.innerHTML = '<i class="ph-bold ph-spinner-gap text-sm animate-spin"></i> Saving...';
+    const saveTimeoutId = setTimeout(() => {
+        savePostInFlight = false;
+        saveButton.disabled = false;
+        saveButton.innerHTML = originalSaveButtonHtml;
+    }, 30000);
     const existing = currentEditingPostId
       ? hydratePostCampaign(findPostByAnyId(currentEditingPostId))
       : null;
@@ -24677,6 +24682,7 @@ function setupSaveHandler() {
     const selectedCampaignName = selectedCampaign?.campaignName || normalizeCampaignName(selectedCampaignId);
     const requestedDate = String(dateInput?.value || "").trim();
     if ((statusSelect?.value || "draft") === "scheduled" && !requestedDate) {
+      clearTimeout(saveTimeoutId);
       savePostInFlight = false;
       saveButton.disabled = false;
       saveButton.innerHTML = originalSaveButtonHtml;
@@ -24696,6 +24702,7 @@ function setupSaveHandler() {
 
     const selectedPlatforms = getSelectedModalPlatforms();
     if (!selectedPlatforms.length) {
+      clearTimeout(saveTimeoutId);
       savePostInFlight = false;
       saveButton.disabled = false;
       saveButton.innerHTML = originalSaveButtonHtml;
@@ -24844,6 +24851,7 @@ function setupSaveHandler() {
     }
 
     if (!payload.title) {
+      clearTimeout(saveTimeoutId);
       savePostInFlight = false;
       saveButton.disabled = false;
       saveButton.innerHTML = originalSaveButtonHtml;
@@ -24927,6 +24935,7 @@ function setupSaveHandler() {
             showToast("Saved locally", detail || "Backend sync failed; local draft changes are preserved.", "ph-warning", "text-yellow-400");
             console.log("[post-save] failed");
         } finally {
+            clearTimeout(saveTimeoutId);
             savePostInFlight = false;
             saveButton.disabled = false;
             if (!modal?.classList.contains("active")) saveButton.innerHTML = originalSaveButtonHtml;
@@ -24972,6 +24981,7 @@ function setupSaveHandler() {
     }
 
     if (STELLARSYNC_DEBUG) console.log("[post-save] backend path", "localStorage");
+    clearTimeout(saveTimeoutId);
     savePostInFlight = false;
     saveButton.disabled = false;
     saveButton.innerHTML = originalSaveButtonHtml;
@@ -35246,57 +35256,27 @@ async function savePWProfile() {
     var user = STELLARSYNC_AUTH_USER;
     if (!user) throw new Error("Authenticated user not available");
     var userId = String(user.id || "").trim();
-    var profileTable = "";
-    var lastProfileError = null;
-    for (const tableName of ["profile_settings", "user_preferences"]) {
-      const profilePayload = { ...payload, user_id: userId };
-      const upsertResult = await STELLARSYNC_SUPABASE_CLIENT.from(tableName).upsert(profilePayload, { onConflict: "user_id" }).select("user_id,display_name,profile_image_url").maybeSingle();
-      if (STELLARSYNC_DEBUG) console.log("[icon-save] response", { table: tableName, ok: !upsertResult?.error, error: upsertResult?.error || null });
-      if (!upsertResult?.error) {
-        profileTable = tableName;
-        break;
+    console.log("[icon-save] supabase tables unavailable, saving to session metadata only");
+    STELLARSYNC_AUTH_USER = {
+      ...user,
+      user_metadata: {
+        ...(user.user_metadata || {}),
+        ...payload
       }
-      lastProfileError = upsertResult.error;
-      if (isOptionalProfileSettingsError(upsertResult.error)) {
-        if (STELLARSYNC_DEBUG) console.log("[optional-profile] table missing, using defaults", { table: tableName });
-      } else {
-        throw upsertResult.error;
-      }
+    };
+    if (typeof window !== "undefined") {
+      window.__currentAuthUser = STELLARSYNC_AUTH_USER;
     }
-    if (!profileTable) {
-      if (STELLARSYNC_DEBUG) console.warn("[icon-save] optional profile settings unavailable", lastProfileError?.message || lastProfileError || "unknown");
-      STELLARSYNC_AUTH_USER = { ...user, user_metadata: { ...(user.user_metadata || {}), ...payload } };
-      if (typeof window !== "undefined") window.__currentAuthUser = STELLARSYNC_AUTH_USER;
-      if (statusEl) { statusEl.textContent = "Profile saved."; statusEl.className = "text-xs text-emerald-400"; statusEl.classList.remove("hidden"); }
-      renderWorkspaceBranding();
-      updateToast(loadingToastId, "success", "Profile saved", "Profile settings updated for this session.");
-      setTimeout(function() { if (statusEl) statusEl.classList.add("hidden"); }, 3000);
-      return;
+    if (statusEl) {
+      statusEl.textContent = "Profile saved.";
+      statusEl.className = "text-xs text-emerald-400";
+      statusEl.classList.remove("hidden");
     }
-    var reloadFields = ["user_id", "display_name", "profile_image_url"];
-    if (STELLARSYNC_DEBUG) console.log("[profile-save] verification required", ["user_id"]);
-    if (STELLARSYNC_DEBUG) console.log("[profile-save] verification optional", ["display_name", "profile_image_url"]);
-    var reloadResult = await STELLARSYNC_SUPABASE_CLIENT.from(profileTable).select(reloadFields.join(",")).eq("user_id", userId).maybeSingle();
-    if (reloadResult.error) throw reloadResult.error;
-    var persisted = reloadResult.data || {};
-    console.log("[icon-save] reload check", { table: profileTable, data: persisted });
-    var requiredMismatch = String(persisted.user_id || "").trim() !== userId ? ["user_id"] : [];
-    if (STELLARSYNC_DEBUG) console.log("[profile-save] required mismatch", requiredMismatch);
-    if (requiredMismatch.length) throw new Error("Profile save verification failed: " + requiredMismatch.join(", "));
-    var optionalMismatch = ["display_name", "profile_image_url"].filter(function(key) {
-      if (!(key in persisted)) return false;
-      var persistedValue = String(persisted[key] || "").trim();
-      var payloadValue = String(payload[key] || "").trim();
-      return persistedValue !== payloadValue;
-    });
-    if (STELLARSYNC_DEBUG) console.log("[profile-save] optional mismatch", optionalMismatch);
-    if (optionalMismatch.length && STELLARSYNC_DEBUG) console.log("[profile-save] optional mismatch ignored", optionalMismatch);
-    STELLARSYNC_AUTH_USER = { ...user, user_metadata: { ...(user.user_metadata || {}), ...payload } };
-    if (typeof window !== "undefined") window.__currentAuthUser = STELLARSYNC_AUTH_USER;
-    if (statusEl) { statusEl.textContent = "Profile saved."; statusEl.className = "text-xs text-emerald-400"; statusEl.classList.remove("hidden"); }
     renderWorkspaceBranding();
-    updateToast(loadingToastId, "success", "Profile saved", "Profile settings saved.");
-    setTimeout(function() { if (statusEl) statusEl.classList.add("hidden"); }, 3000);
+    updateToast(loadingToastId, "success", "Profile saved", "Profile settings updated for this session.");
+    setTimeout(function() {
+      if (statusEl) statusEl.classList.add("hidden");
+    }, 3000);
   } catch (err) {
     console.log("[icon-save] response", err);
     if (statusEl) { statusEl.textContent = "Save failed: " + (err.message || String(err)); statusEl.className = "text-xs text-red-400"; statusEl.classList.remove("hidden"); }
