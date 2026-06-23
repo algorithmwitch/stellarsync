@@ -10223,6 +10223,58 @@ function loadShellLayout() {
   }
 }
 
+function safeStorageGet(key) {
+  try {
+    return window.localStorage ? window.localStorage.getItem(key) : null;
+  } catch (err) {
+    console.warn("[storage] get unavailable", key, err);
+    return null;
+  }
+}
+
+function safeStorageGet(key) {
+  try {
+    return window.localStorage ? window.localStorage.getItem(key) : null;
+  } catch (err) {
+    console.warn("[storage] get unavailable", key, err);
+    return null;
+  }
+}
+
+function safeStorageGet(key) {
+  try {
+    return window.localStorage ? window.localStorage.getItem(key) : null;
+  } catch (err) {
+    console.warn("[storage] get unavailable", key, err);
+    return null;
+  }
+}
+
+function safeStorageGet(key) {
+  try {
+    return window.localStorage ? window.localStorage.getItem(key) : null;
+  } catch (err) {
+    console.warn("[storage] get unavailable", key, err);
+    return null;
+  }
+}
+
+function safeStorageSet(key, value) {
+  try {
+    if (window.localStorage) window.localStorage.setItem(key, value);
+  } catch (err) {
+    console.warn("[storage] set unavailable", key, err);
+  }
+}
+
+function loadMediaSelectMode() {
+  return safeStorageGet("stellarsync_media_select_mode") || "grid";
+}
+
+function getInitialCalendarCursor() {
+  return new Date();
+}
+
 let appState = loadLocalState();
 __APP_STATE_REF = appState;
 let currentView = "calendar";
@@ -10624,6 +10676,17 @@ function getWorkspaceExportRows(context, type) {
   if (context === "media") return rowsForMediaExport();
   if (context === "newsletter") return rowsForPostsExport((appState.posts || []).filter((post) => /newsletter/i.test(String(post.type || post.post_type || post.generationMode || ""))));
   return [];
+}
+
+function toDateKey(date) {
+  const d = date instanceof Date ? date : new Date(date);
+  if (Number.isNaN(d.getTime())) return "";
+
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
 }
 
 function getPostsForCurrentCalendarView() {
