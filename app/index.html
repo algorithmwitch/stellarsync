@@ -25073,16 +25073,10 @@ function setupSaveHandler() {
                         result = await withTimeout(apiCreatePostFromNote(noteIdToConvert, payload), 15000, "apiCreatePostFromNote timed out");
                     } catch (noteErr) {
                         console.warn("[post-save] createPostFromNote failed, falling back to savePost", noteErr);
-                        console.time("[post-save] apiSavePost");
-                        result = await withTimeout(apiSavePost(payload), 30000, "savePost fallback timed out");
-                        console.timeEnd("[post-save] apiSavePost");
-                        console.log("[post-save] apiSavePost result", result);
+                        result = await withTimeout(apiSavePost(payload), 15000, "savePost fallback timed out");
                     }
                 } else {
-                    console.time("[post-save] apiSavePost");
-                    result = await withTimeout(apiSavePost(payload), 30000, "savePost timed out");
-                    console.timeEnd("[post-save] apiSavePost");
-                    console.log("[post-save] apiSavePost result", result);
+                    result = await withTimeout(apiSavePost(payload), 15000, "savePost timed out");
                 }
                 upsertSavedPostIntoAppState(result, payload);
                 const canonicalId =
