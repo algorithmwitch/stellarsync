@@ -10135,6 +10135,32 @@ const EMPTY_WORKSPACE_STATE = {
 
 const DEFAULT_STATE = EMPTY_WORKSPACE_STATE;
 
+function loadLocalState() {
+  try {
+    const raw = safeStorageGet(getLocalStateStorageKey()) || (shouldReadLegacyLocalStateKey() ? safeStorageGet(APP_CONFIG.STORAGE_KEY) : "");
+    if (!raw) return sanitizeAppStateArtifacts(structuredCloneState(DEFAULT_STATE));
+
+    const parsed = JSON.parse(raw);
+    return sanitizeAppStateArtifacts({
+      posts: Array.isArray(parsed.posts) ? parsed.posts : structuredCloneState(DEFAULT_STATE.posts),
+      campaigns: Array.isArray(parsed.campaigns) ? parsed.campaigns : structuredCloneState(DEFAULT_STATE.campaigns),
+      settings: parsed.settings ? normalizeRemoteSettings(parsed.settings) : structuredCloneState(DEFAULT_STATE.settings),
+      workspace: parsed.workspace && typeof parsed.workspace === "object" ? { ...parsed.workspace } : {},
+      brandOS: parsed.brandOS && typeof parsed.brandOS === "object" ? { ...parsed.brandOS } : {},
+      inspo: Array.isArray(parsed.inspo) ? parsed.inspo : structuredCloneState(DEFAULT_STATE.inspo),
+      notes: Array.isArray(parsed.notes) ? parsed.notes : structuredCloneState(DEFAULT_STATE.notes),
+      media: Array.isArray(parsed.media) ? parsed.media : structuredCloneState(DEFAULT_STATE.media),
+      postMedia: Array.isArray(parsed.postMedia) ? parsed.postMedia : Array.isArray(parsed.post_media) ? parsed.post_media : structuredCloneState(DEFAULT_STATE.postMedia),
+      importJobs: Array.isArray(parsed.importJobs) ? parsed.importJobs : structuredCloneState(DEFAULT_STATE.importJobs),
+      aiDrafts: Array.isArray(parsed.aiDrafts) ? parsed.aiDrafts : structuredCloneState(DEFAULT_STATE.aiDrafts),
+      brandFramework: Array.isArray(parsed.brandFramework) ? parsed.brandFramework : structuredCloneState(DEFAULT_STATE.brandFramework)
+    });
+  } catch (err) {
+    console.warn("Failed to load local state, using defaults.", err);
+    return sanitizeAppStateArtifacts(structuredCloneState(DEFAULT_STATE));
+  }
+}
+
 let appState = loadLocalState();
 __APP_STATE_REF = appState;
 let currentView = "calendar";
@@ -33977,31 +34003,7 @@ function shouldReadLegacyLocalStateKey() {
   return slug === "master" || slug === "default";
 }
 
-function loadLocalState() {
-  try {
-    const raw = safeStorageGet(getLocalStateStorageKey()) || (shouldReadLegacyLocalStateKey() ? safeStorageGet(APP_CONFIG.STORAGE_KEY) : "");
-    if (!raw) return sanitizeAppStateArtifacts(structuredCloneState(DEFAULT_STATE));
 
-    const parsed = JSON.parse(raw);
-    return sanitizeAppStateArtifacts({
-      posts: Array.isArray(parsed.posts) ? parsed.posts : structuredCloneState(DEFAULT_STATE.posts),
-      campaigns: Array.isArray(parsed.campaigns) ? parsed.campaigns : structuredCloneState(DEFAULT_STATE.campaigns),
-      settings: parsed.settings ? normalizeRemoteSettings(parsed.settings) : structuredCloneState(DEFAULT_STATE.settings),
-      workspace: parsed.workspace && typeof parsed.workspace === "object" ? { ...parsed.workspace } : {},
-      brandOS: parsed.brandOS && typeof parsed.brandOS === "object" ? { ...parsed.brandOS } : {},
-      inspo: Array.isArray(parsed.inspo) ? parsed.inspo : structuredCloneState(DEFAULT_STATE.inspo),
-      notes: Array.isArray(parsed.notes) ? parsed.notes : structuredCloneState(DEFAULT_STATE.notes),
-      media: Array.isArray(parsed.media) ? parsed.media : structuredCloneState(DEFAULT_STATE.media),
-      postMedia: Array.isArray(parsed.postMedia) ? parsed.postMedia : Array.isArray(parsed.post_media) ? parsed.post_media : structuredCloneState(DEFAULT_STATE.postMedia),
-      importJobs: Array.isArray(parsed.importJobs) ? parsed.importJobs : structuredCloneState(DEFAULT_STATE.importJobs),
-      aiDrafts: Array.isArray(parsed.aiDrafts) ? parsed.aiDrafts : structuredCloneState(DEFAULT_STATE.aiDrafts),
-      brandFramework: Array.isArray(parsed.brandFramework) ? parsed.brandFramework : structuredCloneState(DEFAULT_STATE.brandFramework)
-    });
-  } catch (err) {
-    console.warn("Failed to load local state, using defaults.", err);
-    return sanitizeAppStateArtifacts(structuredCloneState(DEFAULT_STATE));
-  }
-}
 
 function sanitizeAppStateArtifacts(state) {
   const next = state || structuredCloneState(DEFAULT_STATE);
@@ -37030,7 +37032,9 @@ window.openSocialQueueComposer = openSocialQueueComposer;
 window.openMondayBackfillModal = openMondayBackfillModal;
 window.closeMondayBackfillModal = closeMondayBackfillModal;
 window.confirmMondayBackfill = confirmMondayBackfill;
-} 
+
+}
+
 </script>
 </body>
 </html>
