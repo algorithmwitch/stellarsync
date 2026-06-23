@@ -6615,14 +6615,21 @@ async function ensureSupabaseWorkspaceBeforeBoot() {
     window.location.replace("/login/");
     return null;
   }
-  STELLARSYNC_AUTH_USER = await loadProfileSettingsForUser(session.user);
+  STELLARSYNC_AUTH_USER = session.user;
   if (typeof window !== "undefined") window.__currentAuthUser = STELLARSYNC_AUTH_USER;
+  // Fire-and-forget optional profile settings (never blocks boot)
+  loadProfileSettingsForUser(session.user).then(function(merged) {
+    if (merged) {
+      STELLARSYNC_AUTH_USER = merged;
+      if (typeof window !== "undefined") window.__currentAuthUser = merged;
+    }
+  }).catch(function() {});
   console.log("[app-router] session found", session.user.email || session.user.id);
   console.log("[app-router] user email", session.user.email || "(none)");
 
   let workspaces = [];
   try {
-    workspaces = await fetchWorkspaceMembershipsByUserId(session.user.id, session.user.email || "");
+    workspaces = await withTimeout(fetchWorkspaceMembershipsByUserId(session.user.id, session.user.email || ""), 8000, 'fetchWorkspaceMembershipsByUserId timed out');
     workspaces = await Promise.all((Array.isArray(workspaces) ? workspaces : []).map(loadWorkspaceSettingsForWorkspace));
   } catch (err) {
     updateToast(bootToastId, "error", "Workspace connection failed", err);
@@ -6671,10 +6678,10 @@ async function ensureSupabaseWorkspaceBeforeBoot() {
 
   // Fetch workspace_connections and resolve apps_script_url
   try {
-    const { data: connData } = await STELLARSYNC_SUPABASE_CLIENT
+    const { data: connData } = await withTimeout(STELLARSYNC_SUPABASE_CLIENT
       .from("workspace_connections")
       .select("*")
-      .eq("workspace_id", activeWorkspace.id);
+      .eq("workspace_id", activeWorkspace.id), 6000, 'workspace_connections timed out');
     WORKSPACE_CONNECTIONS = Array.isArray(connData) ? connData : [];
     console.log("[app-router] workspace_connections loaded", WORKSPACE_CONNECTIONS.length);
   } catch (e) {
@@ -11573,7 +11580,8 @@ function toggleSidePanel(name) {
 }
 
 function rerenderAll() {
-  if (STELLARSYNC_DEBUG) {
+  var mobile = isMobileBoot();
+  if (!mobile && STELLARSYNC_DEBUG) {
     safeRender(() => {
       console.table((appState.posts || []).map((p) => ({
         title: p.title,
@@ -11591,7 +11599,7 @@ function rerenderAll() {
   safeRender(() => ensureBrandOSDefaults(WORKSPACE_RUNTIME_CONFIG?.active || {}), "ensureBrandOSDefaults");
   safeRender(renderOverviewPanel, "renderOverviewPanel");
   safeRender(renderContextualGuidancePanel, "renderContextualGuidancePanel");
-  safeRender(renderSemanticMemoryPanel, "renderSemanticMemoryPanel");
+  if (!mobile) safeRender(renderSemanticMemoryPanel, "renderSemanticMemoryPanel");
   safeRender(renderModalPillarButtons, "renderModalPillarButtons");
   if (activeView === "calendar") {
     safeRender(renderCalendar, "renderCalendar");
@@ -11601,15 +11609,15 @@ function rerenderAll() {
     safeRender(updateLedgerFilterLabels, "updateLedgerFilterLabels");
     safeRender(renderLedger, "renderLedger");
   }
-  safeRender(() => renderQueue(getScheduledQueue()), "renderQueue");
+  if (!mobile) safeRender(() => renderQueue(getScheduledQueue()), "renderQueue");
   if (activeView === "media") safeRender(renderMedia, "renderMedia");
   if (activeView === "inspo") safeRender(renderInspo, "renderInspo");
   if (activeView === "notes") safeRender(renderNotes, "renderNotes");
   if (activeView === "write-idea") safeRender(renderWriteIdeaScaffold, "renderWriteIdeaScaffold");
-  if (activeView === "constellation") safeRender(renderConstellation, "renderConstellation");
+  if (activeView === "constellation" && !mobile) safeRender(renderConstellation, "renderConstellation");
   if (activeView === "performance") safeRender(renderPerformanceView, "renderPerformanceView");
   if (activeView === "audit") safeRender(renderAuditView, "renderAuditView");
-  safeRender(renderAISemanticMemoryCards, "renderAISemanticMemoryCards");
+  if (!mobile) safeRender(renderAISemanticMemoryCards, "renderAISemanticMemoryCards");
   safeRender(renderWorkspaceExportActions, "renderWorkspaceExportActions");
   safeRender(() => {
     if (!workspaceHubModal?.classList.contains("opacity-0")) renderWorkspaceHub();
@@ -17914,11 +17922,14 @@ async function testLinkedInHistoricalAccessAction() {
 window.testLinkedInHistoricalAccessAction = testLinkedInHistoricalAccessAction;
 
 async function refreshSocialImportContext() {
+  if (window.__refreshingSocial) return;
+  window.__refreshingSocial = true;
   connectedAccountsStatusLoading = true;
   if (!workspaceHubModal?.classList.contains("opacity-0")) renderWorkspaceHub();
   if (!APP_CONFIG.ENABLE_REMOTE_SYNC || !isRemoteConfigured()) {
     setSocialConnectedAccounts([]);
     connectedAccountsStatusLoading = false;
+    window.__refreshingSocial = false;
     return;
   }
   try {
@@ -17938,6 +17949,7 @@ async function refreshSocialImportContext() {
     setSocialConnectedAccounts([]);
   } finally {
     connectedAccountsStatusLoading = false;
+    window.__refreshingSocial = false;
     if (!workspaceHubModal?.classList.contains("opacity-0")) renderWorkspaceHub();
   }
 }
@@ -18005,6 +18017,8 @@ function toggleProfileMenu(force) {
 }
 
 async function openWorkspaceHub(tab = "settings") {
+  if (window.__workspaceHubOpening) return;
+  window.__workspaceHubOpening = true;
   console.log("[modal] open workspace-hub", tab);
   window.__workspaceHubHealth = window.__workspaceHubHealth || { modalFound: false, cardFound: false, lastTab: "", openCount: 0, lastError: null };
   window.__workspaceHubStats = window.__workspaceHubStats || window.__workspaceHubHealth;
@@ -18020,6 +18034,7 @@ async function openWorkspaceHub(tab = "settings") {
   if (!workspaceHubModal) {
     window.__workspaceHubHealth.lastError = "workspace-hub-modal element missing";
     showToast("Workspace Hub modal missing.", "Settings cannot open because #workspace-hub-modal is not in the DOM.", "ph-warning", "text-yellow-400");
+    window.__workspaceHubOpening = false;
     return;
   }
   try {
@@ -18041,6 +18056,8 @@ async function openWorkspaceHub(tab = "settings") {
     window.__workspaceHubHealth.lastError = err && err.message ? err.message : String(err);
     console.error(err);
     showToast("Workspace Hub Error", window.__workspaceHubHealth.lastError, "ph-warning", "text-yellow-400");
+  } finally {
+    window.__workspaceHubOpening = false;
   }
 }
 
@@ -25026,6 +25043,64 @@ async function deletePostById(postId) {
   }
 }
 
+async function deleteNoteById(noteId) {
+  const note = (appState.notes || []).find((n) => (n.noteId || n.id) === noteId);
+  if (!note) return;
+
+  const confirmed = await openConfirmActionModal({
+    title: "Delete note",
+    message: `Delete "${note.title || "Untitled note"}"? This cannot be undone.`,
+    confirmLabel: "Delete",
+  });
+  if (!confirmed) return;
+
+  appState.notes = (appState.notes || []).filter((n) => (n.noteId || n.id) !== noteId);
+  persistLocalState();
+  rerenderAll();
+  showToast("Deleted", "Note removed locally.", "ph-trash", "text-red-400");
+
+  if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
+    try {
+      await apiDeleteNote(noteId);
+    } catch (err) {
+      console.error(err);
+      appState.notes.push(note);
+      persistLocalState();
+      rerenderAll();
+      showToast("Remote issue", "Delete failed. Note restored.", "ph-warning", "text-yellow-400");
+    }
+  }
+}
+
+async function deleteInspoById(inspoId) {
+  const item = (appState.inspo || []).find((i) => i.id === inspoId);
+  if (!item) return;
+
+  const confirmed = await openConfirmActionModal({
+    title: "Delete inspo",
+    message: `Delete "${item.title || "Untitled inspiration"}"? This cannot be undone.`,
+    confirmLabel: "Delete",
+  });
+  if (!confirmed) return;
+
+  appState.inspo = (appState.inspo || []).filter((i) => i.id !== inspoId);
+  persistLocalState();
+  rerenderAll();
+  showToast("Deleted", "Inspo removed locally.", "ph-trash", "text-red-400");
+
+  if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
+    try {
+      await apiDeleteInspo(inspoId);
+    } catch (err) {
+      console.error(err);
+      appState.inspo.push(item);
+      persistLocalState();
+      rerenderAll();
+      showToast("Remote issue", "Delete failed. Inspo restored.", "ph-warning", "text-yellow-400");
+    }
+  }
+}
+
 async function duplicatePostById(postId) {
   const source = appState.posts.find((p) => p.id === postId);
   if (!source) return;
@@ -25218,15 +25293,20 @@ function switchView(viewName) {
       }
 
       if (targetName === "constellation") {
-        safeRender(renderConstellation, "switchView/constellation");
-        safeRender(() => {
-          if (constellationFirstOpen) {
-            constellationFirstOpen = false;
-            resetConstellationViewToStart();
-          } else {
-            fitConstellation({ preserveUserView: true });
-          }
-        }, "switchView/constellationReset");
+        if (window.__constellationRenderQueued) return;
+        window.__constellationRenderQueued = true;
+        requestAnimationFrame(function() {
+          window.__constellationRenderQueued = false;
+          safeRender(renderConstellation, "switchView/constellation");
+          safeRender(() => {
+            if (constellationFirstOpen) {
+              constellationFirstOpen = false;
+              resetConstellationViewToStart();
+            } else {
+              fitConstellation({ preserveUserView: true });
+            }
+          }, "switchView/constellationReset");
+        });
       }
       safeRender(renderMobileUtilitySheet, "switchView/mobileSheet");
     });
@@ -27555,13 +27635,22 @@ function renderInspo() {
             <span class="px-2.5 py-1 bg-[#120c1d] border border-white/5 rounded text-[10px] text-gray-300 font-semibold uppercase tracking-wider">
               ${escapeHtml(label)}
             </span>
-            <button
-              type="button"
-              onclick="inspoToPost('${escapeHtml(item.id)}')"
-              class="text-gray-500 hover:text-white transition-colors bg-[#120c1d] p-2 rounded-lg border border-white/5"
-              title="Turn into post">
-              <i class="ph-bold ph-paper-plane-tilt text-lg"></i>
-            </button>
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                onclick="deleteInspoById('${escapeHtml(item.id)}')"
+                class="text-gray-500 hover:text-red-400 transition-colors bg-[#120c1d] p-2 rounded-lg border border-white/5"
+                title="Delete inspo">
+                <i class="ph-bold ph-trash text-lg"></i>
+              </button>
+              <button
+                type="button"
+                onclick="inspoToPost('${escapeHtml(item.id)}')"
+                class="text-gray-500 hover:text-white transition-colors bg-[#120c1d] p-2 rounded-lg border border-white/5"
+                title="Turn into post">
+                <i class="ph-bold ph-paper-plane-tilt text-lg"></i>
+              </button>
+            </div>
           </div>
 
           <h3 class="text-white text-base font-bold mb-2 wrap-safe" title="${escapeHtml(getInspoTitle(item))}">
@@ -27657,9 +27746,14 @@ function renderNotes() {
         </div>
         <div class="mt-auto pt-4 border-t border-white/5 flex items-center justify-between gap-3">
           <span class="text-[10px] text-gray-500 font-medium wrap-safe">${escapeHtml(statusLine)}</span>
-          <button type="button" onclick="noteToPost('${escapeHtml(item.noteId || item.id)}')" class="text-[#c77dff] text-xs font-bold hover:text-white transition-colors flex items-center gap-1.5 shrink-0">
-            <i class="ph-bold ph-plus"></i> Create Post
-          </button>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="deleteNoteById('${escapeHtml(item.noteId || item.id)}')" class="text-gray-500 hover:text-red-400 transition-colors p-1.5" title="Delete note">
+              <i class="ph-bold ph-trash text-sm"></i>
+            </button>
+            <button type="button" onclick="noteToPost('${escapeHtml(item.noteId || item.id)}')" class="text-[#c77dff] text-xs font-bold hover:text-white transition-colors flex items-center gap-1.5 shrink-0">
+              <i class="ph-bold ph-plus"></i> Create Post
+            </button>
+          </div>
         </div>
       </div>
     `;
@@ -27697,8 +27791,15 @@ async function apiUpdateCampaign(campaign) {
   return apiPost("saveCampaign", campaign);
 }
 
-async function syncRemoteIfConfigured() {
-  console.log("[boot] syncRemoteIfConfigured start");
+function isOptionalSupabaseTableError(err) {
+  if (!err) return false;
+  var msg = String(err && (err.message || err.error || err.code || err) || "").toLowerCase();
+  return msg.indexOf("relation") >= 0 || msg.indexOf("does not exist") >= 0 || msg.indexOf("404") >= 0 || msg.indexOf("not found") >= 0 || msg.indexOf("permission denied") >= 0;
+}
+
+async function syncRemoteIfConfigured(isMobileBoot) {
+  var mobile = isMobileBoot === true || (isMobileBoot === undefined && isMobileBoot());
+  console.log(mobile ? "[boot-mobile] sync start" : "[boot] syncRemoteIfConfigured start");
   var activeCfg = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active;
   console.log("[data] active workspace", activeCfg ? (activeCfg.workspace_slug || activeCfg.slug) : "none");
   console.log("[data] backend_type", activeCfg ? (activeCfg.backend_type || "unknown") : "unknown");
@@ -27723,28 +27824,39 @@ async function syncRemoteIfConfigured() {
       if (staleNativeErr) staleNativeErr.remove();
       var staleNativeZero = document.getElementById("zero-posts-state");
       if (staleNativeZero) staleNativeZero.remove();
-      const [supabasePosts, supabaseNotes, supabaseInspo, supabaseAIDrafts, supabaseCampaigns] = await Promise.allSettled([
-        apiGetPosts(), apiGetNotes(), apiGetInspo(), apiGetAIDrafts(), apiGetCampaigns()
-      ]);
-      try { await loadAIProviders(); } catch (err) { /* silent */ }
-      if (supabasePosts.status === "fulfilled" && Array.isArray(supabasePosts.value)) {
-        appState.posts = supabasePosts.value.map((post, index) => normalizeRemotePost(post, getAvailableCampaignRecords(), appState.media || [], index));
+      var postCountLimit = mobile ? 50 : 0;
+      if (mobile) console.log("[boot-mobile] phase 1: loading posts only");
+      var p1Posts = await withTimeout(apiGetPosts(), mobile ? 10000 : 20000, 'apiGetPosts timed out');
+      if (Array.isArray(p1Posts)) {
+        appState.posts = p1Posts.slice(0, postCountLimit || p1Posts.length).map(function(post, index) {
+          return normalizeRemotePost(post, getAvailableCampaignRecords(), appState.media || [], index);
+        });
+        console.log(mobile ? "[boot-mobile] phase 1 posts count" : "[data] posts count", appState.posts.length);
       }
-      if (supabaseNotes.status === "fulfilled" && Array.isArray(supabaseNotes.value)) {
-        appState.notes = filterRenderableArtifacts(supabaseNotes.value.map(function(item) { return normalizeRemoteNote(item); }), "note");
+      if (!mobile) {
+        var restResults = await Promise.allSettled([
+          withTimeout(apiGetNotes(), 10000, 'apiGetNotes timed out').catch(function() { return []; }),
+          withTimeout(apiGetInspo(), 10000, 'apiGetInspo timed out').catch(function() { return []; }),
+          withTimeout(apiGetAIDrafts(), 10000, 'apiGetAIDrafts timed out').catch(function() { return []; }),
+          withTimeout(apiGetCampaigns(), 10000, 'apiGetCampaigns timed out').catch(function() { return []; })
+        ]);
+        if (Array.isArray(restResults[0])) {
+          appState.notes = filterRenderableArtifacts(restResults[0].map(function(item) { return normalizeRemoteNote(item); }), "note");
+        }
+        if (Array.isArray(restResults[1])) {
+          appState.inspo = filterRenderableArtifacts(restResults[1].map(function(item) { return normalizeRemoteInspo(item); }), "inspo");
+        }
+        if (Array.isArray(restResults[2])) {
+          appState.aiDrafts = filterRenderableArtifacts(restResults[2].map(function(item) { return normalizeRemoteAIDraft(item); }), "aiDraft");
+        }
+        if (Array.isArray(restResults[3])) {
+          appState.campaigns = restResults[3].map(function(item) { return normalizeRemoteCampaign(item); });
+        }
       }
-      if (supabaseInspo.status === "fulfilled" && Array.isArray(supabaseInspo.value)) {
-        appState.inspo = filterRenderableArtifacts(supabaseInspo.value.map(function(item) { return normalizeRemoteInspo(item); }), "inspo");
-      }
-      if (supabaseAIDrafts.status === "fulfilled" && Array.isArray(supabaseAIDrafts.value)) {
-        appState.aiDrafts = filterRenderableArtifacts(supabaseAIDrafts.value.map(function(item) { return normalizeRemoteAIDraft(item); }), "aiDraft");
-      }
-      if (supabaseCampaigns.status === "fulfilled" && Array.isArray(supabaseCampaigns.value)) {
-        appState.campaigns = supabaseCampaigns.value.map(function(item) { return normalizeRemoteCampaign(item); });
-      }
-      if (isSupabaseMediaEnabled()) {
+      try { await loadAIProviders().catch(function() {}); } catch (err) { /* silent */ }
+      if (!mobile && isSupabaseMediaEnabled()) {
         try {
-          var supabaseMediaResult = await loadSupabaseMediaAssets(activeCfg);
+          var supabaseMediaResult = await withTimeout(loadSupabaseMediaAssets(activeCfg), 8000, 'loadSupabaseMediaAssets timed out');
           appState.media = filterRenderableArtifacts(Array.isArray(supabaseMediaResult.assets) ? supabaseMediaResult.assets : [], "media");
         } catch (err) {
           console.log("[media-backend] load error", err?.message || err);
@@ -27756,11 +27868,31 @@ async function syncRemoteIfConfigured() {
       backendReachable = true;
       lastSyncError = "";
       persistLocalState();
-      await maybeAutoPullMondayUpdatesForWorkspace();
-      logCampaignQASummary("supabase_native");
+      if (!mobile) await maybeAutoPullMondayUpdatesForWorkspace().catch(function() {});
+      if (!mobile) logCampaignQASummary("supabase_native");
       console.log("[data]", getAppStateCounts());
       rerenderAll();
-      updateLoadingToastSuccess(syncLoadingToastId, "Workspace loaded", "Supabase workspace data loaded.");
+      updateLoadingToastSuccess(syncLoadingToastId, "Workspace loaded", mobile ? "Calendar loaded." : "Supabase workspace data loaded.");
+      if (mobile) {
+        console.log("[boot-mobile] phase 1 complete");
+        (window.requestIdleCallback || setTimeout)(function() {
+          console.log("[boot-mobile] phase 2: loading campaigns, notes, inspo");
+          Promise.allSettled([
+            apiGetCampaigns(),
+            apiGetNotes(),
+            apiGetInspo(),
+            apiGetAIDrafts()
+          ]).then(function(results) {
+            if (results[0].status === "fulfilled" && Array.isArray(results[0].value)) appState.campaigns = results[0].value.map(function(c) { return normalizeRemoteCampaign(c); });
+            if (results[1].status === "fulfilled" && Array.isArray(results[1].value)) appState.notes = filterRenderableArtifacts(results[1].value.map(function(n) { return normalizeRemoteNote(n); }), "note");
+            if (results[2].status === "fulfilled" && Array.isArray(results[2].value)) appState.inspo = filterRenderableArtifacts(results[2].value.map(function(i) { return normalizeRemoteInspo(i); }), "inspo");
+            if (results[3].status === "fulfilled" && Array.isArray(results[3].value)) appState.aiDrafts = filterRenderableArtifacts(results[3].value.map(function(d) { return normalizeRemoteAIDraft(d); }), "aiDraft");
+            persistLocalState();
+            rerenderAll();
+            console.log("[boot-mobile] phase 2 complete");
+          }).catch(function(err) { console.warn("[boot-mobile] phase 2 error", err?.message || err); });
+        }, 500);
+      }
       return;
     } catch (err) {
       console.error(err);
@@ -27778,8 +27910,8 @@ async function syncRemoteIfConfigured() {
   window.__SHEET_POSTS_LOADED = false;
   HYBRID_MEDIA_LOADING = false;
   HYBRID_MEDIA_LAZY_LOAD_PROMISE = null;
-  console.log("[boot] hybrid mode detected");
-  console.log("[hybrid] source google_sheets");
+  console.log(mobile ? "[boot-mobile] hybrid mode detected" : "[boot] hybrid mode detected");
+  if (!mobile) console.log("[hybrid] source google_sheets");
 
   dismissToast(syncLoadingToastId);
   var staleErr2 = document.getElementById("sync-error-state");
@@ -27789,26 +27921,29 @@ async function syncRemoteIfConfigured() {
 
   var loadingEl = document.getElementById("boot-loading");
 
-  // Phase 1: Fetch posts and campaigns from Sheets first
-  console.log("[hybrid] phase 1 start");
+  // Phase 1: Fetch posts only (on mobile, capped to recent 50)
+  console.log(mobile ? "[boot-mobile] phase 1: loading posts" : "[hybrid] phase 1 start");
   let sheetHydration = null;
   let postsLoadError = null;
   try {
-    sheetHydration = await loadSheetsWorkspaceDataForHybrid(["POSTS", "CAMPAIGNS"]);
+    sheetHydration = await withTimeout(loadSheetsWorkspaceDataForHybrid(mobile ? ["POSTS"] : ["POSTS", "CAMPAIGNS"]), mobile ? 10000 : 25000, 'loadSheetsWorkspaceDataForHybrid timed out');
   } catch (err) {
     postsLoadError = err;
     console.log("[posts] sheets load error", err && err.message ? err.message : String(err));
   }
 
+  var mobilePostCap = mobile ? 50 : 0;
   let postsData = Array.isArray(sheetHydration?.posts) ? sheetHydration.posts : [];
   if (sheetHydration && typeof sheetHydration === "object" && !postsLoadError) {
     hydrateHybridSheetData(sheetHydration || {});
-    appState.posts = postsData.map(function(post, index) {
+    appState.posts = postsData.slice(0, mobilePostCap || postsData.length).map(function(post, index) {
       return normalizeRemotePost(post, getAvailableCampaignRecords(), appState.media || [], index);
     });
-    console.log("[hybrid] phase 1 posts count", appState.posts.length);
-    console.log("[hybrid] phase 1 campaigns count", Array.isArray(appState.campaigns) ? appState.campaigns.length : 0);
-    logCampaignQASummary("hybrid");
+    console.log(mobile ? "[boot-mobile] phase 1 posts count" : "[hybrid] phase 1 posts count", appState.posts.length);
+    if (!mobile) {
+      console.log("[hybrid] phase 1 campaigns count", Array.isArray(appState.campaigns) ? appState.campaigns.length : 0);
+      logCampaignQASummary("hybrid");
+    }
     console.log("[posts] appState.posts set count", appState.posts.length);
     console.log("[posts] render after sheets");
     window.__SHEET_POSTS_LOADED = true;
@@ -27819,12 +27954,14 @@ async function syncRemoteIfConfigured() {
     lastSyncError = "";
     persistLocalState();
     rerenderAll();
-    console.log("[hybrid] phase 1 render complete");
+    console.log(mobile ? "[boot-mobile] phase 1 render complete" : "[hybrid] phase 1 render complete");
     if (loadingEl) loadingEl.classList.add("hidden");
     console.log("[boot] loading overlay hidden");
     console.log("[boot] first render complete");
-    shouldSkipSupabaseMirror("posts");
-    shouldSkipSupabaseMirror("campaigns");
+    if (!mobile) {
+      shouldSkipSupabaseMirror("posts");
+      shouldSkipSupabaseMirror("campaigns");
+    }
   } else if (postsLoadError) {
     // Show visible error overlay with retry
     offlineMode = true;
@@ -27853,12 +27990,13 @@ async function syncRemoteIfConfigured() {
   }
 
   // Phase 2: Everything else in background (fire and forget, must not overwrite Sheet posts)
-  console.log("[hybrid] phase 2 background start");
-  Promise.allSettled([
-    loadSheetsWorkspaceDataForHybrid(["SETTINGS", "NOTES", "INSPO", "AI_DRAFTS", "BRAND_FRAMEWORK"]),
-    apiGetSocialImportCapabilities(),
-    apiGetConnectedAccounts()
-  ]).then(function(results) {
+  console.log(mobile ? "[boot-mobile] deferred sync scheduled" : "[hybrid] phase 2 background start");
+  var phase2Task = function() {
+    Promise.allSettled([
+      loadSheetsWorkspaceDataForHybrid(mobile ? ["CAMPAIGNS", "SETTINGS"] : ["SETTINGS", "NOTES", "INSPO", "AI_DRAFTS", "BRAND_FRAMEWORK"]),
+      apiGetSocialImportCapabilities(),
+      apiGetConnectedAccounts()
+    ]).then(function(results) {
     var backgroundSheetHydration = results[0].status === "fulfilled" ? results[0].value : {};
     var previousPostCount = Array.isArray(appState.posts) ? appState.posts.length : 0;
     var incomingPostCount = Array.isArray(backgroundSheetHydration?.posts) ? backgroundSheetHydration.posts.length : 0;
@@ -27937,10 +28075,26 @@ async function syncRemoteIfConfigured() {
     maybeAutoPullMondayUpdatesForWorkspace().catch(function() {});
     console.log("[data]", getAppStateCounts());
     rerenderAll();
-    console.log("[hybrid] phase 2 background complete");
+    console.log(mobile ? "[boot-mobile] phase 2 complete" : "[hybrid] phase 2 background complete");
+    if (mobile) {
+      (window.requestIdleCallback || setTimeout)(function() {
+        console.log("[boot-mobile] phase 3: loading notes, inspo, aiDrafts, media");
+        loadSheetsWorkspaceDataForHybrid(["NOTES", "INSPO", "AI_DRAFTS", "MEDIA"]).then(function(r) {
+          if (Array.isArray(r.notes)) { appState.notes = filterRenderableArtifacts(r.notes.map(function(n) { return normalizeRemoteNote(n); }), "note"); }
+          if (Array.isArray(r.inspo)) { appState.inspo = filterRenderableArtifacts(r.inspo.map(function(i) { return normalizeRemoteInspo(i); }), "inspo"); }
+          if (Array.isArray(r.aiDrafts)) { appState.aiDrafts = filterRenderableArtifacts(r.aiDrafts.map(function(d) { return normalizeRemoteAIDraft(d); }), "aiDraft"); }
+          if (Array.isArray(r.media)) { appState.media = r.media.map(function(m) { return normalizeRemoteMedia(m); }); }
+          persistLocalState();
+          rerenderAll();
+          console.log("[boot-mobile] phase 3 complete");
+        }).catch(function(err) { console.warn("[boot-mobile] phase 3 error", err?.message || err); });
+      }, 1000);
+    }
   }).catch(function(err) {
     console.log("[background] nonfatal error", err?.message || err);
   });
+  if (mobile) { (window.requestIdleCallback || setTimeout)(phase2Task, 300); }
+  else { phase2Task(); }
 }
 
 function getSheetMirrorConfig() {
@@ -28802,6 +28956,8 @@ async function callSupabaseEdgeFunction(functionName, payload = {}) {
     console.warn(isSocialConnectionFunction ? "[linkedin-auth] missing Supabase session token" : "[supabase-auth] missing Supabase session token");
     throw new Error(isSocialConnectionFunction ? "Please sign in again to connect LinkedIn" : "Please sign in again.");
   }
+  const controller = new AbortController();
+  var eft = setTimeout(function() { controller.abort(); }, 6000);
   const response = await fetch(`${SUPABASE_URL}/functions/v1/${functionName}`, {
     method: "POST",
     headers: {
@@ -28809,8 +28965,9 @@ async function callSupabaseEdgeFunction(functionName, payload = {}) {
       "Authorization": `Bearer ${token}`,
       "apikey": SUPABASE_ANON_KEY
     },
-    body: JSON.stringify(payload || {})
-  });
+    body: JSON.stringify(payload || {}),
+    signal: controller.signal
+  }).finally(function() { clearTimeout(eft); });
   const rawText = await response.text().catch(() => "");
   let result = {};
   try {
@@ -33583,6 +33740,14 @@ async function apiDeletePost(postId) {
   return apiPost("deletePost", { postId });
 }
 
+async function apiDeleteNote(noteId) {
+  return apiPost("deleteNote", { noteId });
+}
+
+async function apiDeleteInspo(inspoId) {
+  return apiPost("deleteInspo", { inspoId });
+}
+
 async function apiDuplicatePost(postId) {
   const source = appState.posts.find(p => p.id === postId);
   if (!source) throw new Error("Missing source post for duplicate.");
@@ -34999,7 +35164,29 @@ function auditClickableOverlays() {
 
 function bootMinimalApp() {
   try {
-    console.log("[boot] bootMinimalApp start");
+    console.log("[boot-mobile] safe mode fallback shown");
+    // Show safe mode banner
+    var safeBanner = document.getElementById("safe-mode-banner");
+    if (!safeBanner) {
+      safeBanner = document.createElement("div");
+      safeBanner.id = "safe-mode-banner";
+      safeBanner.className = "fixed top-0 left-0 right-0 z-[200] bg-[#1a1128] border-b border-yellow-500/20 px-4 py-2 flex items-center justify-between gap-3";
+      safeBanner.innerHTML = '<div class="flex items-center gap-2"><i class="ph-bold ph-shield-check text-yellow-400 text-lg"></i><span class="text-xs text-gray-300 font-medium">StellarSync loaded in <strong class="text-yellow-400">safe mode</strong></span></div>' +
+        '<div class="flex items-center gap-2">' +
+        '<button class="safe-mode-btn px-3 py-1 rounded-lg bg-[#231738] hover:bg-[#2d1b4e] text-white text-[10px] uppercase tracking-wider font-bold transition-colors" data-action="retry">Retry sync</button>' +
+        '<button class="safe-mode-btn px-3 py-1 rounded-lg bg-[#231738] hover:bg-[#2d1b4e] text-white text-[10px] uppercase tracking-wider font-bold transition-colors" data-action="calendar">Calendar</button>' +
+        '<button class="safe-mode-btn px-3 py-1 rounded-lg bg-[#231738] hover:bg-[#2d1b4e] text-white text-[10px] uppercase tracking-wider font-bold transition-colors" data-action="settings">Settings</button>' +
+        '</div>';
+      document.body.prepend(safeBanner);
+      safeBanner.addEventListener("click", function(ev) {
+        var btn = ev.target.closest(".safe-mode-btn");
+        if (!btn) return;
+        var action = btn.dataset.action;
+        if (action === "retry") { safeBanner.remove(); location.reload(); }
+        else if (action === "calendar") { if (typeof switchView === "function") switchView("calendar"); }
+        else if (action === "settings") { if (typeof openWorkspaceHub === "function") openWorkspaceHub("settings"); }
+      });
+    }
     // Ensure view-calendar is visible
     var cal = document.getElementById("view-calendar");
     if (cal) {
@@ -35045,8 +35232,10 @@ function bootMinimalApp() {
 }
 
 function initApp() {
+  var mobile = isMobileBoot();
+  if (mobile) console.log("[boot-mobile] shell rendering");
   setupRuntimeAuditLogging();
-  console.log("[boot] initApp start");
+  console.log(mobile ? "[boot-mobile] initApp start" : "[boot] initApp start");
   window.__BOOT_STARTED = true;
   var domEl = document.getElementById("boot-diag-dom");
   domEl && (domEl.textContent = "yes");
@@ -35059,39 +35248,40 @@ function initApp() {
   guardedCall(cleanInvalidImportantToken, "cleanInvalidImportantToken");
 
   guardedCall(setupWorkspaceUI, "setupWorkspaceUI");
-  console.log("[boot] setupWorkspaceUI done");
-  if (STELLARSYNC_DEBUG) guardedCall(auditClickableOverlays, "auditClickableOverlays");
+  if (!mobile && STELLARSYNC_DEBUG) guardedCall(auditClickableOverlays, "auditClickableOverlays");
   guardedCall(setupCalendarControls, "setupCalendarControls");
   guardedCall(setupLedgerControls, "setupLedgerControls");
-  guardedCall(setupMediaFilters, "setupMediaFilters");
-  guardedCall(setupMediaAdvancedFilters, "setupMediaAdvancedFilters");
-  guardedCall(setupMediaUpload, "setupMediaUpload");
-  guardedCall(setupMediaLinkModal, "setupMediaLinkModal");
+  if (!mobile) {
+    guardedCall(setupMediaFilters, "setupMediaFilters");
+    guardedCall(setupMediaAdvancedFilters, "setupMediaAdvancedFilters");
+    guardedCall(setupMediaUpload, "setupMediaUpload");
+    guardedCall(setupMediaLinkModal, "setupMediaLinkModal");
+  }
   guardedCall(setupModalControls, "setupModalControls");
   guardedCall(setupModalMediaUpload, "setupModalMediaUpload");
   guardedCall(setupInspoModal, "setupInspoModal");
   guardedCall(setupNoteModal, "setupNoteModal");
   guardedCall(setupImportModals, "setupImportModals");
-  guardedCall(setupCampaignControls, "setupCampaignControls");
-  guardedCall(setupConstellationInteractions, "setupConstellationInteractions");
-  guardedCall(setupWriteIdeaWorkspace, "setupWriteIdeaWorkspace");
-  guardedCall(setupAIAndBrandWorkspaces, "setupAIAndBrandWorkspaces");
-  guardedCall(setupStellarAssistant, "setupStellarAssistant");
+  if (!mobile) guardedCall(setupCampaignControls, "setupCampaignControls");
+  if (!mobile) guardedCall(setupConstellationInteractions, "setupConstellationInteractions");
+  if (!mobile) guardedCall(setupWriteIdeaWorkspace, "setupWriteIdeaWorkspace");
+  if (!mobile) guardedCall(setupAIAndBrandWorkspaces, "setupAIAndBrandWorkspaces");
+  if (!mobile) guardedCall(setupStellarAssistant, "setupStellarAssistant");
   guardedCall(setupPWAInstall, "setupPWAInstall");
   guardedCall(registerServiceWorkerSafe, "registerServiceWorkerSafe");
 
   guardedCall(setupSplitPane, "setupSplitPane");
   guardedCall(applyShellLayout, "applyShellLayout");
 
-  console.log("[boot] rerenderAll start");
+  console.log(mobile ? "[boot-mobile] rerenderAll start" : "[boot] rerenderAll start");
   guardedCall(rerenderAll, "rerenderAll");
-  console.log("[boot] rerenderAll done");
-  console.log("[boot] switchView calendar start");
+  console.log(mobile ? "[boot-mobile] rerenderAll done" : "[boot] rerenderAll done");
+  console.log(mobile ? "[boot-mobile] switchView calendar start" : "[boot] switchView calendar start");
   guardedCall(switchView, "switchView", "calendar");
   guardedCall(handleSocialAuthReturn, "handleSocialAuthReturn");
 
   window.__BOOT_COMPLETED = true;
-  console.log("[boot] initApp complete");
+  console.log(mobile ? "[boot-mobile] initApp complete" : "[boot] initApp complete");
   var completedEl = document.getElementById("boot-diag-completed");
   completedEl && (completedEl.textContent = "yes");
   var renderEl = document.getElementById("boot-diag-render");
@@ -35105,7 +35295,7 @@ function initApp() {
   }
 
   if (typeof syncRemoteIfConfigured === "function") {
-    syncRemoteIfConfigured().catch(function(err) {
+    syncRemoteIfConfigured(mobile).catch(function(err) {
       reportFrontendError("initApp/syncRemoteIfConfigured", err);
       if (!offlineMode) {
         offlineMode = true;
@@ -35113,12 +35303,13 @@ function initApp() {
       }
     });
   }
-  guardedCall(startSheetAutoPullLoop, "startSheetAutoPullLoop");
+  if (!mobile) guardedCall(startSheetAutoPullLoop, "startSheetAutoPullLoop");
   if (typeof loadAIProviders === "function") {
     loadAIProviders().catch(function(err) {
       reportFrontendError("initApp/loadAIProviders", err);
     });
   }
+  if (mobile) console.log("[boot-mobile] shell rendered");
 }
 
 function openProfileWorkspaceModal() {
@@ -36723,25 +36914,28 @@ function renderWorkspaceBranding() {
 }
 
 async function bootAppWithWorkspaceRouter() {
+  var mobile = isMobileBoot();
   try {
-    console.log("[boot] init started");
+    console.log(mobile ? "[boot-mobile] init started" : "[boot] init started");
     var loadingEl = document.getElementById("boot-loading");
     if (loadingEl) loadingEl.classList.remove("hidden");
 
     const activeWorkspace = await ensureSupabaseWorkspaceBeforeBoot();
     if (!activeWorkspace) return;
-    console.log("[boot] workspace resolved");
+    console.log(mobile ? "[boot-mobile] workspace resolved" : "[boot] workspace resolved");
     loadWorkspaceConfig();
     var cfg = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active;
-    console.log("[boot] backend_type", cfg ? (cfg.backend_type || "unknown") : "unknown");
-    console.log("[data] active workspace", cfg ? (cfg.workspace_slug || cfg.slug) : "none");
-    console.log("[data] backend_type", cfg ? (cfg.backend_type || "unknown") : "unknown");
-    console.log("[data] google_sheets apps_script_url present", (cfg && resolveWorkspaceBackendConfig(cfg, cfg).appsScriptUrl) ? "true" : "false");
+    console.log(mobile ? "[boot-mobile] backend_type" : "[boot] backend_type", cfg ? (cfg.backend_type || "unknown") : "unknown");
+    if (!mobile) {
+      console.log("[data] active workspace", cfg ? (cfg.workspace_slug || cfg.slug) : "none");
+      console.log("[data] backend_type", cfg ? (cfg.backend_type || "unknown") : "unknown");
+      console.log("[data] google_sheets apps_script_url present", (cfg && resolveWorkspaceBackendConfig(cfg, cfg).appsScriptUrl) ? "true" : "false");
+    }
     renderWorkspaceBranding();
     initApp();
 
     if (loadingEl) loadingEl.classList.add("hidden");
-    console.log("[boot] first render complete");
+    console.log(mobile ? "[boot-mobile] first render complete" : "[boot] first render complete");
   } catch (error) {
     var loadEl = document.getElementById("boot-loading");
     if (loadEl) loadEl.classList.add("hidden");
@@ -36762,6 +36956,16 @@ async function bootAppWithWorkspaceRouter() {
     }
   }
 }
+
+// ── Mobile detection ──────────────────────────────────────────────────────────
+function isMobileBoot() {
+  if (window.__MOBILE_BOOT !== undefined) return window.__MOBILE_BOOT;
+  var mq = window.matchMedia("(max-width: 767px), (pointer: coarse)");
+  var ua = (navigator.userAgent || "").toLowerCase();
+  window.__MOBILE_BOOT = mq.matches || /mobile|android|iphone|ipad|ipod/i.test(ua);
+  return window.__MOBILE_BOOT;
+}
+if (isMobileBoot()) console.log("[boot-mobile] detected");
 
 bootAppWithWorkspaceRouter();
 
