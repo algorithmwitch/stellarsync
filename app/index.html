@@ -10133,7 +10133,24 @@ const EMPTY_WORKSPACE_STATE = {
   brandFramework: []
 };
 
-const DEFAULT_STATE = EMPTY_WORKSPACE_STATE;
+const DEFAULT_STATE = {
+  posts: [],
+  campaigns: [],
+  settings: {},
+  workspaceSettings: {},
+  workspace: {},
+  brandOS: {},
+  inspo: [],
+  notes: [],
+  media: [],
+  postMedia: [],
+  importJobs: [],
+  aiDrafts: [],
+  brandFramework: []
+};
+
+var STORAGE_KEY = window.STORAGE_KEY || "stellarsync_state";
+function loadShellLayout() { return {}; }
 
 function loadLocalState() {
   try {
@@ -10174,6 +10191,38 @@ function loadLocalState() {
   }
 }
 
+
+// Early boot storage/state helpers — must exist before appState initialization
+if (typeof window.STORAGE_KEY === "undefined") {
+  window.STORAGE_KEY = (typeof APP_CONFIG !== "undefined" && APP_CONFIG.STORAGE_KEY) || "stellarsync_local_state_v5";
+}
+var STORAGE_KEY = window.STORAGE_KEY;
+
+function safeStorageGet(key) {
+  try { return localStorage.getItem(key); }
+  catch (err) { console.warn("[storage] get unavailable", err); return null; }
+}
+
+function safeStorageSet(key, value) {
+  try { localStorage.setItem(key, value); return true; }
+  catch (err) { console.warn("[storage] set unavailable", err); return false; }
+}
+
+function sanitizeAppStateArtifacts(state) {
+  return state || {};
+}
+
+function loadShellLayout() {
+  try {
+    var key = (typeof APP_CONFIG !== "undefined" && APP_CONFIG.SHELL_LAYOUT_KEY) || "stellarsync_shell_layout";
+    var raw = safeStorageGet(key);
+    return raw ? JSON.parse(raw) : {};
+  } catch (err) {
+    console.warn("[layout] shell layout unavailable, using defaults", err);
+    return {};
+  }
+}
+
 let appState = loadLocalState();
 __APP_STATE_REF = appState;
 let currentView = "calendar";
@@ -10193,7 +10242,7 @@ let mediaSelectMode = loadMediaSelectMode();
 let mediaPostsPanelOpen = false;
 let currentModalInspoId = null;
 let currentModalNoteId = null;
-let shellLayout = loadShellLayout();
+let shellLayout = { overviewWidth: 360 };
 let deferredInstallPrompt = null;
 let backendDiagnostics = null;
 let backendReachable = false;
@@ -35315,6 +35364,7 @@ function initApp() {
   guardedCall(registerServiceWorkerSafe, "registerServiceWorkerSafe");
 
   guardedCall(setupSplitPane, "setupSplitPane");
+  try { shellLayout = loadShellLayout(); } catch (_) {}
   guardedCall(applyShellLayout, "applyShellLayout");
 
   console.log(mobile ? "[boot-mobile] rerenderAll start" : "[boot] rerenderAll start");
