@@ -1554,6 +1554,11 @@ function doPost(e) {
       return jsonResponse({ ok: true, deleted: true, noteId: String(payload.noteId || "").trim() });
     }
 
+    if (action === "deleteInspo") {
+      deleteInspo(payload.inspoId);
+      return jsonResponse({ ok: true, deleted: true, inspoId: String(payload.inspoId || "").trim() });
+    }
+
     if (action === "createPostFromNote") {
       const createdPost = createPostFromNote(payload);
       return jsonResponse({ ok: true, post: createdPost, postId: createdPost.postId });
@@ -6095,6 +6100,12 @@ function deleteNote(noteId) {
   if (!noteId) throw new Error("Missing noteId");
   const sheet = getCoreSheet_("notes");
   deleteRowByAliases_(sheet, ["note_id", "noteId"], noteId);
+}
+
+function deleteInspo(inspoId) {
+  if (!inspoId) throw new Error("Missing inspoId");
+  const sheet = getCoreSheet_("inspo");
+  deleteRowByAliases_(sheet, ["inspo_id"], inspoId);
 }
 
 function createPostFromNote(payload) {

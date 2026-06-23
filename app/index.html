@@ -6796,6 +6796,7 @@ async function callAppsScript(action, payloadOrParams = {}, method = "GET") {
     });
   }
   if (/^\s*<!doctype/i.test(rawText) || /^\s*<html/i.test(rawText)) {
+    console.error("[apps-script] HTML response", { action, status: response.status, preview: (rawText || "").slice(0, 320) });
     const err = new Error("Apps Script returned HTML instead of JSON");
     err.action = action;
     err.status = response.status;
@@ -24913,7 +24914,26 @@ function setupSaveHandler() {
                 }
             } else {
                 console.log("[post-save] step: remote save via Apps Script...");
-                result = await withTimeout(apiSavePost(payload), 15000, 'savePost timed out');
+                console.log("[post-save] sending to sheets", {
+                    post_id: payload.post_id || payload.postId || payload.id || "",
+                    title: (payload.title || "").slice(0, 60),
+                    status: payload.status,
+                    platform: payload.platform
+                });
+                var backend = getSheetMirrorConfig();
+                var sheetsPayload = Object.assign({}, payload, {
+                    sheet_id: String(backend.sheetId || payload.workspace_id || "").trim()
+                });
+                result = await Promise.race([
+                    callAppsScript("savePost", sheetsPayload, "POST"),
+                    new Promise(function(_, reject) {
+                        setTimeout(function() { reject(new Error("Save timed out after 20s")); }, 20000);
+                    })
+                ]);
+                console.log("[post-save] sheets result", {
+                    ok: !!(result && (result.ok || result.post)),
+                    post_id: result && (result.post && result.post.post_id || result.postId || result.savedPostId || "") || ""
+                });
             }
             console.log("[post-save] step: remote save completed", {
                 ok: !!result?.ok,
@@ -24938,9 +24958,10 @@ function setupSaveHandler() {
         } catch (err) {
             console.error("[post-save] failed", {
                 action: err?.action || "savePost",
-                message: err?.message || "Unknown error"
+                message: err?.message || "Unknown error",
+                stack: (err?.stack || "").slice(0, 200)
             });
-            const routeStatus = err?.backend?.routeStatus || {};
+            var routeStatus = err?.backend?.routeStatus || {};
             const detail = [
                 err?.message || "Remote save failed.",
                 routeStatus.postsSheetReachable === false ? "POSTS sheet is unavailable." : "",
@@ -33738,6 +33759,14 @@ async function syncMirrorAttachmentsForPost(postId, post = null) {
 
 async function apiDeletePost(postId) {
   return apiPost("deletePost", { postId });
+}
+
+async function callWorkspaceBackend(params) {
+  var action = params && String(params.action || "").trim();
+  if (!action) throw new Error("callWorkspaceBackend: missing action");
+  var rest = Object.assign({}, params);
+  delete rest.action;
+  return callAppsScript(action, rest, "POST");
 }
 
 async function apiDeleteNote(noteId) {
