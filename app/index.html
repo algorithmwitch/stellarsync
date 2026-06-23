@@ -10138,43 +10138,38 @@ const DEFAULT_STATE = EMPTY_WORKSPACE_STATE;
 function loadLocalState() {
   try {
     var raw = null;
-
     try {
-      raw = window.localStorage ? window.localStorage.getItem(STORAGE_KEY) : null;
+      raw = window.localStorage ? window.localStorage.getItem("stellarsync_state") : null;
     } catch (storageErr) {
       console.warn("[state] localStorage unavailable", storageErr);
     }
 
-    var parsed = raw ? JSON.parse(raw) : null;
-    var base = parsed && typeof parsed === "object" ? parsed : {};
+    var parsed = raw ? JSON.parse(raw) : {};
+    if (!parsed || typeof parsed !== "object") parsed = {};
 
-    var defaults = typeof getDefaultAppState === "function" ? getDefaultAppState() : {
+    return Object.assign({
       posts: [],
       campaigns: [],
       pillars: [],
       media: [],
       notes: [],
       inspo: [],
-      aiDrafts: []
-    };
-
-    var merged = Object.assign({}, defaults, base);
-
-    if (typeof sanitizeAppStateArtifacts === "function") {
-      return sanitizeAppStateArtifacts(merged);
-    }
-
-    return merged;
+      aiDrafts: [],
+      brandOS: {},
+      workspaceSettings: {}
+    }, parsed);
   } catch (err) {
     console.warn("Failed to load local state, using defaults.", err);
-    return typeof getDefaultAppState === "function" ? getDefaultAppState() : {
+    return {
       posts: [],
       campaigns: [],
       pillars: [],
       media: [],
       notes: [],
       inspo: [],
-      aiDrafts: []
+      aiDrafts: [],
+      brandOS: {},
+      workspaceSettings: {}
     };
   }
 }
