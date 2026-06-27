@@ -7046,7 +7046,8 @@ async function uploadMediaToSupabaseStorage(file, options = {}) {
     throw new Error("Supabase media is not configured for this workspace.");
   }
   const config = WORKSPACE_RUNTIME_CONFIG.active || loadWorkspaceConfig();
-  const storagePath = buildWorkspaceMediaPath(config.workspace_slug, options.postId || "", file?.name || "media");
+  const mediaContext = getActiveMediaWorkspaceContext(config);
+  const storagePath = buildWorkspaceMediaPath(mediaContext.slug || "gpe", options.postId || "", file?.name || "media");
   const bucket = encodeURIComponent("media");
   const uploadUrl = `${String(config.supabase_url || "").replace(/\/+$/, "")}/storage/v1/object/${bucket}/${storagePath}`;
   const sessionResult = STELLARSYNC_SUPABASE_CLIENT
@@ -22656,13 +22657,13 @@ function setupModalMediaUpload() {
       });
       currentModalAsset = currentModalCarouselAssets[0] || uploadedAssets[0] || null;
       applyCurrentCarouselOrderToModalPost();
+      renderModalCarouselPreview();
       await attachCurrentCarouselToSupabasePost().catch((err) => {
         console.warn("[modal-media-upload] attach skipped", err?.message || err);
       });
-      saveCurrentCarouselOrderToSupabase?.().catch((err) => {
-        console.warn("[modal-media-upload] carousel order sync skipped", err?.message || err);
+      await saveCurrentCarouselOrderToSupabase?.().catch((err) => {
+        console.warn("[modal-media-upload] order sync skipped", err?.message || err);
       });
-      renderModalCarouselPreview();
 
       const linkedCount = currentModalCarouselAssets.length;
       if (modalMediaStatus) {
