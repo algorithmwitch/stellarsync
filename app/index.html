@@ -28126,7 +28126,8 @@ async function syncRemoteIfConfigured() {
     }
 
     persistLocalState();
-    maybeAutoPullMondayUpdatesForWorkspace().catch(function() {});
+    // Monday pull is manual only until sync is stable.
+    // maybeAutoPullMondayUpdatesForWorkspace().catch(function() {});
     console.log("[data]", getAppStateCounts());
     rerenderAll();
     console.log("[hybrid] phase 2 background complete");
@@ -32415,7 +32416,8 @@ async function saveCurrentAIDraft(options = {}) {
     if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
       const result = await apiSaveAIDraft({ ...payload, aiDraftId: currentAIDraftId });
       currentAIDraftId = result?.draft?.aiDraftId || currentAIDraftId;
-      await syncRemoteIfConfigured();
+      // Do not rehydrate the whole workspace after saving an AI draft.
+      // This was causing silent aborts/timeouts and possible empty overwrite behavior.
       return result;
     }
     return { draft: localDraft };
@@ -33504,20 +33506,14 @@ async function apiSavePost(post) {
       : await apiPost("savePost", savePayload);
     if (STELLARSYNC_DEBUG) console.log("[post-save] backend result", response);
     const savedPost = response?.post || response?.data || savePayload;
-    if (backendMode.mode === "supabase_native") {
-      try {
-        await syncMirrorAttachmentsForPost(savedPost?.post_id || savedPost?.postId || canonicalPostId || "", savedPost);
-      } catch (mirrorErr) {
-        console.warn("[media-sync] sheet media attachments push/pull", mirrorErr?.message || mirrorErr);
-      }
-    }
-    try {
-      await autoSyncPostToMonday(savedPost, { force: false });
-    } catch (mondayErr) {
-      console.warn("[monday-auto-sync] error", mondayErr?.message || mondayErr);
-    }
+    // Critical: ordinary Save must only persist the post.
+    // Monday backfill/sync and Sheet mirror must be manual actions.
+    // This prevents save timeout, duplicate Monday writes, and AI draft hydration collisions.
+    console.log("[post-save] remote save complete; optional sync skipped", {
+      post_id: savedPost?.post_id || savedPost?.postId || canonicalPostId || "",
+      reason: "manual_monday_and_sheet_sync_only"
+    });
     updateLoadingToastSuccess(loadingToastId, "Post saved", "Post saved.");
-    if (STELLARSYNC_DEBUG) console.log("[post-save] optional save skipped", { reason: "no separate optional persistence path", ok: true });
     return response;
   } catch (err) {
     if (STELLARSYNC_DEBUG) console.log("[post-save] backend result", { ok: false, error: err?.message || err });
@@ -33767,21 +33763,20 @@ async function maybeAutoPullMondayUpdatesForWorkspace(options = {}) {
 }
 
 async function syncMirrorAttachmentsForPost(postId, post = null) {
-  const config = getSheetMirrorConfig();
   const targetPost = post || findPostByAnyId(postId) || null;
   const targetId = String(postId || targetPost?.post_id || targetPost?.postId || targetPost?.id || "").trim();
-  if (!targetId) return;
-  const backendMode = getActiveWorkspaceBackendMode();
-  if (backendMode.mode === "supabase_native" && config.sheetId && config.appsScriptUrl && config.syncEnabled) {
-    try {
-      console.log("[media-sync] sheet media attachments push/pull", { postId: targetId, direction: config.syncDirection });
-      await pushSupabaseToSheets();
-    } catch (err) {
-      console.warn("[media-sync] sheet media attachments push/pull", err?.message || err);
-    }
+  if (!targetId) {
+    return { ok: false, skipped: true, reason: "missing_post_id" };
   }
-  const mondayResult = await autoSyncPostToMonday(targetPost || { post_id: targetId }, { force: false });
-  return { sheet: true, monday: mondayResult };
+  // Stabilization rule:
+  // This function must not push the full Supabase workspace to Sheets
+  // and must not call Monday from ordinary save/media attachment flows.
+  return {
+    ok: true,
+    skipped: true,
+    reason: "manual_sheet_and_monday_sync_only",
+    post_id: targetId
+  };
 }
 
 async function apiDeletePost(postId) {
