@@ -8539,9 +8539,20 @@ function extractPostsFromGetPostsResult(result) {
   return candidates.find(Array.isArray) || [];
 }
 
+function extractPostsFromSheetsResult(result) {
+  return (
+    result?.posts ||
+    result?.data?.posts ||
+    result?.tabs?.POSTS ||
+    result?.tabs?.posts ||
+    result?.POSTS ||
+    []
+  );
+}
+
 function extractPostsFromSheetPullResult(result) {
   if (!result || typeof result !== "object") return [];
-  var postsObj = result.POSTS || result.posts;
+  var postsObj = extractPostsFromSheetsResult(result);
   if (postsObj && typeof postsObj === "object" && !Array.isArray(postsObj)) {
     var nested = [postsObj.rows, postsObj.items, postsObj.records, postsObj.data];
     for (var i = 0; i < nested.length; i++) {
@@ -8634,6 +8645,20 @@ function mergeMediaAssetsPreservingExisting(currentAssets = [], incomingAssets =
 
 function shouldSkipEmptyOverwrite(existingItems = [], incomingItems = []) {
   return Array.isArray(existingItems) && existingItems.length > 0 && Array.isArray(incomingItems) && incomingItems.length === 0;
+}
+
+function safeReplaceCollectionFromAuthority(key, incoming, label) {
+  var existing = Array.isArray(appState[key]) ? appState[key] : [];
+  var next = Array.isArray(incoming) ? incoming : [];
+  if (shouldUseSheetsAuthority() && existing.length > 0 && next.length === 0) {
+    console.warn("[sheets-authority] refusing empty " + String(label || key) + " overwrite", {
+      existing: existing.length,
+      incoming: next.length
+    });
+    return false;
+  }
+  appState[key] = next;
+  return true;
 }
 
 function normalizeHybridSettingsCategoryKey(value) {
@@ -9030,18 +9055,18 @@ function hydrateHybridSheetData(sheetData = {}, options = {}) {
     var normalizedMedia = filterRenderableArtifacts(mediaRows.map(function(asset) {
       return normalizeRemoteMedia(asset);
     }), "media");
-    appState.media = mergeMediaAssetsPreservingExisting(appState.media || [], normalizedMedia);
+    safeReplaceCollectionFromAuthority("media", mergeMediaAssetsPreservingExisting(appState.media || [], normalizedMedia), "media");
   }
 
   if (Array.isArray(sheetData.notes)) {
-    appState.notes = filterRenderableArtifacts(sheetData.notes.map(function(item) {
+    safeReplaceCollectionFromAuthority("notes", filterRenderableArtifacts(sheetData.notes.map(function(item) {
       return normalizeRemoteNote(item);
-    }), "note");
+    }), "note"), "notes");
   }
   if (Array.isArray(sheetData.inspo)) {
-    appState.inspo = filterRenderableArtifacts(sheetData.inspo.map(function(item) {
+    safeReplaceCollectionFromAuthority("inspo", filterRenderableArtifacts(sheetData.inspo.map(function(item) {
       return normalizeRemoteInspo(item);
-    }), "inspo");
+    }), "inspo"), "inspo");
   }
   if (Array.isArray(sheetData.aiDrafts)) {
     appState.aiDrafts = filterRenderableArtifacts(sheetData.aiDrafts.map(function(item) {
@@ -22724,15 +22749,12 @@ async function ensureLazyHybridMediaLoad(options = {}) {
   console.log("[media] lazy load requested");
   HYBRID_MEDIA_LOADING = true;
   HYBRID_MEDIA_LAZY_LOAD_PROMISE = Promise.allSettled([
-    loadSheetsWorkspaceDataForHybrid(["MEDIA"]),
     isSupabaseMediaEnabled() ? loadSupabaseMediaAssets(WORKSPACE_RUNTIME_CONFIG?.active || loadWorkspaceConfig(), { silent: true }) : Promise.resolve({ assets: [], postMedia: [] })
   ]).then(function(results) {
-    var sheetResult = results[0].status === "fulfilled" ? results[0].value : {};
-    var supabaseResult = results[1].status === "fulfilled" ? results[1].value : { assets: [], postMedia: [] };
-    var sheetMedia = Array.isArray(sheetResult.media) ? sheetResult.media.map(function(asset) { return normalizeRemoteMedia(asset); }) : [];
+    var supabaseResult = results[0].status === "fulfilled" ? results[0].value : { assets: [], postMedia: [] };
     var supabaseMedia = Array.isArray(supabaseResult.assets) ? supabaseResult.assets.map(function(asset) { return normalizeRemoteMedia(asset); }) : [];
-    var mergedMedia = mergeMediaAssetsPreservingExisting(sheetMedia, supabaseMedia);
-    appState.media = mergeMediaAssetsPreservingExisting(appState.media || [], filterRenderableArtifacts(mergedMedia, "media"));
+    var mergedMedia = mergeMediaAssetsPreservingExisting(appState.media || [], filterRenderableArtifacts(supabaseMedia, "media"));
+    safeReplaceCollectionFromAuthority("media", mergedMedia, "media");
     if (Array.isArray(supabaseResult.postMedia) && supabaseResult.postMedia.length) {
       appState.postMedia = supabaseResult.postMedia;
       appState.post_media = supabaseResult.postMedia;
@@ -28432,7 +28454,12 @@ async function syncRemoteIfConfigured() {
     var sheetPosts = postsData.map(function(post, index) {
       return normalizeRemotePost(post, getAvailableCampaignRecords(), appState.media || [], index);
     });
-    appState.posts = mergePostsByAuthority([], sheetPosts, "sheets");
+    if (!safeReplaceCollectionFromAuthority("posts", mergePostsByAuthority([], sheetPosts, "sheets"), "posts")) {
+      console.log("[hybrid] phase 1 preserved existing posts", {
+        existing: Array.isArray(appState.posts) ? appState.posts.length : 0,
+        incoming: sheetPosts.length
+      });
+    }
     console.log("[hybrid] phase 1 posts count", appState.posts.length);
     console.log("[hybrid] phase 1 campaigns count", Array.isArray(appState.campaigns) ? appState.campaigns.length : 0);
     logCampaignQASummary("hybrid");
@@ -28525,7 +28552,7 @@ async function syncRemoteIfConfigured() {
       if (shouldSkipEmptyOverwrite(appState.inspo, filteredInspo)) {
         console.log("[hybrid] background supabase skipped empty overwrite", "inspo");
       } else {
-        appState.inspo = filteredInspo;
+        safeReplaceCollectionFromAuthority("inspo", filteredInspo, "inspo");
       }
     }
     if (Array.isArray(notes)) {
@@ -28534,7 +28561,7 @@ async function syncRemoteIfConfigured() {
       if (shouldSkipEmptyOverwrite(appState.notes, filteredNotes)) {
         console.log("[hybrid] background supabase skipped empty overwrite", "notes");
       } else {
-        appState.notes = filteredNotes;
+        safeReplaceCollectionFromAuthority("notes", filteredNotes, "notes");
       }
     }
     if (Array.isArray(aiDrafts)) {
@@ -28699,12 +28726,12 @@ async function pullSheetsToSupabase() {
     var sheetData = await loadSheetsWorkspaceDataForHybrid(tabsToPull);
     if (sheetData && typeof sheetData === "object") {
       hydrateHybridSheetData(sheetData, { preserveCampaignRegistry: !Array.isArray(sheetData.campaigns) });
-      if (Array.isArray(sheetData.posts)) appState.posts = mergePostsByAuthority([], sheetData.posts.map((post, index) => normalizeRemotePost(post, getAvailableCampaignRecords(), appState.media || [], index)), "sheets");
-      if (Array.isArray(sheetData.notes)) appState.notes = filterRenderableArtifacts(sheetData.notes.map(function(item) { return normalizeRemoteNote(item); }), "note");
-      if (Array.isArray(sheetData.inspo)) appState.inspo = filterRenderableArtifacts(sheetData.inspo.map(function(item) { return normalizeRemoteInspo(item); }), "inspo");
+      if (Array.isArray(sheetData.posts)) safeReplaceCollectionFromAuthority("posts", mergePostsByAuthority([], sheetData.posts.map((post, index) => normalizeRemotePost(post, getAvailableCampaignRecords(), appState.media || [], index)), "sheets"), "posts");
+      if (Array.isArray(sheetData.notes)) safeReplaceCollectionFromAuthority("notes", filterRenderableArtifacts(sheetData.notes.map(function(item) { return normalizeRemoteNote(item); }), "note"), "notes");
+      if (Array.isArray(sheetData.inspo)) safeReplaceCollectionFromAuthority("inspo", filterRenderableArtifacts(sheetData.inspo.map(function(item) { return normalizeRemoteInspo(item); }), "inspo"), "inspo");
       if (Array.isArray(sheetData.aiDrafts)) appState.aiDrafts = filterRenderableArtifacts(sheetData.aiDrafts.map(function(item) { return normalizeRemoteAIDraft(item); }), "aiDraft");
       if (Array.isArray(sheetData.brandFramework)) appState.brandFramework = sheetData.brandFramework.map(function(item) { return normalizeRemoteBrandFrameworkItem(item); });
-      if (Array.isArray(sheetData.media)) appState.media = filterRenderableArtifacts(sheetData.media.map(function(item) { return normalizeRemoteMedia(item); }), "media");
+      if (Array.isArray(sheetData.media)) safeReplaceCollectionFromAuthority("media", filterRenderableArtifacts(sheetData.media.map(function(item) { return normalizeRemoteMedia(item); }), "media"), "media");
       persistLocalState();
       rerenderAll();
       updateSheetMirrorTimestamps({ sheet_last_pulled_at: new Date().toISOString() });
@@ -29189,9 +29216,18 @@ async function loadSheetsPostsForHybrid() {
     console.log("[posts] boot pull posts count", Array.isArray(primaryPosts) ? primaryPosts.length : 0);
     var filteredPrimary = filterBlankPostsForRender(primaryPosts);
     if (Array.isArray(primaryPosts) && primaryPosts.length === 0 && Array.isArray(appState.posts) && appState.posts.length > 0) {
-    console.warn("[sheets-pull] empty posts result ignored to protect existing appState posts");
-    return;
-  }
+      console.warn("[sheets-authority] refusing to replace existing posts with empty Sheets result", {
+        existing: appState.posts.length,
+        incoming: 0
+      });
+      showToast(
+        "Sheets pull returned empty",
+        "Keeping current posts instead of wiping the workspace.",
+        "ph-warning",
+        "text-yellow-400"
+      );
+      return appState.posts;
+    }
     console.log("[posts] boot pull loaded count", filteredPrimary.length);
     if (filteredPrimary.length > 0) return filteredPrimary;
   } catch (primaryErr) {
@@ -29368,13 +29404,13 @@ async function refreshSheetsTabsQuietly(tabs = []) {
       if (shouldSkipEmptyOverwrite(appState.posts, refreshedPosts)) {
         console.log("[sheets-pull] preserved local because pull failed", { tabs: ["POSTS"], reason: "empty quiet post refresh" });
       } else {
-        appState.posts = mergePostsByAuthority([], refreshedPosts, "sheets");
+        safeReplaceCollectionFromAuthority("posts", mergePostsByAuthority([], refreshedPosts, "sheets"), "posts");
       }
     }
-    if (requested.includes("NOTES") && Array.isArray(sheetData.notes)) appState.notes = filterRenderableArtifacts(sheetData.notes.map(function(item) { return normalizeRemoteNote(item); }), "note");
-    if (requested.includes("INSPO") && Array.isArray(sheetData.inspo)) appState.inspo = filterRenderableArtifacts(sheetData.inspo.map(function(item) { return normalizeRemoteInspo(item); }), "inspo");
+    if (requested.includes("NOTES") && Array.isArray(sheetData.notes)) safeReplaceCollectionFromAuthority("notes", filterRenderableArtifacts(sheetData.notes.map(function(item) { return normalizeRemoteNote(item); }), "note"), "notes");
+    if (requested.includes("INSPO") && Array.isArray(sheetData.inspo)) safeReplaceCollectionFromAuthority("inspo", filterRenderableArtifacts(sheetData.inspo.map(function(item) { return normalizeRemoteInspo(item); }), "inspo"), "inspo");
     if (requested.includes("AI_DRAFTS") && Array.isArray(sheetData.aiDrafts)) appState.aiDrafts = filterRenderableArtifacts(sheetData.aiDrafts.map(function(item) { return normalizeRemoteAIDraft(item); }), "aiDraft");
-    if (requested.includes("MEDIA") && Array.isArray(sheetData.media)) appState.media = filterRenderableArtifacts(sheetData.media.map(function(item) { return normalizeRemoteMedia(item); }), "media");
+    if (requested.includes("MEDIA") && Array.isArray(sheetData.media)) safeReplaceCollectionFromAuthority("media", filterRenderableArtifacts(sheetData.media.map(function(item) { return normalizeRemoteMedia(item); }), "media"), "media");
     if (requested.includes("SETTINGS") || requested.includes("BRAND_FRAMEWORK")) {
       hydrateHybridSheetData(sheetData, { preserveCampaignRegistry: !Array.isArray(sheetData.campaigns) });
     }
@@ -34354,6 +34390,17 @@ function safeStorageSet(key, value) {
   }
 }
 
+function safeStorageRemove(key) {
+  if (!safeStorageAvailable()) return false;
+  try {
+    window.localStorage.removeItem(key);
+    return true;
+  } catch (err) {
+    console.warn("localStorage remove failed", err);
+    return false;
+  }
+}
+
 function getWorkspaceProfileCacheKey(workspaceId, slug) {
   var token = String(workspaceId || slug || "master").trim().toLowerCase() || "master";
   return `${APP_CONFIG.STORAGE_KEY}:workspace_profile:${token}`;
@@ -34420,26 +34467,38 @@ function shouldReadLegacyLocalStateKey() {
 
 function loadLocalState() {
   try {
-    const raw = safeStorageGet(getLocalStateStorageKey()) || (shouldReadLegacyLocalStateKey() ? safeStorageGet(APP_CONFIG.STORAGE_KEY) : "");
+    const primaryKey = getLocalStateStorageKey();
+    const legacyKey = shouldReadLegacyLocalStateKey() ? APP_CONFIG.STORAGE_KEY : "";
+    const raw = safeStorageGet(primaryKey) || (legacyKey ? safeStorageGet(legacyKey) : "");
     if (!raw) return sanitizeAppStateArtifacts(structuredCloneState(DEFAULT_STATE));
 
     const parsed = JSON.parse(raw);
     return sanitizeAppStateArtifacts({
-      posts: Array.isArray(parsed.posts) ? parsed.posts : structuredCloneState(DEFAULT_STATE.posts),
-      campaigns: Array.isArray(parsed.campaigns) ? parsed.campaigns : structuredCloneState(DEFAULT_STATE.campaigns),
+      ...structuredCloneState(DEFAULT_STATE),
+      ...parsed,
+      posts: Array.isArray(parsed.posts) ? parsed.posts : [],
+      campaigns: Array.isArray(parsed.campaigns) ? parsed.campaigns : [],
       settings: parsed.settings ? normalizeRemoteSettings(parsed.settings) : structuredCloneState(DEFAULT_STATE.settings),
-      workspace: parsed.workspace && typeof parsed.workspace === "object" ? { ...parsed.workspace } : {},
-      brandOS: parsed.brandOS && typeof parsed.brandOS === "object" ? { ...parsed.brandOS } : {},
-      inspo: Array.isArray(parsed.inspo) ? parsed.inspo : structuredCloneState(DEFAULT_STATE.inspo),
-      notes: Array.isArray(parsed.notes) ? parsed.notes : structuredCloneState(DEFAULT_STATE.notes),
-      media: Array.isArray(parsed.media) ? parsed.media : structuredCloneState(DEFAULT_STATE.media),
-      postMedia: Array.isArray(parsed.postMedia) ? parsed.postMedia : Array.isArray(parsed.post_media) ? parsed.post_media : structuredCloneState(DEFAULT_STATE.postMedia),
-      importJobs: Array.isArray(parsed.importJobs) ? parsed.importJobs : structuredCloneState(DEFAULT_STATE.importJobs),
-      aiDrafts: Array.isArray(parsed.aiDrafts) ? parsed.aiDrafts : structuredCloneState(DEFAULT_STATE.aiDrafts),
-      brandFramework: Array.isArray(parsed.brandFramework) ? parsed.brandFramework : structuredCloneState(DEFAULT_STATE.brandFramework)
+      workspace: parsed.workspace && typeof parsed.workspace === "object" ? { ...parsed.workspace } : structuredCloneState(DEFAULT_STATE.workspace || {}),
+      brandOS: parsed.brandOS && typeof parsed.brandOS === "object" ? { ...parsed.brandOS } : structuredCloneState(DEFAULT_STATE.brandOS || {}),
+      inspo: Array.isArray(parsed.inspo) ? parsed.inspo : [],
+      notes: Array.isArray(parsed.notes) ? parsed.notes : [],
+      media: Array.isArray(parsed.media) ? parsed.media : [],
+      postMedia: Array.isArray(parsed.postMedia) ? parsed.postMedia : Array.isArray(parsed.post_media) ? parsed.post_media : [],
+      importJobs: Array.isArray(parsed.importJobs) ? parsed.importJobs : [],
+      aiDrafts: Array.isArray(parsed.aiDrafts) ? parsed.aiDrafts : [],
+      brandFramework: Array.isArray(parsed.brandFramework) ? parsed.brandFramework : []
     });
   } catch (err) {
-    console.warn("Failed to load local state, using defaults.", err);
+    console.warn("[local-state] corrupt cache quarantined", err);
+    try {
+      const primaryKey = getLocalStateStorageKey();
+      const legacyKey = shouldReadLegacyLocalStateKey() ? APP_CONFIG.STORAGE_KEY : "";
+      const bad = safeStorageGet(primaryKey) || (legacyKey ? safeStorageGet(legacyKey) : "") || "";
+      if (bad) safeStorageSet(primaryKey + "_corrupt_" + Date.now(), bad);
+      safeStorageRemove(primaryKey);
+      if (legacyKey) safeStorageRemove(legacyKey);
+    } catch (_) {}
     return sanitizeAppStateArtifacts(structuredCloneState(DEFAULT_STATE));
   }
 }
