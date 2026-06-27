@@ -226,16 +226,31 @@
   }
 
   #upload-staging-modal {
-    z-index: 123;
+    z-index: 99999;
     padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
   }
 
   #upload-staging-modal-card {
+    position: relative;
+    z-index: 100000;
     width: min(880px, calc(100vw - 32px));
     max-width: min(880px, calc(100vw - 32px));
     max-height: min(860px, calc(100dvh - 40px));
     display: flex;
     flex-direction: column;
+  }
+
+  #media-upload-modal,
+  #upload-modal,
+  .media-upload-modal,
+  #upload-staging-modal {
+    z-index: 99999 !important;
+  }
+
+  #media-upload-modal .modal-panel,
+  #upload-modal .modal-panel,
+  #upload-staging-modal .modal-panel {
+    z-index: 100000 !important;
   }
 
   .upload-media-scroll {
@@ -2398,7 +2413,7 @@
             <button id="app-update-btn" type="button" class="hidden px-4 py-2 bg-[#20110a] hover:bg-[#2e170e] text-[#ffd7a3] text-[10px] uppercase tracking-wider font-bold rounded-xl transition-all items-center gap-2 border border-[#5b3118]">
                 <i class="ph-bold ph-arrow-clockwise"></i> Update Available
             </button>
-            <button id="install-app-btn" type="button" title="Install App" aria-label="Install App" class="hidden px-4 py-2 bg-[#1a1128] hover:bg-[#231738] text-white text-[10px] uppercase tracking-wider font-bold rounded-xl transition-all items-center gap-2 border border-white/10 shrink-0">
+            <button id="install-app-btn" type="button" title="Install App" aria-label="Install App" onclick="installApp()" class="hidden px-4 py-2 bg-[#1a1128] hover:bg-[#231738] text-white text-[10px] uppercase tracking-wider font-bold rounded-xl transition-all items-center gap-2 border border-white/10 shrink-0">
                 <i class="ph-bold ph-download-simple"></i><span class="install-label">Install App</span>
             </button>
             <button id="topbar-new-post-btn" onclick="openModal()" class="px-4 md:px-6 py-2 bg-gradient-to-r from-[#9d4edd] to-[#c77dff] hover:opacity-90 text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(157,78,221,0.2)] border border-white/10 shrink-0" vid="26">
@@ -2460,7 +2475,7 @@
                 </button>
               </div>
             </div>
-            <button id="mobile-install-app-btn" type="button" class="hidden md:hidden w-10 h-10 rounded-xl bg-[#1e152d] border border-white/5 items-center justify-center text-gray-300 hover:text-white transition-colors shrink-0">
+            <button id="mobile-install-app-btn" type="button" onclick="installApp()" class="hidden md:hidden w-10 h-10 rounded-xl bg-[#1e152d] border border-white/5 items-center justify-center text-gray-300 hover:text-white transition-colors shrink-0">
         <i class="ph-bold ph-download-simple"></i>
             </button>
         </div>
@@ -4690,9 +4705,9 @@
   </div>
 </div>
 
-<div id="upload-staging-modal" class="fixed inset-0 z-[123] bg-black/70 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-200 hidden" onclick="if(event.target.id==='upload-staging-modal')closeUploadStagingModal()">
+<div id="upload-staging-modal" class="fixed inset-0 z-[99999] bg-black/70 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-200 hidden media-upload-modal" onclick="if(event.target.id==='upload-staging-modal')closeUploadStagingModal()">
   <div class="w-full h-full flex items-center justify-center p-6">
-    <div id="upload-staging-modal-card" class="bg-[#120c1d] border border-white/10 rounded-2xl shadow-2xl transform scale-95 transition-transform duration-200 overflow-hidden">
+    <div id="upload-staging-modal-card" class="modal-panel relative z-[100000] bg-[#120c1d] border border-white/10 rounded-2xl shadow-2xl transform scale-95 transition-transform duration-200 overflow-hidden">
       <div class="media-viewer-header flex items-center justify-between px-5 py-4 border-b border-white/5 shrink-0">
         <div>
           <h3 class="text-white font-bold text-lg">Upload Media</h3>
@@ -17297,23 +17312,25 @@ async function commitPendingUploads() {
       uploadStagingResult.textContent = "Upload complete.";
       uploadStagingResult.className = "text-[11px] text-[#00ffaa] mt-1";
     }
-    closeUploadStagingModal();
-    rerenderAll();
     if (isSupabaseMediaEnabled()) {
-      refreshMediaFromRemote().then(() => renderMedia()).catch(err => console.warn("[media-upload] refresh skipped", err?.message || err));
+      const mediaResult = await loadSupabaseMediaAssets(WORKSPACE_RUNTIME_CONFIG.active || loadWorkspaceConfig(), { force: true, silent: true });
+      appState.media = filterRenderableArtifacts(Array.isArray(mediaResult.assets) ? mediaResult.assets : [], "media");
+      if (Array.isArray(mediaResult.postMedia)) {
+        appState.postMedia = mediaResult.postMedia;
+        appState.post_media = mediaResult.postMedia;
+      }
     } else {
       await refreshMediaFromRemote();
     }
+    persistLocalState();
+    closeUploadStagingModal();
+    renderMedia();
     renderModalCarouselPreview();
     console.log("[post-upload] refreshed modal");
-    if (lastUploadedAsset) {
-      const key = getMediaItemKey(lastUploadedAsset);
-      const refreshed = getFilteredMediaVaultItems().find(item => getMediaItemKey(item) === key || String(item.assetId || "") === String(lastUploadedAsset.assetId || ""));
-      openMediaAssetModal(refreshed || lastUploadedAsset);
-      console.log("[media-upload] viewer opened", { id: key || getMediaItemKey(refreshed || {}) });
-    }
     console.log("[upload] attach complete", { target: uploadStagingTarget, count: validItems.length });
-    updateToast(loadingToastId, "success", "Uploaded", uploadStagingTarget === "post" ? "Media linked to the current post." : "Media uploaded to the vault.");
+    rerenderAll();
+    showToast("Uploaded", uploadStagingTarget === "post" ? "Media uploaded. Click Save on the post when ready." : "Media uploaded.", "ph-check", "text-[#00ffaa]");
+    updateToast(loadingToastId, "success", "Uploaded", uploadStagingTarget === "post" ? "Media uploaded. Click Save on the post when ready." : "Media uploaded.");
   } catch (err) {
     if (uploadStagingResult) {
       uploadStagingResult.textContent = err?.message || "Upload failed.";
@@ -25205,6 +25222,11 @@ async function savePostToSheetsAuthority(post) {
     delete payload.pendingMedia;
     delete payload.uploadQueue;
     delete payload.attachedMediaObjects;
+    delete payload.rowNumber;
+    delete payload.row_number;
+    delete payload.sheetRow;
+    delete payload.sheet_row;
+    delete payload.row;
     if (Array.isArray(payload.media_ids)) {
       payload.media_ids = payload.media_ids.map(String).filter(Boolean).join(",");
     }
@@ -27872,9 +27894,39 @@ function updateInstallHelperContent() {
   }
 }
 
+async function installApp() {
+  var state = getInstallAvailabilityState();
+  if (state === "installed") return true;
+  if (!deferredInstallPrompt) {
+    showToast(
+      "Install unavailable",
+      "Use your browser menu to install this app. On Safari, tap Share \u2192 Add to Home Screen.",
+      "ph-download-simple",
+      "text-yellow-400"
+    );
+    return false;
+  }
+  var promptEvent = deferredInstallPrompt;
+  try {
+    promptEvent.prompt();
+    var choice = await promptEvent.userChoice;
+    console.log("[pwa-install] choice", choice || {});
+    deferredInstallPrompt = null;
+    installContext.promptAvailable = false;
+    return choice && choice.outcome === "accepted";
+  } catch (err) {
+    deferredInstallPrompt = promptEvent;
+    installContext.promptAvailable = true;
+    showToast("Install unavailable", err?.message || "The browser install prompt could not open.", "ph-warning", "text-yellow-400");
+    return false;
+  } finally {
+    setInstallButtonVisibility();
+    updateInstallHelperContent();
+  }
+}
+
 async function handlePWAInstallAction(options = {}) {
   var state = getInstallAvailabilityState();
-  var appName = getInstallAppDisplayName();
   if (state === "installed") return true;
   if (state === "ios") {
     if (options.openHelper !== false) openInstallHelperModal();
@@ -27882,35 +27934,10 @@ async function handlePWAInstallAction(options = {}) {
     return false;
   }
   if (!deferredInstallPrompt) {
-    openInstallHelperModal();
-    showToast(
-      "Install steps",
-      "Use the browser install icon near the address bar, or open this page in Chrome/Edge after the app is eligible.",
-      "ph-download-simple",
-      "text-[#c77dff]"
-    );
-    setInstallButtonVisibility();
-    updateInstallHelperContent();
-    return false;
+    if (options.openHelper !== false) openInstallHelperModal();
+    return installApp();
   }
-  var promptEvent = deferredInstallPrompt;
-  deferredInstallPrompt = null;
-  installContext.promptAvailable = false;
-  try {
-    promptEvent.prompt();
-    var choice = await promptEvent.userChoice;
-    if (STELLARSYNC_DEBUG) console.log("[install] user choice", choice || {});
-    return choice && choice.outcome === "accepted";
-  } catch (err) {
-    deferredInstallPrompt = promptEvent;
-    installContext.promptAvailable = true;
-    if (STELLARSYNC_DEBUG) console.warn("[install] prompt failed", err?.message || err);
-    showToast("Install unavailable", err?.message || "The browser install prompt could not open.", "ph-warning", "text-yellow-400");
-    return false;
-  } finally {
-    setInstallButtonVisibility();
-    updateInstallHelperContent();
-  }
+  return installApp();
 }
 
 function setupPWAInstall() {
@@ -27924,6 +27951,17 @@ function setupPWAInstall() {
     deferredInstallPrompt = event;
     installContext.promptAvailable = true;
     installContext.unsupported = false;
+    if (installAppBtn) {
+      installAppBtn.disabled = false;
+      installAppBtn.classList.remove("opacity-50", "cursor-not-allowed");
+      var desktopLabel = installAppBtn.querySelector(".install-label");
+      if (desktopLabel) desktopLabel.textContent = "Install App";
+      else installAppBtn.textContent = "Install App";
+    }
+    if (mobileInstallAppBtn) {
+      mobileInstallAppBtn.disabled = false;
+      mobileInstallAppBtn.classList.remove("opacity-50", "cursor-not-allowed");
+    }
     setInstallButtonVisibility();
     updateInstallHelperContent();
     console.log("[install] beforeinstallprompt captured");
@@ -27950,28 +27988,6 @@ function setupPWAInstall() {
     rerenderAll();
   });
 
-  installAppBtn?.addEventListener("click", async function(event) {
-    event.preventDefault();
-    event.stopPropagation();
-    if (deferredInstallPrompt) {
-      const installed = await handlePWAInstallAction({ openHelper: false });
-      if (installed) closeInstallHelperModal();
-      return;
-    }
-    openInstallHelperModal();
-    updateInstallHelperContent();
-  });
-  mobileInstallAppBtn?.addEventListener("click", async function(event) {
-    event.preventDefault();
-    event.stopPropagation();
-    if (deferredInstallPrompt) {
-      const installed = await handlePWAInstallAction({ openHelper: false });
-      if (installed) closeInstallHelperModal();
-      return;
-    }
-    openInstallHelperModal();
-    updateInstallHelperContent();
-  });
   installHelperActionBtn?.addEventListener("click", async () => {
     const installed = await handlePWAInstallAction({ openHelper: false });
     if (installed) closeInstallHelperModal();
@@ -34934,6 +34950,7 @@ window.openPublishIssueSupportModal = openPublishIssueSupportModal;
 window.openSupportModalFromDiagnostics = openSupportModalFromDiagnostics;
 window.openProfileWorkspaceModal = openProfileWorkspaceModal;
 window.closeProfileWorkspaceModal = closeProfileWorkspaceModal;
+window.installApp = installApp;
 window.openLinkedInCaptureImporter = openLinkedInCaptureImporter;
 window.openExistingPostImportModal = openExistingPostImportModal;
 window.repairPostIds = repairPostIds;
