@@ -24863,7 +24863,14 @@ function setupSaveHandler() {
     console.log("[post-save] step: local upsert");
     const savedPost = upsertSavedPostIntoAppState({ ok: true, post: payload, source: "local_first" }, payload);
     console.log("[post-save] step: local upsert done", { post_id: getCanonicalPostId(savedPost) || payload.post_id || payload.postId || payload.id });
-
+    // Local-first UI release: never let backend sync trap the modal/button.
+    clearTimeout(saveTimeoutId);
+    savePostInFlight = false;
+    saveButton.disabled = false;
+    saveButton.innerHTML = originalSaveButtonHtml;
+    
+    closeModal();
+    showToast("Saved locally", "Backend sync will continue in the background.", "ph-check", "text-[#00ffaa]");
     if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
         try {
             const wasEditingPost = !!currentEditingPostId;
