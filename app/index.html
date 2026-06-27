@@ -12126,10 +12126,18 @@ async function saveNoteFromModal() {
   closeNoteModal();
   showToast("Saved", "Note saved locally.", "ph-check", "text-[#00ffaa]");
 
-  if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
+  if (shouldUseSheetsAuthority()) {
     try {
       await apiSaveNote(localItem);
-      await syncRemoteIfConfigured();
+      await refreshSheetsTabsQuietly(["NOTES"]);
+      showToast("Saved", "Note saved to Google Sheets.", "ph-check", "text-[#00ffaa]");
+    } catch (err) {
+      console.error("[sheets-authority] note save failed", err);
+      showToast("Sheets save failed", err?.message || "Note was only saved locally.", "ph-warning", "text-yellow-400");
+    }
+  } else if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
+    try {
+      await apiSaveNote(localItem);
     } catch (err) {
       console.error(err);
       showToast("Local only", "Saved locally. Remote note sync failed.", "ph-warning", "text-yellow-400");
@@ -12231,10 +12239,18 @@ async function saveInspoFromModal() {
   closeInspoModal();
   showToast("Saved", "Inspiration saved to vault.", "ph-check", "text-[#00ffaa]");
 
-  if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
+  if (shouldUseSheetsAuthority()) {
+    try {
+      await apiSaveInspo({ ...payload, id: localItem.id, inspoId: localItem.id });
+      await refreshSheetsTabsQuietly(["INSPO"]);
+      showToast("Saved", "Inspo saved to Google Sheets.", "ph-check", "text-[#00ffaa]");
+    } catch (err) {
+      console.error("[sheets-authority] inspo save failed", err);
+      showToast("Sheets save failed", err?.message || "Inspo was only saved locally.", "ph-warning", "text-yellow-400");
+    }
+  } else if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
     try {
       await apiSaveInspo(payload);
-      await syncRemoteIfConfigured();
     } catch (err) {
       console.error(err);
       showToast("Local only", "Saved locally. Remote inspo sync failed.", "ph-warning", "text-yellow-400");
@@ -25102,7 +25118,8 @@ async function savePostToSheetsAuthority(post) {
   if (!postId) {
     throw new Error("Cannot save to Sheets without canonical post_id.");
   }
-  if (!isRemoteConfigured()) {
+  const apiUrl = getWorkspaceApiUrl?.() || getActiveWorkspaceBackendMode?.().appsScriptUrl || "";
+  if (!apiUrl) {
     throw new Error("Google Sheets Apps Script URL is not configured.");
   }
   showToast("Saving to Sheets", "Updating Google Sheets source of truth...", "ph-table", "text-[#c77dff]");
@@ -25423,30 +25440,14 @@ function setupSaveHandler() {
       return;
     }
 
-    // === STEP B: LOCAL UPSERT FIRST ===
-    console.log("[post-save] step: local upsert");
-    const savedPost = upsertSavedPostIntoAppState({ ok: true, post: payload, source: "local_first" }, payload);
-    console.log("[post-save] step: local upsert done", { post_id: getCanonicalPostId(savedPost) || payload.post_id || payload.postId || payload.id });
-    // Local-first UI release: never let backend sync trap the modal/button.
-    clearTimeout(saveTimeoutId);
-    savePostInFlight = false;
-    saveButton.disabled = false;
-    saveButton.innerHTML = originalSaveButtonHtml;
-
-    closeModal();
-    showToast("Saved", "Post saved locally. Use manual sync to push remote changes.", "ph-check", "text-[#00ffaa]");
-    // HARDENED SAVE RULE:
-    // The modal Save button must never run remote hydration, Sheet sync,
-    // Monday sync, media sync, or social scheduling inline.
-    // It only updates local app state/UI. Explicit manual sync buttons handle remote work.
-    console.log("[post-save] local save complete; remote side effects disabled", {
-      post_id: payload.post_id || payload.postId || payload.id || "",
-      reason: "manual_remote_sync_only"
-    });
-    if (noteIdToConvert) {
-      appState.notes = (appState.notes || []).map((note) => {
-        if ((note.noteId || note.id) !== noteIdToConvert) return note;
-        return {
+	    // === STEP B: LOCAL UPSERT FIRST ===
+	    console.log("[post-save] step: local upsert");
+	    const savedPost = upsertSavedPostIntoAppState({ ok: true, post: payload, source: "local_first" }, payload);
+	    console.log("[post-save] step: local upsert done", { post_id: getCanonicalPostId(savedPost) || payload.post_id || payload.postId || payload.id });
+	    if (noteIdToConvert) {
+	      appState.notes = (appState.notes || []).map((note) => {
+	        if ((note.noteId || note.id) !== noteIdToConvert) return note;
+	        return {
           ...note,
           convertedPostId: savedPost.id || savedPost.postId || payload.id,
           status: "converted_to_post",
@@ -25467,19 +25468,45 @@ function setupSaveHandler() {
           archivedAt: new Date().toISOString()
         };
       });
-    }
-    persistLocalState();
-    if (shouldUseSheetsAuthority()) {
-      savePostToSheetsAuthority(payload).catch((err) => {
-        console.warn("[sheets-authority] save failed", err?.message || err);
-        showToast("Sheets save failed", err?.message || "Saved locally only.", "ph-warning", "text-yellow-400");
-      });
-    } else {
-      console.log("[post-save] supabase/native local save only", {
-        post_id: getCanonicalPostId(payload),
-        reason: "manual_remote_sync_only"
-      });
-    }
+	    }
+	    persistLocalState();
+	    if (shouldUseSheetsAuthority()) {
+	      try {
+	        const authorityPost = await savePostToSheetsAuthority(payload);
+	        upsertLocalPostFromAuthority(authorityPost);
+	        await refreshSheetsTabsQuietly(["POSTS", "NOTES", "INSPO"]);
+	        clearTimeout(saveTimeoutId);
+	        savePostInFlight = false;
+	        saveButton.disabled = false;
+	        saveButton.innerHTML = originalSaveButtonHtml;
+	        closeModal();
+	        showToast("Saved", "Saved to Google Sheets.", "ph-check", "text-[#00ffaa]");
+	      } catch (err) {
+	        console.error("[sheets-authority] post save failed", err);
+	        clearTimeout(saveTimeoutId);
+	        savePostInFlight = false;
+	        saveButton.disabled = false;
+	        saveButton.innerHTML = originalSaveButtonHtml;
+	        showPostSaveErrorBanner(err, payload);
+	        showToast("Sheets save failed", err?.message || "Post was not saved to Sheets.", "ph-warning", "text-yellow-400");
+	        return;
+	      }
+	    } else {
+	      clearTimeout(saveTimeoutId);
+	      savePostInFlight = false;
+	      saveButton.disabled = false;
+	      saveButton.innerHTML = originalSaveButtonHtml;
+	      closeModal();
+	      showToast("Saved", "Post saved locally. Use manual sync to push remote changes.", "ph-check", "text-[#00ffaa]");
+	      // HARDENED SAVE RULE:
+	      // The modal Save button must never run remote hydration, Sheet sync,
+	      // Monday sync, media sync, or social scheduling inline.
+	      // It only updates local app state/UI. Explicit manual sync buttons handle remote work.
+	      console.log("[post-save] supabase/native local save only", {
+	        post_id: getCanonicalPostId(payload),
+	        reason: "manual_remote_sync_only"
+	      });
+	    }
     rerenderAll();
     if (currentView) switchView(currentView);
     console.log("[post-save] complete local-only");
@@ -25488,8 +25515,26 @@ function setupSaveHandler() {
 }
 
 async function deletePostById(postId) {
-  const target = appState.posts.find((p) => p.id === postId);
+  const target = appState.posts.find((p) => p.id === postId || p.postId === postId || p.post_id === postId);
   if (!target) return;
+  const canonicalId = getCanonicalPostId(target) || postId;
+  if (shouldUseSheetsAuthority()) {
+    try {
+      await apiPost("deletePost", {
+        post_id: canonicalId,
+        postId: canonicalId,
+        stellarsync_post_id: canonicalId,
+        workspace_id: getCurrentWorkspaceSlug?.() || "gpe"
+      });
+      await refreshSheetsTabsQuietly(["POSTS", "NOTES", "INSPO"]);
+      showToast("Deleted", "Post deleted from Google Sheets.", "ph-trash", "text-red-400");
+      return;
+    } catch (err) {
+      console.error("[sheets-authority] delete failed", err);
+      showToast("Delete failed", err?.message || "Could not delete from Sheets.", "ph-warning", "text-yellow-400");
+      return;
+    }
+  }
 
   appState.posts = appState.posts.filter((p) => p.id !== postId);
   persistLocalState();
@@ -29073,7 +29118,7 @@ async function loadSheetsPostsForHybrid() {
     var primaryPosts = extractPostsFromSheetPullResult(primaryData);
     console.log("[posts] boot pull posts count", Array.isArray(primaryPosts) ? primaryPosts.length : 0);
     var filteredPrimary = filterBlankPostsForRender(primaryPosts);
-    if (Array.isArray(result.posts) && result.posts.length === 0 && Array.isArray(appState.posts) && appState.posts.length > 0) {
+    if (Array.isArray(primaryPosts) && primaryPosts.length === 0 && Array.isArray(appState.posts) && appState.posts.length > 0) {
     console.warn("[sheets-pull] empty posts result ignored to protect existing appState posts");
     return;
   }
