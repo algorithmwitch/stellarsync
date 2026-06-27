@@ -25563,7 +25563,9 @@ function setupSaveHandler() {
 	          });
 	        }
 	        persistLocalState();
-	        await refreshSheetsTabsQuietly(["POSTS"]);
+	        // Do not pull immediately after save.
+	        // The confirmed saved post already came back from Sheets.
+	        // await refreshSheetsTabsQuietly(["POSTS"]);
 	        setSheetsAuthorityStatus();
 	        if (saveTimeoutId) clearTimeout(saveTimeoutId);
 	        savePostInFlight = false;
