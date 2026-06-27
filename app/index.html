@@ -16598,28 +16598,11 @@ function applyCurrentCarouselOrderToModalPost() {
       mediaId: order.ids[0] || ""
     }));
   }
-  const targetId = String(currentEditingPostId || getCanonicalPostId(window.__currentModalPostData || {}) || "").trim();
-  if (targetId) {
-    appState.posts = (appState.posts || []).map((post) => {
-      if (!getPostIdentityValues(post).includes(targetId)) return post;
-      return applyDerivedPostMediaFormat({
-        ...post,
-        carouselAssetIds: order.ids,
-        carouselAssets: order.assets,
-        media_ids: order.ids,
-        mediaIds: order.ids,
-        media_id: order.ids[0] || "",
-        mediaId: order.ids[0] || ""
-      });
-    });
-    persistLocalState();
-  }
   if (modalMediaStatus) modalMediaStatus.textContent = order.assets.length ? `${order.assets.length >= 2 ? `Carousel · ${order.assets.length} assets` : renderPostMediaTypeBadge(window.__currentModalPostData || {})} linked` : "No media linked";
 }
 
 async function saveCurrentCarouselOrderToSupabase() {
-  const backendMode = getActiveWorkspaceBackendMode();
-  if (backendMode.mode !== "supabase_native") return;
+  if (!isSupabaseMediaEnabled()) return;
   const postId = String(currentEditingPostId || getCanonicalPostId(window.__currentModalPostData || {}) || "").trim();
   if (!postId) return;
   const order = getCurrentCarouselOrderPayload();
@@ -16853,6 +16836,7 @@ function attachMediaToCurrentPost(assetId) {
   if (!currentModalCarouselAssets.some(item => String(item.assetId || item.id || "") === String(normalized.assetId || normalized.id || ""))) {
     currentModalCarouselAssets = [...currentModalCarouselAssets, normalized];
   }
+  applyCurrentCarouselOrderToModalPost();
   if (modalMediaStatus) modalMediaStatus.textContent = `${getMediaTitle(normalized)} attached`;
   renderModalCarouselPreview();
   renderModalExistingMediaPicker();
@@ -16918,6 +16902,7 @@ function selectExistingMediaForPost() {
   if (!currentModalCarouselAssets.some(item => String(item.assetId || item.id || "") === String(normalized.assetId || normalized.id || ""))) {
     currentModalCarouselAssets = [normalized].concat(currentModalCarouselAssets || []);
   }
+  applyCurrentCarouselOrderToModalPost();
   if (modalMediaStatus) modalMediaStatus.textContent = `${getMediaTitle(normalized)} linked`;
   renderModalCarouselPreview();
 }
@@ -17303,6 +17288,7 @@ async function commitPendingUploads() {
         if (!currentModalCarouselAssets.some(asset => getMediaItemKey(asset) === key)) {
           currentModalCarouselAssets.push(normalized);
         }
+        applyCurrentCarouselOrderToModalPost();
         const refreshedPost = linkedPostId ? refreshPostMediaClassification(linkedPostId) : null;
         if (modalMediaStatus) modalMediaStatus.textContent = refreshedPost ? `${renderPostMediaTypeBadge(refreshedPost)} linked` : `${currentModalCarouselAssets.length} linked asset${currentModalCarouselAssets.length === 1 ? "" : "s"}`;
         if (linkedPostId) console.log("[post-upload] attached", { postId: linkedPostId, assetId: key });
@@ -17329,8 +17315,8 @@ async function commitPendingUploads() {
     console.log("[post-upload] refreshed modal");
     console.log("[upload] attach complete", { target: uploadStagingTarget, count: validItems.length });
     rerenderAll();
-    showToast("Uploaded", uploadStagingTarget === "post" ? "Media uploaded. Click Save on the post when ready." : "Media uploaded.", "ph-check", "text-[#00ffaa]");
-    updateToast(loadingToastId, "success", "Uploaded", uploadStagingTarget === "post" ? "Media uploaded. Click Save on the post when ready." : "Media uploaded.");
+    showToast("Uploaded", uploadStagingTarget === "post" ? "Media is in the vault. Attach it, then save the post." : "Media is in the vault. Attach it, then save the post.", "ph-check", "text-[#00ffaa]");
+    updateToast(loadingToastId, "success", "Uploaded", uploadStagingTarget === "post" ? "Media is in the vault. Attach it, then save the post." : "Media is in the vault. Attach it, then save the post.");
   } catch (err) {
     if (uploadStagingResult) {
       uploadStagingResult.textContent = err?.message || "Upload failed.";
@@ -25470,12 +25456,15 @@ function setupSaveHandler() {
       carouselAssets: currentModalCarouselAssets.length
         ? currentModalCarouselAssets.map(asset => normalizeRemoteMedia(asset))
         : Array.isArray(existing?.carouselAssets) ? existing.carouselAssets : [],
+      media_id: currentModalCarouselAssets.length
+        ? (currentModalCarouselAssets.map(asset => asset.mediaId || asset.media_id || asset.assetId || asset.id).filter(Boolean)[0] || "")
+        : [currentModalAsset?.mediaId || currentModalAsset?.media_id || currentModalAsset?.assetId || currentModalAsset?.id || existing?.mediaId || existing?.media_id].filter(Boolean)[0] || "",
       mediaIds: currentModalCarouselAssets.length
         ? currentModalCarouselAssets.map(asset => asset.mediaId || asset.media_id || asset.assetId || asset.id).filter(Boolean)
         : [currentModalAsset?.mediaId || currentModalAsset?.media_id || currentModalAsset?.assetId || currentModalAsset?.id || existing?.mediaId || existing?.media_id].filter(Boolean),
       media_ids: currentModalCarouselAssets.length
-        ? currentModalCarouselAssets.map(asset => asset.mediaId || asset.media_id || asset.assetId || asset.id).filter(Boolean).join("|")
-        : [currentModalAsset?.mediaId || currentModalAsset?.media_id || currentModalAsset?.assetId || currentModalAsset?.id || existing?.mediaId || existing?.media_id].filter(Boolean).join("|"),
+        ? currentModalCarouselAssets.map(asset => asset.mediaId || asset.media_id || asset.assetId || asset.id).filter(Boolean).join(",")
+        : [currentModalAsset?.mediaId || currentModalAsset?.media_id || currentModalAsset?.assetId || currentModalAsset?.id || existing?.mediaId || existing?.media_id].filter(Boolean).join(","),
       hubTitle: selectedCampaignName || existing?.hubTitle || titleInput?.value.trim() || "",
       hubPillarLabel: formatContentPillarLabel(selectedContentPillar),
       queueDateLabel: hasValidSchedule ? planning.queueDateLabel : "",
@@ -25563,44 +25552,40 @@ function setupSaveHandler() {
       return;
     }
 
-	    // === STEP B: LOCAL UPSERT FIRST ===
-	    console.log("[post-save] step: local upsert");
-	    const savedPost = upsertSavedPostIntoAppState({ ok: true, post: payload, source: "local_first" }, payload);
-	    console.log("[post-save] step: local upsert done", { post_id: getCanonicalPostId(savedPost) || payload.post_id || payload.postId || payload.id });
-	    if (noteIdToConvert) {
-	      appState.notes = (appState.notes || []).map((note) => {
-	        if ((note.noteId || note.id) !== noteIdToConvert) return note;
-	        return {
-          ...note,
-          convertedPostId: savedPost.id || savedPost.postId || payload.id,
-          status: "converted_to_post",
-          flowState: "converted_to_post",
-          movedToPostAt: payload.movedToPostAt
-        };
-      });
-    }
-    if (inspoIdToConvert) {
-      appState.inspo = (appState.inspo || []).map((item) => {
-        if ((item.inspoId || item.id) !== inspoIdToConvert) return item;
-        return {
-          ...item,
-          convertedPostId: savedPost.id || savedPost.postId || payload.id,
-          status: "archived",
-          flowState: "converted_to_post",
-          movedToPostAt: payload.movedToPostAt,
-          archivedAt: new Date().toISOString()
-        };
-      });
-	    }
-	    persistLocalState();
-		    if (shouldUseSheetsAuthority()) {
-		      try {
-		        const authorityPost = await savePostToSheetsAuthority(payload);
-		        upsertLocalPostFromAuthority(authorityPost);
-		        await refreshSheetsTabsQuietly(["POSTS"]);
-		        setSheetsAuthorityStatus();
-		        clearTimeout(saveTimeoutId);
-		        savePostInFlight = false;
+	    if (shouldUseSheetsAuthority()) {
+	      try {
+	        const authorityPost = await savePostToSheetsAuthority(payload);
+	        saveCurrentCarouselOrderToSupabase().catch((err) => console.warn("[carousel] order save skipped", err?.message || err));
+	        if (noteIdToConvert) {
+	          appState.notes = (appState.notes || []).map((note) => {
+	            if ((note.noteId || note.id) !== noteIdToConvert) return note;
+	            return {
+                ...note,
+                convertedPostId: authorityPost.id || authorityPost.postId || authorityPost.post_id || payload.id,
+                status: "converted_to_post",
+                flowState: "converted_to_post",
+                movedToPostAt: payload.movedToPostAt
+              };
+	          });
+	        }
+	        if (inspoIdToConvert) {
+	          appState.inspo = (appState.inspo || []).map((item) => {
+	            if ((item.inspoId || item.id) !== inspoIdToConvert) return item;
+	            return {
+                ...item,
+                convertedPostId: authorityPost.id || authorityPost.postId || authorityPost.post_id || payload.id,
+                status: "archived",
+                flowState: "converted_to_post",
+                movedToPostAt: payload.movedToPostAt,
+                archivedAt: new Date().toISOString()
+              };
+	          });
+	        }
+	        persistLocalState();
+	        await refreshSheetsTabsQuietly(["POSTS"]);
+	        setSheetsAuthorityStatus();
+	        clearTimeout(saveTimeoutId);
+	        savePostInFlight = false;
 	        saveButton.disabled = false;
 	        saveButton.innerHTML = originalSaveButtonHtml;
 	        closeModal();
@@ -25616,6 +25601,36 @@ function setupSaveHandler() {
 	        return;
 	      }
 	    } else {
+	      // === STEP B: LOCAL UPSERT FIRST ===
+	      console.log("[post-save] step: local upsert");
+	      const savedPost = upsertSavedPostIntoAppState({ ok: true, post: payload, source: "local_first" }, payload);
+	      console.log("[post-save] step: local upsert done", { post_id: getCanonicalPostId(savedPost) || payload.post_id || payload.postId || payload.id });
+	      if (noteIdToConvert) {
+	        appState.notes = (appState.notes || []).map((note) => {
+	          if ((note.noteId || note.id) !== noteIdToConvert) return note;
+	          return {
+              ...note,
+              convertedPostId: savedPost.id || savedPost.postId || payload.id,
+              status: "converted_to_post",
+              flowState: "converted_to_post",
+              movedToPostAt: payload.movedToPostAt
+            };
+	        });
+	      }
+	      if (inspoIdToConvert) {
+	        appState.inspo = (appState.inspo || []).map((item) => {
+	          if ((item.inspoId || item.id) !== inspoIdToConvert) return item;
+	          return {
+              ...item,
+              convertedPostId: savedPost.id || savedPost.postId || payload.id,
+              status: "archived",
+              flowState: "converted_to_post",
+              movedToPostAt: payload.movedToPostAt,
+              archivedAt: new Date().toISOString()
+            };
+	        });
+	      }
+	      persistLocalState();
 	      clearTimeout(saveTimeoutId);
 	      savePostInFlight = false;
 	      saveButton.disabled = false;
