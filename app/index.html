@@ -25211,7 +25211,14 @@ async function savePostToSheetsAuthority(post) {
   const result = await apiPost("savePost", buildSheetsPostPayload(post), {
     noTimeout: true
   });
-  const savedPost = result?.post || result?.data || result || post;
+  if (!result || result.ok !== true || result.success !== true) {
+    throw new Error(result?.error || "Sheets save did not confirm.");
+  }
+  const savedPost = result.post || null;
+  const confirmedPostId = String(result.postId || result.savedPostId || savedPost?.post_id || savedPost?.postId || "").trim();
+  if (!savedPost || confirmedPostId !== postId) {
+    throw new Error("Sheets save returned without a confirmed matching post.");
+  }
   console.log("[sheets-authority] savePost confirmed", {
     ok: result?.ok,
     success: result?.success,
@@ -25251,6 +25258,15 @@ function buildSheetsPostPayload(post) {
   if (Array.isArray(payload.media_ids)) {
     payload.media_ids = payload.media_ids.map(String).filter(Boolean).join(",");
   }
+  console.log("[sheets-payload] cleaned save payload", {
+    post_id: payload.post_id,
+    postId: payload.postId,
+    rowNumber: payload.rowNumber,
+    row_number: payload.row_number,
+    sheetRow: payload.sheetRow,
+    sheet_row: payload.sheet_row,
+    row: payload.row
+  });
   return payload;
 }
 
