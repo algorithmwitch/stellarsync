@@ -10501,6 +10501,7 @@ let lastSyncError = "";
 let currentModalSourceContext = { type: "manual", label: "Create Post from Calendar", detail: "This post starts as a manual draft.", sourceId: "" };
 let currentModalCarouselAssets = [];
 let modalMediaPickerExpanded = false;
+let modalMediaPickerFilter = "all";
 let currentCarouselDragIndex = null;
 let modalCarouselDetachSelectMode = false;
 let selectedCarouselDetachAssetIds = new Set();
@@ -16910,24 +16911,87 @@ function closeModalMediaVaultPanel() {
   renderModalExistingMediaPicker(currentModalAsset?.assetId || currentModalAsset?.id || "");
 }
 
+function renderModalMediaPickerFilters() {
+  return `
+    <div id="modal-media-picker-filters" class="flex flex-wrap gap-2 mb-3">
+      ${[
+        ["all", "All"],
+        ["attached", "Attached"],
+        ["unattached", "Not attached"],
+        ["image", "Photos"],
+        ["video", "Videos"]
+      ].map(function(entry) {
+        var key = entry[0];
+        var label = entry[1];
+        return `
+          <button type="button"
+            data-modal-media-filter="${key}"
+            class="modal-media-filter-btn px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border ${
+              modalMediaPickerFilter === key
+                ? "bg-[#2d1b4e] border-[#a855f7]/40 text-white"
+                : "bg-[#181125] border-white/5 text-gray-400 hover:text-white"
+            }">
+            ${label}
+          </button>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function setupModalMediaPickerFilterClicks(root = document) {
+  root.querySelectorAll("[data-modal-media-filter]").forEach(function(btn) {
+    btn.addEventListener("click", function() {
+      modalMediaPickerFilter = btn.dataset.modalMediaFilter || "all";
+      renderMediaPickerAssets("modal");
+    });
+  });
+}
+
+function filterModalPickerAssets(assets) {
+  const attachedIds = new Set(
+    (currentModalCarouselAssets || [])
+      .map(function(a) {
+        return String(getCanonicalMediaAssetId(a) || a.media_asset_id || a.assetId || a.id || "").trim();
+      })
+      .filter(Boolean)
+  );
+  return (assets || []).filter(function(asset) {
+    const id = String(getCanonicalMediaAssetId(asset) || asset.media_asset_id || asset.assetId || asset.id || "").trim();
+    const kind = inferMediaKindFromAsset(asset);
+    if (modalMediaPickerFilter === "attached") return attachedIds.has(id);
+    if (modalMediaPickerFilter === "unattached") return !attachedIds.has(id);
+    if (modalMediaPickerFilter === "image") return kind === "image";
+    if (modalMediaPickerFilter === "video") return kind === "video";
+    return true;
+  });
+}
+
 function renderMediaPickerAssets(target = "modal") {
   const container = target === "modal" ? document.getElementById("modal-media-picker-assets") : document.getElementById("media-picker-assets");
   if (!container) return;
-  const media = (appState.media || []).filter(asset => isRenderableArtifact(asset, "media"));
+  const allAssets = (appState.media || []).filter(function(asset) { return isRenderableArtifact(asset, "media"); });
+  const media = target === "modal" ? filterModalPickerAssets(allAssets) : allAssets;
   if (!media.length) {
     container.innerHTML = `<div class="text-center py-8 text-gray-500"><i class="ph-bold ph-image text-3xl mb-2 block"></i>No media in vault</div>`;
     return;
   }
   container.innerHTML = `
-    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+    ${target === "modal" ? renderModalMediaPickerFilters() : ""}
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
       ${media.map(asset => {
         const assetId = asset.assetId || asset.id || "";
         const thumbUrl = getMediaPreviewUrl(asset);
         const title = getMediaTitle(asset);
         const isSelected = currentModalCarouselAssets.some(a => String(getMediaItemKey(a) || a.assetId || a.id || "") === String(getMediaItemKey(asset) || assetId || ""));
+        const kind = inferMediaKindFromAsset(asset);
         return `<div class="rounded-lg border ${isSelected ? 'border-purple-500/80' : 'border-white/10'} bg-[#120c1d] overflow-hidden">
           <button type="button" onclick="attachMediaToCurrentPost('${escapeHtml(assetId)}')" class="relative h-20 w-full bg-black/20" title="${escapeHtml(title)}">
-            ${thumbUrl ? `<img src="${escapeHtml(thumbUrl)}" alt="${escapeHtml(title)}" class="w-full h-full object-contain" loading="lazy" onerror="handleBrokenMediaPreview(this)">` : `<div class="w-full h-full flex items-center justify-center text-gray-600"><i class="ph-bold ph-file text-xl"></i></div>`}
+            ${thumbUrl ? (
+              kind === "video"
+                ? `<video src="${escapeHtml(thumbUrl)}" class="w-full h-full object-contain" muted playsinline preload="metadata"></video>`
+                : `<img src="${escapeHtml(thumbUrl)}" alt="${escapeHtml(title)}" class="w-full h-full object-contain" loading="lazy" onerror="handleBrokenMediaPreview(this)">`
+            ) : `<div class="w-full h-full flex items-center justify-center text-gray-600"><i class="ph-bold ph-file text-xl"></i></div>`}
             ${isSelected ? '<span class="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-purple-500 text-white"><i class="ph-bold ph-check text-[10px]"></i></span>' : ''}
           </button>
           <div class="p-2 space-y-1">
@@ -16941,6 +17005,7 @@ function renderMediaPickerAssets(target = "modal") {
       }).join("")}
     </div>
   `;
+  if (target === "modal") setupModalMediaPickerFilterClicks(container);
 }
 
 function attachMediaToCurrentPost(assetId) {
