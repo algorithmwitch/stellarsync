@@ -34081,11 +34081,24 @@ async function apiSaveNote(note) {
       note: result.note || result.savedNote || result
     };
   }
-  const result = await apiPost("saveNoteFast", note);
+  let result;
+  try {
+    result = await apiPost("saveNoteFast", note, { noTimeout: true });
+  } catch (err) {
+    console.warn("[note-save] first Apps Script fetch failed, retrying once", err);
+    await new Promise(resolve => setTimeout(resolve, 1200));
+    result = await apiPost("saveNoteFast", note, { noTimeout: true });
+  }
   if (result?.ok === false || result?.success === false) {
     throw new Error(result?.error || "saveNote did not confirm.");
   }
-  return result;
+  const confirmed = result?.note || result?.savedNote || result?.item;
+  if (!confirmed) throw new Error("saveNote did not return confirmed note.");
+  return {
+    ...result,
+    note: confirmed,
+    savedNote: confirmed
+  };
 }
 
 async function apiCreatePostFromNote(noteId, post = {}) {
@@ -34657,11 +34670,24 @@ async function apiSaveInspo(inspo) {
       inspo: result.inspo || result.savedInspo || result
     };
   }
-  const result = await apiPost("saveInspoFast", inspo);
+  let result;
+  try {
+    result = await apiPost("saveInspoFast", inspo, { noTimeout: true });
+  } catch (err) {
+    console.warn("[inspo-save] first Apps Script fetch failed, retrying once", err);
+    await new Promise(resolve => setTimeout(resolve, 1200));
+    result = await apiPost("saveInspoFast", inspo, { noTimeout: true });
+  }
   if (result?.ok === false || result?.success === false) {
     throw new Error(result?.error || "saveInspo did not confirm.");
   }
-  return result;
+  const confirmed = result?.inspo || result?.savedInspo || result?.item;
+  if (!confirmed) throw new Error("saveInspo did not return confirmed inspo.");
+  return {
+    ...result,
+    inspo: confirmed,
+    savedInspo: confirmed
+  };
 }
 
 async function apiArchiveInspo(inspoId, convertedPostId = "") {
