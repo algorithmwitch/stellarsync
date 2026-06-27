@@ -9588,17 +9588,6 @@ function getAttachedMediaForPost(post, mediaItems) {
       if (aSort !== bSort) return aSort - bSort;
       return String(a.created_at || a.createdAt || "").localeCompare(String(b.created_at || b.createdAt || ""));
     });
-  postMediaRows.forEach(function(row) {
-    var assetId = getMediaAssetId(row);
-    if (!assetId) return;
-    var asset = findMediaAssetByAnyKey(assetId, mediaItems) || row;
-    addCandidate(asset, {
-      media_asset_id: assetId,
-      id: assetId,
-      sort_order: row.sort_order || row.sortOrder || 0,
-      linked_post_id: postId
-    });
-  });
   var mediaIdValues = splitMediaIdList(post.media_ids || post.mediaIds);
   mediaIdValues.forEach(function(id, index) {
     var asset = findMediaAssetByAnyKey(id, mediaItems);
@@ -9626,6 +9615,17 @@ function getAttachedMediaForPost(post, mediaItems) {
   var carouselAssets = Array.isArray(post.carouselAssets) ? post.carouselAssets : Array.isArray(post.carousel_assets) ? post.carousel_assets : [];
   carouselAssets.forEach(function(asset, index) {
     addCandidate(asset, { sort_order: index, linked_post_id: postId });
+  });
+  postMediaRows.forEach(function(row) {
+    var assetId = getMediaAssetId(row);
+    if (!assetId) return;
+    var asset = findMediaAssetByAnyKey(assetId, mediaItems) || row;
+    addCandidate(asset, {
+      media_asset_id: assetId,
+      id: assetId,
+      sort_order: row.sort_order || row.sortOrder || 0,
+      linked_post_id: postId
+    });
   });
   var linked = (mediaItems || []).filter(function(asset) {
     var lid = String(asset.linkedPostId || asset.linked_post_id || "").trim();
@@ -16637,6 +16637,36 @@ function upsertLocalPostMediaLinks(postId, assets) {
   });
   appState.postMedia = next;
   appState.post_media = next;
+}
+
+function applyLocalMediaOrderToPost(postId, orderedAssets) {
+  const ids = (orderedAssets || []).map(getMediaAssetId).filter(Boolean);
+  if (!postId || !ids.length) return;
+  upsertLocalPostMediaLinks(postId, orderedAssets);
+  appState.posts = (appState.posts || []).map((post) => {
+    if (!getPostIdentityValues(post).includes(postId)) return post;
+    return applyDerivedPostMediaFormat({
+      ...post,
+      media_ids: ids,
+      mediaIds: ids,
+      carouselAssetIds: ids,
+      carousel_asset_ids: ids,
+      media_id: ids[0] || "",
+      mediaId: ids[0] || ""
+    });
+  });
+  if (window.__currentModalPostData && getPostIdentityValues(window.__currentModalPostData).includes(postId)) {
+    Object.assign(window.__currentModalPostData, applyDerivedPostMediaFormat({
+      ...window.__currentModalPostData,
+      media_ids: ids,
+      mediaIds: ids,
+      carouselAssetIds: ids,
+      carousel_asset_ids: ids,
+      media_id: ids[0] || "",
+      mediaId: ids[0] || ""
+    }));
+  }
+  persistLocalState?.();
 }
 
 function applyCurrentCarouselOrderToModalPost() {
@@ -23940,6 +23970,20 @@ function reorderMediaViewerAssets(fromIndex, toIndex) {
   currentMediaViewerItems = clone;
   currentMediaViewerIndex = toIndex;
   currentMediaAssetDetail = normalizeRemoteMedia(item);
+  const linkedPost =
+    currentMediaAssetDetail?.linkedPost ||
+    currentMediaViewerItems.find((asset) => asset.linkedPost)?.linkedPost ||
+    getLinkedPostForMedia(currentMediaAssetDetail);
+  const postId = String(
+    linkedPost ? getCanonicalPostId(linkedPost) :
+    currentMediaAssetDetail?.postId ||
+    currentMediaAssetDetail?.linkedPostId ||
+    currentMediaAssetDetail?.linked_post_id ||
+    ""
+  ).trim();
+  if (postId) {
+    applyLocalMediaOrderToPost(postId, currentMediaViewerItems);
+  }
   console.log("[media-manage] reorder payload", { fromIndex, toIndex, ordered_media_asset_ids: clone.map((asset) => getMediaAssetId(asset)).filter(Boolean) });
   openMediaAssetModal(currentMediaViewerItems[currentMediaViewerIndex] || clone[0], { items: currentMediaViewerItems, openPosts: mediaPostsPanelOpen });
 }
@@ -23951,10 +23995,17 @@ async function saveMediaViewerOrder() {
   console.log("[media-manage] reorder payload", { post_id: postId, ordered_media_asset_ids: orderedIds });
   if (!postId || !orderedIds.length) return;
   try {
+    applyLocalMediaOrderToPost(postId, currentMediaViewerItems);
     const result = await reorderPostMediaPreservingLocal(postId, orderedIds);
     console.log("[media-manage] save response", result);
     if (!result?.preservedLocal) applyOrderedAttachedMediaResult(postId, result);
-    await refreshAttachedMediaForMediaViewer(postId);
+    if (!result?.preservedLocal) {
+      await refreshAttachedMediaForMediaViewer(postId);
+    } else {
+      currentMediaViewerItems = getAttachedMediaForPost(findPostByAnyId(postId) || { post_id: postId })
+        .filter(Boolean)
+        .map(normalizeAttachedMedia);
+    }
     mediaViewerOriginalOrder = currentMediaViewerItems.slice();
     mediaViewerReorderMode = false;
     mediaViewerDragIndex = null;
