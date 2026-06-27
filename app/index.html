@@ -23441,23 +23441,55 @@ function getMediaViewerPostContext(asset) {
   const row = (appState.postMedia || appState.post_media || []).find(function(entry) {
     return String(entry.media_asset_id || entry.mediaAssetId || "").trim() === mediaAssetId;
   });
-  const postId = String(row && (row.post_id || row.postId) || "").trim();
-  return postId ? findPostByAnyId(postId) : null;
+  const rowPostId = String(row?.post_id || row?.postId || "").trim();
+  if (rowPostId) return findPostByAnyId(rowPostId);
+  return (appState.posts || []).find(function(post) {
+    const ids = [
+      ...(Array.isArray(post.media_ids) ? post.media_ids : String(post.media_ids || "").split(/[|,\n]/)),
+      ...(Array.isArray(post.mediaIds) ? post.mediaIds : []),
+      ...(Array.isArray(post.carouselAssetIds) ? post.carouselAssetIds : []),
+      ...(Array.isArray(post.carousel_asset_ids) ? post.carousel_asset_ids : [])
+    ].map(function(v) {
+      return String(v || "").trim();
+    }).filter(Boolean);
+    return ids.includes(mediaAssetId);
+  }) || null;
 }
 
 function getActualAttachedMediaForViewer(post) {
   if (!post) return [];
   const postIds = new Set(getPostIdentityValues(post));
-  const attachedIds = new Set((appState.postMedia || appState.post_media || []).filter(function(row) {
-    return postIds.has(String(row.post_id || row.postId || "").trim());
-  }).map(function(row) {
-    return String(row.media_asset_id || row.mediaAssetId || "").trim();
-  }).filter(Boolean));
-  if (!attachedIds.size) return [];
-  return getAttachedMediaForPost(post, appState.media || []).filter(function(item) {
-    const id = getMediaAssetId(item);
-    return attachedIds.has(id) && !!findMediaAssetInState(item);
-  });
+  const orderedFromJoin = (appState.postMedia || appState.post_media || [])
+    .filter(function(row) {
+      return postIds.has(String(row.post_id || row.postId || "").trim());
+    })
+    .sort(function(a, b) {
+      return Number(a.sort_order ?? a.sortOrder ?? 0) - Number(b.sort_order ?? b.sortOrder ?? 0);
+    })
+    .map(function(row) {
+      return String(row.media_asset_id || row.mediaAssetId || "").trim();
+    })
+    .filter(Boolean);
+  const orderedFromPost = [
+    ...(Array.isArray(post.media_ids) ? post.media_ids : String(post.media_ids || "").split(/[|,\n]/)),
+    ...(Array.isArray(post.mediaIds) ? post.mediaIds : []),
+    ...(Array.isArray(post.carouselAssetIds) ? post.carouselAssetIds : []),
+    ...(Array.isArray(post.carousel_asset_ids) ? post.carousel_asset_ids : [])
+  ].map(function(v) {
+    return String(v || "").trim();
+  }).filter(Boolean);
+  const orderedIds = Array.from(new Set([].concat(orderedFromJoin, orderedFromPost)));
+  if (!orderedIds.length) return [];
+  return orderedIds
+    .map(function(id) {
+      return (appState.media || []).find(function(asset) {
+        return getMediaAssetId(asset) === id;
+      });
+    })
+    .filter(Boolean)
+    .map(function(asset) {
+      return normalizeAttachedMedia(asset);
+    });
 }
 
 function getMediaViewerMode(asset) {
