@@ -7187,7 +7187,6 @@ function renderUnplayableVideoNotice(asset = {}) {
 
 function renderVideoPreview(asset, url) {
   if (!url) return '<div class="flex items-center justify-center h-64 text-gray-500"><i class="ph-bold ph-video text-4xl"></i></div>';
-  if (!isBrowserPlayableVideo(asset)) return renderUnplayableVideoNotice(asset);
   return `<video controls playsinline src="${escapeHtml(url)}" class="max-h-[58vh] w-full object-contain rounded-lg" preload="metadata"></video>`;
 }
 
@@ -10029,8 +10028,29 @@ function setModalTargetPlatforms(platforms) {
   return selected;
 }
 
+function getRenderableMediaUrl(asset = {}) {
+  return String(
+    asset.signedUrl ||
+    asset.signed_url ||
+    asset.previewUrl ||
+    asset.preview_url ||
+    asset.publicUrl ||
+    asset.public_url ||
+    asset.fileUrl ||
+    asset.file_url ||
+    asset.mediaUrl ||
+    asset.media_url ||
+    asset.thumbnailUrl ||
+    asset.thumbnail_url ||
+    asset.url ||
+    asset.sourceUrl ||
+    asset.source_url ||
+    ""
+  ).trim();
+}
+
 function getMediaPreviewUrl(asset = {}) {
-  return String(asset.fileUrl || asset.file_url || asset.mediaUrl || asset.media_url || asset.thumbnailUrl || asset.thumbnail_url || asset.signedUrl || asset.signed_url || asset.sourceUrl || asset.source_url || asset.url || "").trim();
+  return getRenderableMediaUrl(asset);
 }
 
 function isImageMediaAsset(asset = {}) {
@@ -16563,7 +16583,7 @@ function renderModalCarouselPreview() {
   getCarouselCoverAsset(items);
 
   modalCarouselPreview.innerHTML = items.map((asset, index) => {
-    const previewUrl = asset.fileUrl || asset.sourceUrl || "";
+    const previewUrl = getRenderableMediaUrl(asset);
     const canonicalUuid = getDetachAssetId(asset);
     const isSelected = selectedCarouselDetachAssetIds.has(canonicalUuid);
     var linkedPostForCarousel = getLinkedPostForMedia(asset) || getMediaPostContext(asset);
@@ -16582,9 +16602,7 @@ function renderModalCarouselPreview() {
           <span class="absolute top-2 left-2 z-10 w-6 h-6 rounded-full bg-[#181125]/90 border border-white/10 text-[10px] font-bold text-white flex items-center justify-center">${index + 1}</span>
           ${previewUrl
             ? String(asset.assetType || asset.type || "").startsWith("video")
-              ? (isBrowserPlayableVideo(asset || {})
-                ? `<video src="${escapeHtml(previewUrl)}" class="w-full h-full object-cover" muted playsinline preload="metadata"></video>`
-                : `<div class="w-full h-full flex flex-col items-center justify-center bg-black/40 text-center p-3 text-purple-200"><i class="ph-fill ph-video text-3xl mb-2"></i><span class="text-[10px] font-bold">MOV preview unavailable</span></div>`)
+              ? `<video src="${escapeHtml(previewUrl)}" class="w-full h-full object-cover" muted playsinline preload="metadata"></video>`
               : /pdf|document|doc|presentation|spreadsheet|text/i.test(String(asset.assetType || asset.type || asset.mimeType || ""))
               ? `<div class="w-full h-full flex flex-col items-center justify-center text-gray-400"><i class="ph-bold ph-file-text text-2xl mb-1"></i><span class="text-[10px] uppercase tracking-wider font-bold">Document</span></div>`
               : `<img src="${escapeHtml(previewUrl)}" alt="${escapeHtml(carouselTitle)}" class="w-full h-full object-cover" onerror="handleBrokenMediaPreview(this)">`
@@ -16902,36 +16920,21 @@ async function detachSelectedCarouselMedia() {
   const postId = String(currentEditingPostId || getCanonicalPostId(window.__currentModalPostData || {}) || "").trim();
   const selected = getSelectedCarouselDetachAssets();
   if (!postId || !selected.length) return;
-  const mediaAssetIds = [];
-  for (const asset of selected) {
-    const uuid = String(getCanonicalMediaAssetId(asset) || asset.id || asset.media_asset_id || "").trim();
-    if (!uuid || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid)) {
-      console.warn("[detach-ui] selected ids", { skipped: true, asset });
-      showToast("Detach skipped", "One or more selected items do not have a canonical UUID.", "ph-warning", "text-yellow-400");
-      continue;
-    }
-    mediaAssetIds.push(uuid);
-  }
+  const mediaAssetIds = selected.map((asset) => getDetachAssetId(asset)).filter(Boolean);
   if (!mediaAssetIds.length) return;
   console.log("[detach-ui] detach payload", { workspace_id: getWorkspaceRequestMetadata().workspace_id, post_id: postId, media_asset_ids: mediaAssetIds });
   try {
-    const meta = getWorkspaceRequestMetadata();
-    const result = await callSupabaseEdgeFunction("media-index", {
-      action: "detach_from_post",
-      workspace_id: meta.workspace_id,
-      workspace_slug: meta.workspace_slug || getCurrentWorkspaceSlug() || "",
-      post_id: postId,
-      media_asset_ids: mediaAssetIds
-    });
-    console.log("[media-match] detach response", result);
+    await detachMediaAssetsFromPost(selected, postId);
+    currentModalCarouselAssets = (currentModalCarouselAssets || [])
+      .filter((asset) => !mediaAssetIds.includes(getDetachAssetId(asset)));
     window.mediaDetachSelectionMode = false;
     modalCarouselDetachSelectMode = false;
     selectedCarouselDetachAssetIds.clear();
-    if (result) {
-      applyOrderedAttachedMediaResult(postId, result);
-    }
+    await refreshMediaFromRemote();
     renderModalCarouselPreview();
+    renderMedia();
     rerenderAll();
+    showToast("Detached", "Media removed from this post.", "ph-check", "text-[#00ffaa]");
   } catch (err) {
     console.log("[media-match] detach error full object", {
       message: err?.message,
@@ -24241,7 +24244,7 @@ function cancelMediaViewerReorder() {
 }
 
 function renderTaggedContent(item, linkedPost) {
-  const targetUrl = item.fileUrl || item.sourceUrl || item.media_url || item.url || "";
+  const targetUrl = getRenderableMediaUrl(item);
   const noteId = String(item.linkedNoteId || item.linked_note_id || "").trim();
   const inspoId = String(item.linkedInspoId || item.linked_inspo_id || "").trim();
   const platforms = linkedPost ? getPostTargetPlatforms(linkedPost) : [];
@@ -24401,7 +24404,7 @@ function openMediaAssetModal(item, options = {}) {
   }
 
   if (mediaAssetModalOpenLink) {
-    const targetUrl = item.fileUrl || item.sourceUrl || "";
+    const targetUrl = getRenderableMediaUrl(item);
     mediaAssetModalOpenLink.href = targetUrl || "#";
     mediaAssetModalOpenLink.classList.toggle("pointer-events-none", !targetUrl);
     mediaAssetModalOpenLink.classList.toggle("opacity-40", !targetUrl);
