@@ -7069,8 +7069,8 @@ async function uploadMediaToSupabaseStorage(file, options = {}) {
   const mediaType = inferUploadMediaType(file);
   const createPayload = {
     action: "create_asset",
-    workspace_id: config.workspace_id || config.id || getWorkspaceRequestMetadata().workspace_id,
-    workspace_slug: config.workspace_slug || config.slug || getCurrentWorkspaceSlug() || "",
+    workspace_id: mediaContext.id || config.workspace_id || config.id || getWorkspaceRequestMetadata().workspace_id,
+    workspace_slug: mediaContext.slug || "gpe",
     bucket: "media",
     storage_path: storagePath,
     filename: file?.name || "",
@@ -17588,24 +17588,43 @@ function setupMediaUpload() {
     input.click(); // must be direct user gesture
   };
   input.onchange = async function(event) {
-    const file = event.target.files && event.target.files[0];
-    if (!file) return;
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
     try {
-      showToast("Uploading", "Uploading media...", "ph-upload-simple", "text-[#c77dff]");
-      const base64Data = await fileToBase64(file);
-      const result = await apiPost("uploadMedia", {
-        fileName: file.name,
-        mimeType: file.type,
-        base64Data,
-        assetBadge: file.type.startsWith("video/") ? "Reel" : "Image",
-        assetMeta: "",
-        linkedPostId: "",
-        campaign: ""
-      });
-      if (result?.asset) upsertMediaAssetIntoAppState(result.asset);
+      showToast("Uploading", "Uploading media to vault...", "ph-upload-simple", "text-[#c77dff]");
+      const uploaded = [];
+      for (const file of files) {
+        let asset;
+        if (isSupabaseMediaEnabled()) {
+          asset = await uploadMediaToSupabaseStorage(file, {
+            postId: "",
+            campaign: "",
+            title: file.name,
+            altText: ""
+          });
+        } else {
+          const base64Data = await fileToBase64(file);
+          const result = await apiPost("uploadMedia", {
+            fileName: file.name,
+            mimeType: file.type,
+            base64Data,
+            assetBadge: file.type.startsWith("video/") ? "Reel" : "Image",
+            assetMeta: "",
+            linkedPostId: "",
+            campaign: ""
+          });
+          asset = result?.asset || result?.data || result;
+        }
+        const normalized = upsertMediaAssetIntoAppState(asset);
+        uploaded.push(normalizeRemoteMedia(normalized));
+      }
+      persistLocalState();
       renderMedia();
-      showToast("Uploaded", "Media uploaded.", "ph-check", "text-[#00ffaa]");
-      console.log("[media-upload] success", result);
+      await refreshMediaFromRemote?.().catch((err) => {
+        console.warn("[media-upload] refresh skipped", err?.message || err);
+      });
+      showToast("Uploaded", `${uploaded.length} media asset${uploaded.length === 1 ? "" : "s"} uploaded.`, "ph-check", "text-[#00ffaa]");
+      console.log("[media-upload] success", { uploaded: uploaded.length });
     } catch (err) {
       console.error("[media-upload] failed", err);
       showToast("Upload failed", err.message || "Could not upload media.", "ph-warning", "text-yellow-400");
@@ -23822,14 +23841,14 @@ function renderMediaPreviewContent(item, linkedAssets, previewUrl, type) {
     const kind = inferMediaKindFromAsset(asset);
     const title = getMediaDisplayTitle(asset, getLinkedPostForMedia(asset) || getMediaPostContext(asset), `Asset ${index + 1}`);
     return `
-      <button type="button" onclick="selectMediaViewerIndex(${index})" class="shrink-0 w-20 h-20 rounded-lg overflow-hidden bg-[#0f0a18] border ${index === currentMediaViewerIndex ? "border-[#c77dff]" : "border-white/10"} relative" title="${escapeHtml(title)}">
+      <button type="button" onclick="handleMediaViewerThumbClick(event, ${index})" class="media-viewer-carousel-thumb shrink-0 w-20 h-20 rounded-lg overflow-hidden bg-[#0f0a18] border ${index === currentMediaViewerIndex ? "border-[#c77dff]" : "border-white/10"} relative" title="${escapeHtml(title)}">
         <span class="absolute top-1 left-1 z-10 px-1.5 py-0.5 rounded bg-black/65 text-[9px] font-bold text-white">${index + 1}</span>
         ${thumbUrl ? (
           kind === "video"
-            ? `<video src="${escapeHtml(thumbUrl)}" class="w-full h-full object-cover" muted playsinline preload="metadata"></video>`
+            ? `<video src="${escapeHtml(thumbUrl)}" class="w-full h-full object-cover pointer-events-none" draggable="false" muted playsinline preload="metadata"></video>`
             : kind === "document"
             ? `<div class="w-full h-full flex items-center justify-center text-gray-400"><i class="ph-bold ph-file-text text-2xl"></i></div>`
-            : `<img src="${escapeHtml(thumbUrl)}" alt="${escapeHtml(title)}" class="w-full h-full object-cover" onerror="handleBrokenMediaPreview(this)">`
+            : `<img src="${escapeHtml(thumbUrl)}" alt="${escapeHtml(title)}" class="w-full h-full object-cover pointer-events-none" draggable="false" onerror="handleBrokenMediaPreview(this)">`
         ) : `<div class="w-full h-full flex items-center justify-center text-gray-500"><i class="ph-bold ph-image text-2xl"></i></div>`}
       </button>
     `;
@@ -23921,6 +23940,30 @@ function selectMediaViewerIndex(index) {
   const next = currentMediaViewerItems[currentMediaViewerIndex];
   console.log("[media-viewer] thumbnail clicked", { index: currentMediaViewerIndex, id: getMediaItemKey(next) });
   openMediaAssetModal(next, { items: currentMediaViewerItems, openPosts: mediaPostsPanelOpen });
+}
+
+function isMediaViewerCarouselMode() {
+  const assets = Array.isArray(currentMediaViewerItems)
+    ? currentMediaViewerItems.filter(Boolean)
+    : [];
+  if (assets.length > 1) return true;
+  return String(getMediaViewerMode(currentMediaAssetDetail) || "").toLowerCase() === "carousel";
+}
+
+function openSingleMediaViewerAsset(index) {
+  selectMediaViewerIndex(index);
+}
+
+function handleMediaViewerThumbClick(event, index) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  if (isMediaViewerCarouselMode()) {
+    console.log("[media-viewer] carousel thumb click suppressed for reorder", { index });
+    return;
+  }
+  openSingleMediaViewerAsset(index);
 }
 
 function toggleMediaViewerGalleryViewAll() {
