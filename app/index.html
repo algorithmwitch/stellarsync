@@ -22647,8 +22647,40 @@ function buildMediaVaultItems() {
   return items;
 }
 
-function handleBrokenMediaPreview(el) {
+async function refreshSupabaseSignedMediaUrl(asset) {
+  if (!asset?.storage_path && !asset?.storagePath) return asset?.media_url || asset?.mediaUrl || asset?.url || "";
+  const path = asset.storage_path || asset.storagePath;
+  const result = await callSupabaseEdgeFunction("media-sign-url", {
+    storage_path: path,
+    expires_in: 604800
+  });
+  return result?.signedUrl || result?.signed_url || result?.url || "";
+}
+
+async function handleBrokenMediaPreview(el) {
   if (!el) return;
+  try {
+    if (el.dataset.resigned !== "true") {
+      const src = String(el.currentSrc || el.src || "").trim();
+      const asset = (appState.media || []).find((item) => {
+        return src && [
+          item?.media_url,
+          item?.mediaUrl,
+          item?.fileUrl,
+          item?.url,
+          item?.sourceUrl
+        ].map((value) => String(value || "").trim()).includes(src);
+      });
+      const freshUrl = await refreshSupabaseSignedMediaUrl(asset || {});
+      if (freshUrl) {
+        el.dataset.resigned = "true";
+        el.src = freshUrl;
+        return;
+      }
+    }
+  } catch (err) {
+    console.warn("[media] signed URL refresh failed", err?.message || err);
+  }
   const parent = el.parentElement;
   const replacement = document.createElement("div");
   replacement.className = "w-full h-full min-h-[96px] flex flex-col items-center justify-center gap-2 bg-[#120c1d] text-gray-500 text-center p-3";
@@ -25226,7 +25258,7 @@ async function savePostToSheetsAuthority(post) {
   showToast("Saving to Sheets", "Updating Google Sheets source of truth...", "ph-table", "text-[#c77dff]");
   window.__STELLARSYNC_SAVE_ACTIVE = true;
   try {
-    const result = await apiPost("savePost", payload, {
+    const result = await apiPost("savePostMinimalDebug", payload, {
       noTimeout: true
     });
     console.log("[sheets-authority] savePost result", result);
