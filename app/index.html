@@ -16596,21 +16596,48 @@ async function saveCurrentCarouselOrderToSupabase() {
   if (!postId) return;
   const order = getCurrentCarouselOrderPayload();
   const canonicalIds = (currentModalCarouselAssets || []).map(function(a) { return getMediaAssetId(a); }).filter(Boolean);
+  if (!canonicalIds.length) return;
+  const result = await reorderPostMediaPreservingLocal(postId, canonicalIds, order.ids);
+  if (!result?.preservedLocal) {
+    applyOrderedAttachedMediaResult(postId, result);
+  }
+  const refreshed = getAttachedMediaForPost(findPostByAnyId(postId) || window.__currentModalPostData || { post_id: postId });
+  console.log("[carousel] refreshed order", refreshed.map(function(a) { return getMediaAssetId(a); }));
+  console.log("[carousel] order saved", { postId, count: canonicalIds.length, preservedLocal: !!result?.preservedLocal });
+}
+
+async function reorderPostMediaPreservingLocal(postId, orderedIds, rawIds) {
   const meta = getWorkspaceRequestMetadata();
-  console.log("[carousel] saving sort_order", { postId, ids: canonicalIds, raw: order.ids });
-  const result = await callSupabaseEdgeFunction("media-index", {
+  console.log("[carousel] saving sort_order", { postId, ids: orderedIds, raw: rawIds || orderedIds });
+  const response = await callSupabaseEdgeFunction("media-index", {
     action: "reorder_post_media",
     workspace_id: meta.workspace_id,
     workspace_slug: meta.workspace_slug || getCurrentWorkspaceSlug() || "",
     post_id: postId,
-    ordered_media_asset_ids: canonicalIds,
-    orderedMediaAssetIds: canonicalIds
+    ordered_media_asset_ids: orderedIds,
+    orderedMediaAssetIds: orderedIds,
+    ordered_asset_ids: orderedIds
   });
-  console.log("[carousel] save response", result);
-  applyOrderedAttachedMediaResult(postId, result);
-  const refreshed = getAttachedMediaForPost(findPostByAnyId(postId) || window.__currentModalPostData || { post_id: postId });
-  console.log("[carousel] refreshed order", refreshed.map(function(a) { return getMediaAssetId(a); }));
-  console.log("[carousel] order saved", { postId, count: canonicalIds.length });
+  console.log("[carousel] save response", response);
+  const returnedIds =
+    response?.ordered_media_asset_ids ||
+    response?.ordered_asset_ids ||
+    response?.data?.ordered_media_asset_ids ||
+    response?.data?.ordered_asset_ids ||
+    [];
+  if (!returnedIds.length && orderedIds.length) {
+    console.warn("[carousel] mirror returned empty order; preserving local carousel", {
+      postId,
+      orderedIds
+    });
+    return {
+      ok: true,
+      preservedLocal: true,
+      ordered_media_asset_ids: orderedIds,
+      ordered_asset_ids: orderedIds
+    };
+  }
+  return response;
 }
 
 function reorderCarouselAssets(fromIndex, toIndex, persist = true) {
@@ -17026,17 +17053,9 @@ async function repairMediaOrderForModal() {
   var canonicalIds = assets.map(function(a) { return getMediaAssetId(a); }).filter(Boolean);
   if (!canonicalIds.length) { showToast("No valid media IDs", "error"); return; }
   try {
-    var meta = getWorkspaceRequestMetadata();
-    var result = await callSupabaseEdgeFunction("media-index", {
-      action: "reorder_post_media",
-      workspace_id: meta.workspace_id,
-      workspace_slug: meta.workspace_slug || getCurrentWorkspaceSlug() || "",
-      post_id: postId,
-      ordered_media_asset_ids: canonicalIds,
-      orderedMediaAssetIds: canonicalIds
-    });
+    var result = await reorderPostMediaPreservingLocal(postId, canonicalIds);
     console.log("[media] repair order response", result);
-    applyOrderedAttachedMediaResult(postId, result);
+    if (!result?.preservedLocal) applyOrderedAttachedMediaResult(postId, result);
     var refreshed = getAttachedMediaForPost(
       findPostByAnyId(postId) || window.__currentModalPostData || { post_id: postId }
     ).filter(Boolean).map(function(a) { return normalizeAttachedMedia(a); });
@@ -22672,8 +22691,12 @@ function buildMediaVaultItems() {
 async function refreshSupabaseSignedMediaUrl(asset) {
   if (!asset?.storage_path && !asset?.storagePath) return asset?.media_url || asset?.mediaUrl || asset?.url || "";
   const path = asset.storage_path || asset.storagePath;
+  const meta = getWorkspaceRequestMetadata();
   const result = await callSupabaseEdgeFunction("media-sign-url", {
     storage_path: path,
+    bucket: asset?.bucket || "media",
+    workspace_id: meta.workspace_id || "",
+    workspace_slug: meta.workspace_slug || getCurrentWorkspaceSlug?.() || "",
     expires_in: 604800
   });
   return result?.signedUrl || result?.signed_url || result?.url || "";
@@ -23712,17 +23735,9 @@ async function saveMediaViewerOrder() {
   console.log("[media-manage] reorder payload", { post_id: postId, ordered_media_asset_ids: orderedIds });
   if (!postId || !orderedIds.length) return;
   try {
-    const meta = getWorkspaceRequestMetadata();
-    const result = await callSupabaseEdgeFunction("media-index", {
-      action: "reorder_post_media",
-      workspace_id: meta.workspace_id,
-      workspace_slug: meta.workspace_slug || getCurrentWorkspaceSlug() || "",
-      post_id: postId,
-      ordered_media_asset_ids: orderedIds,
-      orderedMediaAssetIds: orderedIds
-    });
+    const result = await reorderPostMediaPreservingLocal(postId, orderedIds);
     console.log("[media-manage] save response", result);
-    applyOrderedAttachedMediaResult(postId, result);
+    if (!result?.preservedLocal) applyOrderedAttachedMediaResult(postId, result);
     await refreshAttachedMediaForMediaViewer(postId);
     mediaViewerOriginalOrder = currentMediaViewerItems.slice();
     mediaViewerReorderMode = false;
@@ -25316,6 +25331,22 @@ function buildSheetsPostPayload(post) {
     workspace_slug: getCurrentWorkspaceSlug?.() || "gpe",
     _rowNumber: post._rowNumber || post.row_number || post.rowNumber || post.sheetRow || ""
   };
+  const explicitMediaIds = []
+    .concat(Array.isArray(post.media_ids) ? post.media_ids : String(post.media_ids || post.mediaIds || "").split(/[|,\n]/))
+    .concat(Array.isArray(post.carouselAssetIds) ? post.carouselAssetIds : String(post.carousel_asset_ids || post.carouselAssetIds || "").split(/[|,\n]/))
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+  const attachedIds = []
+    .concat(getAttachedMediaForPost(post).map((item) => getMediaAssetId(item)))
+    .concat(
+      String(currentEditingPostId || "").trim() && getPostIdentityValues(post).includes(String(currentEditingPostId || "").trim())
+        ? (currentModalCarouselAssets || []).map((item) => getMediaAssetId(item))
+        : []
+    )
+    .concat(explicitMediaIds)
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)
+    .filter((value, index, list) => list.indexOf(value) === index);
   delete payload.file;
   delete payload.files;
   delete payload.base64Data;
@@ -25325,18 +25356,34 @@ function buildSheetsPostPayload(post) {
   delete payload.pendingMedia;
   delete payload.uploadQueue;
   delete payload.attachedMediaObjects;
-  if (Array.isArray(payload.media_ids)) {
-    payload.media_ids = payload.media_ids.map(String).filter(Boolean).join(",");
-  }
-  if (Array.isArray(payload.carouselAssetIds)) {
-    payload.carousel_asset_ids = payload.carouselAssetIds.map(String).filter(Boolean).join("|");
+  if (attachedIds.length) {
+    payload.media_ids = attachedIds.join(",");
+    payload.mediaIds = attachedIds;
+    payload.carousel_asset_ids = attachedIds.join(",");
+    payload.carouselAssetIds = attachedIds;
+    payload.media_id = attachedIds[0];
+    payload.mediaId = attachedIds[0];
+    payload.media_count = attachedIds.length;
+    if (attachedIds.length > 1) {
+      payload.format = "carousel";
+      payload.postType = "carousel";
+      payload.post_type = "carousel";
+    }
+  } else {
+    if (Array.isArray(payload.media_ids)) {
+      payload.media_ids = payload.media_ids.map(String).filter(Boolean).join(",");
+    }
+    if (Array.isArray(payload.carouselAssetIds)) {
+      payload.carousel_asset_ids = payload.carouselAssetIds.map(String).filter(Boolean).join(",");
+    }
   }
   console.log("[sheets-payload] cleaned save payload", {
     post_id: payload.post_id,
     postId: payload.postId,
     _rowNumber: payload._rowNumber,
     media_ids: payload.media_ids,
-    carousel_asset_ids: payload.carousel_asset_ids
+    carousel_asset_ids: payload.carousel_asset_ids,
+    media_count: payload.media_count || 0
   });
   return payload;
 }
@@ -29896,6 +29943,7 @@ async function apiSavePostToSupabase(payload = {}) {
   if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase is not configured.");
   if (SUPABASE_DISABLED_MIRRORS.has("posts") || SUPABASE_MISSING_TABLES.has("posts")) throw new Error("Supabase posts persistence disabled for this session.");
   const row = buildSupabasePostRow(payload);
+  delete row.campaign_id;
   const workspaceId = row.workspace_id;
   if (!workspaceId) throw new Error("Workspace ID is missing for Supabase save.");
   let saved = null;
