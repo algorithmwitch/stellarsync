@@ -23955,12 +23955,14 @@ function openSingleMediaViewerAsset(index) {
 }
 
 function handleMediaViewerThumbClick(event, index) {
-  if (event) {
-    event.preventDefault();
-    event.stopPropagation();
-  }
-  if (isMediaViewerCarouselMode()) {
-    console.log("[media-viewer] carousel thumb click suppressed for reorder", { index });
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
+  if (mediaViewerReorderMode || mediaViewerDetachMode || isMediaViewerCarouselMode()) {
+    currentMediaViewerIndex = Math.max(0, Math.min(index, currentMediaViewerItems.length - 1));
+    openMediaAssetModal(currentMediaViewerItems[currentMediaViewerIndex], {
+      items: currentMediaViewerItems,
+      openPosts: mediaPostsPanelOpen
+    });
     return;
   }
   openSingleMediaViewerAsset(index);
@@ -24169,21 +24171,48 @@ function openMediaAssetModal(item, options = {}) {
     safeRender(renderMedia, "renderMedia");
     return;
   }
-  item = { ...stateItem, linkedPost: item.linkedPost || stateItem.linkedPost || null };
+
+  const linkedPost =
+    item.linkedPost ||
+    stateItem.linkedPost ||
+    getMediaViewerPostContext(stateItem) ||
+    getLinkedPostForMedia(stateItem) ||
+    getMediaPostContext(stateItem);
+
+  item = {
+    ...stateItem,
+    linkedPost: linkedPost || null
+  };
+
+  const attachedForLinkedPost = linkedPost
+    ? getActualAttachedMediaForViewer(linkedPost).slice(0, 20)
+    : [];
+  const forceCarouselMode = attachedForLinkedPost.length >= 2;
+
   console.log("[modal] open media-viewer");
   if (STELLARSYNC_DEBUG) console.log("[assistant-ui] modal minimize");
   minimizeAssistantPanel();
   const wasHidden = mediaAssetModal.classList.contains("opacity-0") || mediaAssetModal.classList.contains("pointer-events-none");
-  if (Array.isArray(options.items) && options.items.length) {
+
+  if (forceCarouselMode) {
+    currentMediaViewerItems = attachedForLinkedPost;
+    currentMediaViewerIndex = Math.max(
+      0,
+      currentMediaViewerItems.findIndex((asset) => getMediaAssetId(asset) === getMediaAssetId(item))
+    );
+  } else if (Array.isArray(options.items) && options.items.length) {
     currentMediaViewerItems = options.items.slice(0, 20);
-  } else if (!currentMediaViewerItems.length || !currentMediaViewerItems.some(asset => getMediaItemKey(asset) === getMediaItemKey(item))) {
-    currentMediaViewerItems = selectedMediaAssetIds.size
-      ? getFilteredMediaVaultItems().filter(asset => selectedMediaAssetIds.has(getMediaItemKey(asset)))
-      : getFilteredMediaVaultItems();
+    currentMediaViewerIndex = Math.max(
+      0,
+      currentMediaViewerItems.findIndex((asset) => getMediaItemKey(asset) === getMediaItemKey(item))
+    );
+  } else {
+    currentMediaViewerItems = [item];
+    currentMediaViewerIndex = 0;
   }
+
   currentMediaViewerItems = (currentMediaViewerItems || []).slice(0, 20);
-  currentMediaViewerIndex = Math.max(0, currentMediaViewerItems.findIndex(asset => getMediaItemKey(asset) === getMediaItemKey(item)));
-  if (currentMediaViewerIndex < 0) currentMediaViewerIndex = 0;
+  currentMediaViewerIndex = Math.max(0, Math.min(currentMediaViewerIndex, Math.max(currentMediaViewerItems.length - 1, 0)));
   if (wasHidden) {
     mediaViewerOriginalOrder = currentMediaViewerItems.slice();
     mediaViewerGalleryViewAll = true;
@@ -24192,62 +24221,35 @@ function openMediaAssetModal(item, options = {}) {
     mediaViewerDetachMode = false;
     selectedMediaViewerDetachAssetIds.clear();
   }
-  currentMediaAssetDetail = normalizeRemoteMedia(item);
+  currentMediaAssetDetail = normalizeRemoteMedia({
+    ...item,
+    linkedPost: linkedPost || item.linkedPost || null
+  });
   item = currentMediaAssetDetail;
   console.log("[media-manage] modal open", { id: getMediaItemKey(item), index: currentMediaViewerIndex, total: currentMediaViewerItems.length });
 
-  const linkedPostKey = String(item.postId || item.linkedPostId || item.linked_post_id || "").trim();
-  const linkedPost = getMediaViewerPostContext(item) || item.linkedPost || (appState.posts || []).find(post => [post.id, post.postId, post.post_id, post.frontendId].map(value => String(value || "").trim()).includes(linkedPostKey));
-  const type = String(item.type || item.assetType || "").toLowerCase();
-  const viewerMode = getMediaViewerMode(item);
-  if (viewerMode === "single") {
-    currentMediaViewerItems = [item];
-    currentMediaViewerIndex = 0;
-    mediaViewerReorderMode = false;
-    mediaViewerDetachMode = false;
-    selectedMediaViewerDetachAssetIds.clear();
-  } else if (linkedPost) {
-    currentMediaViewerItems = getActualAttachedMediaForViewer(linkedPost).slice(0, 20);
-    const currentId = getMediaAssetId(item);
-    currentMediaViewerIndex = Math.max(0, currentMediaViewerItems.findIndex(function(asset) { return getMediaAssetId(asset) === currentId; }));
-    if (wasHidden) mediaViewerOriginalOrder = currentMediaViewerItems.slice();
-  }
-  const linkedAssets = viewerMode === "carousel" && linkedPost ? getActualAttachedMediaForViewer(linkedPost) : [];
-  const previewUrl = viewerMode === "carousel"
-    ? (linkedAssets[currentMediaViewerIndex]?.fileUrl || linkedAssets[currentMediaViewerIndex]?.sourceUrl || item.fileUrl || item.sourceUrl || "")
-    : (item.fileUrl || item.sourceUrl || item.media_url || item.mediaUrl || item.url || "");
+  const viewerMode = forceCarouselMode ? "carousel" : getMediaViewerMode(currentMediaAssetDetail);
+  const linkedAssets = viewerMode === "carousel" ? currentMediaViewerItems : [];
+  const previewAsset = viewerMode === "carousel"
+    ? currentMediaViewerItems[currentMediaViewerIndex] || currentMediaAssetDetail
+    : currentMediaAssetDetail;
+  const previewUrl = getMediaPreviewUrl(previewAsset);
+  const type = inferMediaKindFromAsset(previewAsset);
 
   if (mediaAssetModalTitle) {
-    mediaAssetModalTitle.textContent = getMediaDisplayTitle(item, linkedPost, "Media Asset");
+    mediaAssetModalTitle.textContent = getMediaDisplayTitle(previewAsset, linkedPost, "Media Asset");
   }
 
-  var mediaSubtitle = linkedPost ? getMediaSubtitle(item, linkedPost) : "";
-  if (mediaAssetModalSubtitle && linkedPost) {
-    var campaignPart = linkedPost?.campaignName
-      ? formatCampaignDisplayName(linkedPost.campaignName)
-      : item.campaign
-      ? formatCampaignDisplayName(item.campaign)
-      : "";
-    var viewerAssets = viewerMode === "carousel" ? getActualAttachedMediaForViewer(linkedPost) : [];
-    var viewerIdx = viewerAssets.findIndex(function(a) { return getMediaAssetId(a) === getMediaAssetId(item); });
-    if (viewerAssets.length > 1 && viewerIdx >= 0) {
-      var carouselPos = "Carousel item \u00b7 " + formatCarouselPosition(viewerIdx, viewerAssets.length);
-      mediaSubtitle = [mediaSubtitle, carouselPos].filter(Boolean).join(" · ");
-    }
-    mediaAssetModalSubtitle.textContent = [campaignPart, mediaSubtitle].filter(Boolean).join(" · ") || "Vault details";
-  } else if (mediaAssetModalSubtitle) {
-    var campaignPart = linkedPost?.campaignName
-      ? formatCampaignDisplayName(linkedPost.campaignName)
-      : item.campaign
-      ? formatCampaignDisplayName(item.campaign)
-      : "";
-    mediaAssetModalSubtitle.textContent = [campaignPart, mediaSubtitle].filter(Boolean).join(" · ") || "Vault details";
+  if (mediaAssetModalSubtitle) {
+    mediaAssetModalSubtitle.textContent = linkedPost
+      ? `${getPostDisplayTitle(linkedPost, "Linked post")} · ${currentMediaViewerIndex + 1} of ${currentMediaViewerItems.length}`
+      : "Vault details";
   }
 
   if (mediaAssetModalPreview) {
-    mediaAssetModalPreview.innerHTML = renderMediaPreviewContent(item, linkedAssets, previewUrl, type);
+    mediaAssetModalPreview.innerHTML = renderMediaPreviewContent(previewAsset, linkedAssets, previewUrl, type);
   }
-  renderTaggedContent(item, linkedPost);
+  renderTaggedContent(previewAsset, linkedPost);
 
   if (mediaAssetModalMeta) {
     mediaAssetModalMeta.innerHTML = `
@@ -25812,14 +25814,69 @@ function queueSupabaseInspoMirror(inspo) {
 
 const MONDAY_POST_MIRROR_TIMERS = new Map();
 
-function queueMondayMirrorForPost(post) {
+async function enqueueMondayPostSyncJob(post, options = {}) {
+  const config = getMondaySyncConfig();
+  const targetPost = post || window.__currentModalPostData || null;
+  const postId = String(targetPost?.post_id || targetPost?.postId || targetPost?.id || "").trim();
+  if (!config.enabled || !config.boardId) {
+    console.log("[monday-queue] skipped", { postId, reason: "disabled_or_missing_board" });
+    return { ok: false, skipped: true, reason: "disabled_or_missing_board" };
+  }
+  if (config.direction === "monday_to_supabase") {
+    console.log("[monday-queue] skipped", { postId, reason: "direction_monday_to_supabase" });
+    return { ok: false, skipped: true, reason: "direction_monday_to_supabase" };
+  }
+  if (!config.autoSyncOnSave && !options.force) {
+    console.log("[monday-queue] skipped", { postId, reason: "auto_sync_disabled" });
+    return { ok: false, skipped: true, reason: "auto_sync_disabled" };
+  }
+  if (!targetPost || !postId) {
+    console.log("[monday-queue] skipped", { postId, reason: "missing_post" });
+    return { ok: false, skipped: true, reason: "missing_post" };
+  }
+  const meta = getWorkspaceRequestMetadata();
+  return callSupabaseEdgeFunction("monday-sync", {
+    action: "enqueue_post_sync",
+    workspace_id: meta.workspace_id || meta.workspace_slug,
+    board_id: config.boardId,
+    reason: String(options.reason || "post_save_confirmed").trim(),
+    source: String(options.source || "supabase_after_sheets_save").trim(),
+    force: Boolean(options.force),
+    monday_item_id: targetPost.mondayItemId || targetPost.monday_item_id || "",
+    id: postId,
+    post_id: postId,
+    post_title: targetPost.title || targetPost.post_title || "",
+    title: targetPost.title || targetPost.post_title || "",
+    description: targetPost.description || targetPost.caption || targetPost.body || "",
+    status: targetPost.status || targetPost.publish_status || targetPost.flowState || "draft",
+    publish_status: targetPost.publish_status || targetPost.status || "draft",
+    platform: targetPost.platform || (Array.isArray(targetPost.platforms) ? targetPost.platforms[0] : "") || "",
+    platforms: targetPost.platforms || (targetPost.platform ? [targetPost.platform] : []),
+    platform_targets: targetPost.platform_targets || targetPost.platforms || targetPost.platform || "",
+    pillar: targetPost.pillar || "",
+    campaign_name: targetPost.campaign_name || targetPost.campaignName || "",
+    campaignName: targetPost.campaignName || targetPost.campaign_name || "",
+    scheduled_at: targetPost.scheduled_at || targetPost.scheduledAt || targetPost.date || targetPost.publish_date || "",
+    date: targetPost.date || targetPost.scheduled_at || targetPost.publish_date || "",
+    impressions: targetPost.impressions || targetPost.impression_count || targetPost.views || 0,
+    published_url: targetPost.published_url || targetPost.publishedUrl || "",
+    media_url: targetPost.media_url || targetPost.mediaUrl || "",
+    monday_sync_enabled: config.enabled,
+    monday_sync_direction: config.direction,
+    monday_auto_sync_on_save: config.autoSyncOnSave,
+    monday_last_pushed_at: config.lastPushedAt,
+    monday_last_pulled_at: config.lastPulledAt,
+  });
+}
+
+function queueMondayMirrorForPost(post, options = {}) {
   const postId = getCanonicalPostId(post || {});
   if (!postId) return;
   const existingTimer = MONDAY_POST_MIRROR_TIMERS.get(postId);
   if (existingTimer) window.clearTimeout(existingTimer);
   const timerId = window.setTimeout(() => {
     MONDAY_POST_MIRROR_TIMERS.delete(postId);
-    autoSyncPostToMonday(post, { force: false }).catch((err) => {
+    enqueueMondayPostSyncJob(post, options).catch((err) => {
       console.warn("[monday-queue] mirror failed", { postId, error: err?.message || err });
     });
   }, 1500);
@@ -25836,19 +25893,23 @@ function queuePostMirrorsAfterSheetsSave(savedPost, fallbackPayload = {}) {
     postId: canonicalPostId,
     id: canonicalPostId
   });
-  window.setTimeout(() => {
-    Promise.resolve()
-      .then(() => apiSavePostToSupabase?.(mirrorPayload))
-      .then(() => console.log("[mirror] supabase post done", { postId: canonicalPostId }))
-      .catch((err) => console.warn("[mirror] supabase post failed", err));
-    Promise.resolve()
-      .then(() => saveCurrentCarouselOrderToSupabase?.())
-      .then(() => console.log("[mirror] carousel done", { postId: canonicalPostId }))
-      .catch((err) => console.warn("[mirror] carousel failed", err));
-    Promise.resolve()
-      .then(() => queueMondayMirrorForPost?.(mirrorPayload))
-      .then(() => console.log("[mirror] monday queued", { postId: canonicalPostId }))
-      .catch((err) => console.warn("[mirror] monday failed", err));
+  window.setTimeout(async () => {
+    try {
+      await apiSavePostToSupabase?.(mirrorPayload);
+      console.log("[mirror] supabase post done", { postId: canonicalPostId });
+      await saveCurrentCarouselOrderToSupabase?.();
+      console.log("[mirror] carousel done", { postId: canonicalPostId });
+      queueMondayMirrorForPost?.(mirrorPayload, {
+        reason: "post_save_confirmed",
+        source: "supabase_after_sheets_save"
+      });
+      console.log("[mirror] monday queued", { postId: canonicalPostId });
+    } catch (err) {
+      console.warn("[mirror] post mirror chain failed", {
+        postId: canonicalPostId,
+        error: err?.message || err
+      });
+    }
   }, 0);
 }
 
@@ -26142,9 +26203,7 @@ function setupSaveHandler() {
           console.timeEnd("[post-save] close/rerender");
           setSheetsAuthorityStatus?.();
           window.setTimeout(() => {
-            saveCurrentCarouselOrderToSupabase?.().catch(console.warn);
             mirrorPostToSupabaseAfterSheetsSave?.(authorityPost, payload).catch(console.warn);
-            queueWorkspaceSyncAfterSave?.(authorityPost);
           }, 0);
           showToast("Saved", "Saved to Google Sheets.", "ph-check", "text-[#00ffaa]");
           return;
