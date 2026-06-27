@@ -5711,10 +5711,69 @@ function getCurrentWorkspaceSlug() {
   }
 }
 
+function formatWorkspacePlanLabel(value, fallback = "Starter") {
+  const raw = String(value || "").trim();
+  const normalized = normalizeWorkspacePlan(raw || fallback);
+  if (raw && raw.toLowerCase() === "agency") return "Agency";
+  const labels = {
+    starter: "Starter",
+    growth: "Growth",
+    managed: "Managed",
+    admin_master: "Admin Master",
+    custom: "Custom"
+  };
+  return labels[normalized] || labels[normalizeWorkspacePlan(fallback)] || raw || fallback;
+}
+
+function formatWorkspaceBackendLabel(value, fallback = "supabase_native") {
+  const normalized = String(value || fallback || "").trim().toLowerCase();
+  const labels = {
+    supabase_native: "Supabase Native",
+    google_sheets_hybrid: "Google Sheets Hybrid",
+    managed_hybrid: "Google Sheets Hybrid",
+    client_google_sheets: "Google Sheets Hybrid",
+    master_google_sheets: "Google Sheets Hybrid",
+    hybrid: "Google Sheets Hybrid",
+    supabase_private: "Supabase Native"
+  };
+  return labels[normalized] || formatTitleCase(normalized.replace(/[_-]+/g, " ")) || "Supabase Native";
+}
+
+function getWorkspaceRuntimeProfile(workspace = WORKSPACE_RUNTIME_CONFIG?.active || {}) {
+  const active = workspace || {};
+  const backendMode = getWorkspaceBackendMode(active, WORKSPACE_CONNECTIONS || []);
+  const rawPlan = String(active.plan || active.plan_slug || active.subscription_tier || active.settings_plan || "").trim();
+  const plan = normalizeWorkspacePlan(rawPlan || "starter") || "starter";
+  const planFeatures = ACTIVE_PLAN_FEATURES && ACTIVE_PLAN_FEATURES.plan === plan
+    ? ACTIVE_PLAN_FEATURES
+    : getWorkspacePlanFeatures(active);
+  const featureFlags = active.feature_flags && typeof active.feature_flags === "object" ? active.feature_flags : {};
+  return {
+    workspace_slug: String(active.workspace_slug || active.slug || "").trim(),
+    workspace_id: String(active.workspace_id || active.id || "").trim(),
+    plan,
+    plan_label: formatWorkspacePlanLabel(rawPlan || plan),
+    backend_mode: backendMode.mode || "supabase_native",
+    backend_label: formatWorkspaceBackendLabel(backendMode.mode || active.backend_mode || active.backend_type || "supabase_native"),
+    apps_script_url: backendMode.apps_script_url || active.apps_script_url || "",
+    monday_board_id: String(active.monday_board_id || "").trim(),
+    supabase_project: String(active.supabase_project || active.supabase_url || "").trim(),
+    features: {
+      ai: planFeatures.allFeatures !== false,
+      approvals: planFeatures.advancedPermissions !== false,
+      analytics: planFeatures.publishingReadiness !== false,
+      media: planFeatures.mediaLibraryStorage !== false,
+      hybrid_sync: backendMode.mode === "google_sheets_hybrid" || featureFlags.hybrid_sync === true
+    }
+  };
+}
+
 function getWorkspaceAuthorityMode() {
   const config = WORKSPACE_RUNTIME_CONFIG?.active || {};
-  const slug = getCurrentWorkspaceSlug?.() || config.slug || config.workspace_slug || "";
+  const profile = getWorkspaceRuntimeProfile(config);
+  const slug = getCurrentWorkspaceSlug?.() || config.slug || config.workspace_slug || profile.workspace_slug || "";
   if (
+    profile.backend_mode === "google_sheets_hybrid" ||
     config.backend_mode === "google_sheets_hybrid" ||
     config.authority_mode === "sheets" ||
     slug === "gpe"
@@ -5790,6 +5849,7 @@ function getSessionWorkspaceConfig() {
 	      created_at: parsed.created_at || null,
 	      updated_at: parsed.updated_at || null,
 	      subscription_status: String(parsed.subscription_status || "").trim(),
+	      backend_mode: String(parsed.backend_mode || backendConfig.backendType || "supabase_native").trim(),
 	      backend_type: backendConfig.backendType,
 	      apps_script_url: backendConfig.appsScriptUrl,
 	      sheet_id: backendConfig.sheetId,
@@ -5828,10 +5888,10 @@ function updateWorkspaceBadge(config) {
   try {
     const badge = document.getElementById("app-header-workspace-badge");
     if (!badge) return;
+    const profile = getWorkspaceRuntimeProfile(config || {});
     const slug = (config && config.workspace_slug) || "";
     if (slug && slug !== "master") {
-      const name = (config && config.name) || slug;
-      badge.textContent = name;
+      badge.textContent = profile.plan_label || "Starter";
       badge.classList.remove("hidden");
     } else {
       badge.classList.add("hidden");
@@ -5858,8 +5918,9 @@ function loadWorkspaceConfig() {
 	      role: sessionConfig.role || "",
 	      created_at: sessionConfig.created_at || null,
 	      updated_at: sessionConfig.updated_at || null,
-	      subscription_status: sessionConfig.subscription_status || "",
-	      backend_type: backendConfig.backendType || "",
+		      subscription_status: sessionConfig.subscription_status || "",
+		      backend_mode: sessionConfig.backend_mode || backendConfig.backendType || "supabase_native",
+		      backend_type: backendConfig.backendType || "",
 	      apps_script_url: backendConfig.appsScriptUrl || "",
 	      sheet_id: backendConfig.sheetId || "",
 	      google_sheet_id: backendConfig.sheetId || "",
@@ -5908,8 +5969,9 @@ function loadWorkspaceConfig() {
     ...masterConfig,
     ...workspaceConfig,
     workspace_slug: String(workspaceConfig.workspace_slug || slug || masterConfig.workspace_slug || "master").trim(),
-    workspace_id: String(workspaceConfig.workspace_id || workspaceConfig.workspace_slug || slug || masterConfig.workspace_id || "master").trim(),
-    backend_type: String(backendConfig.backendType || "supabase_native").trim(),
+	    workspace_id: String(workspaceConfig.workspace_id || workspaceConfig.workspace_slug || slug || masterConfig.workspace_id || "master").trim(),
+	    backend_mode: String(workspaceConfig.backend_mode || backendConfig.backendType || "supabase_native").trim(),
+	    backend_type: String(backendConfig.backendType || "supabase_native").trim(),
     apps_script_url: String(backendConfig.appsScriptUrl || APP_CONFIG.APP_SCRIPT_URL || "").trim(),
     sheet_id: String(backendConfig.sheetId || "").trim(),
     google_sheet_id: String(backendConfig.sheetId || "").trim(),
@@ -5964,9 +6026,10 @@ function normalizeSupabaseWorkspaceConfig(workspace) {
   return {
     id,
     slug,
-    name: String(source.name || slug || "Workspace").trim(),
-    plan: String(source.plan || "").trim(),
-    subscription_status: String(source.subscription_status || "").trim(),
+	    name: String(source.name || slug || "Workspace").trim(),
+	    plan: String(source.plan || "").trim(),
+	    backend_mode: String(source.backend_mode || backendConfig.backendType || "supabase_native").trim(),
+	    subscription_status: String(source.subscription_status || "").trim(),
     role: String(source.role || "").trim(),
     apps_script_url: backendConfig.appsScriptUrl,
     sheet_id: backendConfig.sheetId,
@@ -6041,10 +6104,12 @@ function resolveWorkspaceBackendConfig(workspace, settings) {
     }
     return { value: false, source: "" };
   }
-  const backendType = firstPresent([
-    { source: "workspace_settings.backend_type", value: prefs.backend_type },
-    { source: "workspaces.backend_type", value: active.backend_type }
-  ]);
+	  const backendType = firstPresent([
+	    { source: "workspace_settings.backend_mode", value: prefs.backend_mode },
+	    { source: "workspaces.backend_mode", value: active.backend_mode },
+	    { source: "workspace_settings.backend_type", value: prefs.backend_type },
+	    { source: "workspaces.backend_type", value: active.backend_type }
+	  ]);
   const sheetId = firstPresent([
     { source: "workspace_settings.google_sheet_id", value: prefs.google_sheet_id },
     { source: "workspaces.google_sheet_id", value: active.google_sheet_id },
@@ -6063,8 +6128,10 @@ function resolveWorkspaceBackendConfig(workspace, settings) {
   ]);
   const resolved = {
     slug,
-    backendType: backendType.value,
-    backend_type: backendType.value,
+	    backendType: backendType.value,
+	    backendMode: backendType.value,
+	    backend_mode: backendType.value,
+	    backend_type: backendType.value,
     sheetId: sheetId.value,
     sheet_id: sheetId.value,
     google_sheet_id: sheetId.value,
@@ -6125,11 +6192,12 @@ function mergeWorkspaceSettings(workspace, settings) {
     ...workspace,
     name: displayName || workspace.name,
     brand_name: brandName || displayName || workspace.brand_name || workspace.name,
-    plan: workspace.plan || plan,
-    plan_slug: plan,
-    subscription_tier: normalizeWorkspacePlan(settings.subscription_tier || workspace.subscription_tier || plan),
-    settings_plan: plan,
-    managed_account: settings.managed_account !== undefined ? Boolean(settings.managed_account) : Boolean(workspace.managed_account),
+	    plan: workspace.plan || plan,
+	    plan_slug: plan,
+	    subscription_tier: normalizeWorkspacePlan(settings.subscription_tier || workspace.subscription_tier || plan),
+	    settings_plan: plan,
+	    backend_mode: String(settings.backend_mode || settings.backend_type || workspace.backend_mode || backendConfig.backendType || "supabase_native").trim(),
+	    managed_account: settings.managed_account !== undefined ? Boolean(settings.managed_account) : Boolean(workspace.managed_account),
     is_admin_workspace: settings.is_admin_workspace !== undefined ? Boolean(settings.is_admin_workspace) : Boolean(workspace.is_admin_workspace),
     feature_flags: featureFlags,
     short_name: shortName || workspace.short_name || "",
@@ -6536,25 +6604,26 @@ function showWorkspacePicker(workspaces) {
     const canSeeAdminWorkspaces = (workspaces || []).some(isAdminMasterWorkspaceUser);
     const regularWorkspaces = (workspaces || []).filter(function(workspace) { return !workspace.is_admin_workspace; });
     const adminWorkspaces = canSeeAdminWorkspaces ? (workspaces || []).filter(function(workspace) { return workspace.is_admin_workspace; }) : [];
-    const renderWorkspaceButton = function(workspace, index) {
-      return `
-        <button type="button" data-router-workspace-index="${index}" class="w-full text-left p-5 rounded-2xl bg-[#181125] border border-white/5 hover:border-[#c77dff]/40 transition-colors">
-          <div class="flex items-start justify-between gap-4">
-            <div class="flex items-center gap-3 min-w-0">
-              <div class="workspace-menu-avatar">${renderWorkspaceAvatar(workspace)}</div>
-              <div class="min-w-0">
-                <div class="text-white font-bold truncate">${escapeHtml(workspace.name || workspace.slug)}</div>
-                <div class="text-xs text-gray-500 mt-1 truncate">${escapeHtml(workspace.slug || "")}</div>
-              </div>
-            </div>
-            <div class="flex items-center gap-2">
-              ${workspace.is_admin_workspace ? '<span class="diagnostic-chip text-amber-300">ADMIN</span>' : ""}
-              <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${escapeHtml(workspace.role || workspace.plan || "")}</div>
-            </div>
-          </div>
-        </button>
-      `;
-    };
+	    const renderWorkspaceButton = function(workspace, index) {
+	      const profile = getWorkspaceRuntimeProfile(workspace || {});
+	      return `
+	        <button type="button" data-router-workspace-index="${index}" class="w-full text-left p-5 rounded-2xl bg-[#181125] border border-white/5 hover:border-[#c77dff]/40 transition-colors">
+	          <div class="flex items-start justify-between gap-4">
+	            <div class="flex items-center gap-3 min-w-0">
+	              <div class="workspace-menu-avatar">${renderWorkspaceAvatar(workspace)}</div>
+	              <div class="min-w-0">
+	                <div class="text-white font-bold truncate">${escapeHtml(workspace.name || workspace.slug)}</div>
+	                <div class="text-xs text-gray-500 mt-1 truncate">${escapeHtml([profile.plan_label, profile.backend_label].filter(Boolean).join(" • "))}</div>
+	              </div>
+	            </div>
+	            <div class="flex items-center gap-2">
+	              ${workspace.is_admin_workspace ? '<span class="diagnostic-chip text-amber-300">ADMIN</span>' : ""}
+	              <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${escapeHtml(workspace.role || profile.plan_label || "")}</div>
+	            </div>
+	          </div>
+	        </button>
+	      `;
+	    };
     overlay.id = "app-router-workspace-picker";
     overlay.className = "fixed inset-0 z-[10000] flex items-center justify-center p-6";
     overlay.style.background = "#0a0514";
@@ -7244,7 +7313,7 @@ function getWorkspaceRequestMetadata() {
     plan: config.plan || "",
     role: config.role || "",
     backend_type: backendMode.mode || config.backend_type || "supabase_native",
-    backend_mode: backendMode.mode || config.backend_type || "supabase_native",
+    backend_mode: backendMode.mode || config.backend_mode || config.backend_type || "supabase_native",
     sheet_id: backendConfig.sheetId || "",
     google_sheet_id: backendConfig.sheetId || "",
     monday_board_id: getMondayBoardId(config, WORKSPACE_CONNECTIONS) || "",
@@ -17617,7 +17686,7 @@ function getWorkspaceBackendMode(workspace = {}, connections = []) {
   const appsScriptUrl = normalizeAppsScriptExecUrl(source.url || backendConfig.appsScriptUrl || "") || "";
   const rawPlan = String(activeWorkspace.plan || activeWorkspace.settings_plan || "").trim();
   const plan = normalizeWorkspacePlan(rawPlan);
-  const backendType = String(backendConfig.backendType || "").trim().toLowerCase();
+  const backendType = String(activeWorkspace.backend_mode || backendConfig.backendMode || backendConfig.backendType || "").trim().toLowerCase();
   const connAppsScriptUrl = normalizeAppsScriptExecUrl(gsConn?.config?.apps_script_url || "") || "";
   let mode = "supabase_native";
   if (backendType) {
@@ -37150,6 +37219,7 @@ function renderWorkspaceBranding() {
       };
     }
   }
+  var profile = getWorkspaceRuntimeProfile(config || {});
   var name = config && (config.name || "");
   var slug = config && (config.workspace_slug || config.slug || "");
   var avatarHtml = renderWorkspaceAvatar(config || { name: name, slug: slug });
@@ -37161,14 +37231,14 @@ function renderWorkspaceBranding() {
   if (avatarEl) avatarEl.innerHTML = avatarHtml;
   if (profileAvatarEl) profileAvatarEl.innerHTML = avatarHtml;
   if (profileNameEl) profileNameEl.textContent = name || slug || "Workspace";
-  if (profileSlugEl) profileSlugEl.textContent = slug || "";
+  if (profileSlugEl) profileSlugEl.textContent = [profile.plan_label, profile.backend_label].filter(Boolean).join(" • ");
   if (badgeEl) {
     if (slug && slug !== "master") {
-      badgeEl.innerHTML = avatarHtml;
+      badgeEl.textContent = profile.plan_label || "Starter";
       badgeEl.classList.remove("hidden");
     } else {
       badgeEl.classList.add("hidden");
-      badgeEl.innerHTML = "";
+      badgeEl.textContent = "";
     }
   }
   applyWorkspaceDiagnosticsVisibility();
