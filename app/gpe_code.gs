@@ -5311,17 +5311,23 @@ function syncSourceFlowStateForPost_(postRow) {
 }
 
 function savePost(payload) {
-  payload = payload || {};
-  console.log("[savePost] payload", JSON.stringify(payload));
-  console.log("[savePost] backend", "google_sheets");
-  const sheet = getPostsSheet_();
-  ensureHeadersPresent_(sheet, PHASE1_WORKSPACE_POST_HEADERS);
-  requireHeaders_(sheet, REQUIRED_POST_HEADERS);
-  const settings = getSettingsRegistry();
-  const defaultPillar = settings.pillars[0] || "authority";
-  const existingRow = findPostObjectForSave_(payload);
-  const existing = existingRow ? normalizePostSchemaAliases_(existingRow) : null;
-  const tracking = buildFlowTrackingFields_(payload, existing, { entityType: "post" });
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) {
+    return { success: false, error: "Save is already running. Try again in a moment." };
+  }
+  try {
+    const start = Date.now();
+    payload = payload || {};
+    console.log("[savePost] payload", JSON.stringify(payload));
+    console.log("[savePost] backend", "google_sheets");
+    const sheet = getPostsSheet_();
+    ensureHeadersPresent_(sheet, PHASE1_WORKSPACE_POST_HEADERS);
+    requireHeaders_(sheet, REQUIRED_POST_HEADERS);
+    const settings = getSettingsRegistry();
+    const defaultPillar = settings.pillars[0] || "authority";
+    const existingRow = findPostObjectForSave_(payload);
+    const existing = existingRow ? normalizePostSchemaAliases_(existingRow) : null;
+    const tracking = buildFlowTrackingFields_(payload, existing, { entityType: "post" });
   if (!existing) {
     const duplicateBySource = getPosts().find(function(post) {
       var incomingPostId = String(pickFirstDefined_(payload.postId, payload.id, "")).trim();
@@ -5630,7 +5636,15 @@ function savePost(payload) {
       dateDiagnostics: buildDateDiagnostics_(normalized.scheduled_at, workflow.dateKey, normalized.queue_date_label, normalized.queue_time_label, planning.hasUserSelectedTime && workflow.isScheduledValid)
   }, semanticFieldsFromRow_(normalized));
   console.log("[savePost] response", JSON.stringify({ postId: response.postId, rowNumber: response.rowNumber, source: response.source }));
-  return response;
+    if (Date.now() - start > 25000) {
+      return { success: false, error: "Save exceeded backend time budget." };
+    }
+    return { success: true, post: response };
+  } catch (err) {
+    return { success: false, error: String(err && err.message || err) };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function deletePost(postId) {
