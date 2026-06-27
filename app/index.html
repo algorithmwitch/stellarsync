@@ -25233,26 +25233,13 @@ async function savePostToSheetsAuthority(post) {
     return payload;
   }
   showToast("Saving to Sheets", "Updating Google Sheets source of truth...", "ph-table", "text-[#c77dff]");
-  try {
-    const result = await withTimeout(
-      apiPost("savePost", buildSheetsPostPayload(post)),
-      120000,
-      "Google Sheets savePost timed out after 120s"
-    );
-    const savedPost = result?.post || result?.data || result || post;
-    upsertLocalPostFromAuthority(savedPost);
-    persistLocalState();
-    rerenderAll();
-    showToast("Saved to Sheets", "Google Sheets updated.", "ph-check", "text-[#00ffaa]");
-    return savedPost;
-  } catch (err) {
-    if (String(err?.message || err).includes("aborted")) {
-      throw new Error(
-        "Google Sheets save was aborted by the frontend timeout. The upload may have succeeded, but the post row did not confirm. Try Save again; media will not be re-uploaded."
-      );
-    }
-    throw err;
-  }
+  const result = await apiPost("savePost", buildSheetsPostPayload(post));
+  const savedPost = result?.post || result?.data || result || post;
+  upsertLocalPostFromAuthority(savedPost);
+  persistLocalState();
+  rerenderAll();
+  showToast("Saved to Sheets", "Google Sheets updated.", "ph-check", "text-[#00ffaa]");
+  return savedPost;
 }
 
 function upsertLocalPostFromAuthority(post) {
