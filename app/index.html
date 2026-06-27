@@ -25338,11 +25338,7 @@ function setupSaveHandler() {
     const originalSaveButtonHtml = saveButton.innerHTML;
     saveButton.disabled = true;
     saveButton.innerHTML = '<i class="ph-bold ph-spinner-gap text-sm animate-spin"></i> Saving...';
-    const saveTimeoutId = setTimeout(() => {
-        savePostInFlight = false;
-        saveButton.disabled = false;
-        saveButton.innerHTML = originalSaveButtonHtml;
-    }, 30000);
+    const saveTimeoutId = null;
     const existing = currentEditingPostId
       ? hydratePostCampaign(findPostByAnyId(currentEditingPostId))
       : null;
@@ -25357,7 +25353,7 @@ function setupSaveHandler() {
     const selectedCampaignName = selectedCampaign?.campaignName || normalizeCampaignName(selectedCampaignId);
     const requestedDate = String(dateInput?.value || "").trim();
     if ((statusSelect?.value || "draft") === "scheduled" && !requestedDate) {
-      clearTimeout(saveTimeoutId);
+      if (saveTimeoutId) clearTimeout(saveTimeoutId);
       savePostInFlight = false;
       saveButton.disabled = false;
       saveButton.innerHTML = originalSaveButtonHtml;
@@ -25377,7 +25373,7 @@ function setupSaveHandler() {
 
     const selectedPlatforms = getSelectedModalPlatforms();
     if (!selectedPlatforms.length) {
-      clearTimeout(saveTimeoutId);
+      if (saveTimeoutId) clearTimeout(saveTimeoutId);
       savePostInFlight = false;
       saveButton.disabled = false;
       saveButton.innerHTML = originalSaveButtonHtml;
@@ -25529,7 +25525,7 @@ function setupSaveHandler() {
     }
 
     if (!payload.title) {
-      clearTimeout(saveTimeoutId);
+      if (saveTimeoutId) clearTimeout(saveTimeoutId);
       savePostInFlight = false;
       saveButton.disabled = false;
       saveButton.innerHTML = originalSaveButtonHtml;
@@ -25569,7 +25565,7 @@ function setupSaveHandler() {
 	        persistLocalState();
 	        await refreshSheetsTabsQuietly(["POSTS"]);
 	        setSheetsAuthorityStatus();
-	        clearTimeout(saveTimeoutId);
+	        if (saveTimeoutId) clearTimeout(saveTimeoutId);
 	        savePostInFlight = false;
 	        saveButton.disabled = false;
 	        saveButton.innerHTML = originalSaveButtonHtml;
@@ -25577,7 +25573,7 @@ function setupSaveHandler() {
 	        showToast("Saved", "Saved to Google Sheets.", "ph-check", "text-[#00ffaa]");
 	      } catch (err) {
 	        console.error("[sheets-authority] post save failed", err);
-	        clearTimeout(saveTimeoutId);
+	        if (saveTimeoutId) clearTimeout(saveTimeoutId);
 	        savePostInFlight = false;
 	        saveButton.disabled = false;
 	        saveButton.innerHTML = originalSaveButtonHtml;
@@ -25616,7 +25612,7 @@ function setupSaveHandler() {
 	        });
 	      }
 	      persistLocalState();
-	      clearTimeout(saveTimeoutId);
+	      if (saveTimeoutId) clearTimeout(saveTimeoutId);
 	      savePostInFlight = false;
 	      saveButton.disabled = false;
 	      saveButton.innerHTML = originalSaveButtonHtml;
