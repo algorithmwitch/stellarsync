@@ -16439,6 +16439,7 @@ function renderModalCarouselPreview() {
   if (!modalCarouselPreview || !modalCarouselCount) return;
   console.log("[detach-ui] render path hit");
   const items = (currentModalCarouselAssets || []).slice(0, 20);
+  syncModalMediaLayout(items.length);
   const modeEnabled = Boolean(window.mediaDetachSelectionMode || modalCarouselDetachSelectMode);
   window.mediaDetachSelectionMode = modeEnabled;
   modalCarouselDetachSelectMode = modeEnabled;
@@ -16514,6 +16515,14 @@ function renderModalCarouselPreview() {
   }).join("");
   if (modeEnabled) console.log("[detach-ui] checkbox rendered count", items.length);
   console.log("[detach-ui] selected ids", Array.from(selectedCarouselDetachAssetIds));
+}
+
+function syncModalMediaLayout(assetCount = 0) {
+  const picker = document.getElementById("modal-existing-media-picker");
+  const manager = document.getElementById("modal-carousel-manager");
+  const isCarousel = Number(assetCount || 0) >= 2;
+  if (manager) manager.classList.toggle("hidden", !isCarousel);
+  if (picker) picker.classList.toggle("hidden", isCarousel);
 }
 
 function getCurrentCarouselOrderPayload() {
@@ -24889,6 +24898,7 @@ function setModalDeferredPlaceholder(message = "Loading post details...") {
   if (picker) picker.innerHTML = '<div class="text-[10px] text-gray-500 leading-tight">Media options loading...</div>';
   const carousel = document.getElementById("modal-carousel-preview");
   if (carousel) carousel.innerHTML = '<div class="col-span-full rounded-xl border border-white/5 bg-[#181125] px-4 py-3 text-xs text-gray-500">Media preview loading...</div>';
+  syncModalMediaLayout(0);
   const readiness = document.getElementById("modal-publish-readiness");
   if (readiness) readiness.innerHTML = '<div class="rounded-xl border border-white/5 bg-[#181125] px-4 py-3 text-xs text-gray-500">Publishing actions loading...</div>';
   document.getElementById("modal-media-download-btn")?.classList.add("hidden");
@@ -24933,6 +24943,7 @@ function renderPostModalDeferredSections(matched, token) {
         ? `${linkedAsset.title || linkedAsset.assetName || "Media"} linked`
         : "No media linked";
   }
+  syncModalMediaLayout(currentModalCarouselAssets.length);
   renderModalExistingMediaPicker(currentModalAsset?.assetId || currentModalAsset?.id || "");
   if (modalMediaUploadTrigger) {
     modalMediaUploadTrigger.classList.toggle("hidden", !canManageMedia());
@@ -25189,6 +25200,7 @@ function closeModal() {
   if (picker) picker.innerHTML = "";
   hidePostSaveErrorBanner();
   modalAiInlineHelper?.classList.add("hidden");
+  syncModalMediaLayout(0);
   renderModalCarouselPreview();
   updateModalCampaignPreview();
 }
@@ -29944,6 +29956,8 @@ async function apiSavePostToSupabase(payload = {}) {
   if (SUPABASE_DISABLED_MIRRORS.has("posts") || SUPABASE_MISSING_TABLES.has("posts")) throw new Error("Supabase posts persistence disabled for this session.");
   const row = buildSupabasePostRow(payload);
   delete row.campaign_id;
+  delete row.media_alt_text;
+  delete row.mediaAltText;
   const workspaceId = row.workspace_id;
   if (!workspaceId) throw new Error("Workspace ID is missing for Supabase save.");
   let saved = null;
