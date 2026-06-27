@@ -1527,6 +1527,10 @@ function doPost(e) {
       });
     }
 
+    if (action === "savePostMinimalDebug") {
+      return jsonResponse(savePostMinimalDebug(payload));
+    }
+
     if (action === "deletePost") {
       deletePost(payload.postId);
       return jsonResponse({ ok: true, deleted: true, postId: String(payload.postId || "").trim() });
@@ -1542,12 +1546,35 @@ function doPost(e) {
     }
 
     if (action === "saveMediaLink" || action === "saveMedia") {
-      return jsonResponse({ ok: true, asset: saveMediaLink(payload) });
+      const mediaResult = saveMediaLinkWithLock_(payload);
+      if (!mediaResult || mediaResult.ok !== true || mediaResult.success !== true || !mediaResult.asset) {
+        return jsonResponse({
+          ok: false,
+          success: false,
+          error: mediaResult && mediaResult.error ? mediaResult.error : "saveMediaLink did not confirm."
+        });
+      }
+      return jsonResponse(mediaResult);
+    }
+
+    if (action === "saveMediaFast") {
+      return jsonResponse(saveMediaLinkWithLock_(payload));
     }
 
     if (action === "saveInspo") {
-      const savedInspo = saveInspo(payload);
-      return jsonResponse({ ok: true, inspo: savedInspo, inspoId: savedInspo.inspoId });
+      const inspoResult = saveInspoWithLock_(payload);
+      if (!inspoResult || inspoResult.ok !== true || inspoResult.success !== true || !inspoResult.inspo) {
+        return jsonResponse({
+          ok: false,
+          success: false,
+          error: inspoResult && inspoResult.error ? inspoResult.error : "saveInspo did not confirm."
+        });
+      }
+      return jsonResponse(inspoResult);
+    }
+
+    if (action === "saveInspoFast" || action === "saveInspoMinimalDebug") {
+      return jsonResponse(saveInspoMinimalDebug(payload));
     }
 
     if (action === "importExistingPostAsIdea") {
@@ -1555,8 +1582,23 @@ function doPost(e) {
     }
 
     if (action === "saveNote") {
-      const savedNote = saveNote(payload);
-      return jsonResponse({ ok: true, note: savedNote, noteId: savedNote.noteId });
+      const noteResult = saveNoteWithLock_(payload);
+      if (!noteResult || noteResult.ok !== true || noteResult.success !== true || !noteResult.note) {
+        return jsonResponse({
+          ok: false,
+          success: false,
+          error: noteResult && noteResult.error ? noteResult.error : "saveNote did not confirm."
+        });
+      }
+      return jsonResponse(noteResult);
+    }
+
+    if (action === "saveNoteFast" || action === "saveNoteMinimalDebug") {
+      return jsonResponse(saveNoteMinimalDebug(payload));
+    }
+
+    if (action === "saveAIDraftMinimalDebug" || action === "saveAiDraftMinimalDebug") {
+      return jsonResponse({ ok: true, success: true, draft: saveAIDraft(payload) });
     }
 
     if (action === "deleteNote") {
@@ -5352,7 +5394,7 @@ function syncSourceFlowStateForPost_(postRow) {
   }
 }
 
-function savePost(payload) {
+function runLockedSave_(saveLabel, runner) {
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(20000)) {
     return {
@@ -5363,23 +5405,375 @@ function savePost(payload) {
     };
   }
   try {
-    return savePostCore_(payload || {});
+    return runner();
   } catch (err) {
     return {
       ok: false,
       success: false,
+      error: String(err && err.message || err),
+      saveLabel: String(saveLabel || "").trim()
+    };
+  } finally {
+    try {
+      lock.releaseLock();
+    } catch (releaseErr) {
+      console.warn("[savePost] lock release failed", releaseErr);
+    }
+  }
+}
+
+function getSaveLock_(label) {
+  return LockService.getDocumentLock();
+}
+
+function runArtifactSave_(label, runner) {
+  var lock = getSaveLock_(label);
+  var saveLabel = String(label || "Artifact").trim();
+  if (!lock.tryLock(15000)) {
+    return {
+      ok: false,
+      success: false,
+      retryable: true,
+      saveLabel: saveLabel,
+      error: saveLabel + " save is busy. Try again in a moment."
+    };
+  }
+  try {
+    var result = runner();
+    if (!result || result.ok === false || result.success === false) {
+      return Object.assign({
+        ok: false,
+        success: false,
+        saveLabel: saveLabel,
+        error: saveLabel + " save did not confirm."
+      }, result || {});
+    }
+    return result;
+  } catch (err) {
+    return {
+      ok: false,
+      success: false,
+      saveLabel: saveLabel,
       error: String(err && err.message || err)
     };
   } finally {
     try {
       lock.releaseLock();
-    } catch (_) {}
+    } catch (releaseErr) {
+      console.warn("[artifact-save] lock release failed", saveLabel, releaseErr);
+    }
+  }
+}
+
+function runPostSaveSideEffectsSafe_(normalized, finalExisting) {
+  var started = Date.now();
+  function step(label, fn) {
+    var stepStart = Date.now();
+    try {
+      console.log("[savePost side-effect start]", label);
+      var result = fn();
+      console.log("[savePost side-effect done]", label, Date.now() - stepStart);
+      return result;
+    } catch (err) {
+      console.log("[savePost side-effect failed]", label, String(err && err.message || err));
+      return null;
+    }
+  }
+  step("syncMediaLinkForPost", function() {
+    return syncMediaLinkForPost_(
+      normalized.post_id,
+      normalized.asset_id,
+      normalized.campaign_name,
+      normalized.media_label
+    );
+  });
+  step("syncSourceFlowStateForPost", function() {
+    return syncSourceFlowStateForPost_(normalized);
+  });
+  step("timestamps", function() {
+    if (normalized.flow_state === "scheduled") setLastRebuildTimestamp_("calendar");
+    if (normalized.flow_state === "scheduled" || normalized.flow_state === "draft") setLastRebuildTimestamp_("queue");
+    setLastRebuildTimestamp_("ledger");
+    setLastRebuildTimestamp_("constellation");
+  });
+  step("logFlowEvent", function() {
+    return logFlowEvent_(
+      finalExisting ? "update_post" : "create_post",
+      "post",
+      normalized.source_note_id || normalized.source_inspo_id || normalized.source_ai_draft_id || normalized.source_import_job_id,
+      normalized.post_id,
+      "ok",
+      "",
+      {
+        flowState: normalized.flow_state,
+        createdFromFlow: normalized.created_from_flow,
+        campaignId: normalized.campaign_id,
+        status: normalized.status
+      }
+    );
+  });
+  console.log("[savePost side-effects total]", Date.now() - started);
+}
+
+function savePost(payload) {
+  return runLockedSave_("post", function() {
+    return savePostCore_(payload || {});
+  });
+}
+
+function savePostMinimalDebug(payload) {
+  var started = Date.now();
+  try {
+    payload = payload || {};
+    console.log("[savePostMinimalDebug] entered", JSON.stringify({
+      post_id: payload.post_id || payload.postId || payload.stellarsync_post_id || payload.id,
+      rowNumber: payload._rowNumber || payload.rowNumber || payload.row_number
+    }));
+    var sheet = getPostsSheet_();
+    console.log("[savePostMinimalDebug] got POSTS sheet");
+    var normalized = normalizePostSchemaAliases_(payload);
+    normalized.post_id = String(
+      normalized.post_id ||
+      payload.post_id ||
+      payload.postId ||
+      payload.stellarsync_post_id ||
+      payload.id ||
+      ""
+    ).trim();
+    if (!normalized.post_id) throw new Error("Missing canonical post_id.");
+    normalized.postId = normalized.post_id;
+    normalized._rowNumber = payload._rowNumber || payload.rowNumber || payload.row_number || payload.sheetRow || "";
+    normalized.title = String(normalized.title || payload.title || "").trim();
+    console.log("[savePostMinimalDebug] normalized", JSON.stringify({
+      post_id: normalized.post_id,
+      rowNumber: normalized._rowNumber,
+      title: normalized.title
+    }));
+    var rowNumber = upsertPostObjectById_(sheet, normalized);
+    console.log("[savePostMinimalDebug] row written", rowNumber);
+    SpreadsheetApp.flush();
+    console.log("[savePostMinimalDebug] flush done");
+    var confirmed = findObjectByHeaders_(sheet, ["post_id", "postId"], normalized.post_id);
+    console.log("[savePostMinimalDebug] confirmed", JSON.stringify({
+      found: !!confirmed,
+      row_number: confirmed && confirmed.row_number
+    }));
+    if (!confirmed) throw new Error("Minimal save wrote but could not confirm row.");
+    return {
+      ok: true,
+      success: true,
+      source: "google_sheets_minimal_debug",
+      post: confirmed,
+      savedPost: confirmed,
+      postId: normalized.post_id,
+      savedPostId: normalized.post_id,
+      rowNumber: rowNumber,
+      ms: Date.now() - started
+    };
+  } catch (err) {
+    console.error("[savePostMinimalDebug] failed", err && err.stack ? err.stack : err);
+    return {
+      ok: false,
+      success: false,
+      source: "google_sheets_minimal_debug",
+      error: err && err.message ? err.message : String(err),
+      ms: Date.now() - started
+    };
+  }
+}
+
+function saveMediaLinkWithLock_(payload) {
+  return runArtifactSave_("media", function() {
+    var asset = saveMediaLink(payload || {});
+    return {
+      ok: true,
+      success: true,
+      asset: asset,
+      assetId: String(asset && (asset.assetId || asset.asset_id || asset.mediaId || asset.media_id) || "").trim()
+    };
+  });
+}
+
+function saveInspoWithLock_(payload) {
+  return runArtifactSave_("inspo", function() {
+    var inspo = saveInspo(payload || {});
+    var inspoId = String(inspo && (inspo.inspoId || inspo.inspo_id || inspo.id) || "").trim();
+    return {
+      ok: !!inspoId,
+      success: !!inspoId,
+      inspo: inspo,
+      savedInspo: inspo,
+      item: inspo,
+      inspoId: inspoId,
+      savedInspoId: inspoId,
+      error: inspoId ? "" : "saveInspo returned no inspo id."
+    };
+  });
+}
+
+function saveNoteWithLock_(payload) {
+  return runArtifactSave_("note", function() {
+    var note = saveNote(payload || {});
+    var noteId = String(note && (note.noteId || note.note_id || note.id) || "").trim();
+    return {
+      ok: !!noteId,
+      success: !!noteId,
+      note: note,
+      savedNote: note,
+      item: note,
+      noteId: noteId,
+      savedNoteId: noteId,
+      error: noteId ? "" : "saveNote returned no note id."
+    };
+  });
+}
+
+function saveInspoMinimalDebug(payload) {
+  var started = Date.now();
+  try {
+    payload = payload || {};
+    var inspoId = String(
+      payload.inspoId ||
+      payload.inspo_id ||
+      payload.id ||
+      createInspoId_()
+    ).trim();
+    console.log("[saveInspoMinimalDebug] entered", JSON.stringify({
+      inspoId: inspoId,
+      title: payload.title
+    }));
+    var sheet = getCoreSheet_("inspo");
+    var normalized = {
+      inspo_id: inspoId,
+      title: String(payload.title || "").trim(),
+      inspo_type: String(payload.inspoType || payload.inspo_type || payload.type || "article").trim(),
+      source_label: String(payload.sourceLabel || payload.source_label || "Added manually").trim(),
+      summary: String(payload.summary || payload.description || payload.notes || "").trim(),
+      status: String(payload.status || "active").trim() || "active",
+      url: String(payload.url || "").trim(),
+      notes: String(payload.notes || "").trim(),
+      campaign_name: String(payload.campaignName || payload.campaign_name || "").trim(),
+      suggested_platform: String(payload.suggestedPlatform || payload.suggested_platform || "linkedin").trim(),
+      suggested_pillar: String(payload.suggestedPillar || payload.suggested_pillar || "").trim(),
+      created_from_flow: String(payload.createdFromFlow || payload.created_from_flow || "manual").trim(),
+      flow_state: String(payload.flowState || payload.flow_state || "active").trim(),
+      updated_at: new Date().toISOString()
+    };
+    if (!normalized.title) throw new Error("Missing inspo title.");
+    var rowNumber = upsertObjectByHeader_(
+      sheet,
+      ["inspo_id"],
+      normalized,
+      REQUIRED_INSPO_HEADERS,
+      INSPO_FORMULA_HEADERS
+    );
+    SpreadsheetApp.flush();
+    var confirmed = findObjectByNormalizedHeaderValue_(
+      sheet,
+      ["inspo_id"],
+      inspoId,
+      REQUIRED_INSPO_HEADERS
+    );
+    if (!confirmed) throw new Error("Inspo wrote but could not confirm.");
+    confirmed.inspoId = confirmed.inspo_id;
+    confirmed.inspoType = confirmed.inspo_type;
+    return {
+      ok: true,
+      success: true,
+      source: "google_sheets_inspo_minimal_debug",
+      inspo: confirmed,
+      savedInspo: confirmed,
+      inspoId: inspoId,
+      rowNumber: rowNumber,
+      ms: Date.now() - started
+    };
+  } catch (err) {
+    console.error("[saveInspoMinimalDebug] failed", err && err.stack ? err.stack : err);
+    return {
+      ok: false,
+      success: false,
+      source: "google_sheets_inspo_minimal_debug",
+      error: err && err.message ? err.message : String(err),
+      ms: Date.now() - started
+    };
+  }
+}
+
+function saveNoteMinimalDebug(payload) {
+  var started = Date.now();
+  try {
+    payload = payload || {};
+    var noteId = String(
+      payload.noteId ||
+      payload.note_id ||
+      payload.id ||
+      createNoteId_()
+    ).trim();
+    console.log("[saveNoteMinimalDebug] entered", JSON.stringify({
+      noteId: noteId,
+      title: payload.title
+    }));
+    var sheet = getCoreSheet_("notes");
+    var sourceUrl = String(payload.sourceUrl || payload.source_url || "").trim();
+    var normalized = {
+      note_id: noteId,
+      title: String(payload.title || "").trim(),
+      body: String(payload.body || payload.description || "").trim(),
+      bullets: stringifyBulletLines_(payload.bullets),
+      suggested_platform: String(payload.suggestedPlatform || payload.suggested_platform || "linkedin").trim(),
+      suggested_pillar: String(payload.suggestedPillar || payload.suggested_pillar || "").trim(),
+      status: String(payload.status || "active").trim() || "active",
+      converted_post_id: String(payload.convertedPostId || payload.converted_post_id || "").trim(),
+      source_url: sourceUrl,
+      source_platform: detectSourcePlatform_(payload.sourcePlatform || payload.source_platform || sourceUrl),
+      source_label: String(payload.sourceLabel || payload.source_label || deriveSourceLabel_(sourceUrl) || "Added manually").trim(),
+      created_from_flow: String(payload.createdFromFlow || payload.created_from_flow || "manual").trim(),
+      flow_state: String(payload.flowState || payload.flow_state || "active").trim(),
+      updated_at: new Date().toISOString()
+    };
+    if (!normalized.title) throw new Error("Missing note title.");
+    var rowNumber = upsertObjectByHeader_(
+      sheet,
+      ["note_id", "noteId"],
+      normalized,
+      REQUIRED_NOTE_HEADERS,
+      NOTE_FORMULA_HEADERS
+    );
+    SpreadsheetApp.flush();
+    var confirmed = findObjectByNormalizedHeaderValue_(
+      sheet,
+      ["note_id", "noteId"],
+      noteId,
+      REQUIRED_NOTE_HEADERS
+    );
+    if (!confirmed) throw new Error("Note wrote but could not confirm.");
+    confirmed.noteId = confirmed.note_id;
+    return {
+      ok: true,
+      success: true,
+      source: "google_sheets_note_minimal_debug",
+      note: confirmed,
+      savedNote: confirmed,
+      noteId: noteId,
+      rowNumber: rowNumber,
+      ms: Date.now() - started
+    };
+  } catch (err) {
+    console.error("[saveNoteMinimalDebug] failed", err && err.stack ? err.stack : err);
+    return {
+      ok: false,
+      success: false,
+      source: "google_sheets_note_minimal_debug",
+      error: err && err.message ? err.message : String(err),
+      ms: Date.now() - started
+    };
   }
 }
 
 function savePostCore_(payload) {
   const start = Date.now();
   payload = payload || {};
+  console.log("[savePost] start");
   console.log("[savePost] payload", JSON.stringify(payload));
   console.log("[savePost] backend", "google_sheets");
   const sheet = getPostsSheet_();
@@ -5546,21 +5940,13 @@ function savePostCore_(payload) {
   maybeAutoGenerateKeywords_(normalized, payload, finalExisting);
 
   var savedRowNumber = upsertPostObjectById_(sheet, normalized);
+  console.log("[savePost] row written", savedRowNumber);
   SpreadsheetApp.flush();
   const confirmed = findObjectByHeaders_(sheet, ["post_id", "postId"], normalized.post_id);
   if (!confirmed) {
     throw new Error("Save failed: row was not confirmed in POSTS after write.");
   }
-  // TEMP DISABLED: post-save side effects were causing savePost to hang.
-  // Save should only write POSTS, confirm the row, and return.
-  // Isolate order: syncSourceFlowStateForPost_ (worst — cascades into saveAIDraft, notes, inspo, logFlowEvent_) > syncMediaLinkForPost_ > logFlowEvent_
-  // syncMediaLinkForPost_(normalized.post_id, normalized.asset_id, normalized.campaign_name, normalized.media_label);
-  // syncSourceFlowStateForPost_(normalized);
-  // if (normalized.flow_state === "scheduled") setLastRebuildTimestamp_("calendar");
-  // if (normalized.flow_state === "scheduled" || normalized.flow_state === "draft") setLastRebuildTimestamp_("queue");
-  // setLastRebuildTimestamp_("ledger");
-  // setLastRebuildTimestamp_("constellation");
-  // logFlowEvent_(...)
+  console.log("[savePost] row confirmed", normalized.post_id, savedRowNumber);
 
   var confirmedNormalized = normalizePostSchemaAliases_(confirmed);
   var response = Object.assign({
@@ -5679,11 +6065,23 @@ function savePostCore_(payload) {
     workflowBucket: workflow.workflowBucket,
     dateDiagnostics: buildDateDiagnostics_(normalized.scheduled_at, workflow.dateKey, normalized.queue_date_label, normalized.queue_time_label, planning.hasUserSelectedTime && workflow.isScheduledValid)
   }, semanticFieldsFromRow_(confirmedNormalized));
+  console.log("[savePost] returning confirmed post before side effects", normalized.post_id);
   console.log("[savePost] response", JSON.stringify({ postId: response.postId, rowNumber: response.rowNumber, source: response.source }));
-    if (Date.now() - start > 25000) {
-      return { ok: false, success: false, error: "Save exceeded backend time budget." };
-    }
-    return { ok: true, success: true, post: response };
+  if (Date.now() - start > 25000) {
+    return { ok: false, success: false, error: "Save exceeded backend time budget." };
+  }
+  return {
+    ok: true,
+    success: true,
+    post: response,
+    savedPost: response,
+    postId: normalized.post_id,
+    savedPostId: normalized.post_id,
+    rowNumber: savedRowNumber,
+    source: "google_sheets"
+  };
+  // TEMP: do not run inline during save diagnosis.
+  // runPostSaveSideEffectsSafe_(normalized, finalExisting);
 }
 
 function deletePost(postId) {

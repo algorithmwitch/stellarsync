@@ -7159,9 +7159,36 @@ function getUploadFailureMessage(err, file) {
 }
 
 function isBrowserPlayableVideo(asset = {}) {
-  const type = String(asset.mime_type || asset.mimeType || asset.type || "").toLowerCase();
-  const url = String(asset.url || asset.media_url || asset.mediaUrl || asset.fileUrl || asset.sourceUrl || asset.src || "").toLowerCase();
-  return type.includes("video/mp4") || url.endsWith(".mp4") || url.includes(".mp4?");
+  const type = String(asset.mime_type || asset.mimeType || asset.type || asset.assetType || "").toLowerCase();
+  const url = getMediaPreviewUrl(asset).toLowerCase();
+  return (
+    type.includes("video/mp4") ||
+    type.includes("video/webm") ||
+    url.endsWith(".mp4") ||
+    url.includes(".mp4?") ||
+    url.endsWith(".webm") ||
+    url.includes(".webm?")
+  );
+}
+
+function renderUnplayableVideoNotice(asset = {}) {
+  const url = getMediaPreviewUrl(asset);
+  return `
+    <div class="flex flex-col items-center justify-center h-[55vh] text-center bg-[#0f0a18] border border-white/5 rounded-lg p-6">
+      <i class="ph-fill ph-video text-5xl text-[#c77dff] mb-3"></i>
+      <div class="text-sm font-bold text-white">Video uploaded</div>
+      <div class="text-xs text-gray-400 mt-2 max-w-sm">
+        This file is saved, but MOV previews may not play in the browser. Use MP4 for in-app playback.
+      </div>
+      ${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="mt-4 text-xs text-[#c77dff] underline">Open video file</a>` : ""}
+    </div>
+  `;
+}
+
+function renderVideoPreview(asset, url) {
+  if (!url) return '<div class="flex items-center justify-center h-64 text-gray-500"><i class="ph-bold ph-video text-4xl"></i></div>';
+  if (!isBrowserPlayableVideo(asset)) return renderUnplayableVideoNotice(asset);
+  return `<video controls playsinline src="${escapeHtml(url)}" class="max-h-[58vh] w-full object-contain rounded-lg" preload="metadata"></video>`;
 }
 
 async function loadSupabaseMediaAssets(workspace, options = {}) {
@@ -16537,8 +16564,7 @@ function renderModalCarouselPreview() {
 
   modalCarouselPreview.innerHTML = items.map((asset, index) => {
     const previewUrl = asset.fileUrl || asset.sourceUrl || "";
-    const detachId = getCanonicalMediaAssetId(asset);
-    const canonicalUuid = String(detachId || asset.id || asset.media_asset_id || "").trim();
+    const canonicalUuid = getDetachAssetId(asset);
     const isSelected = selectedCarouselDetachAssetIds.has(canonicalUuid);
     var linkedPostForCarousel = getLinkedPostForMedia(asset) || getMediaPostContext(asset);
     var carouselTitle = getMediaDisplayTitle(asset, linkedPostForCarousel, "Carousel asset");
@@ -16551,7 +16577,7 @@ function renderModalCarouselPreview() {
         ondragover="event.preventDefault()"
         ondrop="dropCarouselAsset(event, ${index})"
         ondragend="endCarouselAssetDrag()">
-        ${modeEnabled ? `<input type="checkbox" class="media-select-box" style="position:absolute;left:.75rem;top:.75rem;" ${isSelected ? "checked" : ""} onchange="toggleCarouselDetachSelection('${escapeHtml(canonicalUuid)}', this.checked)" aria-label="Select slide for detach">` : ""}
+        ${modeEnabled ? `<input type="checkbox" class="media-select-box" style="position:absolute;left:.75rem;top:.75rem;" ${isSelected ? "checked" : ""} onclick="event.stopPropagation()" onchange="toggleCarouselDetachSelection('${escapeHtml(canonicalUuid)}', this.checked)" aria-label="Select slide for detach">` : ""}
         <div class="w-24 h-24 rounded-xl overflow-hidden bg-[#0f0a18] border border-white/5 shrink-0 flex items-center justify-center relative">
           <span class="absolute top-2 left-2 z-10 w-6 h-6 rounded-full bg-[#181125]/90 border border-white/10 text-[10px] font-bold text-white flex items-center justify-center">${index + 1}</span>
           ${previewUrl
@@ -16628,6 +16654,17 @@ function getMediaAssetId(media) {
 
 function getCanonicalMediaAssetId(asset) {
   return getMediaAssetId(asset);
+}
+
+function getDetachAssetId(asset = {}) {
+  return String(
+    getCanonicalMediaAssetId?.(asset) ||
+    getMediaAssetId?.(asset) ||
+    asset.media_asset_id ||
+    asset.mediaAssetId ||
+    asset.id ||
+    ""
+  ).trim();
 }
 
 function normalizeAttachedMedia(media) {
@@ -16858,7 +16895,7 @@ function toggleCarouselDetachSelection(mediaAssetId, checked) {
 
 function getSelectedCarouselDetachAssets() {
   const keys = new Set(selectedCarouselDetachAssetIds);
-  return (currentModalCarouselAssets || []).filter((asset) => keys.has(getCanonicalMediaAssetId(asset)));
+  return (currentModalCarouselAssets || []).filter(asset => keys.has(getDetachAssetId(asset)));
 }
 
 async function detachSelectedCarouselMedia() {
@@ -23866,18 +23903,8 @@ function renderMediaPreviewContent(item, linkedAssets, previewUrl, type) {
       return '<div class="flex items-center justify-center h-64 text-gray-500"><i class="ph-bold ph-image text-4xl"></i></div>';
     }
     var kind = (type || inferMediaKindFromAsset(item) || (item ? String(item.type || item.assetType || "").toLowerCase() : ""));
-    if (kind === "video" && isBrowserPlayableVideo(item || {})) {
-      return '<video controls src="' + escapeHtml(src) + '" class="max-h-[55vh] w-full object-contain rounded-lg" preload="metadata"></video>';
-    }
     if (kind === "video") {
-      return `
-        <div class="w-full h-64 flex flex-col items-center justify-center bg-black/40 text-center p-6 rounded-lg">
-          <i class="ph-fill ph-video text-5xl text-purple-300 mb-3"></i>
-          <p class="text-sm font-bold text-white">Video uploaded</p>
-          <p class="text-xs text-gray-400 mt-1">Preview unavailable for MOV files. Use MP4 for in-app playback.</p>
-          <a href="${escapeHtml(src)}" target="_blank" rel="noopener noreferrer" class="mt-4 text-xs text-purple-300 underline">Open video file</a>
-        </div>
-      `;
+      return renderVideoPreview(item, src);
     }
     if (kind === "document") {
       var docLabel = getMediaFileTypeLabel ? getMediaFileTypeLabel(item) : "Document";
@@ -23901,15 +23928,7 @@ function renderMediaPreviewContent(item, linkedAssets, previewUrl, type) {
   const mainTitle = getMediaDisplayTitle(mainAsset, getLinkedPostForMedia(mainAsset) || getMediaPostContext(mainAsset), `Asset ${currentMediaViewerIndex + 1}`);
   const renderMain = function(asset, url, kind, title) {
     if (!url) return '<div class="flex items-center justify-center h-[55vh] text-gray-500"><i class="ph-bold ph-image text-4xl"></i></div>';
-    if (kind === "video" && isBrowserPlayableVideo(asset || {})) return `<video controls src="${escapeHtml(url)}" class="max-h-[58vh] w-full object-contain rounded-lg" preload="metadata"></video>`;
-    if (kind === "video") return `
-      <div class="w-full h-[55vh] flex flex-col items-center justify-center bg-black/40 text-center p-6 rounded-lg">
-        <i class="ph-fill ph-video text-5xl text-purple-300 mb-3"></i>
-        <p class="text-sm font-bold text-white">Video uploaded</p>
-        <p class="text-xs text-gray-400 mt-1">Preview unavailable for MOV files. Use MP4 for in-app playback.</p>
-        <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="mt-4 text-xs text-purple-300 underline">Open video file</a>
-      </div>
-    `;
+    if (kind === "video") return renderVideoPreview(asset, url);
     if (kind === "document") return `<div class="flex flex-col items-center justify-center h-[55vh] text-gray-400 gap-3"><i class="ph-bold ph-file-text text-5xl"></i><span class="text-xs uppercase tracking-wider font-bold">${escapeHtml(getMediaFileTypeLabel(asset))}</span></div>`;
     return `<img src="${escapeHtml(url)}" alt="${escapeHtml(title)}" class="max-h-[58vh] w-full object-contain rounded-lg" onerror="handleBrokenMediaPreview(this)">`;
   };
