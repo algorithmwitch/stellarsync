@@ -7131,16 +7131,29 @@ async function uploadMediaToSupabaseStorage(file, options = {}) {
   if (!created?.ok || !created.asset) {
     throw new Error(created?.error || "Media asset row was not created after upload.");
   }
-  return normalizeRemoteMedia({
+  const normalized = normalizeRemoteMedia({
     ...created.asset,
-    media_url: publicUrl,
     media_type: mediaType,
     media_filename: file?.name || "",
     media_source: "supabase",
+    bucket,
     storage_path: storagePath,
+    storagePath,
     assetType: mediaType,
-    fileUrl: publicUrl,
+    fileUrl: "",
+    media_url: "",
+    url: ""
   });
+  try {
+    const signedUrl = await refreshSupabaseSignedMediaUrl(normalized);
+    normalized.signedUrl = signedUrl;
+    normalized.signed_url = signedUrl;
+    normalized.previewUrl = signedUrl;
+    normalized.preview_url = signedUrl;
+  } catch (err) {
+    console.warn("[supabase-upload] signed url after upload failed", err?.message || err);
+  }
+  return normalized;
 }
 
 function getUploadFailureMessage(err, file) {
@@ -10029,24 +10042,28 @@ function setModalTargetPlatforms(platforms) {
 }
 
 function getRenderableMediaUrl(asset = {}) {
-  return String(
+  const signed = String(
     asset.signedUrl ||
     asset.signed_url ||
     asset.previewUrl ||
     asset.preview_url ||
-    asset.publicUrl ||
-    asset.public_url ||
+    ""
+  ).trim();
+  if (signed) return signed;
+  const raw = String(
     asset.fileUrl ||
     asset.file_url ||
     asset.mediaUrl ||
     asset.media_url ||
-    asset.thumbnailUrl ||
-    asset.thumbnail_url ||
     asset.url ||
     asset.sourceUrl ||
     asset.source_url ||
     ""
   ).trim();
+  if (raw.includes("/storage/v1/object/public/media/") && (asset.storage_path || asset.storagePath)) {
+    return "";
+  }
+  return raw;
 }
 
 function getMediaPreviewUrl(asset = {}) {
@@ -34394,6 +34411,10 @@ function normalizeRemoteMedia(asset) {
     status: assetStatus,
     assetStatus,
     placeholderIcon: String(pickRemoteValue(asset?.placeholderIcon, asset?.placeholder_icon, "")).trim(),
+    signedUrl: String(pickRemoteValue(asset?.signedUrl, asset?.signed_url, asset?.previewUrl, asset?.preview_url, "")).trim(),
+    signed_url: String(pickRemoteValue(asset?.signed_url, asset?.signedUrl, asset?.preview_url, asset?.previewUrl, "")).trim(),
+    previewUrl: String(pickRemoteValue(asset?.previewUrl, asset?.preview_url, asset?.signedUrl, asset?.signed_url, "")).trim(),
+    preview_url: String(pickRemoteValue(asset?.preview_url, asset?.previewUrl, asset?.signed_url, asset?.signedUrl, "")).trim(),
     fileUrl: String(pickRemoteValue(asset?.fileUrl, asset?.file_url, asset?.mediaUrl, asset?.media_url, asset?.url, "")).trim(),
     url: String(pickRemoteValue(asset?.url, asset?.mediaUrl, asset?.media_url, asset?.fileUrl, asset?.file_url, asset?.sourceUrl, asset?.source_url, "")).trim(),
     mediaUrl: String(pickRemoteValue(asset?.mediaUrl, asset?.media_url, asset?.fileUrl, asset?.file_url, asset?.url, "")).trim(),
