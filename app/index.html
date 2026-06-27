@@ -6907,6 +6907,7 @@ async function callAppsScript(action, payloadOrParams = {}, method = "GET", requ
   }, null, 2));
   return {
     ...data,
+    httpStatus: response.status,
     status: response.status,
     httpOk: response.ok
   };
@@ -29484,7 +29485,11 @@ async function apiPost(action, payload = {}, options = {}) {
     result
   }, null, 2));
   if (result?.ok !== true || result?.success !== true) {
-    const err = new Error(result?.error || `Request failed ${result?.status || ""}`.trim());
+    const err = new Error(
+      result?.error ||
+      result?.message ||
+      `Apps Script did not confirm ${action}. HTTP ${result?.httpStatus || result?.status || "unknown"}`
+    );
     err.backend = result;
     err.action = action;
     throw err;
