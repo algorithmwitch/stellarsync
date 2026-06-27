@@ -5635,6 +5635,11 @@
 <script>
 window.STELLARSYNC_BUILD = "2026-06-27-save-hardening-v5";
 console.log("[build]", window.STELLARSYNC_BUILD);
+window.__STELLARSYNC_SAVE_ACTIVE = false;
+
+function isCriticalSaveActive() {
+  return window.__STELLARSYNC_SAVE_ACTIVE === true;
+}
 
 const APP_CONFIG = {
   APP_SCRIPT_URL: "",
@@ -6875,6 +6880,22 @@ function getWorkspaceApiUrl() {
 }
 
 async function callAppsScript(action, payloadOrParams = {}, method = "GET", requestOptions = {}) {
+  const backgroundActions = new Set([
+    "getAIProviderConfig",
+    "getSocialImportCapabilities",
+    "pull_workspace_tabs",
+    "getSocialConnectionStatus"
+  ]);
+  if (isCriticalSaveActive() && backgroundActions.has(action)) {
+    console.warn("[apps-script] skipped during save", action);
+    return {
+      ok: false,
+      success: false,
+      skipped: true,
+      action,
+      error: "Skipped background Apps Script call during active save."
+    };
+  }
   const apiUrl = normalizeAppsScriptExecUrl(getWorkspaceApiUrl());
   if (!apiUrl) throw new Error("Workspace setup needed: missing valid Apps Script exec URL.");
   const verb = String(method || "GET").trim().toUpperCase() === "POST" ? "POST" : "GET";
@@ -6894,13 +6915,15 @@ async function callAppsScript(action, payloadOrParams = {}, method = "GET", requ
   if (requestOptions && requestOptions.signal) {
     options.signal = requestOptions.signal;
   }
+  console.log("[apps-script] request start", action);
   const response = await fetch(url, options);
   const text = await response.text();
+  console.log("[apps-script] raw response", action, response.status, text.slice(0, 500));
   let data;
   try {
     data = text ? JSON.parse(text) : {};
   } catch (err) {
-    throw new Error(`Apps Script returned non-JSON: ${text.slice(0, 300)}`);
+    throw new Error(`Apps Script returned non-JSON for ${action}: ${text.slice(0, 300)}`);
   }
   console.log("[apps-script] response body", JSON.stringify({
     action,
@@ -22373,50 +22396,85 @@ function setupModalMediaUpload() {
     input.click(); // must be direct user gesture
   };
   input.onchange = async function(event) {
-    const file = event.target.files && event.target.files[0];
-    if (!file) return;
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
     try {
-      showToast("Uploading", "Uploading media for this post...", "ph-upload-simple", "text-[#c77dff]");
-      const base64Data = await fileToBase64(file);
+      const isCarousel = String(postTypeSelect?.value || "").trim().toLowerCase() === "carousel";
+      showToast(
+        "Uploading",
+        files.length > 1 ? "Uploading media for this carousel..." : "Uploading media for this post...",
+        "ph-upload-simple",
+        "text-[#c77dff]"
+      );
       const linkedPostId =
         currentEditingPostId ||
         getCanonicalPostId(window.__currentModalPostData || {}) ||
         "";
-      const result = await apiPost("uploadMedia", {
-        fileName: file.name,
-        mimeType: file.type,
-        base64Data,
-        assetBadge: file.type.startsWith("video/") ? "Reel" : "Image",
-        assetMeta: "",
-        linkedPostId,
-        campaign: getCurrentModalCampaignLabel()
+      const uploadedAssets = [];
+      for (const file of files) {
+        const base64Data = await fileToBase64(file);
+        const result = await apiPost("uploadMedia", {
+          fileName: file.name,
+          mimeType: file.type,
+          base64Data,
+          assetBadge: file.type.startsWith("video/")
+            ? "Reel"
+            : file.type.startsWith("image/") && isCarousel
+              ? "Carousel"
+              : "Image",
+          assetMeta: "",
+          linkedPostId,
+          campaign: getCurrentModalCampaignLabel()
+        });
+        const asset = result?.asset || result?.data || result;
+        upsertMediaAssetIntoAppState(asset);
+        uploadedAssets.push(normalizeRemoteMedia(asset));
+      }
+      if (!uploadedAssets.length) return;
+
+      uploadedAssets.forEach((asset) => {
+        const key = getMediaItemKey(asset);
+        if (!currentModalCarouselAssets.some((item) => getMediaItemKey(item) === key)) {
+          currentModalCarouselAssets.push(asset);
+        }
       });
-      const asset = result?.asset || result?.data || result;
-      currentModalAsset = {
-        id: asset.assetId || asset.media_id || asset.id || "",
-        title: asset.assetName || asset.media_filename || asset.fileName || file.name,
-        type: asset.assetType || asset.media_type || (file.type.startsWith("video/") ? "video" : "image"),
-        fileUrl: asset.fileUrl || asset.media_url || asset.publicUrl || ""
-      };
+      currentModalAsset = currentModalCarouselAssets[0] || uploadedAssets[0] || null;
+      applyCurrentCarouselOrderToModalPost();
+      renderModalCarouselPreview();
+
+      const linkedCount = currentModalCarouselAssets.length;
       if (modalMediaStatus) {
-        modalMediaStatus.textContent = `${currentModalAsset.title} linked`;
+        modalMediaStatus.textContent = linkedCount >= 2
+          ? `Carousel · ${linkedCount} assets linked`
+          : `${getMediaTitle(currentModalAsset)} linked`;
       }
       const postIndex = (appState.posts || []).findIndex(p =>
         String(p.id || p.post_id || p.postId || "") === String(linkedPostId || "")
       );
       if (postIndex >= 0) {
-        appState.posts[postIndex].assetId = currentModalAsset.id;
-        appState.posts[postIndex].media_id = currentModalAsset.id;
-        appState.posts[postIndex].media_url = currentModalAsset.fileUrl;
-        appState.posts[postIndex].media_filename = currentModalAsset.title;
-        appState.posts[postIndex].media_type = currentModalAsset.type;
-        appState.posts[postIndex].mediaLabel = currentModalAsset.title;
+        const linkedIds = currentModalCarouselAssets.map((asset) => getMediaAssetId(asset)).filter(Boolean);
+        Object.assign(appState.posts[postIndex], applyDerivedPostMediaFormat({
+          ...appState.posts[postIndex],
+          assetId: currentModalAsset?.assetId || currentModalAsset?.id || "",
+          media_id: linkedIds[0] || "",
+          media_url: currentModalAsset?.mediaUrl || currentModalAsset?.fileUrl || "",
+          media_filename: currentModalAsset?.title || currentModalAsset?.assetName || "",
+          media_type: currentModalAsset?.assetType || currentModalAsset?.type || "",
+          mediaLabel: linkedCount >= 2 ? `${linkedCount} slides` : (currentModalAsset?.title || ""),
+          carouselAssetIds: linkedIds,
+          carouselAssets: currentModalCarouselAssets.map((asset) => normalizeRemoteMedia(asset)),
+          media_ids: linkedIds,
+          mediaId: linkedIds[0] || ""
+        }));
         persistLocalState();
       }
-      upsertMediaAssetIntoAppState(asset);
       renderMedia();
-      showToast("Uploaded", "Media linked to this post.", "ph-check", "text-[#00ffaa]");
-      console.log("[modal-media-upload] success", result);
+      showToast("Uploaded", files.length > 1 ? "Carousel media linked to this post." : "Media linked to this post.", "ph-check", "text-[#00ffaa]");
+      console.log("[modal-media-upload] success", {
+        count: uploadedAssets.length,
+        linkedPostId,
+        carousel: isCarousel
+      });
     } catch (err) {
       console.error("[modal-media-upload] failed", err);
       showToast("Upload failed", err.message || "Could not upload post media.", "ph-warning", "text-yellow-400");
@@ -25160,24 +25218,31 @@ async function savePostToSheetsAuthority(post) {
   if (!isRemoteConfigured()) {
     throw new Error("Google Sheets Apps Script URL is not configured.");
   }
-  showToast("Saving to Sheets", "Updating Google Sheets source of truth...", "ph-table", "text-[#c77dff]");
-  const result = await apiPost("savePost", buildSheetsPostPayload(post), {
-    noTimeout: true
+  const payload = buildSheetsPostPayload(post);
+  console.log("[sheets-authority] savePost start", {
+    post_id: payload.post_id || payload.postId || payload.id,
+    rowNumber: payload._rowNumber || payload.rowNumber || payload.row_number
   });
-  console.log("[sheets-authority] raw savePost result", JSON.stringify(result, null, 2));
-  if (result?.ok !== true || result?.success !== true) {
-    throw new Error(
-      result?.error ||
-      result?.message ||
-      `Sheets save did not confirm. HTTP ${result?.httpStatus || "unknown"}`
-    );
+  showToast("Saving to Sheets", "Updating Google Sheets source of truth...", "ph-table", "text-[#c77dff]");
+  window.__STELLARSYNC_SAVE_ACTIVE = true;
+  try {
+    const result = await apiPost("savePost", payload, {
+      noTimeout: true
+    });
+    console.log("[sheets-authority] savePost result", result);
+    const savedPost = result?.post || result?.savedPost || result?.data?.post || result?.data?.savedPost || null;
+    const confirmedPostId = String(result?.postId || result?.savedPostId || savedPost?.post_id || savedPost?.postId || "").trim();
+    if (!result?.ok || !result?.success || !savedPost || confirmedPostId !== postId) {
+      throw new Error(
+        result?.error ||
+        result?.message ||
+        "Sheets save did not return confirmed post."
+      );
+    }
+    return savedPost;
+  } finally {
+    window.__STELLARSYNC_SAVE_ACTIVE = false;
   }
-  const savedPost = result.post || result.savedPost || null;
-  const confirmedPostId = String(result.postId || result.savedPostId || savedPost?.post_id || savedPost?.postId || "").trim();
-  if (!savedPost || confirmedPostId !== postId) {
-    throw new Error("Sheets save returned without a confirmed matching post.");
-  }
-  return savedPost;
 }
 
 function buildSheetsPostPayload(post) {
@@ -25430,6 +25495,11 @@ function setupSaveHandler() {
   saveButton.removeAttribute("onclick");
 
   saveButton.addEventListener("click", async () => {
+    if (window.__STELLARSYNC_SAVE_ACTIVE) {
+      console.warn("[post-save] blocked duplicate save");
+      showToast("Save already running", "Wait for the current save to finish.", "ph-warning", "text-yellow-400");
+      return;
+    }
     if (savePostInFlight) {
       try {
         if (savePostAbortController) savePostAbortController.abort("new_save_started");
