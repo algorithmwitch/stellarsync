@@ -5364,6 +5364,12 @@
                 <div class="text-xs text-gray-400 mt-1">Google Sheets, Monday.com, and Drive/files stay here.</div>
               </div>
               <div class="flex items-center gap-2 flex-wrap">
+                <button type="button" id="pw-push-sheets-btn" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 hover:text-white transition-colors">
+                  Push to Sheets
+                </button>
+                <button type="button" id="pw-sync-all-btn" class="px-3 py-2 rounded-xl bg-[#2d1b4e] border border-[#c77dff]/30 text-[10px] uppercase tracking-wider font-bold text-white hover:bg-[#3d246c] transition-colors">
+                  Sync Sheets + Monday
+                </button>
                 <button type="button" id="pw-backfill-monday-btn" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 hover:text-white transition-colors">Backfill Monday Board</button>
               </div>
             </div>
@@ -12447,6 +12453,33 @@ function setupWorkspaceUI() {
   });
   document.getElementById("pw-profile-save-btn")?.addEventListener("click", savePWProfile);
   document.getElementById("pw-workspace-save-btn")?.addEventListener("click", savePWWorkspace);
+  document.getElementById("pw-push-sheets-btn")?.addEventListener("click", async function() {
+    console.log("[button] fired pw-push-sheets-btn");
+    try {
+      await withTimeout(pushSupabaseToSheets(), 60000, "Push to Sheets timed out");
+      showToast("Sheets updated", "Supabase data pushed to Google Sheets.", "ph-check", "text-[#00ffaa]");
+      renderWorkspaceHub();
+    } catch (err) {
+      console.error("[sheet-mirror] manual push failed", err);
+      showToast("Sheets push failed", err?.message || "Could not push to Sheets.", "ph-warning", "text-yellow-400");
+    }
+  });
+  document.getElementById("pw-sync-all-btn")?.addEventListener("click", async function() {
+    console.log("[button] fired pw-sync-all-btn");
+    try {
+      await withTimeout(pushSupabaseToSheets(), 60000, "Push to Sheets timed out");
+      if (typeof openMondayBackfillModal === "function") {
+        openMondayBackfillModal();
+      } else if (typeof confirmMondayBackfill === "function") {
+        await withTimeout(confirmMondayBackfill(), 60000, "Monday sync timed out");
+      }
+      showToast("Sync started", "Sheets pushed. Monday sync is ready/started.", "ph-check", "text-[#00ffaa]");
+      renderWorkspaceHub();
+    } catch (err) {
+      console.error("[workspace-sync] sync all failed", err);
+      showToast("Sync failed", err?.message || "Could not complete sync.", "ph-warning", "text-yellow-400");
+    }
+  });
   document.getElementById("pw-backfill-monday-btn")?.addEventListener("click", function() {
     console.log("[button] fired pw-backfill-monday-btn");
     backfillMondayBoard();
@@ -17095,17 +17128,43 @@ function handleMediaUploadFileSelected(event) {
 }
 
 function setupMediaUpload() {
-  if (mediaUploadBtn && !mediaUploadBtn.dataset.bound) {
-    mediaUploadBtn.addEventListener("click", () => {
-      console.log("[button] fired media-upload-btn");
-      openUploadStagingModal("vault");
-      setTimeout(() => {
-        const picker = document.getElementById("upload-staging-file-input") || mediaUploadInput;
-        picker?.click();
-      }, 50);
-    });
-    mediaUploadBtn.dataset.bound = "true";
+  const btn = document.getElementById("media-upload-btn");
+  const input = document.getElementById("media-upload-input");
+  if (!btn || !input) {
+    console.warn("[media-upload] missing button or input", { btn: !!btn, input: !!input });
+    return;
   }
+  btn.onclick = function(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    console.log("[media-upload] vault button clicked");
+    input.click(); // must be direct user gesture
+  };
+  input.onchange = async function(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    try {
+      showToast("Uploading", "Uploading media...", "ph-upload-simple", "text-[#c77dff]");
+      const base64Data = await fileToBase64(file);
+      const result = await apiPost("uploadMedia", {
+        fileName: file.name,
+        mimeType: file.type,
+        base64Data,
+        assetBadge: file.type.startsWith("video/") ? "Reel" : "Image",
+        assetMeta: "",
+        linkedPostId: "",
+        campaign: ""
+      });
+      await refreshMediaFromRemote();
+      showToast("Uploaded", "Media uploaded.", "ph-check", "text-[#00ffaa]");
+      console.log("[media-upload] success", result);
+    } catch (err) {
+      console.error("[media-upload] failed", err);
+      showToast("Upload failed", err.message || "Could not upload media.", "ph-warning", "text-yellow-400");
+    } finally {
+      input.value = "";
+    }
+  };
 }
 
 function openMediaLinkModal() {
@@ -22096,28 +22155,69 @@ async function editCampaignById(campaignId) {
 }
 
 function setupModalMediaUpload() {
-  if (!modalMediaUploadTrigger || !modalMediaUploadInput) return;
-
-  modalMediaUploadTrigger.addEventListener("click", (event) => {
+  const btn = document.getElementById("modal-media-upload-trigger");
+  const input = document.getElementById("modal-media-upload-input");
+  if (!btn || !input) {
+    console.warn("[modal-media-upload] missing button or input", { btn: !!btn, input: !!input });
+    return;
+  }
+  btn.onclick = function(event) {
     event.preventDefault();
     event.stopPropagation();
-    console.log("[button] fired modal-media-upload-trigger");
-    openUploadStagingModal({
-      target: "post",
-      source: "post-modal",
-      targetPostId: currentEditingPostId || getCanonicalPostId(window.__currentModalPostData || {}) || ""
-    });
-    setTimeout(() => {
-      const picker = document.getElementById("upload-staging-file-input") || modalMediaUploadInput;
-      picker?.click();
-    }, 50);
-  });
-
-  modalMediaUploadInput.setAttribute("multiple", "multiple");
-  modalMediaUploadInput.addEventListener("change", (e) => {
-    queueUploadFiles(e.target.files, "post");
-    modalMediaUploadInput.value = "";
-  });
+    console.log("[modal-media-upload] button clicked");
+    input.click(); // must be direct user gesture
+  };
+  input.onchange = async function(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    try {
+      showToast("Uploading", "Uploading media for this post...", "ph-upload-simple", "text-[#c77dff]");
+      const base64Data = await fileToBase64(file);
+      const linkedPostId =
+        currentEditingPostId ||
+        getCanonicalPostId(window.__currentModalPostData || {}) ||
+        "";
+      const result = await apiPost("uploadMedia", {
+        fileName: file.name,
+        mimeType: file.type,
+        base64Data,
+        assetBadge: file.type.startsWith("video/") ? "Reel" : "Image",
+        assetMeta: "",
+        linkedPostId,
+        campaign: getCurrentModalCampaignLabel()
+      });
+      const asset = result?.asset || result?.data || result;
+      currentModalAsset = {
+        id: asset.assetId || asset.media_id || asset.id || "",
+        title: asset.assetName || asset.media_filename || asset.fileName || file.name,
+        type: asset.assetType || asset.media_type || (file.type.startsWith("video/") ? "video" : "image"),
+        fileUrl: asset.fileUrl || asset.media_url || asset.publicUrl || ""
+      };
+      if (modalMediaStatus) {
+        modalMediaStatus.textContent = `${currentModalAsset.title} linked`;
+      }
+      const postIndex = (appState.posts || []).findIndex(p =>
+        String(p.id || p.post_id || p.postId || "") === String(linkedPostId || "")
+      );
+      if (postIndex >= 0) {
+        appState.posts[postIndex].assetId = currentModalAsset.id;
+        appState.posts[postIndex].media_id = currentModalAsset.id;
+        appState.posts[postIndex].media_url = currentModalAsset.fileUrl;
+        appState.posts[postIndex].media_filename = currentModalAsset.title;
+        appState.posts[postIndex].media_type = currentModalAsset.type;
+        appState.posts[postIndex].mediaLabel = currentModalAsset.title;
+        persistLocalState();
+      }
+      await refreshMediaFromRemote();
+      showToast("Uploaded", "Media linked to this post.", "ph-check", "text-[#00ffaa]");
+      console.log("[modal-media-upload] success", result);
+    } catch (err) {
+      console.error("[modal-media-upload] failed", err);
+      showToast("Upload failed", err.message || "Could not upload post media.", "ph-warning", "text-yellow-400");
+    } finally {
+      input.value = "";
+    }
+  };
 }
 
 function getCurrentModalCampaignLabel() {
@@ -24840,6 +24940,52 @@ function withTimeout(promise, ms, label) {
   ]);
 }
 
+let STELLARSYNC_SYNC_QUEUE_TIMER = null;
+let STELLARSYNC_SYNC_QUEUE_ACTIVE = false;
+function queueWorkspaceSyncAfterSave(post) {
+  const active = WORKSPACE_RUNTIME_CONFIG?.active || {};
+  const sheetEnabled = Boolean(active.sheet_sync_enabled);
+  const mondayEnabled = Boolean(active.monday_sync_enabled);
+  const autoPushEnabled = Boolean(active.auto_push_after_save || active.sync_after_save_enabled);
+  if (!autoPushEnabled) {
+    console.log("[sync-queue] skipped", { reason: "auto_push_disabled" });
+    return;
+  }
+  const postId = getCanonicalPostId(post || {});
+  if (!postId) {
+    console.warn("[sync-queue] skipped missing canonical post_id");
+    return;
+  }
+  window.clearTimeout(STELLARSYNC_SYNC_QUEUE_TIMER);
+  STELLARSYNC_SYNC_QUEUE_TIMER = window.setTimeout(() => {
+    runWorkspaceSyncQueue({ sheetEnabled, mondayEnabled }).catch((err) => {
+      console.warn("[sync-queue] failed", err?.message || err);
+      showToast("Sync queued issue", err?.message || "Manual sync may be needed.", "ph-warning", "text-yellow-400");
+    });
+  }, 2500);
+}
+
+async function runWorkspaceSyncQueue({ sheetEnabled = false, mondayEnabled = false } = {}) {
+  if (STELLARSYNC_SYNC_QUEUE_ACTIVE) {
+    console.log("[sync-queue] already active");
+    return;
+  }
+  STELLARSYNC_SYNC_QUEUE_ACTIVE = true;
+  try {
+    if (sheetEnabled && typeof pushSupabaseToSheets === "function") {
+      showToast("Syncing Sheet", "Pushing saved changes to Google Sheets...", "ph-upload-simple", "text-[#c77dff]");
+      await withTimeout(pushSupabaseToSheets(), 45000, "pushSupabaseToSheets timed out");
+    }
+    if (mondayEnabled && typeof runMondayBackfillDryRunThenPush === "function") {
+      showToast("Syncing Monday", "Checking Monday before push...", "ph-kanban", "text-[#c77dff]");
+      await withTimeout(runMondayBackfillDryRunThenPush(), 45000, "Monday sync timed out");
+    }
+    showToast("Sync complete", "Workspace sync finished.", "ph-check", "text-[#00ffaa]");
+  } finally {
+    STELLARSYNC_SYNC_QUEUE_ACTIVE = false;
+  }
+}
+
 function setupSaveHandler() {
   const existingBtn = document.getElementById("save-post-btn");
   if (!existingBtn) return;
@@ -25101,6 +25247,7 @@ function setupSaveHandler() {
       });
     }
     persistLocalState();
+    queueWorkspaceSyncAfterSave(payload);
     rerenderAll();
     if (currentView) switchView(currentView);
     console.log("[post-save] complete local-only");
@@ -27346,9 +27493,13 @@ function updateInstallHelperContent() {
     installHelperUnsupportedCopy.textContent = "If install is unavailable, open " + appName + " in Safari, Chrome, or Edge and try again.";
   }
   if (installHelperActionBtn) {
-    installHelperActionBtn.disabled = state === "installed" || state === "unsupported";
+    installHelperActionBtn.disabled = state === "installed";
     installHelperActionBtn.classList.toggle("opacity-50", installHelperActionBtn.disabled);
-    installHelperActionBtn.textContent = state === "available" ? "Install Now" : state === "ios" ? "Show iOS Steps" : state === "installed" ? "Installed" : "Install Unavailable";
+    installHelperActionBtn.textContent =
+      state === "available" ? "Install Now" :
+      state === "ios" ? "Show iOS Steps" :
+      state === "installed" ? "Installed" :
+      "Show Browser Install Steps";
   }
 }
 
@@ -27362,9 +27513,15 @@ async function handlePWAInstallAction(options = {}) {
     return false;
   }
   if (!deferredInstallPrompt) {
-    if (options.openHelper) openInstallHelperModal();
-    else showToast("Install unavailable", "Open " + appName + " in Chrome, Edge, or Safari and try again.", "ph-browser", "text-yellow-400");
+    openInstallHelperModal();
+    showToast(
+      "Install steps",
+      "Use the browser install icon near the address bar, or open this page in Chrome/Edge after the app is eligible.",
+      "ph-download-simple",
+      "text-[#c77dff]"
+    );
     setInstallButtonVisibility();
+    updateInstallHelperContent();
     return false;
   }
   var promptEvent = deferredInstallPrompt;
@@ -27424,8 +27581,28 @@ function setupPWAInstall() {
     rerenderAll();
   });
 
-  installAppBtn?.addEventListener("click", openInstallHelperModal);
-  mobileInstallAppBtn?.addEventListener("click", openInstallHelperModal);
+  installAppBtn?.addEventListener("click", async function(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (deferredInstallPrompt) {
+      const installed = await handlePWAInstallAction({ openHelper: false });
+      if (installed) closeInstallHelperModal();
+      return;
+    }
+    openInstallHelperModal();
+    updateInstallHelperContent();
+  });
+  mobileInstallAppBtn?.addEventListener("click", async function(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (deferredInstallPrompt) {
+      const installed = await handlePWAInstallAction({ openHelper: false });
+      if (installed) closeInstallHelperModal();
+      return;
+    }
+    openInstallHelperModal();
+    updateInstallHelperContent();
+  });
   installHelperActionBtn?.addEventListener("click", async () => {
     const installed = await handlePWAInstallAction({ openHelper: false });
     if (installed) closeInstallHelperModal();
