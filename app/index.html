@@ -25172,8 +25172,13 @@ async function savePostToSheetsAuthority(post) {
   const result = await apiPost("savePost", buildSheetsPostPayload(post), {
     noTimeout: true
   });
-  if (!result || result.ok !== true || result.success !== true) {
-    throw new Error(result?.error || "Sheets save did not confirm.");
+  console.log("[sheets-authority] raw savePost result", JSON.stringify(result, null, 2));
+  if (result?.ok !== true || result?.success !== true) {
+    throw new Error(
+      result?.error ||
+      result?.message ||
+      `Sheets save did not confirm. HTTP ${result?.httpStatus || "unknown"}`
+    );
   }
   const savedPost = result.post || null;
   const confirmedPostId = String(result.postId || result.savedPostId || savedPost?.post_id || savedPost?.postId || "").trim();
@@ -29484,16 +29489,6 @@ async function apiPost(action, payload = {}, options = {}) {
     httpStatus: result?.httpStatus,
     result
   }, null, 2));
-  if (result?.ok !== true || result?.success !== true) {
-    const err = new Error(
-      result?.error ||
-      result?.message ||
-      `Apps Script did not confirm ${action}. HTTP ${result?.httpStatus || result?.status || "unknown"}`
-    );
-    err.backend = result;
-    err.action = action;
-    throw err;
-  }
   return result;
 }
 
@@ -29528,17 +29523,17 @@ async function callSupabaseEdgeFunction(functionName, payload = {}) {
     console.log("[media-index] parsed error", result);
     console.log("[media-index] request payload", payload || {});
   }
-  if (!response.ok || result.ok === false) {
-    const message = result.error || result.message || rawText || `HTTP ${response.status}`;
-    const err = new Error(message);
-    err.backend = result;
-    err.status = response.status;
-    err.functionName = functionName;
-    err.responseText = rawText;
-    err.requestPayload = payload || {};
-    throw err;
-  }
-  return result;
+  console.log("[supabase-edge] response body", JSON.stringify({
+    action: functionName,
+    status: response.status,
+    httpOk: response.ok,
+    data: result
+  }, null, 2));
+  return {
+    ...result,
+    httpStatus: response.status,
+    httpOk: response.ok
+  };
 }
 
 function getSupabasePostId(payload = {}) {
