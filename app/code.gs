@@ -1505,13 +1505,23 @@ function doPost(e) {
     }
 
     if (route === "savePost" || action === "savePost" || action === "updatePost") {
-      const savedPost = savePost(payload);
+      const saveResult = savePost(payload);
+      if (!saveResult || saveResult.ok !== true || saveResult.success !== true || !saveResult.post) {
+        return jsonResponse({
+          ok: false,
+          success: false,
+          error: saveResult && saveResult.error ? saveResult.error : "savePost did not confirm."
+        });
+      }
+      const savedPost = saveResult.post;
+      const confirmedPostId = String(savedPost.postId || savedPost.post_id || "").trim();
       return jsonResponse({
         ok: true,
+        success: true,
         post: savedPost,
-        posts: getPosts(),
-        savedPostId: savedPost.postId || savedPost.post_id || "",
-        postId: savedPost.postId || savedPost.post_id || "",
+        savedPost: savedPost,
+        postId: confirmedPostId,
+        savedPostId: confirmedPostId,
         rowNumber: savedPost.rowNumber || savedPost.row_number || "",
         source: "google_sheets"
       });
@@ -1906,9 +1916,11 @@ function doPost(e) {
       diagnostics: { receivedWorkspaceContext: context }
     }));
   } catch (err) {
-    return jsonResponse(Object.assign(buildRouteErrorResponse_(err, action, context), {
-      routeStatus: normalizeRouteName_(action) === "savePost" || action === "savePost" || action === "updatePost" ? getSafeWritePostRouteStatus_() : undefined
-    }));
+    return jsonResponse({
+      ok: false,
+      success: false,
+      error: err && err.message || String(err || "Unknown error")
+    });
   }
 }
 
@@ -2987,33 +2999,42 @@ function normalizePostSchemaAliases_(row) {
 }
 
 function writePostObjectToRow_(sheet, rowNumber, post) {
-  const headerMap = requireHeaders_(sheet, REQUIRED_POST_HEADERS);
-  Object.keys(post || {}).forEach(function(rawKey) {
-    const key = normalizeHeader_(rawKey);
-    if (isPostFormulaHeader_(key)) return;
-    const columnIndex = headerMap[key];
-    if (!columnIndex) return;
-    sheet.getRange(rowNumber, columnIndex).setValue(post[rawKey]);
+  const headers = getHeaders_(sheet).map(normalizeHeader_);
+  const formulas = getFormulaRowSafe_(sheet, rowNumber, headers.length);
+  const row = headers.map(function(header, index) {
+    if (isPostFormulaHeader_(header) && formulas[index]) return formulas[index];
+    if (Object.prototype.hasOwnProperty.call(post, header)) return post[header];
+    return "";
   });
-  const updatedAtCol = headerMap.updated_at;
-  if (updatedAtCol) {
-    sheet.getRange(rowNumber, updatedAtCol).setValue(new Date());
-  }
+  sheet.getRange(rowNumber, 1, 1, headers.length).setValues([row]);
 }
 
-function upsertPostObjectById_(sheet, post, payload) {
-  const postId = String(pickFirstDefined_(post && post.post_id, post && post.postId, post && post.id)).trim();
+function upsertPostObjectById_(sheet, post) {
+  const postId = String(post && (post.post_id || post.postId || post.id) || "").trim();
   if (!postId) throw new Error("Missing post_id");
-  const requestedRow = Number(pickFirstDefined_(payload && payload._rowNumber, payload && payload.rowNumber, payload && payload.row_number, payload && payload.sheetRow, payload && payload.sheet_row, ""));
-  const rowNumber = findRowByNormalizedHeaderValue_(sheet, ["post_id", "postId"], postId);
-  const rowByPayload = requestedRow >= 2 && requestedRow <= Math.max(sheet.getLastRow(), 2) ? requestedRow : 0;
-  const targetRow = rowNumber > 0 ? rowNumber : rowByPayload > 0 ? rowByPayload : Math.max(sheet.getLastRow() + 1, 2);
-  var existingTarget = targetRow >= 2 ? getPostsData_().find(function(row) {
-    return Number(row.row_number || 0) === targetRow;
-  }) : null;
-  var existingPostId = String(pickFirstDefined_(existingTarget && existingTarget.post_id, existingTarget && existingTarget.postId, "")).trim();
-  var canonicalPostId = existingPostId || postId;
-  writePostObjectToRow_(sheet, targetRow, Object.assign({}, post, { post_id: canonicalPostId, postId: canonicalPostId }));
+  const byIdRow = findRowByNormalizedHeaderValue_(sheet, ["post_id", "postId"], postId);
+  const requestedRow = Number(post._rowNumber || post.rowNumber || post.row_number || post.sheetRow || post.sheet_row || 0);
+  let targetRow = byIdRow > 0 ? byIdRow : -1;
+  if (targetRow < 0 && requestedRow >= 2 && requestedRow <= sheet.getLastRow()) {
+    const headers = getHeaders_(sheet).map(normalizeHeader_);
+    const rowValues = sheet.getRange(requestedRow, 1, 1, headers.length).getValues()[0] || [];
+    const rowObject = {};
+    headers.forEach(function(header, index) {
+      if (header) rowObject[header] = rowValues[index];
+    });
+    const rowPostId = String(rowObject.post_id || rowObject.postId || "").trim();
+    if (!rowPostId || rowPostId === postId) {
+      targetRow = requestedRow;
+    } else {
+      throw new Error("Row fallback refused: row " + requestedRow + " belongs to " + rowPostId + ", not " + postId + ".");
+    }
+  }
+  if (targetRow < 0) targetRow = Math.max(sheet.getLastRow() + 1, 2);
+  writePostObjectToRow_(sheet, targetRow, Object.assign({}, post, {
+    post_id: postId,
+    postId: postId
+  }));
+  SpreadsheetApp.flush();
   return targetRow;
 }
 
@@ -5333,15 +5354,16 @@ function syncSourceFlowStateForPost_(postRow) {
 
 function savePost(payload) {
   const lock = LockService.getScriptLock();
-  if (!lock.tryLock(5000)) {
+  if (!lock.tryLock(20000)) {
     return {
       ok: false,
       success: false,
+      retryable: true,
       error: "Another save is already running. Try again in a moment."
     };
   }
   try {
-    return savePostCore_(payload);
+    return savePostCore_(payload || {});
   } catch (err) {
     return {
       ok: false,
@@ -5349,7 +5371,9 @@ function savePost(payload) {
       error: String(err && err.message || err)
     };
   } finally {
-    lock.releaseLock();
+    try {
+      lock.releaseLock();
+    } catch (_) {}
   }
 }
 
@@ -5369,20 +5393,6 @@ function savePostCore_(payload) {
     : null;
   const existing = existingRow ? normalizePostSchemaAliases_(existingRow) : null;
   const tracking = buildFlowTrackingFields_(payload, existing, { entityType: "post" });
-  if (!existing) {
-    const duplicateBySource = getPosts().find(function(post) {
-      var incomingPostId = getCanonicalIncomingPostId_(payload);
-      if (incomingPostId && String(post.postId || "").trim() === incomingPostId) return false;
-      return !!(
-        (tracking.sourceNoteId && tracking.sourceNoteId === String(post.sourceNoteId || post.createdFromNoteId || "").trim()) ||
-        (tracking.sourceInspoId && tracking.sourceInspoId === String(post.sourceInspoId || post.createdFromInspoId || "").trim()) ||
-        (tracking.sourceAiDraftId && tracking.sourceAiDraftId === String(post.sourceAiDraftId || post.aiSourceId || "").trim())
-      );
-    });
-    if (duplicateBySource) {
-      payload = Object.assign({}, payload, { postId: duplicateBySource.postId });
-    }
-  }
   const finalIncomingPostId = getCanonicalIncomingPostId_(payload);
   const finalExistingRow = finalIncomingPostId
     ? findObjectByHeaders_(sheet, ["post_id", "postId"], finalIncomingPostId)
@@ -5439,6 +5449,7 @@ function savePostCore_(payload) {
   const workspaceFields = normalizeWorkspacePostFields_(payload, finalExisting || existing || {});
   const normalized = {
     post_id: ensureCanonicalPostId_(payload, finalExisting || existing),
+    _rowNumber: payload._rowNumber || payload.rowNumber || payload.row_number || payload.sheetRow || payload.sheet_row || "",
     title: String(pickFirstDefined_(payload.title, payload.postTitle, existing && existing.title, "")).trim(),
     platform: primaryPlatform,
     post_type: postType,
@@ -5534,148 +5545,140 @@ function savePostCore_(payload) {
   applySemanticFieldsToRow_(normalized, payload, finalExisting);
   maybeAutoGenerateKeywords_(normalized, payload, finalExisting);
 
-  var savedRowNumber = upsertPostObjectById_(sheet, normalized, payload);
-  syncMediaLinkForPost_(normalized.post_id, normalized.asset_id, normalized.campaign_name, normalized.media_label);
-  syncSourceFlowStateForPost_(normalized);
-  if (normalized.flow_state === "scheduled") setLastRebuildTimestamp_("calendar");
-  if (normalized.flow_state === "scheduled" || normalized.flow_state === "draft") setLastRebuildTimestamp_("queue");
-  setLastRebuildTimestamp_("ledger");
-  setLastRebuildTimestamp_("constellation");
-  logFlowEvent_(
-    finalExisting ? "update_post" : "create_post",
-    "post",
-    normalized.source_note_id || normalized.source_inspo_id || normalized.source_ai_draft_id || normalized.source_import_job_id,
-    normalized.post_id,
-    "ok",
-    "",
-    {
-      flowState: normalized.flow_state,
-      createdFromFlow: normalized.created_from_flow,
-      campaignId: normalized.campaign_id,
-      status: normalized.status
-    }
-  );
+  var savedRowNumber = upsertPostObjectById_(sheet, normalized);
+  SpreadsheetApp.flush();
+  const confirmed = findObjectByHeaders_(sheet, ["post_id", "postId"], normalized.post_id);
+  if (!confirmed) {
+    throw new Error("Save failed: row was not confirmed in POSTS after write.");
+  }
+  // TEMP DISABLED: post-save side effects were causing savePost to hang.
+  // Save should only write POSTS, confirm the row, and return.
+  // Isolate order: syncSourceFlowStateForPost_ (worst — cascades into saveAIDraft, notes, inspo, logFlowEvent_) > syncMediaLinkForPost_ > logFlowEvent_
+  // syncMediaLinkForPost_(normalized.post_id, normalized.asset_id, normalized.campaign_name, normalized.media_label);
+  // syncSourceFlowStateForPost_(normalized);
+  // if (normalized.flow_state === "scheduled") setLastRebuildTimestamp_("calendar");
+  // if (normalized.flow_state === "scheduled" || normalized.flow_state === "draft") setLastRebuildTimestamp_("queue");
+  // setLastRebuildTimestamp_("ledger");
+  // setLastRebuildTimestamp_("constellation");
+  // logFlowEvent_(...)
 
+  var confirmedNormalized = normalizePostSchemaAliases_(confirmed);
   var response = Object.assign({
-    postId: normalized.post_id,
-    post_id: normalized.post_id,
-    savedPostId: normalized.post_id,
+    postId: confirmedNormalized.post_id || normalized.post_id,
+    post_id: confirmedNormalized.post_id || normalized.post_id,
+    savedPostId: confirmedNormalized.post_id || normalized.post_id,
     rowNumber: savedRowNumber,
     row_number: savedRowNumber,
     source: "google_sheets",
-    title: normalized.title,
-    platform: normalized.platform,
+    title: confirmedNormalized.title || normalized.title,
+    platform: confirmedNormalized.platform || normalized.platform,
     platform_targets: platformTargets,
     platforms: platformTargets,
-    postType: normalized.post_type,
-    format: normalized.format,
-    pillar: normalized.pillar,
-    scheduledAt: normalized.scheduled_at,
-    status: normalized.status,
-    description: normalized.description,
-    assetId: normalized.asset_id,
-    hubTitle: normalized.hub_title,
-    hubPillarLabel: normalized.hub_pillar_label,
-    queueDateLabel: normalized.queue_date_label,
-    queueTimeLabel: normalized.queue_time_label,
-    publishDate: normalized.publish_date,
-    publishTime: normalized.publish_time,
-    calendarMonth: normalized.calendar_month,
-    calendarYear: normalized.calendar_year,
-    calendarDay: normalized.calendar_day,
-    ledgerExcerpt: normalized.ledger_excerpt,
-    constellationMeta: normalized.constellation_meta,
-    mediaLabel: normalized.media_label,
-    createdFromInspoId: normalized.created_from_inspo_id,
-    createdFromNoteId: normalized.created_from_note_id,
-    sourceNoteId: normalized.source_note_id,
-    sourceInspoId: normalized.source_inspo_id,
-    sourceAiDraftId: normalized.source_ai_draft_id,
-    sourceImportJobId: normalized.source_import_job_id,
-    createdFromFlow: normalized.created_from_flow,
-    movedToPostAt: normalized.moved_to_post_at,
-    archivedAt: normalized.archived_at,
-    flowState: normalized.flow_state,
-    campaignId: normalized.campaign_id,
-    campaignName: normalized.campaign_name,
-    notes: normalized.notes,
-    impressions: normalized.impressions,
-    reach: normalized.reach,
-    likes: normalized.likes,
-    comments: normalized.comments,
-    shares: normalized.shares,
-    saves: normalized.saves,
-    clicks: normalized.clicks,
-    engagementRate: normalized.engagement_rate,
-    sourceUrl: normalized.source_url,
-    sourceType: normalized.source_type,
-    sourcePlatform: normalized.source_platform,
-    sourceTitle: normalized.source_title,
-    sourceMetadata: normalized.source_metadata,
-    sourceImportStatus: normalized.source_import_status,
-    importedAt: normalized.imported_at,
-    importJobId: normalized.import_job_id,
-    originalPostDate: normalized.original_post_date,
-    originalPostDateLabel: normalized.original_post_date_label,
-    dateConfidence: normalized.date_confidence,
-    linkedinPostId: normalized.linkedin_post_id,
-    normalizedTextHash: normalized.normalized_text_hash,
-    isRepost: normalized.is_repost,
-    repostAuthor: normalized.repost_author,
-    repostCommentary: normalized.repost_commentary,
-    originalAuthor: normalized.original_author,
-    originalPostExcerpt: normalized.original_post_excerpt,
+    postType: confirmedNormalized.post_type || normalized.post_type,
+    format: confirmedNormalized.format || normalized.format,
+    pillar: confirmedNormalized.pillar || normalized.pillar,
+    scheduledAt: confirmedNormalized.scheduled_at || normalized.scheduled_at,
+    status: confirmedNormalized.status || normalized.status,
+    description: confirmedNormalized.description || normalized.description,
+    assetId: confirmedNormalized.asset_id || normalized.asset_id,
+    hubTitle: confirmedNormalized.hub_title || normalized.hub_title,
+    hubPillarLabel: confirmedNormalized.hub_pillar_label || normalized.hub_pillar_label,
+    queueDateLabel: confirmedNormalized.queue_date_label || normalized.queue_date_label,
+    queueTimeLabel: confirmedNormalized.queue_time_label || normalized.queue_time_label,
+    publishDate: confirmedNormalized.publish_date || normalized.publish_date,
+    publishTime: confirmedNormalized.publish_time || normalized.publish_time,
+    calendarMonth: confirmedNormalized.calendar_month || normalized.calendar_month,
+    calendarYear: confirmedNormalized.calendar_year || normalized.calendar_year,
+    calendarDay: confirmedNormalized.calendar_day || normalized.calendar_day,
+    ledgerExcerpt: confirmedNormalized.ledger_excerpt || normalized.ledger_excerpt,
+    constellationMeta: confirmedNormalized.constellation_meta || normalized.constellation_meta,
+    mediaLabel: confirmedNormalized.media_label || normalized.media_label,
+    createdFromInspoId: confirmedNormalized.created_from_inspo_id || normalized.created_from_inspo_id,
+    createdFromNoteId: confirmedNormalized.created_from_note_id || normalized.created_from_note_id,
+    sourceNoteId: confirmedNormalized.source_note_id || normalized.source_note_id,
+    sourceInspoId: confirmedNormalized.source_inspo_id || normalized.source_inspo_id,
+    sourceAiDraftId: confirmedNormalized.source_ai_draft_id || normalized.source_ai_draft_id,
+    sourceImportJobId: confirmedNormalized.source_import_job_id || normalized.source_import_job_id,
+    createdFromFlow: confirmedNormalized.created_from_flow || normalized.created_from_flow,
+    movedToPostAt: confirmedNormalized.moved_to_post_at || normalized.moved_to_post_at,
+    archivedAt: confirmedNormalized.archived_at || normalized.archived_at,
+    flowState: confirmedNormalized.flow_state || normalized.flow_state,
+    campaignId: confirmedNormalized.campaign_id || normalized.campaign_id,
+    campaignName: confirmedNormalized.campaign_name || normalized.campaign_name,
+    notes: confirmedNormalized.notes || normalized.notes,
+    impressions: confirmedNormalized.impressions || normalized.impressions,
+    reach: confirmedNormalized.reach || normalized.reach,
+    likes: confirmedNormalized.likes || normalized.likes,
+    comments: confirmedNormalized.comments || normalized.comments,
+    shares: confirmedNormalized.shares || normalized.shares,
+    saves: confirmedNormalized.saves || normalized.saves,
+    clicks: confirmedNormalized.clicks || normalized.clicks,
+    engagementRate: confirmedNormalized.engagement_rate || normalized.engagement_rate,
+    sourceUrl: confirmedNormalized.source_url || normalized.source_url,
+    sourceType: confirmedNormalized.source_type || normalized.source_type,
+    sourcePlatform: confirmedNormalized.source_platform || normalized.source_platform,
+    sourceTitle: confirmedNormalized.source_title || normalized.source_title,
+    sourceMetadata: confirmedNormalized.source_metadata || normalized.source_metadata,
+    sourceImportStatus: confirmedNormalized.source_import_status || normalized.source_import_status,
+    importedAt: confirmedNormalized.imported_at || normalized.imported_at,
+    importJobId: confirmedNormalized.import_job_id || normalized.import_job_id,
+    originalPostDate: confirmedNormalized.original_post_date || normalized.original_post_date,
+    originalPostDateLabel: confirmedNormalized.original_post_date_label || normalized.original_post_date_label,
+    dateConfidence: confirmedNormalized.date_confidence || normalized.date_confidence,
+    linkedinPostId: confirmedNormalized.linkedin_post_id || normalized.linkedin_post_id,
+    normalizedTextHash: confirmedNormalized.normalized_text_hash || normalized.normalized_text_hash,
+    isRepost: confirmedNormalized.is_repost || normalized.is_repost,
+    repostAuthor: confirmedNormalized.repost_author || normalized.repost_author,
+    repostCommentary: confirmedNormalized.repost_commentary || normalized.repost_commentary,
+    originalAuthor: confirmedNormalized.original_author || normalized.original_author,
+    originalPostExcerpt: confirmedNormalized.original_post_excerpt || normalized.original_post_excerpt,
     platformTargets: platformTargets,
-    publishStatus: normalized.publish_status,
-    publishedUrl: normalized.published_url,
-    publishedAt: normalized.published_at,
-    apiPostId: normalized.api_post_id,
-    apiError: normalized.api_error,
-    platformCaptionOverride: normalized.platform_caption_override,
-    platformCharacterCount: normalized.platform_character_count,
-    requiresManualReview: normalized.requires_manual_review,
+    publishStatus: confirmedNormalized.publish_status || normalized.publish_status,
+    publishedUrl: confirmedNormalized.published_url || normalized.published_url,
+    publishedAt: confirmedNormalized.published_at || normalized.published_at,
+    apiPostId: confirmedNormalized.api_post_id || normalized.api_post_id,
+    apiError: confirmedNormalized.api_error || normalized.api_error,
+    platformCaptionOverride: confirmedNormalized.platform_caption_override || normalized.platform_caption_override,
+    platformCharacterCount: confirmedNormalized.platform_character_count || normalized.platform_character_count,
+    requiresManualReview: confirmedNormalized.requires_manual_review || normalized.requires_manual_review,
     carouselAssetIds: carouselAssetIds,
-    aiSourceType: normalized.ai_source_type,
-    aiSourceId: normalized.ai_source_id,
-    aiPrompt: normalized.ai_prompt,
-    aiGenerationMode: normalized.ai_generation_mode,
-    aiBrandFrameworkVersion: normalized.ai_brand_framework_version,
-    aiDraftStatus: normalized.ai_draft_status,
-    aiReviewNotes: normalized.ai_review_notes,
-    workspaceId: normalized.workspace_id,
-    workspace_id: normalized.workspace_id,
-    mediaId: normalized.media_id,
-    media_id: normalized.media_id,
-    mediaUrl: normalized.media_url,
-    media_url: normalized.media_url,
-    mediaType: normalized.media_type,
-    media_type: normalized.media_type,
-    mediaFilename: normalized.media_filename,
-    media_filename: normalized.media_filename,
-    mediaAltText: normalized.media_alt_text,
-    media_alt_text: normalized.media_alt_text,
-    mediaSource: normalized.media_source,
-    media_source: normalized.media_source,
-    storagePath: normalized.storage_path,
-    storage_path: normalized.storage_path,
-    mondayItemId: normalized.monday_item_id,
-    monday_item_id: normalized.monday_item_id,
-    mondayGroupId: normalized.monday_group_id,
-    monday_group_id: normalized.monday_group_id,
-    mondayLastSyncedAt: normalized.monday_last_synced_at,
-    monday_last_synced_at: normalized.monday_last_synced_at,
-    mondaySyncStatus: normalized.monday_sync_status,
-    monday_sync_status: normalized.monday_sync_status,
+    aiSourceType: confirmedNormalized.ai_source_type || normalized.ai_source_type,
+    aiSourceId: confirmedNormalized.ai_source_id || normalized.ai_source_id,
+    aiPrompt: confirmedNormalized.ai_prompt || normalized.ai_prompt,
+    aiGenerationMode: confirmedNormalized.ai_generation_mode || normalized.ai_generation_mode,
+    aiBrandFrameworkVersion: confirmedNormalized.ai_brand_framework_version || normalized.ai_brand_framework_version,
+    aiDraftStatus: confirmedNormalized.ai_draft_status || normalized.ai_draft_status,
+    aiReviewNotes: confirmedNormalized.ai_review_notes || normalized.ai_review_notes,
+    workspaceId: confirmedNormalized.workspace_id || normalized.workspace_id,
+    workspace_id: confirmedNormalized.workspace_id || normalized.workspace_id,
+    mediaId: confirmedNormalized.media_id || normalized.media_id,
+    media_id: confirmedNormalized.media_id || normalized.media_id,
+    mediaUrl: confirmedNormalized.media_url || normalized.media_url,
+    media_url: confirmedNormalized.media_url || normalized.media_url,
+    mediaType: confirmedNormalized.media_type || normalized.media_type,
+    media_type: confirmedNormalized.media_type || normalized.media_type,
+    mediaFilename: confirmedNormalized.media_filename || normalized.media_filename,
+    media_filename: confirmedNormalized.media_filename || normalized.media_filename,
+    mediaAltText: confirmedNormalized.media_alt_text || normalized.media_alt_text,
+    media_alt_text: confirmedNormalized.media_alt_text || normalized.media_alt_text,
+    mediaSource: confirmedNormalized.media_source || normalized.media_source,
+    media_source: confirmedNormalized.media_source || normalized.media_source,
+    storagePath: confirmedNormalized.storage_path || normalized.storage_path,
+    storage_path: confirmedNormalized.storage_path || normalized.storage_path,
+    mondayItemId: confirmedNormalized.monday_item_id || normalized.monday_item_id,
+    monday_item_id: confirmedNormalized.monday_item_id || normalized.monday_item_id,
+    mondayGroupId: confirmedNormalized.monday_group_id || normalized.monday_group_id,
+    monday_group_id: confirmedNormalized.monday_group_id || normalized.monday_group_id,
+    mondayLastSyncedAt: confirmedNormalized.monday_last_synced_at || normalized.monday_last_synced_at,
+    monday_last_synced_at: confirmedNormalized.monday_last_synced_at || normalized.monday_last_synced_at,
+    mondaySyncStatus: confirmedNormalized.monday_sync_status || normalized.monday_sync_status,
+    monday_sync_status: confirmedNormalized.monday_sync_status || normalized.monday_sync_status,
     hasUserSelectedTime: planning.hasUserSelectedTime && workflow.isScheduledValid,
-    carouselAssets: getAssetsForPost_({
-      postId: normalized.post_id,
-      assetId: normalized.asset_id,
-      carouselAssetIds: carouselAssetIds
-    }, getMedia()),
-      scheduledDateKey: workflow.dateKey,
-      workflowBucket: workflow.workflowBucket,
-      dateDiagnostics: buildDateDiagnostics_(normalized.scheduled_at, workflow.dateKey, normalized.queue_date_label, normalized.queue_time_label, planning.hasUserSelectedTime && workflow.isScheduledValid)
-  }, semanticFieldsFromRow_(normalized));
+    carouselAssets: [],
+    scheduledDateKey: workflow.dateKey,
+    workflowBucket: workflow.workflowBucket,
+    dateDiagnostics: buildDateDiagnostics_(normalized.scheduled_at, workflow.dateKey, normalized.queue_date_label, normalized.queue_time_label, planning.hasUserSelectedTime && workflow.isScheduledValid)
+  }, semanticFieldsFromRow_(confirmedNormalized));
   console.log("[savePost] response", JSON.stringify({ postId: response.postId, rowNumber: response.rowNumber, source: response.source }));
     if (Date.now() - start > 25000) {
       return { ok: false, success: false, error: "Save exceeded backend time budget." };

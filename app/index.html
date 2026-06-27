@@ -6891,6 +6891,9 @@ async function callAppsScript(action, payloadOrParams = {}, method = "GET", requ
     options.headers = { "Content-Type": "text/plain;charset=utf-8" };
     options.body = JSON.stringify({ action, route: action, payload, ...payload });
   }
+  if (requestOptions && requestOptions.signal) {
+    options.signal = requestOptions.signal;
+  }
   const response = await fetch(url, options);
   const text = await response.text();
   let data;
@@ -11153,6 +11156,7 @@ const descInput = document.getElementById("modal-description");
 const pillarBtns = Array.from(document.querySelectorAll(".pillar-btn"));
 let saveButton = document.getElementById("save-post-btn");
 let savePostInFlight = false;
+let savePostAbortController = null;
 const sourceUrlInput = document.getElementById("modal-source-url");
 const importCaptionFallbackInput = document.getElementById("modal-import-caption-fallback");
 const importDiagnosticsEl = document.getElementById("modal-import-diagnostics");
@@ -25106,6 +25110,10 @@ function showPostSaveErrorBanner(err, payload = {}) {
   if (postSaveErrorDetails) postSaveErrorDetails.textContent = buildSaveDiagnosticsDetails(err, payload);
 }
 
+function isSaveAbortError(err) {
+  return err?.name === "AbortError" || err?.message === "new_save_started";
+}
+
 function setSheetsAuthorityStatus(message) {
   const text = message || `Saved to Google Sheets at ${new Date().toLocaleTimeString([], {
     hour: "numeric",
@@ -25160,7 +25168,7 @@ function upsertSavedPostIntoAppState(saveResult, fallbackPayload = {}) {
   return normalized;
 }
 
-async function savePostToSheetsAuthority(post) {
+async function savePostToSheetsAuthority(post, requestOptions = {}) {
   const postId = getCanonicalPostId(post);
   if (!postId) {
     throw new Error("Cannot save to Sheets without canonical post_id.");
@@ -25170,7 +25178,8 @@ async function savePostToSheetsAuthority(post) {
   }
   showToast("Saving to Sheets", "Updating Google Sheets source of truth...", "ph-table", "text-[#c77dff]");
   const result = await apiPost("savePost", buildSheetsPostPayload(post), {
-    noTimeout: true
+    noTimeout: true,
+    signal: requestOptions.signal
   });
   console.log("[sheets-authority] raw savePost result", JSON.stringify(result, null, 2));
   if (result?.ok !== true || result?.success !== true) {
@@ -25207,6 +25216,14 @@ function buildSheetsPostPayload(post) {
     stellarsync_post_id: postId,
     workspace_id: getCurrentWorkspaceSlug?.() || "gpe"
   };
+  payload._rowNumber =
+    post._rowNumber ||
+    post.rowNumber ||
+    post.row_number ||
+    post.sheetRow ||
+    post.sheet_row ||
+    post.row ||
+    "";
   delete payload.rowNumber;
   delete payload.row_number;
   delete payload.sheetRow;
@@ -25227,11 +25244,7 @@ function buildSheetsPostPayload(post) {
   console.log("[sheets-payload] cleaned save payload", {
     post_id: payload.post_id,
     postId: payload.postId,
-    rowNumber: payload.rowNumber,
-    row_number: payload.row_number,
-    sheetRow: payload.sheetRow,
-    sheet_row: payload.sheet_row,
-    row: payload.row
+    _rowNumber: payload._rowNumber
   });
   return payload;
 }
@@ -25331,7 +25344,12 @@ function setupSaveHandler() {
   saveButton.removeAttribute("onclick");
 
   saveButton.addEventListener("click", async () => {
-    if (savePostInFlight) return;
+    if (savePostInFlight) {
+      try {
+        if (savePostAbortController) savePostAbortController.abort("new_save_started");
+      } catch (_) {}
+      savePostInFlight = false;
+    }
     savePostInFlight = true;
     console.log("[post-save] click");
     hidePostSaveErrorBanner();
@@ -25339,220 +25357,213 @@ function setupSaveHandler() {
     saveButton.disabled = true;
     saveButton.innerHTML = '<i class="ph-bold ph-spinner-gap text-sm animate-spin"></i> Saving...';
     const saveTimeoutId = null;
-    const existing = currentEditingPostId
-      ? hydratePostCampaign(findPostByAnyId(currentEditingPostId))
-      : null;
-    const existingCanonicalPostId = getCanonicalPostId(existing || {});
-    const existingLookupId = existing?.id || existing?.frontendId || existing?._frontendId || currentEditingPostId || "";
-    const inspoIdToConvert = currentModalInspoId || existing?.createdFromInspoId || "";
-    const noteIdToConvert = currentModalNoteId || existing?.createdFromNoteId || "";
+    savePostAbortController = new AbortController();
+    const requestController = savePostAbortController;
+    try {
+      const existing = currentEditingPostId
+        ? hydratePostCampaign(findPostByAnyId(currentEditingPostId))
+        : null;
+      const existingCanonicalPostId = getCanonicalPostId(existing || {});
+      const existingLookupId = existing?.id || existing?.frontendId || existing?._frontendId || currentEditingPostId || "";
+      const inspoIdToConvert = currentModalInspoId || existing?.createdFromInspoId || "";
+      const noteIdToConvert = currentModalNoteId || existing?.createdFromNoteId || "";
 
-    const selectedCampaignId = campaignSelect?.value || "";
-    const selectedCampaign = getCampaignById(selectedCampaignId, getAvailableCampaignRecords()) || getCampaignByName(selectedCampaignId, getAvailableCampaignRecords());
-    const selectedContentPillar = normalizePillar(getActivePillar() || existing?.hubPillarLabel || existing?.pillar || (appState.settings?.pillars || [])[0] || "authority");
-    const selectedCampaignName = selectedCampaign?.campaignName || normalizeCampaignName(selectedCampaignId);
-    const requestedDate = String(dateInput?.value || "").trim();
-    if ((statusSelect?.value || "draft") === "scheduled" && !requestedDate) {
-      if (saveTimeoutId) clearTimeout(saveTimeoutId);
-      savePostInFlight = false;
-      saveButton.disabled = false;
-      saveButton.innerHTML = originalSaveButtonHtml;
-      showToast("Missing date", "Scheduled posts need a planning date.", "ph-warning-circle", "text-yellow-400");
-      return;
-    }
-    const planning = normalizePostPlanningFields({
-      queueDateLabel: requestedDate,
-      queueTimeLabel: timeInput?.value || (requestedDate ? "9:15 AM" : ""),
-      scheduledAt: requestedDate ? existing?.date || "" : ""
-    }, requestedDate ? (existing || {}) : {});
-    const hasValidSchedule = !!planning.queueDateLabel && !!planning.scheduledAt;
-    const selectedStatus = statusSelect?.value || "draft";
-    const resolvedStatus = hasValidSchedule
-      ? selectedStatus
-      : (selectedStatus === "published" || selectedStatus === "needs_review" ? selectedStatus : "draft");
+      const selectedCampaignId = campaignSelect?.value || "";
+      const selectedCampaign = getCampaignById(selectedCampaignId, getAvailableCampaignRecords()) || getCampaignByName(selectedCampaignId, getAvailableCampaignRecords());
+      const selectedContentPillar = normalizePillar(getActivePillar() || existing?.hubPillarLabel || existing?.pillar || (appState.settings?.pillars || [])[0] || "authority");
+      const selectedCampaignName = selectedCampaign?.campaignName || normalizeCampaignName(selectedCampaignId);
+      const requestedDate = String(dateInput?.value || "").trim();
+      if ((statusSelect?.value || "draft") === "scheduled" && !requestedDate) {
+        showToast("Missing date", "Scheduled posts need a planning date.", "ph-warning-circle", "text-yellow-400");
+        return;
+      }
+      const planning = normalizePostPlanningFields({
+        queueDateLabel: requestedDate,
+        queueTimeLabel: timeInput?.value || (requestedDate ? "9:15 AM" : ""),
+        scheduledAt: requestedDate ? existing?.date || "" : ""
+      }, requestedDate ? (existing || {}) : {});
+      const hasValidSchedule = !!planning.queueDateLabel && !!planning.scheduledAt;
+      const selectedStatus = statusSelect?.value || "draft";
+      const resolvedStatus = hasValidSchedule
+        ? selectedStatus
+        : (selectedStatus === "published" || selectedStatus === "needs_review" ? selectedStatus : "draft");
 
-    const selectedPlatforms = getSelectedModalPlatforms();
-    if (!selectedPlatforms.length) {
-      if (saveTimeoutId) clearTimeout(saveTimeoutId);
-      savePostInFlight = false;
-      saveButton.disabled = false;
-      saveButton.innerHTML = originalSaveButtonHtml;
-      showToast("Missing platform", "Select at least one target platform.", "ph-warning-circle", "text-yellow-400");
-      return;
-    }
+      const selectedPlatforms = getSelectedModalPlatforms();
+      if (!selectedPlatforms.length) {
+        showToast("Missing platform", "Select at least one target platform.", "ph-warning-circle", "text-yellow-400");
+        return;
+      }
 
-    const payload = {
-      id: existingCanonicalPostId || existingLookupId || generateId("post"),
-      postId: existingCanonicalPostId,
-      post_id: existingCanonicalPostId,
-      _frontendId: existing?._frontendId || existing?.frontendId || existingLookupId || "",
-      frontendId: existing?.frontendId || existing?._frontendId || existingLookupId || "",
-      _rowNumber: existing?._rowNumber || existing?.row_number || existing?.sheetRow || "",
-      sheetRow: existing?.sheetRow || existing?.row_number || existing?._rowNumber || "",
-      rowNumber: existing?.rowNumber || existing?.row_number || existing?.sheetRow || "",
-      row_number: existing?.row_number || existing?.rowNumber || existing?.sheetRow || "",
-      slug: existing?.slug || "",
-      contentKey: existing?.contentKey || existing?.content_key || "",
-      content_key: existing?.content_key || existing?.contentKey || "",
-      title: titleInput?.value.trim() || "",
-      platform: selectedPlatforms[0],
-      platforms: selectedPlatforms,
-      platform_targets: selectedPlatforms.join(","),
-      pillar: selectedContentPillar,
-      date: hasValidSchedule ? planning.scheduledAt : "",
-      scheduled_at: hasValidSchedule ? planning.scheduledAt : "",
-      scheduledAt: hasValidSchedule ? planning.scheduledAt : "",
-      status: resolvedStatus,
-      publish_status: resolvedStatus,
-      publishStatus: resolvedStatus,
-      publish_date: hasValidSchedule ? planning.queueDateLabel : "",
-      publishDate: hasValidSchedule ? planning.queueDateLabel : "",
-      publish_time: hasValidSchedule ? planning.queueTimeLabel : "",
-      publishTime: hasValidSchedule ? planning.queueTimeLabel : "",
-      postType: postTypeSelect?.value || "text",
-      description: descInput?.value.trim() || "",
-      assetId: currentModalAsset?.id || existing?.assetId || "",
-      mediaId: currentModalAsset?.mediaId || currentModalAsset?.media_id || currentModalAsset?.assetId || existing?.mediaId || existing?.media_id || "",
-      mediaUrl: currentModalAsset?.mediaUrl || currentModalAsset?.media_url || currentModalAsset?.fileUrl || currentModalAsset?.url || existing?.mediaUrl || existing?.media_url || "",
-      mediaType: currentModalAsset?.mediaType || currentModalAsset?.media_type || currentModalAsset?.assetType || existing?.mediaType || existing?.media_type || "",
-      mediaFilename: currentModalAsset?.mediaFilename || currentModalAsset?.media_filename || currentModalAsset?.originalFilename || currentModalAsset?.assetName || existing?.mediaFilename || existing?.media_filename || "",
-      mediaAltText: currentModalAsset?.mediaAltText || currentModalAsset?.media_alt_text || currentModalAsset?.altText || existing?.mediaAltText || existing?.media_alt_text || "",
-      mediaSource: currentModalAsset?.mediaSource || currentModalAsset?.media_source || currentModalAsset?.sourceType || existing?.mediaSource || existing?.media_source || "",
-      storagePath: currentModalAsset?.storagePath || currentModalAsset?.storage_path || existing?.storagePath || existing?.storage_path || "",
-      workspace_id: getWorkspaceRequestMetadata().workspace_id || existing?.workspace_id || existing?.workspaceId || "",
-      workspaceId: getWorkspaceRequestMetadata().workspace_id || existing?.workspaceId || existing?.workspace_id || "",
-      workspace_slug: getWorkspaceRequestMetadata().workspace_slug || "",
-      user_id: getWorkspaceRequestMetadata().user_id || "",
-      user_email: getWorkspaceRequestMetadata().user_email || "",
-      backend_type: getWorkspaceRequestMetadata().backend_type || "",
-      mondayItemId: document.getElementById("modal-monday-item-id")?.value || existing?.mondayItemId || existing?.monday_item_id || "",
-      monday_item_id: document.getElementById("modal-monday-item-id")?.value || existing?.monday_item_id || existing?.mondayItemId || "",
-      mondayGroupId: existing?.mondayGroupId || existing?.monday_group_id || "",
-      mondayLastSyncedAt: document.getElementById("modal-monday-synced-at")?.value || existing?.mondayLastSyncedAt || existing?.monday_last_synced_at || "",
-      monday_synced_at: document.getElementById("modal-monday-synced-at")?.value || existing?.monday_last_synced_at || existing?.mondayLastSyncedAt || "",
-      mondaySyncStatus: existing?.mondaySyncStatus || existing?.monday_sync_status || "",
-      carouselAssetIds: currentModalCarouselAssets.length
-        ? currentModalCarouselAssets.map(asset => asset.assetId || asset.id).filter(Boolean)
-        : Array.isArray(existing?.carouselAssetIds) ? existing.carouselAssetIds : [],
-      carouselAssets: currentModalCarouselAssets.length
-        ? currentModalCarouselAssets.map(asset => normalizeRemoteMedia(asset))
-        : Array.isArray(existing?.carouselAssets) ? existing.carouselAssets : [],
-      media_id: currentModalCarouselAssets.length
-        ? (currentModalCarouselAssets.map(asset => asset.mediaId || asset.media_id || asset.assetId || asset.id).filter(Boolean)[0] || "")
-        : [currentModalAsset?.mediaId || currentModalAsset?.media_id || currentModalAsset?.assetId || currentModalAsset?.id || existing?.mediaId || existing?.media_id].filter(Boolean)[0] || "",
-      mediaIds: currentModalCarouselAssets.length
-        ? currentModalCarouselAssets.map(asset => asset.mediaId || asset.media_id || asset.assetId || asset.id).filter(Boolean)
-        : [currentModalAsset?.mediaId || currentModalAsset?.media_id || currentModalAsset?.assetId || currentModalAsset?.id || existing?.mediaId || existing?.media_id].filter(Boolean),
-      media_ids: currentModalCarouselAssets.length
-        ? currentModalCarouselAssets.map(asset => asset.mediaId || asset.media_id || asset.assetId || asset.id).filter(Boolean).join(",")
-        : [currentModalAsset?.mediaId || currentModalAsset?.media_id || currentModalAsset?.assetId || currentModalAsset?.id || existing?.mediaId || existing?.media_id].filter(Boolean).join(","),
-      hubTitle: selectedCampaignName || existing?.hubTitle || titleInput?.value.trim() || "",
-      hubPillarLabel: formatContentPillarLabel(selectedContentPillar),
-      queueDateLabel: hasValidSchedule ? planning.queueDateLabel : "",
-      queueTimeLabel: hasValidSchedule ? planning.queueTimeLabel : "",
-      calendarMonth: hasValidSchedule ? planning.calendarMonth : "",
-      calendarYear: hasValidSchedule ? planning.calendarYear : "",
-      calendarDay: hasValidSchedule ? planning.calendarDay : "",
-      hasUserSelectedTime: hasValidSchedule ? planning.hasUserSelectedTime : false,
-      mediaLabel: currentModalAsset?.title || existing?.mediaLabel || "",
-      createdFromInspoId: inspoIdToConvert,
-      createdFromNoteId: noteIdToConvert,
-      sourceNoteId: noteIdToConvert || existing?.sourceNoteId || "",
-      sourceInspoId: inspoIdToConvert || existing?.sourceInspoId || "",
-      sourceAiDraftId: existing?.sourceAiDraftId || (currentModalSourceContext.type === "ai_draft" ? currentModalSourceContext.sourceId || "" : ""),
-      sourceImportJobId: existing?.sourceImportJobId || "",
-      createdFromFlow: existing?.createdFromFlow || (noteIdToConvert ? "note_to_post" : inspoIdToConvert ? "inspo_to_post" : currentModalSourceContext.type === "ai_draft" ? "ai_draft_to_post" : "manual"),
-      movedToPostAt: (noteIdToConvert || inspoIdToConvert || currentModalSourceContext.type === "ai_draft") ? new Date().toISOString() : existing?.movedToPostAt || "",
-      archivedAt: existing?.archivedAt || "",
-      flowState: resolvedStatus === "published" ? "published" : resolvedStatus === "scheduled" && hasValidSchedule ? "scheduled" : "draft",
-      campaignId: selectedCampaign?.campaignId || existing?.campaignId || "",
-      campaign_id: selectedCampaign?.campaignId || existing?.campaign_id || existing?.campaignId || "",
-      campaignName: selectedCampaignName || existing?.campaignName || "",
-      campaign_name: selectedCampaignName || existing?.campaign_name || existing?.campaignName || "",
-      campaign: selectedCampaignName || existing?.campaign || existing?.campaignName || "",
-      sourceUrl: sourceUrlInput?.value.trim() || existing?.sourceUrl || "",
-      sourcePlatform: existing?.sourcePlatform || detectSourcePlatform(sourceUrlInput?.value || ""),
-      sourceTitle: existing?.sourceTitle || titleInput?.value.trim() || "",
-      sourceImportStatus: existing?.sourceImportStatus || "",
-      sourceMetadata: existing?.sourceMetadata || "",
-      platformTargets: selectedPlatforms,
-      publishStatus: resolvedStatus,
-      publishedUrl: existing?.publishedUrl || "",
-      publishedAt: existing?.publishedAt || "",
-      apiPostId: existing?.apiPostId || "",
-      apiError: existing?.apiError || "",
-      platformCaptionOverride: existing?.platformCaptionOverride || "",
-      platformCharacterCount: (descInput?.value || existing?.description || "").trim().length,
-      requiresManualReview: existing?.requiresManualReview || false,
-      aiSourceType: existing?.aiSourceType || (currentModalSourceContext.type === "ai_draft" ? "ai_draft" : ""),
-      aiSourceId: existing?.aiSourceId || (currentModalSourceContext.type === "ai_draft" ? currentModalSourceContext.sourceId || "" : ""),
-      aiPrompt: existing?.aiPrompt || (currentModalSourceContext.type === "ai_draft" ? String(modalAiPrompt?.value || "").trim() : ""),
-      aiGenerationMode: existing?.aiGenerationMode || (currentModalSourceContext.type === "ai_draft" ? String(modalAiMode?.value || "").trim() : ""),
-      aiBrandFrameworkVersion: existing?.aiBrandFrameworkVersion || (currentModalSourceContext.type === "ai_draft" ? "brand-os-2026.05.09" : ""),
-      aiDraftStatus: existing?.aiDraftStatus || (currentModalSourceContext.type === "ai_draft" ? "reviewed" : ""),
-      aiReviewNotes: existing?.aiReviewNotes || "",
-      impressions: existing?.impressions || 0,
-      reach: existing?.reach || 0,
-      likes: existing?.likes || 0,
-      comments: existing?.comments || 0,
-      shares: existing?.shares || 0,
-      saves: existing?.saves || 0,
-      clicks: existing?.clicks || 0,
-      engagementRate: existing?.engagementRate || 0
-    };
-    Object.assign(payload, applyDerivedPostMediaFormat(payload));
+      const payload = {
+        id: existingCanonicalPostId || existingLookupId || generateId("post"),
+        postId: existingCanonicalPostId,
+        post_id: existingCanonicalPostId,
+        _frontendId: existing?._frontendId || existing?.frontendId || existingLookupId || "",
+        frontendId: existing?.frontendId || existing?._frontendId || existingLookupId || "",
+        _rowNumber: existing?._rowNumber || existing?.row_number || existing?.sheetRow || "",
+        sheetRow: existing?.sheetRow || existing?.row_number || existing?._rowNumber || "",
+        rowNumber: existing?.rowNumber || existing?.row_number || existing?.sheetRow || "",
+        row_number: existing?.row_number || existing?.rowNumber || existing?.sheetRow || "",
+        slug: existing?.slug || "",
+        contentKey: existing?.contentKey || existing?.content_key || "",
+        content_key: existing?.content_key || existing?.contentKey || "",
+        title: titleInput?.value.trim() || "",
+        platform: selectedPlatforms[0],
+        platforms: selectedPlatforms,
+        platform_targets: selectedPlatforms.join(","),
+        pillar: selectedContentPillar,
+        date: hasValidSchedule ? planning.scheduledAt : "",
+        scheduled_at: hasValidSchedule ? planning.scheduledAt : "",
+        scheduledAt: hasValidSchedule ? planning.scheduledAt : "",
+        status: resolvedStatus,
+        publish_status: resolvedStatus,
+        publishStatus: resolvedStatus,
+        publish_date: hasValidSchedule ? planning.queueDateLabel : "",
+        publishDate: hasValidSchedule ? planning.queueDateLabel : "",
+        publish_time: hasValidSchedule ? planning.queueTimeLabel : "",
+        publishTime: hasValidSchedule ? planning.queueTimeLabel : "",
+        postType: postTypeSelect?.value || "text",
+        description: descInput?.value.trim() || "",
+        assetId: currentModalAsset?.id || existing?.assetId || "",
+        mediaId: currentModalAsset?.mediaId || currentModalAsset?.media_id || currentModalAsset?.assetId || existing?.mediaId || existing?.media_id || "",
+        mediaUrl: currentModalAsset?.mediaUrl || currentModalAsset?.media_url || currentModalAsset?.fileUrl || currentModalAsset?.url || existing?.mediaUrl || existing?.media_url || "",
+        mediaType: currentModalAsset?.mediaType || currentModalAsset?.media_type || currentModalAsset?.assetType || existing?.mediaType || existing?.media_type || "",
+        mediaFilename: currentModalAsset?.mediaFilename || currentModalAsset?.media_filename || currentModalAsset?.originalFilename || currentModalAsset?.assetName || existing?.mediaFilename || existing?.media_filename || "",
+        mediaAltText: currentModalAsset?.mediaAltText || currentModalAsset?.media_alt_text || currentModalAsset?.altText || existing?.mediaAltText || existing?.media_alt_text || "",
+        mediaSource: currentModalAsset?.mediaSource || currentModalAsset?.media_source || currentModalAsset?.sourceType || existing?.mediaSource || existing?.media_source || "",
+        storagePath: currentModalAsset?.storagePath || currentModalAsset?.storage_path || existing?.storagePath || existing?.storage_path || "",
+        workspace_id: getWorkspaceRequestMetadata().workspace_id || existing?.workspace_id || existing?.workspaceId || "",
+        workspaceId: getWorkspaceRequestMetadata().workspace_id || existing?.workspaceId || existing?.workspace_id || "",
+        workspace_slug: getWorkspaceRequestMetadata().workspace_slug || "",
+        user_id: getWorkspaceRequestMetadata().user_id || "",
+        user_email: getWorkspaceRequestMetadata().user_email || "",
+        backend_type: getWorkspaceRequestMetadata().backend_type || "",
+        mondayItemId: document.getElementById("modal-monday-item-id")?.value || existing?.mondayItemId || existing?.monday_item_id || "",
+        monday_item_id: document.getElementById("modal-monday-item-id")?.value || existing?.monday_item_id || existing?.mondayItemId || "",
+        mondayGroupId: existing?.mondayGroupId || existing?.monday_group_id || "",
+        mondayLastSyncedAt: document.getElementById("modal-monday-synced-at")?.value || existing?.mondayLastSyncedAt || existing?.monday_last_synced_at || "",
+        monday_synced_at: document.getElementById("modal-monday-synced-at")?.value || existing?.monday_last_synced_at || existing?.mondayLastSyncedAt || "",
+        mondaySyncStatus: existing?.mondaySyncStatus || existing?.monday_sync_status || "",
+        carouselAssetIds: currentModalCarouselAssets.length
+          ? currentModalCarouselAssets.map(asset => asset.assetId || asset.id).filter(Boolean)
+          : Array.isArray(existing?.carouselAssetIds) ? existing.carouselAssetIds : [],
+        carouselAssets: currentModalCarouselAssets.length
+          ? currentModalCarouselAssets.map(asset => normalizeRemoteMedia(asset))
+          : Array.isArray(existing?.carouselAssets) ? existing.carouselAssets : [],
+        media_id: currentModalCarouselAssets.length
+          ? (currentModalCarouselAssets.map(asset => asset.mediaId || asset.media_id || asset.assetId || asset.id).filter(Boolean)[0] || "")
+          : [currentModalAsset?.mediaId || currentModalAsset?.media_id || currentModalAsset?.assetId || currentModalAsset?.id || existing?.mediaId || existing?.media_id].filter(Boolean)[0] || "",
+        mediaIds: currentModalCarouselAssets.length
+          ? currentModalCarouselAssets.map(asset => asset.mediaId || asset.media_id || asset.assetId || asset.id).filter(Boolean)
+          : [currentModalAsset?.mediaId || currentModalAsset?.media_id || currentModalAsset?.assetId || currentModalAsset?.id || existing?.mediaId || existing?.media_id].filter(Boolean),
+        media_ids: currentModalCarouselAssets.length
+          ? currentModalCarouselAssets.map(asset => asset.mediaId || asset.media_id || asset.assetId || asset.id).filter(Boolean).join(",")
+          : [currentModalAsset?.mediaId || currentModalAsset?.media_id || currentModalAsset?.assetId || currentModalAsset?.id || existing?.mediaId || existing?.media_id].filter(Boolean).join(","),
+        hubTitle: selectedCampaignName || existing?.hubTitle || titleInput?.value.trim() || "",
+        hubPillarLabel: formatContentPillarLabel(selectedContentPillar),
+        queueDateLabel: hasValidSchedule ? planning.queueDateLabel : "",
+        queueTimeLabel: hasValidSchedule ? planning.queueTimeLabel : "",
+        calendarMonth: hasValidSchedule ? planning.calendarMonth : "",
+        calendarYear: hasValidSchedule ? planning.calendarYear : "",
+        calendarDay: hasValidSchedule ? planning.calendarDay : "",
+        hasUserSelectedTime: hasValidSchedule ? planning.hasUserSelectedTime : false,
+        mediaLabel: currentModalAsset?.title || existing?.mediaLabel || "",
+        createdFromInspoId: inspoIdToConvert,
+        createdFromNoteId: noteIdToConvert,
+        sourceNoteId: noteIdToConvert || existing?.sourceNoteId || "",
+        sourceInspoId: inspoIdToConvert || existing?.sourceInspoId || "",
+        sourceAiDraftId: existing?.sourceAiDraftId || (currentModalSourceContext.type === "ai_draft" ? currentModalSourceContext.sourceId || "" : ""),
+        sourceImportJobId: existing?.sourceImportJobId || "",
+        createdFromFlow: existing?.createdFromFlow || (noteIdToConvert ? "note_to_post" : inspoIdToConvert ? "inspo_to_post" : currentModalSourceContext.type === "ai_draft" ? "ai_draft_to_post" : "manual"),
+        movedToPostAt: (noteIdToConvert || inspoIdToConvert || currentModalSourceContext.type === "ai_draft") ? new Date().toISOString() : existing?.movedToPostAt || "",
+        archivedAt: existing?.archivedAt || "",
+        flowState: resolvedStatus === "published" ? "published" : resolvedStatus === "scheduled" && hasValidSchedule ? "scheduled" : "draft",
+        campaignId: selectedCampaign?.campaignId || existing?.campaignId || "",
+        campaign_id: selectedCampaign?.campaignId || existing?.campaign_id || existing?.campaignId || "",
+        campaignName: selectedCampaignName || existing?.campaignName || "",
+        campaign_name: selectedCampaignName || existing?.campaign_name || existing?.campaignName || "",
+        campaign: selectedCampaignName || existing?.campaign || existing?.campaignName || "",
+        sourceUrl: sourceUrlInput?.value.trim() || existing?.sourceUrl || "",
+        sourcePlatform: existing?.sourcePlatform || detectSourcePlatform(sourceUrlInput?.value || ""),
+        sourceTitle: existing?.sourceTitle || titleInput?.value.trim() || "",
+        sourceImportStatus: existing?.sourceImportStatus || "",
+        sourceMetadata: existing?.sourceMetadata || "",
+        platformTargets: selectedPlatforms,
+        publishStatus: resolvedStatus,
+        publishedUrl: existing?.publishedUrl || "",
+        publishedAt: existing?.publishedAt || "",
+        apiPostId: existing?.apiPostId || "",
+        apiError: existing?.apiError || "",
+        platformCaptionOverride: existing?.platformCaptionOverride || "",
+        platformCharacterCount: (descInput?.value || existing?.description || "").trim().length,
+        requiresManualReview: existing?.requiresManualReview || false,
+        aiSourceType: existing?.aiSourceType || (currentModalSourceContext.type === "ai_draft" ? "ai_draft" : ""),
+        aiSourceId: existing?.aiSourceId || (currentModalSourceContext.type === "ai_draft" ? currentModalSourceContext.sourceId || "" : ""),
+        aiPrompt: existing?.aiPrompt || (currentModalSourceContext.type === "ai_draft" ? String(modalAiPrompt?.value || "").trim() : ""),
+        aiGenerationMode: existing?.aiGenerationMode || (currentModalSourceContext.type === "ai_draft" ? String(modalAiMode?.value || "").trim() : ""),
+        aiBrandFrameworkVersion: existing?.aiBrandFrameworkVersion || (currentModalSourceContext.type === "ai_draft" ? "brand-os-2026.05.09" : ""),
+        aiDraftStatus: existing?.aiDraftStatus || (currentModalSourceContext.type === "ai_draft" ? "reviewed" : ""),
+        aiReviewNotes: existing?.aiReviewNotes || "",
+        impressions: existing?.impressions || 0,
+        reach: existing?.reach || 0,
+        likes: existing?.likes || 0,
+        comments: existing?.comments || 0,
+        shares: existing?.shares || 0,
+        saves: existing?.saves || 0,
+        clicks: existing?.clicks || 0,
+        engagementRate: existing?.engagementRate || 0
+      };
+      Object.assign(payload, applyDerivedPostMediaFormat(payload));
 
-    if (!payload.post_id && !payload.postId && !payload.id) {
-      payload.id = "post_" + (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10));
-      payload.post_id = payload.id;
-      payload.postId = payload.id;
-    } else if (!payload.post_id) {
-      payload.post_id = payload.postId || payload.id;
-      payload.postId = payload.post_id;
-      if (!payload.id) payload.id = payload.post_id;
-    } else {
-      if (!payload.postId) payload.postId = payload.post_id;
-      if (!payload.id) payload.id = payload.post_id;
-    }
-    const meta = getWorkspaceRequestMetadata();
-    if (!payload.workspace_id && !payload.workspaceId) {
-      payload.workspace_id = meta.workspace_id || "";
-      payload.workspaceId = meta.workspace_id || "";
-    } else if (!payload.workspace_id) {
-      payload.workspace_id = payload.workspaceId || meta.workspace_id || "";
-    } else if (!payload.workspaceId) {
-      payload.workspaceId = payload.workspace_id || meta.workspace_id || "";
-    }
+      if (!payload.post_id && !payload.postId && !payload.id) {
+        payload.id = "post_" + (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10));
+        payload.post_id = payload.id;
+        payload.postId = payload.id;
+      } else if (!payload.post_id) {
+        payload.post_id = payload.postId || payload.id;
+        payload.postId = payload.post_id;
+        if (!payload.id) payload.id = payload.post_id;
+      } else {
+        if (!payload.postId) payload.postId = payload.post_id;
+        if (!payload.id) payload.id = payload.post_id;
+      }
+      const meta = getWorkspaceRequestMetadata();
+      if (!payload.workspace_id && !payload.workspaceId) {
+        payload.workspace_id = meta.workspace_id || "";
+        payload.workspaceId = meta.workspace_id || "";
+      } else if (!payload.workspace_id) {
+        payload.workspace_id = payload.workspaceId || meta.workspace_id || "";
+      } else if (!payload.workspaceId) {
+        payload.workspaceId = payload.workspace_id || meta.workspace_id || "";
+      }
 
-    if (!payload.title) {
-      if (saveTimeoutId) clearTimeout(saveTimeoutId);
-      savePostInFlight = false;
-      saveButton.disabled = false;
-      saveButton.innerHTML = originalSaveButtonHtml;
-      showToast("Missing title", "Please add a content title.", "ph-warning-circle", "text-yellow-400");
-      return;
-    }
+      if (!payload.title) {
+        showToast("Missing title", "Please add a content title.", "ph-warning-circle", "text-yellow-400");
+        return;
+      }
 
-	    if (shouldUseSheetsAuthority()) {
-	      try {
-	        const authorityPost = await savePostToSheetsAuthority(payload);
-	        saveCurrentCarouselOrderToSupabase().catch((err) => console.warn("[carousel] order save skipped", err?.message || err));
-	        if (noteIdToConvert) {
-	          appState.notes = (appState.notes || []).map((note) => {
-	            if ((note.noteId || note.id) !== noteIdToConvert) return note;
-	            return {
+      if (shouldUseSheetsAuthority()) {
+        try {
+          const authorityPost = await savePostToSheetsAuthority(payload, {
+            signal: requestController.signal
+          });
+          saveCurrentCarouselOrderToSupabase().catch((err) => console.warn("[carousel] order save skipped", err?.message || err));
+          if (noteIdToConvert) {
+            appState.notes = (appState.notes || []).map((note) => {
+              if ((note.noteId || note.id) !== noteIdToConvert) return note;
+              return {
                 ...note,
                 convertedPostId: authorityPost.id || authorityPost.postId || authorityPost.post_id || payload.id,
                 status: "converted_to_post",
                 flowState: "converted_to_post",
                 movedToPostAt: payload.movedToPostAt
               };
-	          });
-	        }
-	        if (inspoIdToConvert) {
-	          appState.inspo = (appState.inspo || []).map((item) => {
-	            if ((item.inspoId || item.id) !== inspoIdToConvert) return item;
-	            return {
+            });
+          }
+          if (inspoIdToConvert) {
+            appState.inspo = (appState.inspo || []).map((item) => {
+              if ((item.inspoId || item.id) !== inspoIdToConvert) return item;
+              return {
                 ...item,
                 convertedPostId: authorityPost.id || authorityPost.postId || authorityPost.post_id || payload.id,
                 status: "archived",
@@ -25560,50 +25571,39 @@ function setupSaveHandler() {
                 movedToPostAt: payload.movedToPostAt,
                 archivedAt: new Date().toISOString()
               };
-	          });
-	        }
-	        persistLocalState();
-	        // Do not pull immediately after save.
-	        // The confirmed saved post already came back from Sheets.
-	        // await refreshSheetsTabsQuietly(["POSTS"]);
-	        setSheetsAuthorityStatus();
-	        if (saveTimeoutId) clearTimeout(saveTimeoutId);
-	        savePostInFlight = false;
-	        saveButton.disabled = false;
-	        saveButton.innerHTML = originalSaveButtonHtml;
-	        closeModal();
-	        showToast("Saved", "Saved to Google Sheets.", "ph-check", "text-[#00ffaa]");
-	      } catch (err) {
-	        console.error("[sheets-authority] post save failed", err);
-	        if (saveTimeoutId) clearTimeout(saveTimeoutId);
-	        savePostInFlight = false;
-	        saveButton.disabled = false;
-	        saveButton.innerHTML = originalSaveButtonHtml;
-	        showPostSaveErrorBanner(err, payload);
-	        showToast("Sheets save failed", err?.message || "Post was not saved to Sheets.", "ph-warning", "text-yellow-400");
-	        return;
-	      }
-	    } else {
-	      // === STEP B: LOCAL UPSERT FIRST ===
-	      console.log("[post-save] step: local upsert");
-	      const savedPost = upsertSavedPostIntoAppState({ ok: true, post: payload, source: "local_first" }, payload);
-	      console.log("[post-save] step: local upsert done", { post_id: getCanonicalPostId(savedPost) || payload.post_id || payload.postId || payload.id });
-	      if (noteIdToConvert) {
-	        appState.notes = (appState.notes || []).map((note) => {
-	          if ((note.noteId || note.id) !== noteIdToConvert) return note;
-	          return {
+            });
+          }
+          persistLocalState();
+          setSheetsAuthorityStatus();
+          closeModal();
+          showToast("Saved", "Saved to Google Sheets.", "ph-check", "text-[#00ffaa]");
+        } catch (err) {
+          if (isSaveAbortError(err)) return;
+          console.error("[sheets-authority] post save failed", err);
+          showPostSaveErrorBanner(err, payload);
+          showToast("Sheets save failed", err?.message || "Post was not saved to Sheets.", "ph-warning", "text-yellow-400");
+          return;
+        }
+      } else {
+        console.log("[post-save] step: local upsert");
+        const savedPost = upsertSavedPostIntoAppState({ ok: true, post: payload, source: "local_first" }, payload);
+        console.log("[post-save] step: local upsert done", { post_id: getCanonicalPostId(savedPost) || payload.post_id || payload.postId || payload.id });
+        if (noteIdToConvert) {
+          appState.notes = (appState.notes || []).map((note) => {
+            if ((note.noteId || note.id) !== noteIdToConvert) return note;
+            return {
               ...note,
               convertedPostId: savedPost.id || savedPost.postId || payload.id,
               status: "converted_to_post",
               flowState: "converted_to_post",
               movedToPostAt: payload.movedToPostAt
             };
-	        });
-	      }
-	      if (inspoIdToConvert) {
-	        appState.inspo = (appState.inspo || []).map((item) => {
-	          if ((item.inspoId || item.id) !== inspoIdToConvert) return item;
-	          return {
+          });
+        }
+        if (inspoIdToConvert) {
+          appState.inspo = (appState.inspo || []).map((item) => {
+            if ((item.inspoId || item.id) !== inspoIdToConvert) return item;
+            return {
               ...item,
               convertedPostId: savedPost.id || savedPost.postId || payload.id,
               status: "archived",
@@ -25611,28 +25611,35 @@ function setupSaveHandler() {
               movedToPostAt: payload.movedToPostAt,
               archivedAt: new Date().toISOString()
             };
-	        });
-	      }
-	      persistLocalState();
-	      if (saveTimeoutId) clearTimeout(saveTimeoutId);
-	      savePostInFlight = false;
-	      saveButton.disabled = false;
-	      saveButton.innerHTML = originalSaveButtonHtml;
-	      closeModal();
-	      showToast("Saved", "Post saved locally. Use manual sync to push remote changes.", "ph-check", "text-[#00ffaa]");
-	      // HARDENED SAVE RULE:
-	      // The modal Save button must never run remote hydration, Sheet sync,
-	      // Monday sync, media sync, or social scheduling inline.
-	      // It only updates local app state/UI. Explicit manual sync buttons handle remote work.
-	      console.log("[post-save] supabase/native local save only", {
-	        post_id: getCanonicalPostId(payload),
-	        reason: "manual_remote_sync_only"
-	      });
-	    }
-    rerenderAll();
-    if (currentView) switchView(currentView);
-    console.log("[post-save] complete local-only");
-    return;
+          });
+        }
+        persistLocalState();
+        closeModal();
+        showToast("Saved", "Post saved locally. Use manual sync to push remote changes.", "ph-check", "text-[#00ffaa]");
+        // HARDENED SAVE RULE:
+        // The modal Save button must never run remote hydration, Sheet sync,
+        // Monday sync, media sync, or social scheduling inline.
+        // It only updates local app state/UI. Explicit manual sync buttons handle remote work.
+        console.log("[post-save] supabase/native local save only", {
+          post_id: getCanonicalPostId(payload),
+          reason: "manual_remote_sync_only"
+        });
+      }
+      rerenderAll();
+      if (currentView) switchView(currentView);
+      console.log("[post-save] complete local-only");
+      return;
+    } finally {
+      if (saveTimeoutId) clearTimeout(saveTimeoutId);
+      if (saveButton) {
+        saveButton.disabled = false;
+        saveButton.innerHTML = originalSaveButtonHtml;
+      }
+      if (savePostAbortController === requestController) {
+        savePostInFlight = false;
+        savePostAbortController = null;
+      }
+    }
   });
 }
 
