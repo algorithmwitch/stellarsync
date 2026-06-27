@@ -28344,7 +28344,7 @@ async function apiUpdateCampaign(campaign) {
   return apiPost("saveCampaign", campaign);
 }
 
-async function syncRemoteIfConfigured() {
+async function syncRemoteIfConfigured(options = {}) {
   console.log("[boot] syncRemoteIfConfigured start");
   var activeCfg = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active;
   console.log("[data] active workspace", activeCfg ? (activeCfg.workspace_slug || activeCfg.slug) : "none");
@@ -28359,7 +28359,7 @@ async function syncRemoteIfConfigured() {
     lastSyncError = "Remote sync is disabled or the active backend is not configured.";
     console.log("[data]", getAppStateCounts());
     rerenderAll();
-    return;
+    return { ok: false, reason: "remote_disabled_or_unconfigured" };
   }
 
   const syncLoadingToastId = showLoadingToast("Syncing workspace", "Loading workspace data...");
@@ -28409,7 +28409,7 @@ async function syncRemoteIfConfigured() {
       console.log("[data]", getAppStateCounts());
       rerenderAll();
       updateLoadingToastSuccess(syncLoadingToastId, "Workspace loaded", "Supabase workspace data loaded.");
-      return;
+      return { ok: true, source: "supabase_native", counts: getAppStateCounts() };
     } catch (err) {
       console.error(err);
       offlineMode = true;
@@ -28418,7 +28418,8 @@ async function syncRemoteIfConfigured() {
       console.log("[data]", getAppStateCounts());
       rerenderAll();
       updateLoadingToastError(syncLoadingToastId, "Supabase sync issue", lastSyncError || "Posts could not be loaded.");
-      return;
+      if (options && options.force) throw err;
+      return { ok: false, source: "supabase_native", error: lastSyncError || "Posts could not be loaded." };
     }
   }
 
@@ -28504,6 +28505,7 @@ async function syncRemoteIfConfigured() {
         '</div></div>';
       document.body.appendChild(syncErrEl2);
     }
+    if (options && options.force) throw postsLoadError;
   }
 
   // Phase 2: Everything else in background (fire and forget, must not overwrite Sheet posts)
@@ -28596,6 +28598,7 @@ async function syncRemoteIfConfigured() {
   }).catch(function(err) {
     console.log("[background] nonfatal error", err?.message || err);
   });
+  return { ok: !postsLoadError, source: "google_sheets_hybrid", counts: getAppStateCounts() };
 }
 
 function getSheetMirrorConfig() {
@@ -34499,6 +34502,21 @@ function loadLocalState() {
       safeStorageRemove(primaryKey);
       if (legacyKey) safeStorageRemove(legacyKey);
     } catch (_) {}
+    try {
+      const fallbackKey = `${APP_CONFIG.STORAGE_KEY}_last_good`;
+      const fallbackRaw =
+        (typeof localStorage !== "undefined" ? localStorage.getItem(fallbackKey) : null) ||
+        (typeof sessionStorage !== "undefined" ? sessionStorage.getItem(fallbackKey) : null);
+      if (fallbackRaw) {
+        try {
+          console.warn("[local-state] using last good backup");
+          return sanitizeAppStateArtifacts({
+            ...structuredCloneState(DEFAULT_STATE),
+            ...JSON.parse(fallbackRaw)
+          });
+        } catch (_) {}
+      }
+    } catch (_) {}
     return sanitizeAppStateArtifacts(structuredCloneState(DEFAULT_STATE));
   }
 }
@@ -34517,6 +34535,12 @@ function sanitizeAppStateArtifacts(state) {
 }
 
 function persistLocalState() {
+  try {
+    localStorage.setItem(
+      `${APP_CONFIG.STORAGE_KEY}_last_good`,
+      JSON.stringify(appState)
+    );
+  } catch (_) {}
   safeStorageSet(getLocalStateStorageKey(), JSON.stringify(appState));
 }
 
@@ -37435,6 +37459,30 @@ async function bootAppWithWorkspaceRouter() {
     console.log("[data] backend_type", cfg ? (cfg.backend_type || "unknown") : "unknown");
     console.log("[data] google_sheets apps_script_url present", (cfg && resolveWorkspaceBackendConfig(cfg, cfg).appsScriptUrl) ? "true" : "false");
     renderWorkspaceBranding();
+    if (shouldUseSheetsAuthority?.()) {
+      try {
+        console.log("[boot] sheets authority initial pull start");
+        const result = await syncRemoteIfConfigured({
+          silent: false,
+          force: true,
+          source: "boot_sheets_authority_required"
+        });
+        console.log("[boot] sheets authority initial pull result", {
+          ok: result?.ok,
+          posts: appState.posts?.length || 0,
+          notes: appState.notes?.length || 0,
+          inspo: appState.inspo?.length || 0
+        });
+      } catch (err) {
+        console.error("[boot] sheets authority initial pull failed", err);
+        showToast(
+          "Sheets pull failed",
+          err?.message || "Could not load posts from Google Sheets.",
+          "ph-warning",
+          "text-yellow-400"
+        );
+      }
+    }
     initApp();
 
     if (loadingEl) loadingEl.classList.add("hidden");
