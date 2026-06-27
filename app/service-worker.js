@@ -1,4 +1,4 @@
-const CACHE_VERSION = "2026.06.16.01-launch-hardening";
+const CACHE_VERSION = "2026.06.27.02-save-hardening";
 const STELLARSYNC_CACHE = `stellarsync-app-shell-${CACHE_VERSION}`;
 const STELLARSYNC_ASSETS = [
   "./",
@@ -46,13 +46,21 @@ self.addEventListener("fetch", (event) => {
   if (url.pathname.endsWith("/service-worker.js")) return;
   if (url.searchParams.has("action")) return;
   if (url.pathname.includes("/functions/v1/")) return;
+  const isHtmlDocument =
+    request.mode === "navigate" ||
+    url.pathname.endsWith("/index.html") ||
+    (request.headers.get("accept") || "").includes("text/html");
 
-  if (request.mode === "navigate") {
+  if (isHtmlDocument) {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const copy = response.clone();
-          caches.open(STELLARSYNC_CACHE).then((cache) => cache.put("./index.html", copy)).catch(() => undefined);
+          if (response && response.status === 200) {
+            const copy = response.clone();
+            caches.open(STELLARSYNC_CACHE).then((cache) => {
+              cache.put("./index.html", copy).catch(() => undefined);
+            }).catch(() => undefined);
+          }
           return response;
         })
         .catch(() => caches.match("./index.html"))

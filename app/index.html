@@ -5633,7 +5633,7 @@
   </div>
 </div>
 <script>
-window.STELLARSYNC_BUILD = "2026-06-27-save-hardening-v3";
+window.STELLARSYNC_BUILD = "2026-06-27-save-hardening-v5";
 console.log("[build]", window.STELLARSYNC_BUILD);
 
 const APP_CONFIG = {
@@ -28155,7 +28155,8 @@ function registerServiceWorkerSafe() {
     window.location.reload();
   });
 
-  navigator.serviceWorker.register("./service-worker.js").then((registration) => {
+  const serviceWorkerUrl = `./service-worker.js?build=${encodeURIComponent(window.STELLARSYNC_BUILD || "dev")}`;
+  navigator.serviceWorker.register(serviceWorkerUrl, { updateViaCache: "none" }).then((registration) => {
     serviceWorkerStatus.registered = true;
     serviceWorkerStatus.controllerReady = !!navigator.serviceWorker.controller;
     setWaitingWorker(registration);
@@ -28214,7 +28215,7 @@ async function resetAppShellCacheOnly() {
     return;
   }
   const keys = await caches.keys();
-  const shellKeys = keys.filter((key) => /^stellarsync-shell-/.test(key));
+  const shellKeys = keys.filter((key) => /^stellarsync-app-shell-/.test(key));
   await Promise.all(shellKeys.map((key) => caches.delete(key)));
   if ("serviceWorker" in navigator) {
     const registrations = await navigator.serviceWorker.getRegistrations();
