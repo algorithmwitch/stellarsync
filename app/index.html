@@ -25359,6 +25359,10 @@ function queuePostMirrorsAfterSheetsSave(savedPost, fallbackPayload = {}) {
   }, 0);
 }
 
+async function mirrorPostToSupabaseAfterSheetsSave(savedPost, fallbackPayload = {}) {
+  queuePostMirrorsAfterSheetsSave(savedPost, fallbackPayload);
+}
+
 function withTimeout(promise, ms, label) {
   return Promise.race([
     promise,
@@ -25632,48 +25636,25 @@ function setupSaveHandler() {
           console.timeEnd("[post-save] sheets authority");
           console.time("[post-save] local upsert");
           upsertLocalPostFromAuthority(authorityPost);
-          if (noteIdToConvert) {
-            appState.notes = (appState.notes || []).map((note) => {
-              if ((note.noteId || note.id) !== noteIdToConvert) return note;
-              return {
-                ...note,
-                convertedPostId: authorityPost.id || authorityPost.postId || authorityPost.post_id || payload.id,
-                status: "converted_to_post",
-                flowState: "converted_to_post",
-                movedToPostAt: payload.movedToPostAt
-              };
-            });
-          }
-          if (inspoIdToConvert) {
-            appState.inspo = (appState.inspo || []).map((item) => {
-              if ((item.inspoId || item.id) !== inspoIdToConvert) return item;
-              return {
-                ...item,
-                convertedPostId: authorityPost.id || authorityPost.postId || authorityPost.post_id || payload.id,
-                status: "archived",
-                flowState: "converted_to_post",
-                movedToPostAt: payload.movedToPostAt,
-                archivedAt: new Date().toISOString()
-              };
-            });
-          }
           persistLocalState();
           console.timeEnd("[post-save] local upsert");
           console.time("[post-save] close/rerender");
           closeModal();
           rerenderAll();
           console.timeEnd("[post-save] close/rerender");
+          setSheetsAuthorityStatus?.();
           window.setTimeout(() => {
-            Promise.resolve().then(() => apiSavePostToSupabase?.(payload)).catch(console.warn);
-            Promise.resolve().then(() => saveCurrentCarouselOrderToSupabase?.()).catch(console.warn);
-            Promise.resolve().then(() => queueMondayMirrorForPost?.(payload)).catch(console.warn);
+            saveCurrentCarouselOrderToSupabase?.().catch(console.warn);
+            mirrorPostToSupabaseAfterSheetsSave?.(authorityPost, payload).catch(console.warn);
+            queueWorkspaceSyncAfterSave?.(authorityPost);
           }, 0);
           showToast("Saved", "Saved to Google Sheets.", "ph-check", "text-[#00ffaa]");
+          return;
         } catch (err) {
-          if (isSaveAbortError(err)) return;
           console.error("[sheets-authority] post save failed", err);
           showPostSaveErrorBanner(err, payload);
-          showToast("Sheets save failed", err?.message || "Post was not saved to Sheets.", "ph-warning", "text-yellow-400");
+          showToast("Sheets save failed", err?.message || "Post was not saved.", "ph-warning", "text-yellow-400");
+          return;
         } finally {
           try { console.timeEnd("[post-save] total"); } catch (_) {}
           savePostInFlight = false;
@@ -25681,11 +25662,7 @@ function setupSaveHandler() {
             saveButton.disabled = false;
             saveButton.innerHTML = originalSaveButtonHtml;
           }
-          if (savePostAbortController === requestController) {
-            savePostAbortController = null;
-          }
         }
-        return;
       } else {
         console.log("[post-save] step: local upsert");
         const savedPost = upsertSavedPostIntoAppState({ ok: true, post: payload, source: "local_first" }, payload);
