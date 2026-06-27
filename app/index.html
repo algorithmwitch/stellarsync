@@ -6871,7 +6871,7 @@ function getWorkspaceApiUrl() {
   return normalizeAppsScriptExecUrl(backendConfig.appsScriptUrl || APP_CONFIG.APP_SCRIPT_URL || "");
 }
 
-async function callAppsScript(action, payloadOrParams = {}, method = "GET") {
+async function callAppsScript(action, payloadOrParams = {}, method = "GET", requestOptions = {}) {
   const apiUrl = normalizeAppsScriptExecUrl(getWorkspaceApiUrl());
   if (!apiUrl) throw new Error("Workspace setup needed: missing valid Apps Script exec URL.");
   const verb = String(method || "GET").trim().toUpperCase() === "POST" ? "POST" : "GET";
@@ -6888,10 +6888,15 @@ async function callAppsScript(action, payloadOrParams = {}, method = "GET") {
     options.headers = { "Content-Type": "text/plain;charset=utf-8" };
     options.body = JSON.stringify({ action, route: action, payload, ...payload });
   }
-  const controller = new AbortController();
-  const fetchTimeout = setTimeout(() => controller.abort(), 30000);
-  options.signal = controller.signal;
-  const response = await fetch(url, options).finally(() => clearTimeout(fetchTimeout));
+  let response;
+  if (requestOptions.noTimeout) {
+    response = await fetch(url, options);
+  } else {
+    const controller = new AbortController();
+    const fetchTimeout = setTimeout(() => controller.abort(), requestOptions.timeoutMs || 30000);
+    options.signal = controller.signal;
+    response = await fetch(url, options).finally(() => clearTimeout(fetchTimeout));
+  }
   const rawText = await response.text().catch(() => "");
   const preview = String(rawText || "").slice(0, 160);
   if (STELLARSYNC_DEBUG) {
@@ -25199,47 +25204,54 @@ async function savePostToSheetsAuthority(post) {
   if (!postId) {
     throw new Error("Cannot save to Sheets without canonical post_id.");
   }
-  const apiUrl = getWorkspaceApiUrl?.() || getActiveWorkspaceBackendMode?.().appsScriptUrl || "";
-  if (!apiUrl) {
+  if (!isRemoteConfigured()) {
     throw new Error("Google Sheets Apps Script URL is not configured.");
   }
-  function buildSheetsPostPayload(post) {
-    const postId = getCanonicalPostId(post);
-    const payload = {
-      ...post,
-      post_id: postId,
-      postId,
-      stellarsync_post_id: postId,
-      workspace_id: getCurrentWorkspaceSlug?.() || "gpe"
-    };
-    // Keep Apps Script savePost limited to lightweight post fields.
-    delete payload.file;
-    delete payload.files;
-    delete payload.base64Data;
-    delete payload.blob;
-    delete payload.mediaBlob;
-    delete payload.pendingUploads;
-    delete payload.pendingMedia;
-    delete payload.uploadQueue;
-    delete payload.attachedMediaObjects;
-    delete payload.rowNumber;
-    delete payload.row_number;
-    delete payload.sheetRow;
-    delete payload.sheet_row;
-    delete payload.row;
-    if (Array.isArray(payload.media_ids)) {
-      payload.media_ids = payload.media_ids.map(String).filter(Boolean).join(",");
-    }
-    return payload;
-  }
   showToast("Saving to Sheets", "Updating Google Sheets source of truth...", "ph-table", "text-[#c77dff]");
-  const result = await apiPost("savePost", buildSheetsPostPayload(post));
+  const result = await apiPost("savePost", buildSheetsPostPayload(post), {
+    noTimeout: true
+  });
   const savedPost = result?.post || result?.data || result || post;
+  console.log("[sheets-authority] savePost confirmed", {
+    ok: result?.ok,
+    success: result?.success,
+    post_id: postId,
+    rowNumber: result?.rowNumber || result?.row_number || null
+  });
   upsertLocalPostFromAuthority(savedPost);
   persistLocalState();
   rerenderAll();
   showToast("Saved to Sheets", "Google Sheets updated.", "ph-check", "text-[#00ffaa]");
   return savedPost;
+}
+
+function buildSheetsPostPayload(post) {
+  const postId = getCanonicalPostId(post);
+  const payload = {
+    ...post,
+    post_id: postId,
+    postId,
+    stellarsync_post_id: postId,
+    workspace_id: getCurrentWorkspaceSlug?.() || "gpe"
+  };
+  delete payload.rowNumber;
+  delete payload.row_number;
+  delete payload.sheetRow;
+  delete payload.sheet_row;
+  delete payload.row;
+  delete payload.file;
+  delete payload.files;
+  delete payload.base64Data;
+  delete payload.blob;
+  delete payload.mediaBlob;
+  delete payload.pendingUploads;
+  delete payload.pendingMedia;
+  delete payload.uploadQueue;
+  delete payload.attachedMediaObjects;
+  if (Array.isArray(payload.media_ids)) {
+    payload.media_ids = payload.media_ids.map(String).filter(Boolean).join(",");
+  }
+  return payload;
 }
 
 function upsertLocalPostFromAuthority(post) {
@@ -29456,8 +29468,8 @@ async function apiGet(action, params = {}) {
   return result;
 }
 
-async function apiPost(action, payload = {}) {
-  const result = await callAppsScript(action, payload || {}, "POST");
+async function apiPost(action, payload = {}, options = {}) {
+  const result = await callAppsScript(action, payload || {}, "POST", options);
   if (!result.ok) {
     const err = new Error(result.error || "Unknown Apps Script error");
     err.backend = result;
