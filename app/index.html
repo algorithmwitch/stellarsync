@@ -13578,8 +13578,7 @@ async function runAssistantFollowup(action) {
       };
       if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
         await savePostForActiveBackend(postPayload);
-        if (isGoogleSheetsFrontendMode(backendMode.mode)) await refreshSheetsTabsQuietly(["POSTS"]);
-        else await syncRemoteIfConfigured();
+        if (!isGoogleSheetsFrontendMode(backendMode.mode)) await syncRemoteIfConfigured();
       } else {
         appState.posts.unshift(normalizeRemotePost({ ...postPayload, id: generateId("post") }, getAvailableCampaignRecords(), appState.media || []));
         persistLocalState();
@@ -25153,7 +25152,7 @@ function upsertSavedPostIntoAppState(saveResult, fallbackPayload = {}) {
   return normalized;
 }
 
-async function savePostToSheetsAuthority(post, requestOptions = {}) {
+async function savePostToSheetsAuthority(post) {
   const postId = getCanonicalPostId(post);
   if (!postId) {
     throw new Error("Cannot save to Sheets without canonical post_id.");
@@ -25163,8 +25162,7 @@ async function savePostToSheetsAuthority(post, requestOptions = {}) {
   }
   showToast("Saving to Sheets", "Updating Google Sheets source of truth...", "ph-table", "text-[#c77dff]");
   const result = await apiPost("savePost", buildSheetsPostPayload(post), {
-    noTimeout: true,
-    signal: requestOptions.signal
+    noTimeout: true
   });
   console.log("[sheets-authority] raw savePost result", JSON.stringify(result, null, 2));
   if (result?.ok !== true || result?.success !== true) {
@@ -25174,19 +25172,12 @@ async function savePostToSheetsAuthority(post, requestOptions = {}) {
       `Sheets save did not confirm. HTTP ${result?.httpStatus || "unknown"}`
     );
   }
-  const savedPost = result.post || null;
+  const savedPost = result.post || result.savedPost || null;
   const confirmedPostId = String(result.postId || result.savedPostId || savedPost?.post_id || savedPost?.postId || "").trim();
   if (!savedPost || confirmedPostId !== postId) {
     throw new Error("Sheets save returned without a confirmed matching post.");
   }
-  console.log("[sheets-authority] savePost confirmed", {
-    ok: result?.ok,
-    success: result?.success,
-    post_id: postId,
-    rowNumber: result?.rowNumber || result?.row_number || null
-  });
-  showToast("Saved to Sheets", "Google Sheets updated.", "ph-check", "text-[#00ffaa]");
-  return result;
+  return savedPost;
 }
 
 function buildSheetsPostPayload(post) {
@@ -25197,7 +25188,7 @@ function buildSheetsPostPayload(post) {
     post_id: postId,
     postId,
     stellarsync_post_id: postId,
-    workspace_id: meta.workspace_id || "",
+    workspace_id: meta.workspace_id || post.workspace_id || "",
     workspace_slug: getCurrentWorkspaceSlug?.() || "gpe",
     _rowNumber: post._rowNumber || post.row_number || post.rowNumber || post.sheetRow || ""
   };
@@ -25210,12 +25201,12 @@ function buildSheetsPostPayload(post) {
   delete payload.pendingMedia;
   delete payload.uploadQueue;
   delete payload.attachedMediaObjects;
-  payload.media_ids = Array.isArray(payload.media_ids)
-    ? payload.media_ids.map(String).filter(Boolean).join(",")
-    : String(payload.media_ids || payload.mediaIds || "").trim();
-  payload.carousel_asset_ids = Array.isArray(payload.carouselAssetIds)
-    ? payload.carouselAssetIds.map(String).filter(Boolean).join("|")
-    : String(payload.carousel_asset_ids || payload.carouselAssetIds || "").trim();
+  if (Array.isArray(payload.media_ids)) {
+    payload.media_ids = payload.media_ids.map(String).filter(Boolean).join(",");
+  }
+  if (Array.isArray(payload.carouselAssetIds)) {
+    payload.carousel_asset_ids = payload.carouselAssetIds.map(String).filter(Boolean).join("|");
+  }
   console.log("[sheets-payload] cleaned save payload", {
     post_id: payload.post_id,
     postId: payload.postId,
@@ -25634,32 +25625,19 @@ function setupSaveHandler() {
       }
 
       if (shouldUseSheetsAuthority()) {
-        let postSaveTotalTimed = false;
-        let postSaveSheetsTimed = false;
-        let postSaveLocalTimed = false;
-        let postSaveRenderTimed = false;
+        console.time("[post-save] total");
         try {
-          console.time("[post-save] total");
-          postSaveTotalTimed = true;
           console.time("[post-save] sheets authority");
-          postSaveSheetsTimed = true;
-          const result = await savePostToSheetsAuthority(payload, {
-            signal: requestController.signal
-          });
+          const authorityPost = await savePostToSheetsAuthority(payload);
           console.timeEnd("[post-save] sheets authority");
-          postSaveSheetsTimed = false;
-          console.log("[post-save] confirmed sheets result", JSON.stringify(result, null, 2));
-          const confirmedPost = requireConfirmedSaveResult(result, "post", "Post");
-
           console.time("[post-save] local upsert");
-          postSaveLocalTimed = true;
-          upsertLocalPostFromAuthority(confirmedPost);
+          upsertLocalPostFromAuthority(authorityPost);
           if (noteIdToConvert) {
             appState.notes = (appState.notes || []).map((note) => {
               if ((note.noteId || note.id) !== noteIdToConvert) return note;
               return {
                 ...note,
-                convertedPostId: confirmedPost.id || confirmedPost.postId || confirmedPost.post_id || payload.id,
+                convertedPostId: authorityPost.id || authorityPost.postId || authorityPost.post_id || payload.id,
                 status: "converted_to_post",
                 flowState: "converted_to_post",
                 movedToPostAt: payload.movedToPostAt
@@ -25671,7 +25649,7 @@ function setupSaveHandler() {
               if ((item.inspoId || item.id) !== inspoIdToConvert) return item;
               return {
                 ...item,
-                convertedPostId: confirmedPost.id || confirmedPost.postId || confirmedPost.post_id || payload.id,
+                convertedPostId: authorityPost.id || authorityPost.postId || authorityPost.post_id || payload.id,
                 status: "archived",
                 flowState: "converted_to_post",
                 movedToPostAt: payload.movedToPostAt,
@@ -25681,33 +25659,33 @@ function setupSaveHandler() {
           }
           persistLocalState();
           console.timeEnd("[post-save] local upsert");
-          postSaveLocalTimed = false;
-
           console.time("[post-save] close/rerender");
-          postSaveRenderTimed = true;
-          setSheetsAuthorityStatus();
-          queuePostMirrorsAfterSheetsSave(confirmedPost, payload);
           closeModal();
           rerenderAll();
           console.timeEnd("[post-save] close/rerender");
-          postSaveRenderTimed = false;
+          window.setTimeout(() => {
+            Promise.resolve().then(() => apiSavePostToSupabase?.(payload)).catch(console.warn);
+            Promise.resolve().then(() => saveCurrentCarouselOrderToSupabase?.()).catch(console.warn);
+            Promise.resolve().then(() => queueMondayMirrorForPost?.(payload)).catch(console.warn);
+          }, 0);
           showToast("Saved", "Saved to Google Sheets.", "ph-check", "text-[#00ffaa]");
-          console.timeEnd("[post-save] total");
-          postSaveTotalTimed = false;
-          if (currentView) switchView(currentView);
-          console.log("[post-save] complete sheets-authority");
-          return;
         } catch (err) {
-          if (postSaveSheetsTimed) console.timeEnd("[post-save] sheets authority");
-          if (postSaveLocalTimed) console.timeEnd("[post-save] local upsert");
-          if (postSaveRenderTimed) console.timeEnd("[post-save] close/rerender");
-          if (postSaveTotalTimed) console.timeEnd("[post-save] total");
           if (isSaveAbortError(err)) return;
           console.error("[sheets-authority] post save failed", err);
           showPostSaveErrorBanner(err, payload);
           showToast("Sheets save failed", err?.message || "Post was not saved to Sheets.", "ph-warning", "text-yellow-400");
-          return;
+        } finally {
+          try { console.timeEnd("[post-save] total"); } catch (_) {}
+          savePostInFlight = false;
+          if (saveButton) {
+            saveButton.disabled = false;
+            saveButton.innerHTML = originalSaveButtonHtml;
+          }
+          if (savePostAbortController === requestController) {
+            savePostAbortController = null;
+          }
         }
+        return;
       } else {
         console.log("[post-save] step: local upsert");
         const savedPost = upsertSavedPostIntoAppState({ ok: true, post: payload, source: "local_first" }, payload);
@@ -28669,7 +28647,7 @@ async function syncRemoteIfConfigured(options = {}) {
   // Phase 2: Everything else in background (fire and forget, must not overwrite Sheet posts)
   console.log("[hybrid] phase 2 background start");
   Promise.allSettled([
-    loadSheetsWorkspaceDataForHybrid(["SETTINGS", "NOTES", "INSPO", "AI_DRAFTS", "BRAND_FRAMEWORK"]),
+    loadSheetsWorkspaceDataForHybrid(["POSTS", "SETTINGS", "NOTES", "INSPO", "AI_DRAFTS", "BRAND_FRAMEWORK"]),
     apiGetSocialImportCapabilities(),
     apiGetConnectedAccounts()
   ]).then(function(results) {
