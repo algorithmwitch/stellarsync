@@ -16535,9 +16535,13 @@ function renderModalCarouselPreview() {
 function syncModalMediaLayout(assetCount = 0) {
   const picker = document.getElementById("modal-existing-media-picker");
   const manager = document.getElementById("modal-carousel-manager");
-  const isCarousel = Number(assetCount || 0) >= 2;
-  if (manager) manager.classList.toggle("hidden", !isCarousel);
-  if (picker) picker.classList.toggle("hidden", isCarousel);
+  const upload = document.getElementById("modal-media-upload-trigger");
+  const count = Number(assetCount || 0);
+  const postType = String(postTypeSelect?.value || "").toLowerCase();
+  const shouldShowCarouselManager = count > 0 || postType === "carousel";
+  if (picker) picker.classList.remove("hidden");
+  if (manager) manager.classList.toggle("hidden", !shouldShowCarouselManager);
+  if (upload) upload.classList.remove("hidden");
 }
 
 function getCurrentCarouselOrderPayload() {
@@ -16610,6 +16614,29 @@ function normalizeAttachedMedia(media) {
   };
 }
 
+function upsertLocalPostMediaLinks(postId, assets) {
+  postId = String(postId || "").trim();
+  if (!postId || !Array.isArray(assets)) return;
+  const existing = Array.isArray(appState.postMedia) ? appState.postMedia : [];
+  const next = existing.filter(function(row) {
+    return String(row.post_id || row.postId || "") !== postId;
+  });
+  assets.forEach(function(asset, index) {
+    const mediaAssetId = getMediaAssetId(asset);
+    if (!mediaAssetId) return;
+    next.push({
+      post_id: postId,
+      postId: postId,
+      media_asset_id: mediaAssetId,
+      mediaAssetId: mediaAssetId,
+      sort_order: index,
+      sortOrder: index
+    });
+  });
+  appState.postMedia = next;
+  appState.post_media = next;
+}
+
 function applyCurrentCarouselOrderToModalPost() {
   const order = getCurrentCarouselOrderPayload();
   currentModalCarouselAssets = order.assets;
@@ -16625,7 +16652,37 @@ function applyCurrentCarouselOrderToModalPost() {
       mediaId: order.ids[0] || ""
     }));
   }
+  const postId = String(
+    currentEditingPostId ||
+    getCanonicalPostId(window.__currentModalPostData || {}) ||
+    ""
+  ).trim();
+  if (postId) {
+    upsertLocalPostMediaLinks(postId, order.assets);
+  }
   if (modalMediaStatus) modalMediaStatus.textContent = order.assets.length ? `${order.assets.length >= 2 ? `Carousel · ${order.assets.length} assets` : renderPostMediaTypeBadge(window.__currentModalPostData || {})} linked` : "No media linked";
+}
+
+async function attachCurrentCarouselToSupabasePost() {
+  if (!isSupabaseMediaEnabled()) return { ok: true, skipped: true };
+  const postId = String(
+    currentEditingPostId ||
+    getCanonicalPostId(window.__currentModalPostData || {}) ||
+    ""
+  ).trim();
+  const assets = (currentModalCarouselAssets || []).filter(function(asset) {
+    return !!getMediaAssetId(asset);
+  });
+  const ids = assets.map(function(asset) { return getMediaAssetId(asset); }).filter(Boolean);
+  if (!postId || !ids.length) return { ok: true, skipped: true };
+  return callSupabaseEdgeFunction("media-index", {
+    action: "attach_to_post",
+    post_id: postId,
+    media_asset_ids: ids,
+    ordered_media_asset_ids: ids,
+    workspace_id: getWorkspaceRequestMetadata().workspace_id,
+    workspace_slug: getCurrentWorkspaceSlug()
+  });
 }
 
 async function saveCurrentCarouselOrderToSupabase() {
@@ -16640,7 +16697,7 @@ async function saveCurrentCarouselOrderToSupabase() {
     console.warn("[carousel] no real Supabase media ids; skipping sync");
     return;
   }
-  await attachMediaAssetsToPost(assets, postId, 0);
+  await attachCurrentCarouselToSupabasePost();
   const result = await reorderPostMediaPreservingLocal(postId, ids, ids);
   if (!result?.preservedLocal) {
     applyOrderedAttachedMediaResult(postId, result);
@@ -16897,6 +16954,7 @@ function attachMediaToCurrentPost(assetId) {
     currentModalCarouselAssets = [...currentModalCarouselAssets, normalized];
   }
   applyCurrentCarouselOrderToModalPost();
+  persistLocalState();
   if (modalMediaStatus) modalMediaStatus.textContent = `${getMediaTitle(normalized)} attached`;
   renderModalCarouselPreview();
   renderModalExistingMediaPicker();
