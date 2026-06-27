@@ -5633,6 +5633,9 @@
   </div>
 </div>
 <script>
+window.STELLARSYNC_BUILD = "2026-06-27-save-hardening-v3";
+console.log("[build]", window.STELLARSYNC_BUILD);
+
 const APP_CONFIG = {
   APP_SCRIPT_URL: "",
   ENABLE_REMOTE_SYNC: true,
@@ -6888,15 +6891,7 @@ async function callAppsScript(action, payloadOrParams = {}, method = "GET", requ
     options.headers = { "Content-Type": "text/plain;charset=utf-8" };
     options.body = JSON.stringify({ action, route: action, payload, ...payload });
   }
-  let response;
-  if (requestOptions.noTimeout) {
-    response = await fetch(url, options);
-  } else {
-    const controller = new AbortController();
-    const fetchTimeout = setTimeout(() => controller.abort(), requestOptions.timeoutMs || 30000);
-    options.signal = controller.signal;
-    response = await fetch(url, options).finally(() => clearTimeout(fetchTimeout));
-  }
+  const response = await fetch(url, options);
   const rawText = await response.text().catch(() => "");
   const preview = String(rawText || "").slice(0, 160);
   if (STELLARSYNC_DEBUG) {
