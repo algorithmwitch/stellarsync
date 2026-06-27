@@ -8112,17 +8112,44 @@ function getExplicitMediaTitle(asset) {
   return values.find((value) => !isUntitledArtifact(value, "media")) || "";
 }
 
+function isSyntheticRowPostId(value) {
+  return /^row_\d+$/i.test(String(value || "").trim());
+}
+
 function getLinkedPostForMedia(asset = {}) {
+  if (!asset) return null;
   if (asset.linkedPost) return asset.linkedPost;
-  const linkedId = String(asset.postId || asset.post_id || asset.linkedPostId || asset.linked_post_id || "").trim();
-  if (!linkedId) return null;
-  return (appState.posts || []).find((post) => getPostIdentityValues(post).includes(linkedId)) || null;
+
+  const assetId = getMediaAssetId(asset);
+
+  // Real source of truth: post_media junction table.
+  if (assetId) {
+    const row = (appState.postMedia || appState.post_media || []).find((r) => {
+      return String(r.media_asset_id || r.mediaAssetId || "").trim() === assetId;
+    });
+
+    if (row) {
+      const postId = String(row.post_id || row.postId || "").trim();
+      if (postId) {
+        return (appState.posts || []).find((post) => getPostIdentityValues(post).includes(postId)) || null;
+      }
+    }
+  }
+
+  // Only trust explicit linked_post_id. Do not trust row_ fallback IDs from MEDIA.
+  const linkedId = String(asset.linkedPostId || asset.linked_post_id || "").trim();
+  if (!linkedId || isSyntheticRowPostId(linkedId)) return null;
+
+  return (appState.posts || []).find((post) => {
+    return String(post.post_id || post.postId || post.id || "").trim() === linkedId;
+  }) || null;
 }
 
 function getMediaPostContext(media) {
   if (!media || typeof media !== "object") return null;
-  var postId = String(media.post_id || media.postId || media.linked_post_id || media.linkedPostId || "").trim();
-  if (postId) {
+  var postId = String(media.linked_post_id || media.linkedPostId || "").trim();
+  if (isSyntheticRowPostId(postId)) postId = "";
+    if (postId) {
     var found = (appState.posts || []).find(function(p) { return getPostIdentityValues(p).includes(postId) || String(p.id || "").trim() === postId || String(p.post_id || "").trim() === postId; });
     if (found) return found;
   }
@@ -9306,7 +9333,8 @@ function getAttachedMediaForPost(post, mediaItems) {
     addCandidate(asset, { sort_order: index, linked_post_id: postId });
   });
   var linked = (mediaItems || []).filter(function(asset) {
-    var lid = String(asset.linkedPostId || asset.linked_post_id || asset.postId || asset.post_id || "").trim();
+    var lid = String(asset.linkedPostId || asset.linked_post_id || "").trim();
+if (isSyntheticRowPostId(lid)) lid = "";
     return lid && postIds.has(lid);
   }).sort(function(a, b) {
     var aSort = Number(a.sort_order || a.sortOrder || 0) || 0;
@@ -24868,7 +24896,7 @@ function setupSaveHandler() {
     savePostInFlight = false;
     saveButton.disabled = false;
     saveButton.innerHTML = originalSaveButtonHtml;
-    
+
     closeModal();
     showToast("Saved locally", "Backend sync will continue in the background.", "ph-check", "text-[#00ffaa]");
     if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
