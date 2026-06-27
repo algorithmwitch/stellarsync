@@ -22618,23 +22618,33 @@ function setupModalMediaUpload() {
         "";
       const uploadedAssets = [];
       for (const file of files) {
-        const base64Data = await fileToBase64(file);
-        const result = await apiPost("uploadMedia", {
-          fileName: file.name,
-          mimeType: file.type,
-          base64Data,
-          assetBadge: file.type.startsWith("video/")
-            ? "Reel"
-            : file.type.startsWith("image/") && isCarousel
-              ? "Carousel"
-              : "Image",
-          assetMeta: "",
-          linkedPostId,
-          campaign: getCurrentModalCampaignLabel()
-        });
-        const asset = result?.asset || result?.data || result;
-        upsertMediaAssetIntoAppState(asset);
-        uploadedAssets.push(normalizeRemoteMedia(asset));
+        let asset;
+        if (isSupabaseMediaEnabled()) {
+          asset = await uploadMediaToSupabaseStorage(file, {
+            postId: linkedPostId,
+            campaign: getCurrentModalCampaignLabel(),
+            title: file.name,
+            altText: ""
+          });
+        } else {
+          const base64Data = await fileToBase64(file);
+          const result = await apiPost("uploadMedia", {
+            fileName: file.name,
+            mimeType: file.type,
+            base64Data,
+            assetBadge: file.type.startsWith("video/")
+              ? "Reel"
+              : file.type.startsWith("image/") && isCarousel
+                ? "Carousel"
+                : "Image",
+            assetMeta: "",
+            linkedPostId,
+            campaign: getCurrentModalCampaignLabel()
+          });
+          asset = result?.asset || result?.data || result;
+        }
+        const normalized = upsertMediaAssetIntoAppState(asset);
+        uploadedAssets.push(normalizeRemoteMedia(normalized));
       }
       if (!uploadedAssets.length) return;
 
@@ -22646,6 +22656,12 @@ function setupModalMediaUpload() {
       });
       currentModalAsset = currentModalCarouselAssets[0] || uploadedAssets[0] || null;
       applyCurrentCarouselOrderToModalPost();
+      await attachCurrentCarouselToSupabasePost().catch((err) => {
+        console.warn("[modal-media-upload] attach skipped", err?.message || err);
+      });
+      saveCurrentCarouselOrderToSupabase?.().catch((err) => {
+        console.warn("[modal-media-upload] carousel order sync skipped", err?.message || err);
+      });
       renderModalCarouselPreview();
 
       const linkedCount = currentModalCarouselAssets.length;
