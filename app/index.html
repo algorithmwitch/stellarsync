@@ -12120,22 +12120,34 @@ async function saveNoteFromModal() {
     sourceLabel: deriveSourceLabel(sourceUrl)
   };
 
+  if (shouldUseSheetsAuthority()) {
+    appState.notes.unshift(localItem);
+    persistLocalState();
+    renderNotes();
+    try {
+      showToast("Saving note", "Saving note to Google Sheets...", "ph-table", "text-[#c77dff]");
+      const result = await apiSaveNote(localItem);
+      await refreshSheetsTabsQuietly(["NOTES"]);
+      setSheetsAuthorityStatus();
+      closeNoteModal?.();
+      renderNotes?.();
+      rerenderAll?.();
+      showToast("Saved", "Note saved to Google Sheets.", "ph-check", "text-[#00ffaa]");
+      return result;
+    } catch (err) {
+      console.error("[sheets-authority] note save failed", err);
+      showToast("Sheets save failed", err?.message || "Note was not saved to Sheets.", "ph-warning", "text-yellow-400");
+      return;
+    }
+  }
+
   appState.notes.unshift(localItem);
   persistLocalState();
   renderNotes();
   closeNoteModal();
   showToast("Saved", "Note saved locally.", "ph-check", "text-[#00ffaa]");
 
-  if (shouldUseSheetsAuthority()) {
-    try {
-      await apiSaveNote(localItem);
-      await refreshSheetsTabsQuietly(["NOTES"]);
-      showToast("Saved", "Note saved to Google Sheets.", "ph-check", "text-[#00ffaa]");
-    } catch (err) {
-      console.error("[sheets-authority] note save failed", err);
-      showToast("Sheets save failed", err?.message || "Note was only saved locally.", "ph-warning", "text-yellow-400");
-    }
-  } else if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
+  if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
     try {
       await apiSaveNote(localItem);
     } catch (err) {
@@ -12233,22 +12245,38 @@ async function saveInspoFromModal() {
     archivedAt: ""
   };
 
+  if (shouldUseSheetsAuthority()) {
+    appState.inspo.unshift(localItem);
+    persistLocalState();
+    renderInspo();
+    try {
+      showToast("Saving inspo", "Saving inspo to Google Sheets...", "ph-table", "text-[#c77dff]");
+      const result = await apiSaveInspo({
+        ...payload,
+        id: localItem.id,
+        inspoId: localItem.id
+      });
+      await refreshSheetsTabsQuietly(["INSPO"]);
+      setSheetsAuthorityStatus();
+      closeInspoModal?.();
+      renderInspo?.();
+      rerenderAll?.();
+      showToast("Saved", "Inspo saved to Google Sheets.", "ph-check", "text-[#00ffaa]");
+      return result;
+    } catch (err) {
+      console.error("[sheets-authority] inspo save failed", err);
+      showToast("Sheets save failed", err?.message || "Inspo was not saved to Sheets.", "ph-warning", "text-yellow-400");
+      return;
+    }
+  }
+
   appState.inspo.unshift(localItem);
   persistLocalState();
   renderInspo();
   closeInspoModal();
   showToast("Saved", "Inspiration saved to vault.", "ph-check", "text-[#00ffaa]");
 
-  if (shouldUseSheetsAuthority()) {
-    try {
-      await apiSaveInspo({ ...payload, id: localItem.id, inspoId: localItem.id });
-      await refreshSheetsTabsQuietly(["INSPO"]);
-      showToast("Saved", "Inspo saved to Google Sheets.", "ph-check", "text-[#00ffaa]");
-    } catch (err) {
-      console.error("[sheets-authority] inspo save failed", err);
-      showToast("Sheets save failed", err?.message || "Inspo was only saved locally.", "ph-warning", "text-yellow-400");
-    }
-  } else if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
+  if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
     try {
       await apiSaveInspo(payload);
     } catch (err) {
@@ -25073,6 +25101,20 @@ function showPostSaveErrorBanner(err, payload = {}) {
   if (postSaveErrorDetails) postSaveErrorDetails.textContent = buildSaveDiagnosticsDetails(err, payload);
 }
 
+function setSheetsAuthorityStatus(message) {
+  const text = message || `Saved to Google Sheets at ${new Date().toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit"
+  })}`;
+  console.log("[sheets-authority] status", text);
+  const el =
+    document.getElementById("workspace-sync-status") ||
+    document.getElementById("data-sync-status") ||
+    document.getElementById("connection-sync-status");
+  if (el) el.textContent = text;
+  return text;
+}
+
 function upsertSavedPostIntoAppState(saveResult, fallbackPayload = {}) {
   const rawPost = saveResult?.post || saveResult?.savedPost || fallbackPayload;
   const returnedPostId = getCanonicalPostId(rawPost || {}) || String(saveResult?.savedPostId || saveResult?.postId || "").trim();
@@ -25122,24 +25164,51 @@ async function savePostToSheetsAuthority(post) {
   if (!apiUrl) {
     throw new Error("Google Sheets Apps Script URL is not configured.");
   }
-  showToast("Saving to Sheets", "Updating Google Sheets source of truth...", "ph-table", "text-[#c77dff]");
-  const result = await withTimeout(
-    apiPost("savePost", {
+  function buildSheetsPostPayload(post) {
+    const postId = getCanonicalPostId(post);
+    const payload = {
       ...post,
       post_id: postId,
       postId,
       stellarsync_post_id: postId,
       workspace_id: getCurrentWorkspaceSlug?.() || "gpe"
-    }),
-    45000,
-    "Google Sheets save timed out"
-  );
-  const savedPost = result?.post || result?.data || result || post;
-  upsertLocalPostFromAuthority(savedPost);
-  persistLocalState();
-  rerenderAll();
-  showToast("Saved to Sheets", "Google Sheets updated.", "ph-check", "text-[#00ffaa]");
-  return savedPost;
+    };
+    // Keep Apps Script savePost limited to lightweight post fields.
+    delete payload.file;
+    delete payload.files;
+    delete payload.base64Data;
+    delete payload.blob;
+    delete payload.mediaBlob;
+    delete payload.pendingUploads;
+    delete payload.pendingMedia;
+    delete payload.uploadQueue;
+    delete payload.attachedMediaObjects;
+    if (Array.isArray(payload.media_ids)) {
+      payload.media_ids = payload.media_ids.map(String).filter(Boolean).join(",");
+    }
+    return payload;
+  }
+  showToast("Saving to Sheets", "Updating Google Sheets source of truth...", "ph-table", "text-[#c77dff]");
+  try {
+    const result = await withTimeout(
+      apiPost("savePost", buildSheetsPostPayload(post)),
+      120000,
+      "Google Sheets savePost timed out after 120s"
+    );
+    const savedPost = result?.post || result?.data || result || post;
+    upsertLocalPostFromAuthority(savedPost);
+    persistLocalState();
+    rerenderAll();
+    showToast("Saved to Sheets", "Google Sheets updated.", "ph-check", "text-[#00ffaa]");
+    return savedPost;
+  } catch (err) {
+    if (String(err?.message || err).includes("aborted")) {
+      throw new Error(
+        "Google Sheets save was aborted by the frontend timeout. The upload may have succeeded, but the post row did not confirm. Try Save again; media will not be re-uploaded."
+      );
+    }
+    throw err;
+  }
 }
 
 function upsertLocalPostFromAuthority(post) {
@@ -25470,13 +25539,14 @@ function setupSaveHandler() {
       });
 	    }
 	    persistLocalState();
-	    if (shouldUseSheetsAuthority()) {
-	      try {
-	        const authorityPost = await savePostToSheetsAuthority(payload);
-	        upsertLocalPostFromAuthority(authorityPost);
-	        await refreshSheetsTabsQuietly(["POSTS", "NOTES", "INSPO"]);
-	        clearTimeout(saveTimeoutId);
-	        savePostInFlight = false;
+		    if (shouldUseSheetsAuthority()) {
+		      try {
+		        const authorityPost = await savePostToSheetsAuthority(payload);
+		        upsertLocalPostFromAuthority(authorityPost);
+		        await refreshSheetsTabsQuietly(["POSTS"]);
+		        setSheetsAuthorityStatus();
+		        clearTimeout(saveTimeoutId);
+		        savePostInFlight = false;
 	        saveButton.disabled = false;
 	        saveButton.innerHTML = originalSaveButtonHtml;
 	        closeModal();
