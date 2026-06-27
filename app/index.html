@@ -9942,17 +9942,34 @@ function setModalTargetPlatforms(platforms) {
 }
 
 function getMediaPreviewUrl(asset = {}) {
-  return String(asset.fileUrl || asset.file_url || asset.mediaUrl || asset.media_url || asset.thumbnailUrl || asset.thumbnail_url || asset.sourceUrl || asset.source_url || asset.url || "").trim();
+  return String(asset.fileUrl || asset.file_url || asset.mediaUrl || asset.media_url || asset.thumbnailUrl || asset.thumbnail_url || asset.signedUrl || asset.signed_url || asset.sourceUrl || asset.source_url || asset.url || "").trim();
 }
 
 function isImageMediaAsset(asset = {}) {
   return inferMediaKindFromAsset(asset) === "image";
 }
 
+function getCarouselCoverUrl(assetOrGroup = {}) {
+  const slides = []
+    .concat(Array.isArray(assetOrGroup?.slides) ? assetOrGroup.slides : [])
+    .concat(Array.isArray(assetOrGroup?.carouselSlides) ? assetOrGroup.carouselSlides : [])
+    .concat(Array.isArray(assetOrGroup?.items) ? assetOrGroup.items : [])
+    .concat(Array.isArray(assetOrGroup?.assets) ? assetOrGroup.assets : [])
+    .filter((item) => item && typeof item === "object");
+  const firstSlide = slides.find((slide) => getMediaPreviewUrl(slide));
+  return getMediaPreviewUrl(firstSlide || assetOrGroup);
+}
+
 function getCarouselCoverAsset(source = {}) {
-  const assets = Array.isArray(source)
+  const assets = (Array.isArray(source)
     ? source
-    : getAttachedMediaForPost(source).filter((asset) => asset && typeof asset === "object");
+    : []
+      .concat(Array.isArray(source?.slides) ? source.slides : [])
+      .concat(Array.isArray(source?.carouselSlides) ? source.carouselSlides : [])
+      .concat(Array.isArray(source?.items) ? source.items : [])
+      .concat(Array.isArray(source?.assets) ? source.assets : [])
+      .concat(getAttachedMediaForPost(source)))
+    .filter((asset) => asset && typeof asset === "object");
   if (!assets.length) return null;
   const first = assets[0];
   if (isImageMediaAsset(first) && getMediaPreviewUrl(first)) {
@@ -17278,7 +17295,10 @@ async function commitPendingUploads() {
         appState.post_media = mediaResult.postMedia;
       }
     } else {
-      await refreshMediaFromRemote();
+      console.log("[media] remote refresh skipped after confirmed upload", {
+        count: validItems.length,
+        reason: "confirmed_assets_already_upserted"
+      });
     }
     persistLocalState();
     closeUploadStagingModal();
@@ -22165,7 +22185,7 @@ async function saveSocialCardToMedia() {
           postId: "",
           altText: state.title || deriveSourceLabel(state.sourceUrl)
         });
-        const result = await apiPost("saveMediaLink", {
+        const result = await apiSaveMediaLink({
           sourceUrl: supabaseAsset.media_url,
           assetName: supabaseAsset.media_filename,
           assetType: supabaseAsset.media_type,
@@ -22196,7 +22216,7 @@ async function saveSocialCardToMedia() {
         savedAsset = result?.asset || null;
       }
     } else {
-      const result = await apiPost("saveMediaLink", {
+      const result = await apiSaveMediaLink({
         sourceUrl: state.imageUrl,
         assetName: state.title || deriveSourceLabel(state.sourceUrl),
         assetType: "image",
@@ -22227,7 +22247,7 @@ async function saveMediaLinkFromModal() {
   try {
     showToast("Saving link", "Saving linked media asset...", "ph-link-simple", "text-[#c77dff]");
 
-    const result = await apiPost("saveMediaLink", {
+    const result = await apiSaveMediaLink({
       sourceUrl,
       assetName: String(mediaLinkNameInput?.value || "").trim(),
       assetType: String(mediaLinkTypeInput?.value || "image").trim().toLowerCase(),
@@ -22627,6 +22647,8 @@ function buildMediaVaultItems() {
         campaign: post.campaignName || "",
         sourceUrl: post.sourceUrl || "",
         assets: postAssets.map(asset => normalizeRemoteMedia(asset)),
+        slides: postAssets.map(asset => normalizeRemoteMedia(asset)),
+        carouselSlides: postAssets.map(asset => normalizeRemoteMedia(asset)),
         linkedPost: post
       });
     }
@@ -22838,11 +22860,19 @@ function renderMediaVaultCard(item) {
   const isSelected = selectedMediaAssetIds.has(itemKey);
   const isGroup = item.kind === "group";
   const type = inferMediaKindFromAsset(item);
-  const previewUrl = isGroup
-    ? item.assets?.[0]?.fileUrl || item.assets?.[0]?.sourceUrl || ""
-    : item.fileUrl || item.sourceUrl || "";
-  const hasImagePreview = !!previewUrl && type === "image";
-  const hasVideoPreview = !!previewUrl && type === "video";
+  const linkedPost = item.linkedPost || (appState.posts || []).find(post => post.id === item.postId) || getMediaPostContext(item);
+  const linkedPostAssets = linkedPost ? getAttachedMediaForPost(linkedPost).slice(0, 20).map((asset) => normalizeRemoteMedia(asset)) : [];
+  const isCarouselPreview = isGroup || (linkedPost && linkedPostAssets.length > 1) || type === "carousel";
+  const previewSource = isCarouselPreview
+    ? {
+        ...item,
+        assets: isGroup ? (item.assets || []) : linkedPostAssets,
+        slides: item.slides || item.carouselSlides || (isGroup ? (item.assets || []) : linkedPostAssets)
+      }
+    : item;
+  const previewUrl = isCarouselPreview ? getCarouselCoverUrl(previewSource) : getMediaPreviewUrl(item);
+  const hasImagePreview = !!previewUrl && (type === "image" || isCarouselPreview);
+  const hasVideoPreview = !!previewUrl && type === "video" && !isCarouselPreview;
   const icon =
     type === "video" ? "ph-video-camera" :
     type === "document" ? "ph-file-text" :
@@ -22850,10 +22880,7 @@ function renderMediaVaultCard(item) {
     type === "article" ? "ph-article" :
     "ph-image";
 
-  const linkedPost = item.linkedPost || (appState.posts || []).find(post => post.id === item.postId) || getMediaPostContext(item);
   const linkedStatus = getMediaLinkedStatus(item);
-  const linkedPostAssets = linkedPost ? getAttachedMediaForPost(linkedPost).slice(0, 20).map((asset) => normalizeRemoteMedia(asset)) : [];
-  const isCarouselPreview = isGroup || (linkedPost && linkedPostAssets.length > 1) || type === "carousel";
   const campaignLabel = linkedPost?.campaignName
     ? formatCampaignDisplayName(linkedPost.campaignName)
     : item.campaign
@@ -22884,14 +22911,14 @@ function renderMediaVaultCard(item) {
     }
   }
   var subtitle = getMediaSubtitle(item, linkedPost, carouselIdx, carouselTotal);
-  const assetUrl = isGroup ? (item.sourceUrl || linkedPost?.sourceUrl || "") : (item.fileUrl || item.sourceUrl || "");
-  const overlayLabel = item.fileUrl ? "Open Asset" : item.sourceUrl ? "Open Link" : "View";
+  const assetUrl = isGroup ? (getCarouselCoverUrl(item) || item.sourceUrl || linkedPost?.sourceUrl || "") : (getMediaPreviewUrl(item) || item.sourceUrl || "");
   const coverAsset = isCarouselPreview ? getCarouselCoverAsset(isGroup ? (item.assets || []) : linkedPostAssets.length ? linkedPostAssets : linkedPost || item) : null;
-  const coverUrl = coverAsset ? getMediaPreviewUrl(coverAsset) : "";
+  const coverUrl = coverAsset ? getMediaPreviewUrl(coverAsset) : previewUrl;
+  const overlayLabel = coverUrl || getMediaPreviewUrl(item) ? "Open Asset" : item.sourceUrl ? "Open Link" : "View";
   const previewBlock = isCarouselPreview
     ? `
       <div class="w-full">
-        <div class="w-full aspect-square rounded-none bg-[#120c1d] border border-white/5 overflow-hidden">${coverUrl ? `<img src="${escapeHtml(coverUrl)}" alt="${escapeHtml(getMediaDisplayTitle(coverAsset, linkedPost, displayTitle))}" class="w-full h-full object-cover" loading="lazy" onerror="handleBrokenMediaPreview(this)">` : `<div class="w-full h-full flex items-center justify-center text-gray-500"><i class="ph-bold ph-images text-4xl"></i></div>`}</div>
+        <div class="w-full aspect-square rounded-none bg-[#120c1d] border border-white/5 overflow-hidden">${coverUrl ? `<img src="${escapeHtml(coverUrl)}" alt="${escapeHtml(getMediaDisplayTitle(coverAsset || item, linkedPost, displayTitle))}" class="w-full h-full object-cover" loading="lazy" onerror="handleBrokenMediaPreview(this)">` : `<div class="w-full h-full flex items-center justify-center text-gray-500"><i class="ph-bold ph-images text-4xl"></i></div>`}</div>
         ${renderMediaGalleryStrip(isGroup ? (item.assets || []).slice(0, 20) : linkedPostAssets, { limit: 20 })}
       </div>
     `
@@ -31444,9 +31471,13 @@ async function apiSaveAIDraft(payload) {
   var backendMode = getActiveWorkspaceBackendMode();
   if (backendMode.mode === "supabase_native") {
     var result = await saveSupabaseAIDraft(payload);
-    return { ok: true, draft: result.aiDraft };
+    return { ok: true, success: true, draft: result.aiDraft };
   }
-  return apiPost("saveAIDraft", stripFormulaBackedAIDraftFields(payload));
+  const result = await apiPost("saveAIDraftMinimalDebug", stripFormulaBackedAIDraftFields(payload));
+  if (result?.ok === false || result?.success === false || !result?.draft) {
+    throw new Error(result?.error || "saveAIDraft did not confirm.");
+  }
+  return result;
 }
 
 async function apiCreatePostFromAIDraft(aiDraftId, post = {}) {
@@ -33107,7 +33138,15 @@ async function saveCurrentAIDraft(options = {}) {
   const runSave = async () => {
     if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
       const result = await apiSaveAIDraft({ ...payload, aiDraftId: currentAIDraftId });
-      currentAIDraftId = result?.draft?.aiDraftId || currentAIDraftId;
+      const confirmedDraft = result?.draft ? normalizeRemoteAIDraft(result.draft) : null;
+      currentAIDraftId = confirmedDraft?.aiDraftId || result?.draft?.aiDraftId || currentAIDraftId;
+      if (confirmedDraft) {
+        const confirmedIndex = (appState.aiDrafts || []).findIndex((item) => item.aiDraftId === currentAIDraftId);
+        if (confirmedIndex >= 0) appState.aiDrafts[confirmedIndex] = confirmedDraft;
+        else appState.aiDrafts.unshift(confirmedDraft);
+        persistLocalState();
+        renderAIDraftList();
+      }
       // Do not rehydrate the whole workspace after saving an AI draft.
       // This was causing silent aborts/timeouts and possible empty overwrite behavior.
       return result;
@@ -33923,7 +33962,11 @@ async function persistLinkedAssetForPost(asset) {
 }
 
 async function apiSaveMediaLink(payload) {
-  const result = await apiPost("saveMediaLink", payload);
+  const backendMode = getActiveWorkspaceBackendMode();
+  const result = await apiPost(
+    backendMode.mode === "supabase_native" ? "saveMediaLink" : "saveMediaFast",
+    payload
+  );
   if (result?.ok === false || result?.success === false) {
     throw new Error(result?.error || "saveMediaLink did not confirm.");
   }
@@ -33960,7 +34003,7 @@ async function apiSaveNote(note) {
       note: result.note || result.savedNote || result
     };
   }
-  const result = await apiPost("saveNote", note);
+  const result = await apiPost("saveNoteFast", note);
   if (result?.ok === false || result?.success === false) {
     throw new Error(result?.error || "saveNote did not confirm.");
   }
@@ -34536,7 +34579,7 @@ async function apiSaveInspo(inspo) {
       inspo: result.inspo || result.savedInspo || result
     };
   }
-  const result = await apiPost("saveInspo", inspo);
+  const result = await apiPost("saveInspoFast", inspo);
   if (result?.ok === false || result?.success === false) {
     throw new Error(result?.error || "saveInspo did not confirm.");
   }
