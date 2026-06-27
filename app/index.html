@@ -16916,6 +16916,42 @@ function getSelectedCarouselDetachAssets() {
   return (currentModalCarouselAssets || []).filter(asset => keys.has(getDetachAssetId(asset)));
 }
 
+function removeDetachedMediaFromLocalPost(postId, detachedIds = []) {
+  const targetPostId = String(postId || "").trim();
+  const ids = new Set((detachedIds || []).map(String).filter(Boolean));
+  if (!targetPostId || !ids.size) return;
+  appState.postMedia = (appState.postMedia || appState.post_media || []).filter((row) => {
+    const rowPostId = String(row.post_id || row.postId || "").trim();
+    const rowAssetId = getMediaAssetId(row);
+    return !(rowPostId === targetPostId && ids.has(rowAssetId));
+  });
+  appState.post_media = appState.postMedia;
+  appState.posts = (appState.posts || []).map((post) => {
+    if (!getPostIdentityValues(post).includes(targetPostId)) return post;
+    const clean = (value) => splitMediaIdList(value).filter((id) => !ids.has(String(id)));
+    const next = {
+      ...post,
+      media_ids: clean(post.media_ids || post.mediaIds),
+      mediaIds: clean(post.media_ids || post.mediaIds),
+      carousel_asset_ids: clean(post.carousel_asset_ids || post.carouselAssetIds),
+      carouselAssetIds: clean(post.carousel_asset_ids || post.carouselAssetIds),
+      carouselAssets: (post.carouselAssets || []).filter((asset) => !ids.has(getMediaAssetId(asset))),
+      carousel_assets: (post.carousel_assets || []).filter((asset) => !ids.has(getMediaAssetId(asset)))
+    };
+    if (ids.has(String(next.media_id || next.mediaId || ""))) {
+      next.media_id = next.media_ids[0] || "";
+      next.mediaId = next.media_id;
+    }
+    return applyDerivedPostMediaFormat(next, appState.media);
+  });
+  if (String(currentEditingPostId || "") === targetPostId) {
+    currentModalCarouselAssets = (currentModalCarouselAssets || []).filter((asset) => !ids.has(getMediaAssetId(asset)));
+    currentModalAsset = currentModalCarouselAssets[0] || null;
+    window.__currentModalPostData = findPostByAnyId(targetPostId) || window.__currentModalPostData;
+  }
+  persistLocalState();
+}
+
 async function detachSelectedCarouselMedia() {
   const postId = String(currentEditingPostId || getCanonicalPostId(window.__currentModalPostData || {}) || "").trim();
   const selected = getSelectedCarouselDetachAssets();
@@ -16925,16 +16961,14 @@ async function detachSelectedCarouselMedia() {
   console.log("[detach-ui] detach payload", { workspace_id: getWorkspaceRequestMetadata().workspace_id, post_id: postId, media_asset_ids: mediaAssetIds });
   try {
     await detachMediaAssetsFromPost(selected, postId);
-    currentModalCarouselAssets = (currentModalCarouselAssets || [])
-      .filter((asset) => !mediaAssetIds.includes(getDetachAssetId(asset)));
+    removeDetachedMediaFromLocalPost(postId, mediaAssetIds);
     window.mediaDetachSelectionMode = false;
     modalCarouselDetachSelectMode = false;
     selectedCarouselDetachAssetIds.clear();
-    await refreshMediaFromRemote();
     renderModalCarouselPreview();
-    renderMedia();
+    renderModalExistingMediaPicker();
     rerenderAll();
-    showToast("Detached", "Media removed from this post.", "ph-check", "text-[#00ffaa]");
+    showToast("Media detached", "Selected media was removed from this post.", "ph-check-circle", "text-green-400");
   } catch (err) {
     console.log("[media-match] detach error full object", {
       message: err?.message,
