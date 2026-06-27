@@ -31468,16 +31468,32 @@ function stripFormulaBackedAIDraftFields(payload = {}) {
 }
 
 async function apiSaveAIDraft(payload) {
-  var backendMode = getActiveWorkspaceBackendMode();
+  const backendMode = getActiveWorkspaceBackendMode();
   if (backendMode.mode === "supabase_native") {
-    var result = await saveSupabaseAIDraft(payload);
-    return { ok: true, success: true, draft: result.aiDraft };
+    const supabaseResult = await saveSupabaseAIDraft(payload);
+    return { ok: true, draft: supabaseResult.aiDraft };
   }
-  const result = await apiPost("saveAIDraftMinimalDebug", stripFormulaBackedAIDraftFields(payload));
-  if (result?.ok === false || result?.success === false || !result?.draft) {
-    throw new Error(result?.error || "saveAIDraft did not confirm.");
+  const sheetsResult = await apiPost(
+    "saveAIDraftMinimalDebug",
+    stripFormulaBackedAIDraftFields(payload),
+    { noTimeout: true }
+  );
+  const confirmedDraft =
+    sheetsResult?.draft ||
+    sheetsResult?.aiDraft ||
+    sheetsResult?.savedDraft ||
+    sheetsResult?.data?.draft ||
+    sheetsResult?.data?.aiDraft ||
+    sheetsResult?.data?.savedDraft;
+  if (!sheetsResult?.ok || !confirmedDraft) {
+    throw new Error(sheetsResult?.error || sheetsResult?.message || "AI draft save did not confirm.");
   }
-  return result;
+  return {
+    ok: true,
+    draft: confirmedDraft,
+    aiDraft: confirmedDraft,
+    savedDraft: confirmedDraft
+  };
 }
 
 async function apiCreatePostFromAIDraft(aiDraftId, post = {}) {
