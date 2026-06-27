@@ -6892,45 +6892,24 @@ async function callAppsScript(action, payloadOrParams = {}, method = "GET", requ
     options.body = JSON.stringify({ action, route: action, payload, ...payload });
   }
   const response = await fetch(url, options);
-  const rawText = await response.text().catch(() => "");
-  const preview = String(rawText || "").slice(0, 160);
-  if (STELLARSYNC_DEBUG) {
-    console.log("[apps-script]", {
-      action,
-      method: verb,
-      status: response.status,
-      contentType: response.headers.get("content-type") || "",
-      preview
-    });
-  }
-  if (/^\s*<!doctype/i.test(rawText) || /^\s*<html/i.test(rawText)) {
-    const err = new Error("Apps Script returned HTML instead of JSON");
-    err.action = action;
-    err.status = response.status;
-    err.responseText = preview;
-    err.backend = { ok: false, error: err.message, responseText: preview };
-    throw err;
-  }
-  let result = {};
+  const text = await response.text();
+  let data;
   try {
-    result = rawText ? JSON.parse(rawText) : {};
-  } catch (_) {
-    const err = new Error("Apps Script returned non-JSON response");
-    err.action = action;
-    err.status = response.status;
-    err.responseText = preview;
-    err.backend = { ok: false, error: err.message, responseText: preview };
-    throw err;
+    data = text ? JSON.parse(text) : {};
+  } catch (err) {
+    throw new Error(`Apps Script returned non-JSON: ${text.slice(0, 300)}`);
   }
-  if (!response.ok || result.ok === false) {
-    const err = new Error(result.error || `Request failed: ${response.status}`);
-    err.backend = result;
-    err.action = action;
-    err.status = response.status;
-    err.responseText = preview;
-    throw err;
-  }
-  return result;
+  console.log("[apps-script] response body", {
+    action,
+    status: response.status,
+    httpOk: response.ok,
+    data
+  });
+  return {
+    ...data,
+    status: response.status,
+    httpOk: response.ok
+  };
 }
 
 function isSupabaseMissingTableError(err) {
@@ -29496,8 +29475,16 @@ async function apiGet(action, params = {}) {
 
 async function apiPost(action, payload = {}, options = {}) {
   const result = await callAppsScript(action, payload || {}, "POST", options);
-  if (!result.ok) {
-    const err = new Error(result.error || "Unknown Apps Script error");
+  console.log("[apiPost] response", {
+    action,
+    status: result?.status,
+    ok: result?.ok,
+    success: result?.success,
+    error: result?.error,
+    result
+  });
+  if (result?.ok !== true || result?.success !== true) {
+    const err = new Error(result?.error || `Request failed ${result?.status || ""}`.trim());
     err.backend = result;
     err.action = action;
     throw err;
