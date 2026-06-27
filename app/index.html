@@ -23867,12 +23867,13 @@ function renderMediaPreviewContent(item, linkedAssets, previewUrl, type) {
     return `
       <div class="media-manage-tile ${index === 0 ? "border-[#c77dff]/50" : ""}"
         draggable="true"
+        data-media-asset-id="${escapeHtml(mediaAssetId)}"
         ondragstart="startMediaViewerAssetDrag(event, ${index})"
         ondragover="event.preventDefault()"
         ondrop="dropMediaViewerAsset(event, ${index})"
         ondragend="endMediaViewerAssetDrag()">
         <div class="media-manage-thumb">
-          ${modeEnabled ? `<input type="checkbox" class="media-select-box" ${checked ? "checked" : ""} onchange="toggleMediaViewerDetachSelection('${escapeHtml(mediaAssetId)}', this.checked)" aria-label="Select media to detach">` : ""}
+          ${modeEnabled ? `<input type="checkbox" class="media-select-box" ${checked ? "checked" : ""} onclick="consumeMediaViewerTileEvent(event)" onchange="toggleMediaViewerDetachSelection('${escapeHtml(mediaAssetId)}', this.checked)" aria-label="Select media to detach">` : ""}
           <span class="absolute top-2 left-2 z-10 w-6 h-6 rounded-full bg-[#181125]/90 border border-white/10 text-[10px] font-bold text-white flex items-center justify-center">${index + 1}</span>
           ${index === 0 ? `<span class="absolute top-2 right-2 z-10 px-2 py-1 rounded-full bg-[#231738]/95 border border-[#c77dff]/30 text-[8px] uppercase tracking-wider font-bold text-[#c77dff]">Cover</span>` : ""}
           ${thumbUrl ? (
@@ -23890,10 +23891,6 @@ function renderMediaPreviewContent(item, linkedAssets, previewUrl, type) {
             <span class="px-1.5 py-0.5 rounded bg-[#120c1d] border border-white/5 text-[8px] uppercase tracking-wider font-bold text-gray-300">${escapeHtml(getMediaFileTypeLabel(asset))}</span>
             <span class="text-[10px] text-gray-500 cursor-grab" title="Drag to reorder"><i class="ph-bold ph-dots-six-vertical"></i></span>
           </div>
-          ${mediaViewerReorderMode ? `<div class="grid grid-cols-2 gap-2 pt-1">
-            <button type="button" onclick="moveMediaViewerAsset(${index}, -1)" ${index === 0 ? "disabled" : ""} class="px-2 py-1.5 rounded-lg bg-[#120c1d] border border-white/5 text-[10px] font-bold text-white disabled:opacity-35">Move left</button>
-            <button type="button" onclick="moveMediaViewerAsset(${index}, 1)" ${index === total - 1 ? "disabled" : ""} class="px-2 py-1.5 rounded-lg bg-[#120c1d] border border-white/5 text-[10px] font-bold text-white disabled:opacity-35">Move right</button>
-          </div>` : ""}
         </div>
       </div>
     `;
@@ -23902,7 +23899,7 @@ function renderMediaPreviewContent(item, linkedAssets, previewUrl, type) {
     <div class="flex items-center justify-between gap-3 flex-wrap">
       <div>
         <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">${mediaViewerDetachMode ? "Detach Media" : "Manage Media Order"}</div>
-        <div class="text-xs text-gray-400 mt-1">${mediaViewerDetachMode ? "Choose assets to detach from this post." : `${total} attached asset${total === 1 ? "" : "s"} - drag tiles or use move buttons`}</div>
+        <div class="text-xs text-gray-400 mt-1">${mediaViewerDetachMode ? "Choose assets to detach from this post." : `${total} attached asset${total === 1 ? "" : "s"} - drag tiles to reorder`}</div>
       </div>
       <div class="flex items-center gap-2 flex-wrap">
         ${mediaViewerDetachMode ? `<span class="px-3 py-2 rounded-lg bg-[#231738] text-white border border-white/5 text-[10px] uppercase tracking-wider font-bold">${selectedCount} selected</span><button type="button" onclick="detachSelectedMediaViewerAssets()" ${selectedCount ? "" : "disabled"} class="px-3 py-2 rounded-lg bg-[#30121b] border border-red-400/20 text-[10px] uppercase tracking-wider font-bold text-red-200 disabled:opacity-40">Detach selected</button><button type="button" onclick="toggleMediaViewerDetachMode(false)" class="px-3 py-2 rounded-lg bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300">Cancel</button>` : ""}
@@ -23942,23 +23939,35 @@ function toggleMediaViewerReorderMode(forceValue) {
   openMediaAssetModal(currentMediaViewerItems[currentMediaViewerIndex] || currentMediaAssetDetail, { items: currentMediaViewerItems, openPosts: mediaPostsPanelOpen });
 }
 
+function consumeMediaViewerTileEvent(event) {
+  if (!event) return;
+  event.preventDefault();
+  event.stopPropagation();
+}
+
 function startMediaViewerAssetDrag(event, index) {
   mediaViewerDragIndex = index;
   console.log("[media-gallery] reorder mode", { dragStart: index });
-  try { event.dataTransfer.effectAllowed = "move"; } catch (_) {}
+  try {
+    event.stopPropagation();
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", String(index));
+  } catch (_) {}
 }
 
 function dropMediaViewerAsset(event, index) {
   event.preventDefault();
-  reorderMediaViewerAssets(mediaViewerDragIndex, index);
+  event.stopPropagation();
+  let fromIndex = mediaViewerDragIndex;
+  try {
+    const transferred = Number(event.dataTransfer.getData("text/plain"));
+    if (Number.isFinite(transferred)) fromIndex = transferred;
+  } catch (_) {}
+  reorderMediaViewerAssets(fromIndex, index);
 }
 
 function endMediaViewerAssetDrag() {
   mediaViewerDragIndex = null;
-}
-
-function moveMediaViewerAsset(index, delta) {
-  reorderMediaViewerAssets(index, index + delta);
 }
 
 function reorderMediaViewerAssets(fromIndex, toIndex) {
