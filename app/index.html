@@ -16536,11 +16536,11 @@ function syncModalMediaLayout(assetCount = 0) {
   const picker = document.getElementById("modal-existing-media-picker");
   const manager = document.getElementById("modal-carousel-manager");
   const upload = document.getElementById("modal-media-upload-trigger");
-  const count = Number(assetCount || 0);
-  const postType = String(postTypeSelect?.value || "").toLowerCase();
-  const shouldShowCarouselManager = count > 0 || postType === "carousel";
+  const postType = String(document.getElementById("modal-post-type")?.value || "").toLowerCase();
+  const count = Number(assetCount || currentModalCarouselAssets?.length || 0);
+  const showCarouselTools = postType === "carousel" || count >= 2;
+  if (manager) manager.classList.toggle("hidden", !showCarouselTools);
   if (picker) picker.classList.remove("hidden");
-  if (manager) manager.classList.toggle("hidden", !shouldShowCarouselManager);
   if (upload) upload.classList.remove("hidden");
 }
 
@@ -28629,13 +28629,22 @@ function renderInspo() {
             <span class="px-2.5 py-1 bg-[#120c1d] border border-white/5 rounded text-[10px] text-gray-300 font-semibold uppercase tracking-wider">
               ${escapeHtml(label)}
             </span>
-            <button
-              type="button"
-              onclick="inspoToPost('${escapeHtml(item.id)}')"
-              class="text-gray-500 hover:text-white transition-colors bg-[#120c1d] p-2 rounded-lg border border-white/5"
-              title="Turn into post">
-              <i class="ph-bold ph-paper-plane-tilt text-lg"></i>
-            </button>
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                onclick="deleteInspoById('${escapeHtml(item.inspoId || item.inspo_id || item.id)}')"
+                class="text-gray-500 hover:text-red-400 transition-colors bg-[#120c1d] p-2 rounded-lg border border-white/5"
+                title="Delete inspo">
+                <i class="ph-bold ph-trash text-lg"></i>
+              </button>
+              <button
+                type="button"
+                onclick="inspoToPost('${escapeHtml(item.id)}')"
+                class="text-gray-500 hover:text-white transition-colors bg-[#120c1d] p-2 rounded-lg border border-white/5"
+                title="Turn into post">
+                <i class="ph-bold ph-paper-plane-tilt text-lg"></i>
+              </button>
+            </div>
           </div>
 
           <h3 class="text-white text-base font-bold mb-2 wrap-safe" title="${escapeHtml(getInspoTitle(item))}">
@@ -28715,9 +28724,14 @@ function renderNotes() {
               <span class="px-2 py-1 rounded-full bg-[#120c1d] border border-white/5 text-gray-300 font-semibold">${escapeHtml(pillPillar)}</span>
             </div>
           </div>
-          <button type="button" onclick="noteToPost('${escapeHtml(item.noteId || item.id)}')" class="text-[#c77dff] hover:text-white transition-colors bg-[#120c1d] p-2 rounded-lg border border-white/5" title="Create post">
-            <i class="ph-bold ph-paper-plane-tilt text-lg"></i>
-          </button>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="deleteNoteById('${escapeHtml(item.noteId || item.note_id || item.id)}')" class="text-gray-500 hover:text-red-400 transition-colors bg-[#120c1d] p-2 rounded-lg border border-white/5" title="Delete note">
+              <i class="ph-bold ph-trash text-lg"></i>
+            </button>
+            <button type="button" onclick="noteToPost('${escapeHtml(item.noteId || item.id)}')" class="text-[#c77dff] hover:text-white transition-colors bg-[#120c1d] p-2 rounded-lg border border-white/5" title="Create post">
+              <i class="ph-bold ph-paper-plane-tilt text-lg"></i>
+            </button>
+          </div>
         </div>
         <div class="notes-card-body">
         <p class="text-gray-300 text-sm leading-relaxed wrap-safe mb-4">${escapeHtml(item.body || "No note body yet.")}</p>
@@ -28765,6 +28779,28 @@ function noteToPost(noteId) {
       : "Prefilled from note.";
   }
   showToast("Ready", "Post modal opened from note.", "ph-note-pencil", "text-[#00ffaa]");
+}
+
+async function deleteInspoById(inspoId) {
+  if (!inspoId) return;
+  if (!confirm("Delete this inspo item?")) return;
+  await apiDeleteInspo(inspoId);
+  appState.inspo = (appState.inspo || []).filter(function(item) {
+    return String(item.inspoId || item.inspo_id || item.id || "") !== String(inspoId);
+  });
+  persistLocalState();
+  renderInspo();
+}
+
+async function deleteNoteById(noteId) {
+  if (!noteId) return;
+  if (!confirm("Delete this note?")) return;
+  await apiDeleteNote(noteId);
+  appState.notes = (appState.notes || []).filter(function(item) {
+    return String(item.noteId || item.note_id || item.id || "") !== String(noteId);
+  });
+  persistLocalState();
+  renderNotes();
 }
 
 async function apiUpdateCampaign(campaign) {
@@ -34761,6 +34797,14 @@ async function apiDeletePost(postId) {
   return apiPost("deletePost", { postId });
 }
 
+async function apiDeleteInspo(inspoId) {
+  return apiPost("deleteInspo", { inspoId });
+}
+
+async function apiDeleteNote(noteId) {
+  return apiPost("deleteNote", { noteId });
+}
+
 async function apiDuplicatePost(postId) {
   const source = appState.posts.find(p => p.id === postId);
   if (!source) throw new Error("Missing source post for duplicate.");
@@ -35437,7 +35481,13 @@ window.navigateMediaViewer = navigateMediaViewer;
 window.toggleMediaPostsPanel = toggleMediaPostsPanel;
 window.attachSelectedMediaToPost = attachSelectedMediaToPost;
 window.copyCurrentMediaAssetUrl = copyCurrentMediaAssetUrl;
+window.openModalMediaVaultPanel = openModalMediaVaultPanel;
+window.closeModalMediaVaultPanel = closeModalMediaVaultPanel;
+window.attachMediaToCurrentPost = attachMediaToCurrentPost;
+window.detachMediaFromCurrentPost = detachMediaFromCurrentPost;
 window.selectExistingMediaForPost = selectExistingMediaForPost;
+window.deleteInspoById = deleteInspoById;
+window.deleteNoteById = deleteNoteById;
 window.closeModal = closeModal;
 window.switchView = switchView;
 window.openWorkspaceHub = openWorkspaceHub;
