@@ -17054,6 +17054,11 @@ async function commitPendingUploads() {
     updateToast(loadingToastId, "error", "Upload failed", err);
     throw err;
   } finally {
+    if (confirmUploadStagingBtn) {
+      confirmUploadStagingBtn.disabled = false;
+      confirmUploadStagingBtn.classList.remove("opacity-50", "cursor-not-allowed");
+      confirmUploadStagingBtn.textContent = "Upload";
+    }
     renderUploadStagingList();
   }
 }
@@ -17091,7 +17096,14 @@ function handleMediaUploadFileSelected(event) {
 
 function setupMediaUpload() {
   if (mediaUploadBtn && !mediaUploadBtn.dataset.bound) {
-    mediaUploadBtn.addEventListener("click", () => { console.log("[button] fired media-upload-btn"); openUploadStagingModal("vault"); });
+    mediaUploadBtn.addEventListener("click", () => {
+      console.log("[button] fired media-upload-btn");
+      openUploadStagingModal("vault");
+      setTimeout(() => {
+        const picker = document.getElementById("upload-staging-file-input") || mediaUploadInput;
+        picker?.click();
+      }, 50);
+    });
     mediaUploadBtn.dataset.bound = "true";
   }
 }
@@ -22090,9 +22102,15 @@ function setupModalMediaUpload() {
     event.preventDefault();
     event.stopPropagation();
     console.log("[button] fired modal-media-upload-trigger");
-    console.log("[post-upload] clicked");
-    openUploadStagingModal({ targetPostId: currentEditingPostId || getCanonicalPostId(window.__currentModalPostData || {}) || "", source: "post-modal" });
-    console.log("[post-upload] modal opened");
+    openUploadStagingModal({
+      target: "post",
+      source: "post-modal",
+      targetPostId: currentEditingPostId || getCanonicalPostId(window.__currentModalPostData || {}) || ""
+    });
+    setTimeout(() => {
+      const picker = document.getElementById("upload-staging-file-input") || modalMediaUploadInput;
+      picker?.click();
+    }, 50);
   });
 
   modalMediaUploadInput.setAttribute("multiple", "multiple");
@@ -25048,153 +25066,45 @@ function setupSaveHandler() {
     saveButton.innerHTML = originalSaveButtonHtml;
 
     closeModal();
-    showToast("Saved locally", "Backend sync will continue in the background.", "ph-check", "text-[#00ffaa]");
-    if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
-        try {
-            const wasEditingPost = !!currentEditingPostId;
-            const backendMode = getActiveWorkspaceBackendMode();
-            const isSupabase = backendMode.mode === "supabase_native";
-            console.log("[post-save] backend mode", backendMode.mode);
-            console.log("[post-save] payload", {
-                post_id: payload.post_id || payload.postId || payload.id || "",
-                workspace_id: payload.workspace_id || payload.workspaceId || "",
-                title: (payload.title || "").slice(0, 60),
-                status: payload.status,
-                platform: payload.platform,
-                campaign: (payload.campaignName || payload.campaign || "").slice(0, 40),
-                pillar: payload.pillar
-            });
-            let result;
-            if (noteIdToConvert && isSupabase) {
-                console.log("[post-save] step: Supabase create-from-note...");
-                result = await withTimeout(createSupabasePostFromNote(noteIdToConvert, payload), 15000, 'createSupabasePostFromNote timed out');
-            } else if (inspoIdToConvert && isSupabase) {
-                console.log("[post-save] step: Supabase create-from-inspo...");
-                result = await withTimeout(createSupabasePostFromInspo(inspoIdToConvert, payload), 15000, 'createSupabasePostFromInspo timed out');
-            } else if (noteIdToConvert) {
-                console.log("[post-save] step: Apps Script create-from-note...");
-                try {
-                    result = await withTimeout(apiCreatePostFromNote(noteIdToConvert, payload), 15000, 'apiCreatePostFromNote timed out');
-                } catch (noteErr) {
-                    console.warn("createPostFromNote failed, falling back to savePost", noteErr);
-                    result = await withTimeout(savePostForActiveBackend(payload), 15000, 'savePost (fallback) timed out');
-                }
-            } else if (backendMode.mode === "supabase_native") {
-                console.log("[post-save] step: remote save via Supabase...");
-                result = await withTimeout(apiSavePostToSupabase(payload), 15000, 'saveSupabasePost timed out');
-            } else if (backendMode.mode === "google_sheets_hybrid") {
-                console.log("[post-save] step: remote save via Apps Script...");
-                result = await withTimeout(apiSavePost(payload), 15000, 'savePost timed out');
-            } else {
-                console.log("[post-save] step: remote save via workspace backend...");
-                result = await withTimeout(savePostForActiveBackend(payload), 15000, 'savePost timed out');
-            }
-            console.log("[post-save] step: remote save completed", {
-                ok: !!result?.ok,
-                mode: backendMode.mode,
-                post_id: result?.post?.post_id || result?.postId || result?.savedPostId || ""
-            });
-
-            console.log("[post-save] step: media relation sync...");
-            const canonicalId = getCanonicalPostId(savedPost) || result?.post?.post_id || result?.postId || result?.savedPostId || payload.post_id || payload.postId || "";
-            withTimeout(syncSelectedMediaForSavedPost(canonicalId), 15000, 'syncSelectedMediaForSavedPost timed out')
-                .then(() => console.log("[post-save] step: media sync completed"))
-                .catch(mediaErr => console.warn("[post-save] media sync failed (non-blocking)", mediaErr?.message || mediaErr));
-
-            upsertSavedPostIntoAppState(result, payload);
-
-            closeModal();
-            console.log("[post-save] step: modal closed");
-
-            const backendLabel = backendMode.mode === "supabase_native" ? "Supabase" : "Google Sheets";
-            showToast("Synced", wasEditingPost ? "Post updated in " + backendLabel + "." : "Post created in " + backendLabel + ".", "ph-cloud-check", "text-[#00ffaa]");
-            console.log("[post-save] success");
-        } catch (err) {
-            console.error("[post-save] failed", {
-                action: err?.action || "savePost",
-                message: err?.message || "Unknown error"
-            });
-            const routeStatus = err?.backend?.routeStatus || {};
-            const detail = [
-                err?.message || "Remote save failed.",
-                routeStatus.postsSheetReachable === false ? "POSTS sheet is unavailable." : "",
-                routeStatus.requiredHeadersPresent === false ? "POSTS sheet headers are incomplete." : "",
-                routeStatus.spreadsheetIdConfigured === false ? "SPREADSHEET_ID is not configured." : ""
-            ].filter(Boolean).join(" ");
-            showPostSaveErrorBanner(err, payload);
-            closeModal();
-            showToast("Saved locally", detail || "Backend sync failed; local draft changes are preserved.", "ph-warning", "text-yellow-400");
-            console.log("[post-save] failed");
-        } finally {
-            clearTimeout(saveTimeoutId);
-            savePostInFlight = false;
-            saveButton.disabled = false;
-            if (!modal?.classList.contains("active")) saveButton.innerHTML = originalSaveButtonHtml;
-        }
-
-        console.log("[post-save] step: background ops starting");
-
-        if (noteIdToConvert) {
-            appState.notes = (appState.notes || []).map((note) => {
-                if ((note.noteId || note.id) !== noteIdToConvert) return note;
-                return { ...note, convertedPostId: savedPost.id || savedPost.postId || payload.id, status: "converted_to_post", flowState: "converted_to_post", movedToPostAt: payload.movedToPostAt };
-            });
-        }
-        if (inspoIdToConvert) {
-            appState.inspo = (appState.inspo || []).map((item) => {
-                if ((item.inspoId || item.id) !== inspoIdToConvert) return item;
-                return { ...item, convertedPostId: savedPost.id || savedPost.postId || payload.id, status: "archived", flowState: "converted_to_post", movedToPostAt: payload.movedToPostAt, archivedAt: new Date().toISOString() };
-            });
-        }
-        persistLocalState();
-
-        console.log("[post-save] step: light render");
-        rerenderAll();
-        if (currentView) switchView(currentView);
-
-        if (scheduleSocialEnabledInput?.checked) {
-            withTimeout(scheduleSocialPostsForTargets(payload), 15000, 'social schedule timed out')
-                .then(results => { if (socialScheduleStatusEl) socialScheduleStatusEl.textContent = `Social schedule rows created: ${results.length}`; })
-                .catch(socialErr => { console.warn("[social] schedule failed", socialErr); if (socialScheduleStatusEl) socialScheduleStatusEl.textContent = "Social scheduling failed: " + (socialErr.message || "Unknown error"); });
-        }
-
-        withTimeout(syncRemoteIfConfigured(), 30000, 'syncRemoteIfConfigured timed out')
-            .catch(syncErr => console.warn("[post-save] background sync failed", syncErr));
-
-        const bm = getActiveWorkspaceBackendMode();
-        if (inspoIdToConvert && bm.mode !== "supabase_native") {
-            withTimeout(apiArchiveInspo(inspoIdToConvert, savedPost?.postId || payload.id), 15000, 'archive inspo timed out')
-                .catch(inspoErr => console.warn("[post-save] inspo archive failed", inspoErr));
-        }
-
-        console.log("[post-save] complete");
-        return;
-    }
-
-    if (STELLARSYNC_DEBUG) console.log("[post-save] backend path", "localStorage");
-    clearTimeout(saveTimeoutId);
-    savePostInFlight = false;
-    saveButton.disabled = false;
-    saveButton.innerHTML = originalSaveButtonHtml;
-    closeModal();
-    showToast("Saved locally", "Backend sync is not configured; this post is stored in local browser data only.", "ph-check", "text-[#00ffaa]");
-    console.log("[post-save] step: local-only save done");
+    showToast("Saved", "Post saved locally. Use manual sync to push remote changes.", "ph-check", "text-[#00ffaa]");
+    // HARDENED SAVE RULE:
+    // The modal Save button must never run remote hydration, Sheet sync,
+    // Monday sync, media sync, or social scheduling inline.
+    // It only updates local app state/UI. Explicit manual sync buttons handle remote work.
+    console.log("[post-save] local save complete; remote side effects disabled", {
+      post_id: payload.post_id || payload.postId || payload.id || "",
+      reason: "manual_remote_sync_only"
+    });
     if (noteIdToConvert) {
-        appState.notes = (appState.notes || []).map((note) => {
-            if ((note.noteId || note.id) !== noteIdToConvert) return note;
-            return { ...note, convertedPostId: savedPost.id || savedPost.postId || payload.id, status: "converted_to_post", flowState: "converted_to_post", movedToPostAt: payload.movedToPostAt };
-        });
+      appState.notes = (appState.notes || []).map((note) => {
+        if ((note.noteId || note.id) !== noteIdToConvert) return note;
+        return {
+          ...note,
+          convertedPostId: savedPost.id || savedPost.postId || payload.id,
+          status: "converted_to_post",
+          flowState: "converted_to_post",
+          movedToPostAt: payload.movedToPostAt
+        };
+      });
     }
     if (inspoIdToConvert) {
-        appState.inspo = (appState.inspo || []).map((item) => {
-            if ((item.inspoId || item.id) !== inspoIdToConvert) return item;
-            return { ...item, convertedPostId: savedPost.id || savedPost.postId || payload.id, status: "archived", flowState: "converted_to_post", movedToPostAt: payload.movedToPostAt, archivedAt: new Date().toISOString() };
-        });
+      appState.inspo = (appState.inspo || []).map((item) => {
+        if ((item.inspoId || item.id) !== inspoIdToConvert) return item;
+        return {
+          ...item,
+          convertedPostId: savedPost.id || savedPost.postId || payload.id,
+          status: "archived",
+          flowState: "converted_to_post",
+          movedToPostAt: payload.movedToPostAt,
+          archivedAt: new Date().toISOString()
+        };
+      });
     }
     persistLocalState();
     rerenderAll();
     if (currentView) switchView(currentView);
-    console.log("[post-save] complete");
+    console.log("[post-save] complete local-only");
+    return;
   });
 }
 
@@ -27947,7 +27857,8 @@ async function syncRemoteIfConfigured() {
       backendReachable = true;
       lastSyncError = "";
       persistLocalState();
-      await maybeAutoPullMondayUpdatesForWorkspace();
+      // Monday pull is manual only until sync is stable.
+      // await maybeAutoPullMondayUpdatesForWorkspace().catch(function() {});
       logCampaignQASummary("supabase_native");
       console.log("[data]", getAppStateCounts());
       rerenderAll();
@@ -33764,13 +33675,13 @@ async function maybeAutoPullMondayUpdatesForWorkspace(options = {}) {
 
 async function syncMirrorAttachmentsForPost(postId, post = null) {
   const targetPost = post || findPostByAnyId(postId) || null;
-  const targetId = String(postId || targetPost?.post_id || targetPost?.postId || targetPost?.id || "").trim();
-  if (!targetId) {
-    return { ok: false, skipped: true, reason: "missing_post_id" };
-  }
-  // Stabilization rule:
-  // This function must not push the full Supabase workspace to Sheets
-  // and must not call Monday from ordinary save/media attachment flows.
+  const targetId = String(
+    postId ||
+    targetPost?.post_id ||
+    targetPost?.postId ||
+    targetPost?.id ||
+    ""
+  ).trim();
   return {
     ok: true,
     skipped: true,
@@ -35304,16 +35215,17 @@ function initApp() {
     panel.classList.add("hidden");
   }
 
-  if (typeof syncRemoteIfConfigured === "function") {
-    syncRemoteIfConfigured().catch(function(err) {
-      reportFrontendError("initApp/syncRemoteIfConfigured", err);
-      if (!offlineMode) {
-        offlineMode = true;
-        try { rerenderAll(); } catch (_) {}
-      }
-    });
-  }
-  guardedCall(startSheetAutoPullLoop, "startSheetAutoPullLoop");
+  // Remote hydration is manual only while save/media/Monday stability is being hardened.
+  // if (typeof syncRemoteIfConfigured === "function") {
+  //   syncRemoteIfConfigured().catch(function(err) {
+  //     reportFrontendError("initApp/syncRemoteIfConfigured", err);
+  //     if (!offlineMode) {
+  //       offlineMode = true;
+  //       try { rerenderAll(); } catch (_) {}
+  //     }
+  //   });
+  // }
+  // guardedCall(startSheetAutoPullLoop, "startSheetAutoPullLoop");
   if (typeof loadAIProviders === "function") {
     loadAIProviders().catch(function(err) {
       reportFrontendError("initApp/loadAIProviders", err);
