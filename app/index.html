@@ -5654,6 +5654,11 @@ let STELLARSYNC_AUTH_USER = null;
 let STELLARSYNC_LOOKUP_WORKSPACES = [];
 const SUBSCRIPTION_ALLOWED_STATUSES = new Set(["active", "trialing", "custom", "manual", "comped", "permanent_free"]);
 const SUBSCRIPTION_BLOCKED_STATUSES = new Set(["expired", "canceled", "cancelled", "past_due", "payment_required", "inactive"]);
+const SOURCE_PRIORITY = {
+  google_sheets_hybrid: ["sheets", "monday", "supabase", "local"],
+  supabase_native: ["supabase", "local"],
+  local_only: ["local"]
+};
 
 // Phase 1 Workspace Adapter Layer.
 const WORKSPACE_RUNTIME_CONFIG = {
@@ -9198,6 +9203,146 @@ function getPostIdentityValues(post = {}) {
     .filter(Boolean);
 }
 
+function getPostStableKey(post = {}) {
+  return String(
+    post.post_id ||
+    post.postId ||
+    post.stellarsync_post_id ||
+    post.monday_item_id ||
+    post.mondayItemId ||
+    ""
+  ).trim();
+}
+
+function isBadPostIdentity(value) {
+  return !value || /^row_\d+$/i.test(String(value)) || /^POST-NEW-/i.test(String(value));
+}
+
+function getPostSourcePriority(mode = "") {
+  var key = String(mode || "").trim();
+  return SOURCE_PRIORITY[key] || SOURCE_PRIORITY.local_only;
+}
+
+function getPostSourceRank(source = "", mode = "") {
+  var priority = getPostSourcePriority(mode || getActiveWorkspaceBackendMode?.().mode || "local_only");
+  var index = priority.indexOf(String(source || "").trim());
+  return index >= 0 ? index : priority.length;
+}
+
+function getPostUpdatedTime(post = {}) {
+  var value = post.updated_at || post.updatedAt || post.modified_at || post.modifiedAt || 0;
+  var time = new Date(value || 0).getTime();
+  return Number.isFinite(time) ? time : 0;
+}
+
+function mergePostsByAuthority(existingPosts = [], incomingPosts = [], source = "sheets") {
+  var mode = getActiveWorkspaceBackendMode?.().mode || "local_only";
+  const map = new Map();
+  [...existingPosts, ...incomingPosts].forEach((post) => {
+    if (!post || typeof post !== "object") return;
+    const key = getPostStableKey(post);
+    if (isBadPostIdentity(key)) return;
+    const nextSource = String(post._source || source || "local").trim() || "local";
+    const current = map.get(key);
+    const nextPost = { ...post, _source: nextSource };
+    if (!current) {
+      map.set(key, nextPost);
+      return;
+    }
+    const currentSource = String(current._source || source || "local").trim() || "local";
+    const currentRank = getPostSourceRank(currentSource, mode);
+    const nextRank = getPostSourceRank(nextSource, mode);
+    if (nextRank < currentRank) {
+      map.set(key, { ...current, ...nextPost, _source: nextSource });
+      return;
+    }
+    if (nextRank > currentRank) return;
+    const currentUpdated = getPostUpdatedTime(current);
+    const nextUpdated = getPostUpdatedTime(nextPost);
+    map.set(key, {
+      ...current,
+      ...(nextUpdated >= currentUpdated ? nextPost : {}),
+      _source: nextUpdated >= currentUpdated ? nextSource : currentSource
+    });
+  });
+  return Array.from(map.values());
+}
+
+function enrichSheetPostsWithMonday(sheetPosts = [], mondayPosts = []) {
+  const mondayById = new Map(
+    mondayPosts
+      .filter((p) => p && (p.monday_item_id || p.mondayItemId))
+      .map((p) => [String(p.monday_item_id || p.mondayItemId).trim(), p])
+      .filter(([id]) => id)
+  );
+  return sheetPosts.map((post) => {
+    const mondayId = String(post.monday_item_id || post.mondayItemId || "").trim();
+    const monday = mondayById.get(mondayId);
+    return monday ? { ...post, monday_status: monday.status, monday_group_id: monday.group_id || monday.monday_group_id } : post;
+  });
+}
+
+function getMondayDecorationUpdates(updates = {}) {
+  var status = updates.monday_status || updates.mondayStatus || updates.status || updates.publish_status || "";
+  var groupId = updates.monday_group_id || updates.mondayGroupId || updates.group_id || updates.groupId || "";
+  var syncedAt = updates.monday_last_synced_at || updates.mondayLastSyncedAt || updates.monday_synced_at || updates.synced_at || "";
+  var syncStatus = updates.monday_sync_status || updates.mondaySyncStatus || "";
+  var result = {};
+  if (status) {
+    result.monday_status = status;
+    result.mondayStatus = status;
+  }
+  if (groupId) {
+    result.monday_group_id = groupId;
+    result.mondayGroupId = groupId;
+  }
+  if (syncedAt) {
+    result.monday_last_synced_at = syncedAt;
+    result.mondayLastSyncedAt = syncedAt;
+  }
+  if (syncStatus) {
+    result.monday_sync_status = syncStatus;
+    result.mondaySyncStatus = syncStatus;
+  }
+  return result;
+}
+
+function getAllowedMondayUpdatesForPost(updates = {}) {
+  var mode = getActiveWorkspaceBackendMode?.().mode || "local_only";
+  if (mode === "google_sheets_hybrid") return getMondayDecorationUpdates(updates);
+  return updates;
+}
+
+function auditDuplicatePosts(posts = []) {
+  const seen = new Map();
+  posts.forEach((post) => {
+    const key = getPostStableKey(post);
+    if (!key) return;
+    if (!seen.has(key)) seen.set(key, []);
+    seen.get(key).push(post);
+  });
+  const dupes = [...seen.entries()].filter(([, rows]) => rows.length > 1);
+  if (dupes.length) {
+    console.warn("[post-dedupe] duplicate post identities", dupes.map(([key, rows]) => ({
+      key,
+      count: rows.length,
+      sources: rows.map((r) => r._source || r.source || "unknown"),
+      titles: rows.map((r) => r.title || r.caption || "").slice(0, 3)
+    })));
+  }
+}
+
+function normalizePostsForState(posts = [], source = "normalized") {
+  return mergePostsByAuthority([], Array.isArray(posts) ? posts : [], source);
+}
+
+function getCanonicalPostSourceForActiveMode() {
+  var mode = getActiveWorkspaceBackendMode?.().mode || "local_only";
+  if (mode === "google_sheets_hybrid") return "sheets";
+  if (mode === "supabase_native") return "supabase";
+  return "local";
+}
+
 function getMediaDedupeKey(item = {}) {
   if (!item || typeof item !== "object") return String(item || "").trim();
   return String(
@@ -11601,6 +11746,8 @@ function toggleSidePanel(name) {
 }
 
 function rerenderAll() {
+  appState.posts = normalizePostsForState(appState.posts || [], "normalized");
+  auditDuplicatePosts(appState.posts);
   if (STELLARSYNC_DEBUG) {
     safeRender(() => {
       console.table((appState.posts || []).map((p) => ({
@@ -13197,7 +13344,7 @@ async function runAssistantFollowup(action) {
         aiDraftStatus: "assistant_generated"
       };
       if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
-        await apiSavePost(postPayload);
+        await savePostForActiveBackend(postPayload);
         if (isGoogleSheetsFrontendMode(backendMode.mode)) await refreshSheetsTabsQuietly(["POSTS"]);
         else await syncRemoteIfConfigured();
       } else {
@@ -18993,7 +19140,7 @@ async function syncPostToMonday() {
         window.__currentModalPostData.mondaySyncStatus = warningText ? "synced_with_warnings" : "synced";
         window.__currentModalPostData.monday_sync_status = window.__currentModalPostData.mondaySyncStatus;
         try {
-          await apiSavePost(window.__currentModalPostData);
+          await savePostForActiveBackend(window.__currentModalPostData);
           await syncRemoteIfConfigured();
         } catch (saveErr) {
           console.log("[monday] post monday fields save error", saveErr);
@@ -19442,8 +19589,9 @@ async function pullMondayFields() {
     if (result.ok) {
       updateLoadingToastSuccess(loadingToastId, "Fields pulled from Monday", Object.keys(result.fields || {}).length + " field(s) retrieved");
       if (result.fields && window.__currentModalPostData) {
-        for (var key in result.fields) {
-          window.__currentModalPostData[key] = result.fields[key];
+        var allowedFields = getAllowedMondayUpdatesForPost(result.fields);
+        for (var key in allowedFields) {
+          window.__currentModalPostData[key] = allowedFields[key];
         }
       }
       var diagnosticsEl = document.getElementById("modal-monday-diagnostics");
@@ -19482,9 +19630,10 @@ async function pullMondayUpdates() {
       if (result.updates && result.updates._conflict) {
         showToast("Conflict detected", result.updates._conflict_message || "Post was modified after last sync.", "ph-warning", "text-yellow-400");
       } else if (result.updates && window.__currentModalPostData) {
-        for (var key in result.updates) {
+        var allowedUpdates = getAllowedMondayUpdatesForPost(result.updates);
+        for (var key in allowedUpdates) {
           if (key === "_conflict" || key === "_conflict_message") continue;
-          window.__currentModalPostData[key] = result.updates[key];
+          window.__currentModalPostData[key] = allowedUpdates[key];
         }
       }
       var diagnosticsEl = document.getElementById("modal-monday-diagnostics");
@@ -24656,6 +24805,7 @@ function upsertSavedPostIntoAppState(saveResult, fallbackPayload = {}) {
   });
   if (index >= 0) appState.posts[index] = Object.assign({}, appState.posts[index], normalized);
   else appState.posts = [normalized].concat(appState.posts || []);
+  appState.posts = normalizePostsForState(appState.posts, getCanonicalPostSourceForActiveMode());
   currentEditingPostId = normalized.id || normalized.postId || normalized.post_id || currentEditingPostId;
   window.__currentModalPostData = normalized;
   persistLocalState();
@@ -24927,11 +25077,17 @@ function setupSaveHandler() {
                     result = await withTimeout(apiCreatePostFromNote(noteIdToConvert, payload), 15000, 'apiCreatePostFromNote timed out');
                 } catch (noteErr) {
                     console.warn("createPostFromNote failed, falling back to savePost", noteErr);
-                    result = await withTimeout(apiSavePost(payload), 15000, 'savePost (fallback) timed out');
+                    result = await withTimeout(savePostForActiveBackend(payload), 15000, 'savePost (fallback) timed out');
                 }
-            } else {
+            } else if (backendMode.mode === "supabase_native") {
+                console.log("[post-save] step: remote save via Supabase...");
+                result = await withTimeout(apiSavePostToSupabase(payload), 15000, 'saveSupabasePost timed out');
+            } else if (backendMode.mode === "google_sheets_hybrid") {
                 console.log("[post-save] step: remote save via Apps Script...");
                 result = await withTimeout(apiSavePost(payload), 15000, 'savePost timed out');
+            } else {
+                console.log("[post-save] step: remote save via workspace backend...");
+                result = await withTimeout(savePostForActiveBackend(payload), 15000, 'savePost timed out');
             }
             console.log("[post-save] step: remote save completed", {
                 ok: !!result?.ok,
@@ -25082,7 +25238,7 @@ async function duplicatePostById(postId) {
       await apiDuplicatePost(postId);
     } catch (err) {
       console.error(err);
-      await apiSavePost(copy).catch((saveErr) => console.error(saveErr));
+      await savePostForActiveBackend(copy).catch((saveErr) => console.error(saveErr));
     }
   }
 }
@@ -26894,7 +27050,7 @@ async function refreshPostsAfterImportBatch(jobId = "") {
   if (!APP_CONFIG.ENABLE_REMOTE_SYNC || !isRemoteConfigured()) return;
   const posts = await apiGetPosts();
   if (Array.isArray(posts) && posts.length) {
-    appState.posts = posts.map((post, index) => normalizeRemotePost(post, getAvailableCampaignRecords(), appState.media || [], index));
+    appState.posts = normalizePostsForState(posts.map((post, index) => normalizeRemotePost(post, getAvailableCampaignRecords(), appState.media || [], index)), getCanonicalPostSourceForActiveMode());
     persistLocalState();
   }
   if (jobId) {
@@ -27763,7 +27919,7 @@ async function syncRemoteIfConfigured() {
       ]);
       try { await loadAIProviders(); } catch (err) { /* silent */ }
       if (supabasePosts.status === "fulfilled" && Array.isArray(supabasePosts.value)) {
-        appState.posts = supabasePosts.value.map((post, index) => normalizeRemotePost(post, getAvailableCampaignRecords(), appState.media || [], index));
+        appState.posts = normalizePostsForState(supabasePosts.value.map((post, index) => normalizeRemotePost(post, getAvailableCampaignRecords(), appState.media || [], index)), "supabase");
       }
       if (supabaseNotes.status === "fulfilled" && Array.isArray(supabaseNotes.value)) {
         appState.notes = filterRenderableArtifacts(supabaseNotes.value.map(function(item) { return normalizeRemoteNote(item); }), "note");
@@ -27838,9 +27994,10 @@ async function syncRemoteIfConfigured() {
   let postsData = Array.isArray(sheetHydration?.posts) ? sheetHydration.posts : [];
   if (sheetHydration && typeof sheetHydration === "object" && !postsLoadError) {
     hydrateHybridSheetData(sheetHydration || {});
-    appState.posts = postsData.map(function(post, index) {
+    var sheetPosts = postsData.map(function(post, index) {
       return normalizeRemotePost(post, getAvailableCampaignRecords(), appState.media || [], index);
     });
+    appState.posts = mergePostsByAuthority([], sheetPosts, "sheets");
     console.log("[hybrid] phase 1 posts count", appState.posts.length);
     console.log("[hybrid] phase 1 campaigns count", Array.isArray(appState.campaigns) ? appState.campaigns.length : 0);
     logCampaignQASummary("hybrid");
@@ -28106,7 +28263,7 @@ async function pullSheetsToSupabase() {
     var sheetData = await loadSheetsWorkspaceDataForHybrid(tabsToPull);
     if (sheetData && typeof sheetData === "object") {
       hydrateHybridSheetData(sheetData, { preserveCampaignRegistry: !Array.isArray(sheetData.campaigns) });
-      if (Array.isArray(sheetData.posts)) appState.posts = sheetData.posts.map((post, index) => normalizeRemotePost(post, getAvailableCampaignRecords(), appState.media || [], index));
+      if (Array.isArray(sheetData.posts)) appState.posts = mergePostsByAuthority([], sheetData.posts.map((post, index) => normalizeRemotePost(post, getAvailableCampaignRecords(), appState.media || [], index)), "sheets");
       if (Array.isArray(sheetData.notes)) appState.notes = filterRenderableArtifacts(sheetData.notes.map(function(item) { return normalizeRemoteNote(item); }), "note");
       if (Array.isArray(sheetData.inspo)) appState.inspo = filterRenderableArtifacts(sheetData.inspo.map(function(item) { return normalizeRemoteInspo(item); }), "inspo");
       if (Array.isArray(sheetData.aiDrafts)) appState.aiDrafts = filterRenderableArtifacts(sheetData.aiDrafts.map(function(item) { return normalizeRemoteAIDraft(item); }), "aiDraft");
@@ -28775,7 +28932,7 @@ async function refreshSheetsTabsQuietly(tabs = []) {
       if (shouldSkipEmptyOverwrite(appState.posts, refreshedPosts)) {
         console.log("[sheets-pull] preserved local because pull failed", { tabs: ["POSTS"], reason: "empty quiet post refresh" });
       } else {
-        appState.posts = refreshedPosts;
+        appState.posts = mergePostsByAuthority([], refreshedPosts, "sheets");
       }
     }
     if (requested.includes("NOTES") && Array.isArray(sheetData.notes)) appState.notes = filterRenderableArtifacts(sheetData.notes.map(function(item) { return normalizeRemoteNote(item); }), "note");
@@ -29967,7 +30124,7 @@ async function repairPostIds() {
     const updatedCount = Number(result.updatedCount || 0);
     const posts = await apiGetPosts();
     if (Array.isArray(posts)) {
-      appState.posts = posts.map((post, index) => normalizeRemotePost(post, getAvailableCampaignRecords(), appState.media || [], index));
+      appState.posts = normalizePostsForState(posts.map((post, index) => normalizeRemotePost(post, getAvailableCampaignRecords(), appState.media || [], index)), getCanonicalPostSourceForActiveMode());
     }
     persistLocalState();
     rerenderAll();
@@ -33064,7 +33221,7 @@ async function persistLinkedAssetForPost(asset) {
 
   if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
     try {
-      await apiSavePost(appState.posts[postIndex]);
+      await savePostForActiveBackend(appState.posts[postIndex]);
     } catch (err) {
       console.error("Failed to persist post asset link", err);
     }
@@ -33159,6 +33316,14 @@ async function apiReassignCampaignCleanupPosts(payload) {
 
 async function apiImportExistingPostAsIdea(payload) {
   return apiPost("importExistingPostAsIdea", payload);
+}
+
+async function savePostForActiveBackend(payload = {}) {
+  const backendMode = getActiveWorkspaceBackendMode();
+  if (backendMode.mode === "supabase_native") {
+    return apiSavePostToSupabase(payload);
+  }
+  return apiSavePost(payload);
 }
 
 async function apiSavePost(post) {
@@ -33549,13 +33714,14 @@ async function maybeAutoPullMondayUpdatesForWorkspace(options = {}) {
           console.warn("[monday-auto-sync] conflict", { postId, message: result.updates._conflict_message || "" });
           continue;
         }
+        const allowedUpdates = getAllowedMondayUpdatesForPost(result.updates);
         const refreshed = findPostByAnyId(postId);
         if (refreshed) {
-          Object.assign(refreshed, result.updates);
+          Object.assign(refreshed, allowedUpdates);
           Object.assign(refreshed, applyDerivedPostMediaFormat(refreshed));
         }
         if (window.__currentModalPostData && getPostIdentityValues(window.__currentModalPostData).includes(postId)) {
-          Object.assign(window.__currentModalPostData, result.updates);
+          Object.assign(window.__currentModalPostData, allowedUpdates);
           Object.assign(window.__currentModalPostData, applyDerivedPostMediaFormat(window.__currentModalPostData));
         }
         pulled += 1;
