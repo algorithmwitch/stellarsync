@@ -12113,25 +12113,24 @@ function closeNoteModal() {
 async function saveNoteFromModal() {
   const title = noteTitleInput?.value.trim() || "";
   const body = noteBodyInput?.value.trim() || "";
-  const bullets = String(noteBulletsInput?.value || "").split(/\r?\n/).map(line => line.replace(/^\s*[-*•]\s*/, "").trim()).filter(Boolean);
-  const suggestedPlatform = notePlatformInput?.value || "linkedin";
-  const suggestedPillar = normalizePillar(notePillarInput?.value || "authority");
-  const sourceUrl = noteSourceUrlInput?.value.trim() || "";
-
+  const bullets = String(noteBulletsInput?.value || "")
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^\s*[-*•]\s*/, "").trim())
+    .filter(Boolean);
   if (!title) {
     showToast("Missing title", "Please add a note title.", "ph-warning", "text-yellow-400");
     return;
   }
-
   const noteId = generateId("note");
-  const localItem = {
+  const payload = {
     id: noteId,
     noteId,
+    note_id: noteId,
     title,
     body,
     bullets,
-    suggestedPlatform,
-    suggestedPillar,
+    suggestedPlatform: notePlatformInput?.value || "linkedin",
+    suggestedPillar: normalizePillar(notePillarInput?.value || "authority"),
     status: "active",
     flowState: "active",
     convertedPostId: "",
@@ -12139,45 +12138,33 @@ async function saveNoteFromModal() {
     createdFromFlow: "manual",
     movedToPostAt: "",
     archivedAt: "",
-    sourceUrl,
-    sourcePlatform: detectSourcePlatform(sourceUrl),
-    sourceLabel: deriveSourceLabel(sourceUrl)
+    sourceUrl: noteSourceUrlInput?.value.trim() || "",
+    sourcePlatform: detectSourcePlatform(noteSourceUrlInput?.value || ""),
+    sourceLabel: deriveSourceLabel(noteSourceUrlInput?.value || "")
   };
-
-  if (shouldUseSheetsAuthority()) {
-    appState.notes.unshift(localItem);
-    persistLocalState();
-    renderNotes();
-    try {
-      showToast("Saving note", "Saving note to Google Sheets...", "ph-table", "text-[#c77dff]");
-      const result = await apiSaveNote(localItem);
-      await refreshSheetsTabsQuietly(["NOTES"]);
-      setSheetsAuthorityStatus();
-      closeNoteModal?.();
-      renderNotes?.();
-      rerenderAll?.();
-      showToast("Saved", "Note saved to Google Sheets.", "ph-check", "text-[#00ffaa]");
-      return result;
-    } catch (err) {
-      console.error("[sheets-authority] note save failed", err);
-      showToast("Sheets save failed", err?.message || "Note was not saved to Sheets.", "ph-warning", "text-yellow-400");
-      return;
+  try {
+    showToast(
+      "Saving note",
+      shouldUseSheetsAuthority()
+        ? "Saving note to Google Sheets..."
+        : "Saving note...",
+      "ph-table",
+      "text-[#c77dff]"
+    );
+    const result = await apiSaveNote(payload);
+    const confirmedNote = requireConfirmedSaveResult(result, "note", "Note");
+    upsertLocalNoteFromAuthority(confirmedNote);
+    if (shouldUseSheetsAuthority()) {
+      queueSupabaseNoteMirror(confirmedNote);
+      setSheetsAuthorityStatus?.();
     }
-  }
-
-  appState.notes.unshift(localItem);
-  persistLocalState();
-  renderNotes();
-  closeNoteModal();
-  showToast("Saved", "Note saved locally.", "ph-check", "text-[#00ffaa]");
-
-  if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
-    try {
-      await apiSaveNote(localItem);
-    } catch (err) {
-      console.error(err);
-      showToast("Local only", "Saved locally. Remote note sync failed.", "ph-warning", "text-yellow-400");
-    }
+    closeNoteModal?.();
+    rerenderAll?.();
+    showToast("Saved", "Note saved.", "ph-check", "text-[#00ffaa]");
+    return result;
+  } catch (err) {
+    console.error("[note-save] failed", err);
+    showToast("Save failed", err?.message || "Note was not saved.", "ph-warning", "text-yellow-400");
   }
 }
 
@@ -12237,30 +12224,25 @@ async function saveInspoFromModal() {
     showToast("Missing title", "Please enter a title.", "ph-warning", "text-red-400");
     return;
   }
-
+  const inspoId = generateId("inspo");
   const payload = {
+    id: inspoId,
+    inspoId,
+    inspo_id: inspoId,
     inspoType: currentInspoType,
+    type: currentInspoType,
     title,
     sourceLabel: deriveSourceLabel(url),
     summary: notes,
+    description: notes,
     domainOrMeta: deriveDomainLabel(url),
+    url,
+    notes,
     suggestedPlatform: currentInspoType === "video" || currentInspoType === "image" ? "instagram" : currentInspoType === "trend" ? "both" : "linkedin",
     suggestedPillar: currentInspoType === "trend" ? "distribution" : currentInspoType === "image" || currentInspoType === "video" ? "application" : "authority",
     createPostTitle: title,
     createPostDescription: notes,
     createPostType: currentInspoType === "video" ? "video" : currentInspoType === "article" ? "article" : currentInspoType === "image" ? "image" : "text",
-    notes: url || notes
-  };
-
-  const localItem = {
-    id: generateId("inspo"),
-    title,
-    type: currentInspoType,
-    description: notes,
-    sourceLabel: deriveSourceLabel(url),
-    domainOrMeta: deriveDomainLabel(url),
-    url,
-    notes,
     status: "active",
     flowState: "active",
     convertedPostId: "",
@@ -12268,45 +12250,29 @@ async function saveInspoFromModal() {
     movedToPostAt: "",
     archivedAt: ""
   };
-
-  if (shouldUseSheetsAuthority()) {
-    appState.inspo.unshift(localItem);
-    persistLocalState();
-    renderInspo();
-    try {
-      showToast("Saving inspo", "Saving inspo to Google Sheets...", "ph-table", "text-[#c77dff]");
-      const result = await apiSaveInspo({
-        ...payload,
-        id: localItem.id,
-        inspoId: localItem.id
-      });
-      await refreshSheetsTabsQuietly(["INSPO"]);
-      setSheetsAuthorityStatus();
-      closeInspoModal?.();
-      renderInspo?.();
-      rerenderAll?.();
-      showToast("Saved", "Inspo saved to Google Sheets.", "ph-check", "text-[#00ffaa]");
-      return result;
-    } catch (err) {
-      console.error("[sheets-authority] inspo save failed", err);
-      showToast("Sheets save failed", err?.message || "Inspo was not saved to Sheets.", "ph-warning", "text-yellow-400");
-      return;
+  try {
+    showToast(
+      "Saving inspo",
+      shouldUseSheetsAuthority()
+        ? "Saving inspo to Google Sheets..."
+        : "Saving inspo...",
+      "ph-table",
+      "text-[#c77dff]"
+    );
+    const result = await apiSaveInspo(payload);
+    const confirmedInspo = requireConfirmedSaveResult(result, "inspo", "Inspo");
+    upsertLocalInspoFromAuthority(confirmedInspo);
+    if (shouldUseSheetsAuthority()) {
+      queueSupabaseInspoMirror(confirmedInspo);
+      setSheetsAuthorityStatus?.();
     }
-  }
-
-  appState.inspo.unshift(localItem);
-  persistLocalState();
-  renderInspo();
-  closeInspoModal();
-  showToast("Saved", "Inspiration saved to vault.", "ph-check", "text-[#00ffaa]");
-
-  if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
-    try {
-      await apiSaveInspo(payload);
-    } catch (err) {
-      console.error(err);
-      showToast("Local only", "Saved locally. Remote inspo sync failed.", "ph-warning", "text-yellow-400");
-    }
+    closeInspoModal?.();
+    rerenderAll?.();
+    showToast("Saved", "Inspo saved.", "ph-check", "text-[#00ffaa]");
+    return result;
+  } catch (err) {
+    console.error("[inspo-save] failed", err);
+    showToast("Save failed", err?.message || "Inspo was not saved.", "ph-warning", "text-yellow-400");
   }
 }
 
@@ -17377,7 +17343,8 @@ function setupMediaUpload() {
         linkedPostId: "",
         campaign: ""
       });
-      await refreshMediaFromRemote();
+      if (result?.asset) upsertMediaAssetIntoAppState(result.asset);
+      renderMedia();
       showToast("Uploaded", "Media uploaded.", "ph-check", "text-[#00ffaa]");
       console.log("[media-upload] success", result);
     } catch (err) {
@@ -21914,8 +21881,12 @@ async function approveWriteIdeaSelection() {
       suggestedPillar: "authority"
     };
     if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
-      await apiSaveNote(note);
-      await syncRemoteIfConfigured();
+      const result = await apiSaveNote(note);
+      if (result?.note) {
+        const savedNote = upsertLocalNoteFromAuthority(result.note);
+        if (shouldUseSheetsAuthority()) queueSupabaseNoteMirror(savedNote || result.note);
+      }
+      persistLocalState();
       rerenderAll();
     } else {
       appState.notes.unshift({ id: generateId("note"), ...note });
@@ -21936,8 +21907,12 @@ async function approveWriteIdeaSelection() {
       suggestedPillar: "authority"
     };
     if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
-      await apiSaveInspo(inspo);
-      await syncRemoteIfConfigured();
+      const result = await apiSaveInspo(inspo);
+      if (result?.inspo) {
+        const savedInspo = upsertLocalInspoFromAuthority(result.inspo);
+        if (shouldUseSheetsAuthority()) queueSupabaseInspoMirror(savedInspo || result.inspo);
+      }
+      persistLocalState();
       rerenderAll();
     } else {
       appState.inspo.unshift({ id: generateId("inspo"), ...inspo });
@@ -22139,10 +22114,14 @@ async function saveLinkToInspoFromModal() {
     sourceLabel: toTitleCase(state.detected || "external")
   };
   try {
-    await apiSaveInspo(inspo);
-    if (APP_CONFIG.ENABLE_REMOTE_SYNC && isRemoteConfigured()) {
-      await syncRemoteIfConfigured();
+    const result = await apiSaveInspo(inspo);
+    if (result?.inspo) {
+      const savedInspo = upsertLocalInspoFromAuthority(result.inspo);
+      if (shouldUseSheetsAuthority()) queueSupabaseInspoMirror(savedInspo || result.inspo);
     }
+    persistLocalState();
+    renderInspo?.();
+    rerenderAll?.();
     showToast("Saved to Inspo", "Social card saved to Inspo Vault.", "ph-check", "text-[#00ffaa]");
   } catch (err) {
     console.error(err);
@@ -22157,13 +22136,14 @@ async function saveSocialCardToMedia() {
     return;
   }
   try {
+    let savedAsset = null;
     if (socialCardUpload?.file) {
       if (isSupabaseMediaEnabled()) {
         const supabaseAsset = await uploadMediaToSupabaseStorage(socialCardUpload.file, {
           postId: "",
           altText: state.title || deriveSourceLabel(state.sourceUrl)
         });
-        await apiPost("saveMediaLink", {
+        const result = await apiPost("saveMediaLink", {
           sourceUrl: supabaseAsset.media_url,
           assetName: supabaseAsset.media_filename,
           assetType: supabaseAsset.media_type,
@@ -22179,9 +22159,10 @@ async function saveSocialCardToMedia() {
           media_source: supabaseAsset.media_source,
           storage_path: supabaseAsset.storage_path
         });
+        savedAsset = result?.asset || supabaseAsset;
       } else {
         const base64Data = await fileToBase64(socialCardUpload.file);
-        await apiPost("uploadMedia", {
+        const result = await apiPost("uploadMedia", {
           fileName: socialCardUpload.file.name,
           mimeType: socialCardUpload.file.type,
           base64Data,
@@ -22190,9 +22171,10 @@ async function saveSocialCardToMedia() {
           linkedPostId: "",
           campaign: ""
         });
+        savedAsset = result?.asset || null;
       }
     } else {
-      await apiPost("saveMediaLink", {
+      const result = await apiPost("saveMediaLink", {
         sourceUrl: state.imageUrl,
         assetName: state.title || deriveSourceLabel(state.sourceUrl),
         assetType: "image",
@@ -22202,8 +22184,10 @@ async function saveSocialCardToMedia() {
         notes: String(mediaLinkMetaInput?.value || state.fallback || "").trim(),
         campaign: ""
       });
+      savedAsset = result?.asset || null;
     }
-    await refreshMediaFromRemote();
+    if (savedAsset) upsertMediaAssetIntoAppState(savedAsset);
+    renderMedia();
     showToast("Saved to Media", "Social card media saved to the vault.", "ph-check", "text-[#00ffaa]");
   } catch (err) {
     console.error(err);
@@ -22221,7 +22205,7 @@ async function saveMediaLinkFromModal() {
   try {
     showToast("Saving link", "Saving linked media asset...", "ph-link-simple", "text-[#c77dff]");
 
-    await apiPost("saveMediaLink", {
+    const result = await apiPost("saveMediaLink", {
       sourceUrl,
       assetName: String(mediaLinkNameInput?.value || "").trim(),
       assetType: String(mediaLinkTypeInput?.value || "image").trim().toLowerCase(),
@@ -22232,7 +22216,7 @@ async function saveMediaLinkFromModal() {
       campaign: ""
     });
 
-    await refreshMediaFromRemote();
+    if (result?.asset) upsertMediaAssetIntoAppState(result.asset);
     closeMediaLinkModal();
     renderMedia();
     showToast("Saved", "Linked media asset added to the vault.", "ph-check", "text-[#00ffaa]");
@@ -22430,7 +22414,8 @@ function setupModalMediaUpload() {
         appState.posts[postIndex].mediaLabel = currentModalAsset.title;
         persistLocalState();
       }
-      await refreshMediaFromRemote();
+      upsertMediaAssetIntoAppState(asset);
+      renderMedia();
       showToast("Uploaded", "Media linked to this post.", "ph-check", "text-[#00ffaa]");
       console.log("[modal-media-upload] success", result);
     } catch (err) {
@@ -25200,35 +25185,22 @@ async function savePostToSheetsAuthority(post, requestOptions = {}) {
     post_id: postId,
     rowNumber: result?.rowNumber || result?.row_number || null
   });
-  upsertLocalPostFromAuthority(savedPost);
-  persistLocalState();
-  rerenderAll();
   showToast("Saved to Sheets", "Google Sheets updated.", "ph-check", "text-[#00ffaa]");
-  return savedPost;
+  return result;
 }
 
 function buildSheetsPostPayload(post) {
   const postId = getCanonicalPostId(post);
+  const meta = getWorkspaceRequestMetadata();
   const payload = {
     ...post,
     post_id: postId,
     postId,
     stellarsync_post_id: postId,
-    workspace_id: getCurrentWorkspaceSlug?.() || "gpe"
+    workspace_id: meta.workspace_id || "",
+    workspace_slug: getCurrentWorkspaceSlug?.() || "gpe",
+    _rowNumber: post._rowNumber || post.row_number || post.rowNumber || post.sheetRow || ""
   };
-  payload._rowNumber =
-    post._rowNumber ||
-    post.rowNumber ||
-    post.row_number ||
-    post.sheetRow ||
-    post.sheet_row ||
-    post.row ||
-    "";
-  delete payload.rowNumber;
-  delete payload.row_number;
-  delete payload.sheetRow;
-  delete payload.sheet_row;
-  delete payload.row;
   delete payload.file;
   delete payload.files;
   delete payload.base64Data;
@@ -25238,13 +25210,18 @@ function buildSheetsPostPayload(post) {
   delete payload.pendingMedia;
   delete payload.uploadQueue;
   delete payload.attachedMediaObjects;
-  if (Array.isArray(payload.media_ids)) {
-    payload.media_ids = payload.media_ids.map(String).filter(Boolean).join(",");
-  }
+  payload.media_ids = Array.isArray(payload.media_ids)
+    ? payload.media_ids.map(String).filter(Boolean).join(",")
+    : String(payload.media_ids || payload.mediaIds || "").trim();
+  payload.carousel_asset_ids = Array.isArray(payload.carouselAssetIds)
+    ? payload.carouselAssetIds.map(String).filter(Boolean).join("|")
+    : String(payload.carousel_asset_ids || payload.carouselAssetIds || "").trim();
   console.log("[sheets-payload] cleaned save payload", {
     post_id: payload.post_id,
     postId: payload.postId,
-    _rowNumber: payload._rowNumber
+    _rowNumber: payload._rowNumber,
+    media_ids: payload.media_ids,
+    carousel_asset_ids: payload.carousel_asset_ids
   });
   return payload;
 }
@@ -25275,6 +25252,120 @@ function upsertLocalPostFromAuthority(post) {
       }
     ];
   }
+}
+
+function requireConfirmedSaveResult(result, itemKey, label) {
+  const item =
+    result?.[itemKey] ||
+    result?.[`saved${label}`] ||
+    result?.item ||
+    result?.data ||
+    null;
+  if (result?.ok !== true || result?.success === false || !item) {
+    throw new Error(
+      result?.error ||
+      result?.message ||
+      `${label} save did not confirm.`
+    );
+  }
+  return item;
+}
+
+function upsertByStableId(collection, item, idKeys) {
+  const ids = idKeys
+    .map((key) => String(item?.[key] || "").trim())
+    .filter(Boolean);
+  if (!ids.length) return [item, ...(collection || [])];
+  const items = Array.isArray(collection) ? collection : [];
+  const index = items.findIndex((existing) =>
+    idKeys.some((key) => ids.includes(String(existing?.[key] || "").trim()))
+  );
+  if (index >= 0) {
+    const next = items.slice();
+    next[index] = { ...next[index], ...item };
+    return next;
+  }
+  return [item, ...items];
+}
+
+function upsertLocalNoteFromAuthority(note) {
+  const normalized = normalizeRemoteNote ? normalizeRemoteNote(note) : note;
+  appState.notes = upsertByStableId(appState.notes || [], normalized, [
+    "id",
+    "noteId",
+    "note_id"
+  ]);
+  persistLocalState();
+  renderNotes?.();
+  return normalized;
+}
+
+function upsertLocalInspoFromAuthority(inspo) {
+  const normalized = normalizeRemoteInspo ? normalizeRemoteInspo(inspo) : inspo;
+  appState.inspo = upsertByStableId(appState.inspo || [], normalized, [
+    "id",
+    "inspoId",
+    "inspo_id"
+  ]);
+  persistLocalState();
+  renderInspo?.();
+  return normalized;
+}
+
+function queueSupabaseNoteMirror(note) {
+  if (!shouldUseSheetsAuthority?.()) return;
+  Promise.resolve()
+    .then(() => saveSupabaseNote?.(note))
+    .catch((err) => console.warn("[mirror] note Supabase mirror failed", err));
+}
+
+function queueSupabaseInspoMirror(inspo) {
+  if (!shouldUseSheetsAuthority?.()) return;
+  Promise.resolve()
+    .then(() => saveSupabaseInspo?.(inspo))
+    .catch((err) => console.warn("[mirror] inspo Supabase mirror failed", err));
+}
+
+const MONDAY_POST_MIRROR_TIMERS = new Map();
+
+function queueMondayMirrorForPost(post) {
+  const postId = getCanonicalPostId(post || {});
+  if (!postId) return;
+  const existingTimer = MONDAY_POST_MIRROR_TIMERS.get(postId);
+  if (existingTimer) window.clearTimeout(existingTimer);
+  const timerId = window.setTimeout(() => {
+    MONDAY_POST_MIRROR_TIMERS.delete(postId);
+    autoSyncPostToMonday(post, { force: false }).catch((err) => {
+      console.warn("[monday-queue] mirror failed", { postId, error: err?.message || err });
+    });
+  }, 1500);
+  MONDAY_POST_MIRROR_TIMERS.set(postId, timerId);
+}
+
+function queuePostMirrorsAfterSheetsSave(savedPost, fallbackPayload = {}) {
+  const canonicalPostId = getCanonicalPostId(savedPost || fallbackPayload || {});
+  if (!canonicalPostId) return;
+  const mirrorPayload = applyDerivedPostMediaFormat({
+    ...(fallbackPayload || {}),
+    ...(savedPost || {}),
+    post_id: canonicalPostId,
+    postId: canonicalPostId,
+    id: canonicalPostId
+  });
+  window.setTimeout(() => {
+    Promise.resolve()
+      .then(() => apiSavePostToSupabase?.(mirrorPayload))
+      .then(() => console.log("[mirror] supabase post done", { postId: canonicalPostId }))
+      .catch((err) => console.warn("[mirror] supabase post failed", err));
+    Promise.resolve()
+      .then(() => saveCurrentCarouselOrderToSupabase?.())
+      .then(() => console.log("[mirror] carousel done", { postId: canonicalPostId }))
+      .catch((err) => console.warn("[mirror] carousel failed", err));
+    Promise.resolve()
+      .then(() => queueMondayMirrorForPost?.(mirrorPayload))
+      .then(() => console.log("[mirror] monday queued", { postId: canonicalPostId }))
+      .catch((err) => console.warn("[mirror] monday failed", err));
+  }, 0);
 }
 
 function withTimeout(promise, ms, label) {
@@ -25543,17 +25634,32 @@ function setupSaveHandler() {
       }
 
       if (shouldUseSheetsAuthority()) {
+        let postSaveTotalTimed = false;
+        let postSaveSheetsTimed = false;
+        let postSaveLocalTimed = false;
+        let postSaveRenderTimed = false;
         try {
-          const authorityPost = await savePostToSheetsAuthority(payload, {
+          console.time("[post-save] total");
+          postSaveTotalTimed = true;
+          console.time("[post-save] sheets authority");
+          postSaveSheetsTimed = true;
+          const result = await savePostToSheetsAuthority(payload, {
             signal: requestController.signal
           });
-          saveCurrentCarouselOrderToSupabase().catch((err) => console.warn("[carousel] order save skipped", err?.message || err));
+          console.timeEnd("[post-save] sheets authority");
+          postSaveSheetsTimed = false;
+          console.log("[post-save] confirmed sheets result", JSON.stringify(result, null, 2));
+          const confirmedPost = requireConfirmedSaveResult(result, "post", "Post");
+
+          console.time("[post-save] local upsert");
+          postSaveLocalTimed = true;
+          upsertLocalPostFromAuthority(confirmedPost);
           if (noteIdToConvert) {
             appState.notes = (appState.notes || []).map((note) => {
               if ((note.noteId || note.id) !== noteIdToConvert) return note;
               return {
                 ...note,
-                convertedPostId: authorityPost.id || authorityPost.postId || authorityPost.post_id || payload.id,
+                convertedPostId: confirmedPost.id || confirmedPost.postId || confirmedPost.post_id || payload.id,
                 status: "converted_to_post",
                 flowState: "converted_to_post",
                 movedToPostAt: payload.movedToPostAt
@@ -25565,7 +25671,7 @@ function setupSaveHandler() {
               if ((item.inspoId || item.id) !== inspoIdToConvert) return item;
               return {
                 ...item,
-                convertedPostId: authorityPost.id || authorityPost.postId || authorityPost.post_id || payload.id,
+                convertedPostId: confirmedPost.id || confirmedPost.postId || confirmedPost.post_id || payload.id,
                 status: "archived",
                 flowState: "converted_to_post",
                 movedToPostAt: payload.movedToPostAt,
@@ -25574,10 +25680,28 @@ function setupSaveHandler() {
             });
           }
           persistLocalState();
+          console.timeEnd("[post-save] local upsert");
+          postSaveLocalTimed = false;
+
+          console.time("[post-save] close/rerender");
+          postSaveRenderTimed = true;
           setSheetsAuthorityStatus();
+          queuePostMirrorsAfterSheetsSave(confirmedPost, payload);
           closeModal();
+          rerenderAll();
+          console.timeEnd("[post-save] close/rerender");
+          postSaveRenderTimed = false;
           showToast("Saved", "Saved to Google Sheets.", "ph-check", "text-[#00ffaa]");
+          console.timeEnd("[post-save] total");
+          postSaveTotalTimed = false;
+          if (currentView) switchView(currentView);
+          console.log("[post-save] complete sheets-authority");
+          return;
         } catch (err) {
+          if (postSaveSheetsTimed) console.timeEnd("[post-save] sheets authority");
+          if (postSaveLocalTimed) console.timeEnd("[post-save] local upsert");
+          if (postSaveRenderTimed) console.timeEnd("[post-save] close/rerender");
+          if (postSaveTotalTimed) console.timeEnd("[post-save] total");
           if (isSaveAbortError(err)) return;
           console.error("[sheets-authority] post save failed", err);
           showPostSaveErrorBanner(err, payload);
@@ -25630,13 +25754,16 @@ function setupSaveHandler() {
       console.log("[post-save] complete local-only");
       return;
     } finally {
+      try {
+        console.timeEnd?.("[post-save] total");
+      } catch (_) {}
       if (saveTimeoutId) clearTimeout(saveTimeoutId);
+      savePostInFlight = false;
       if (saveButton) {
         saveButton.disabled = false;
         saveButton.innerHTML = originalSaveButtonHtml;
       }
       if (savePostAbortController === requestController) {
-        savePostInFlight = false;
         savePostAbortController = null;
       }
     }
@@ -33738,7 +33865,11 @@ async function persistLinkedAssetForPost(asset) {
 }
 
 async function apiSaveMediaLink(payload) {
-  return apiPost("saveMediaLink", payload);
+  const result = await apiPost("saveMediaLink", payload);
+  if (result?.ok === false || result?.success === false) {
+    throw new Error(result?.error || "saveMediaLink did not confirm.");
+  }
+  return result;
 }
 
 async function apiSaveCampaign(campaign) {
@@ -33762,12 +33893,20 @@ async function apiUpdateCampaignColor(payload) {
 }
 
 async function apiSaveNote(note) {
-  var backendMode = getActiveWorkspaceBackendMode();
+  const backendMode = getActiveWorkspaceBackendMode();
   if (backendMode.mode === "supabase_native") {
-    var result = await saveSupabaseNote(note);
-    return { ok: true, note: result.note };
+    const result = await saveSupabaseNote(note);
+    return {
+      ok: true,
+      success: true,
+      note: result.note || result.savedNote || result
+    };
   }
-  return apiPost("saveNote", note);
+  const result = await apiPost("saveNote", note);
+  if (result?.ok === false || result?.success === false) {
+    throw new Error(result?.error || "saveNote did not confirm.");
+  }
+  return result;
 }
 
 async function apiCreatePostFromNote(noteId, post = {}) {
@@ -34330,12 +34469,20 @@ async function apiDuplicatePost(postId) {
 }
 
 async function apiSaveInspo(inspo) {
-  var backendMode = getActiveWorkspaceBackendMode();
+  const backendMode = getActiveWorkspaceBackendMode();
   if (backendMode.mode === "supabase_native") {
-    var result = await saveSupabaseInspo(inspo);
-    return { ok: true, inspo: result.inspo };
+    const result = await saveSupabaseInspo(inspo);
+    return {
+      ok: true,
+      success: true,
+      inspo: result.inspo || result.savedInspo || result
+    };
   }
-  return apiPost("saveInspo", inspo);
+  const result = await apiPost("saveInspo", inspo);
+  if (result?.ok === false || result?.success === false) {
+    throw new Error(result?.error || "saveInspo did not confirm.");
+  }
+  return result;
 }
 
 async function apiArchiveInspo(inspoId, convertedPostId = "") {
