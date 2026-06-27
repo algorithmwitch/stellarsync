@@ -5364,13 +5364,16 @@
                 <div class="text-xs text-gray-400 mt-1">Google Sheets, Monday.com, and Drive/files stay here.</div>
               </div>
               <div class="flex items-center gap-2 flex-wrap">
+                <button type="button" id="pw-pull-sheets-btn" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 hover:text-white transition-colors">
+                  Pull from Sheets
+                </button>
                 <button type="button" id="pw-push-sheets-btn" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 hover:text-white transition-colors">
                   Push to Sheets
                 </button>
-                <button type="button" id="pw-sync-all-btn" class="px-3 py-2 rounded-xl bg-[#2d1b4e] border border-[#c77dff]/30 text-[10px] uppercase tracking-wider font-bold text-white hover:bg-[#3d246c] transition-colors">
-                  Sync Sheets + Monday
+                <button type="button" id="pw-monday-dry-run-btn" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 hover:text-white transition-colors">
+                  Monday Dry Run
                 </button>
-                <button type="button" id="pw-backfill-monday-btn" class="px-3 py-2 rounded-xl bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 hover:text-white transition-colors">Backfill Monday Board</button>
+                <button type="button" id="pw-monday-backfill-btn" class="px-3 py-2 rounded-xl bg-[#2d1b4e] border border-[#c77dff]/30 text-[10px] uppercase tracking-wider font-bold text-white hover:bg-[#3d246c] transition-colors">Push to Monday</button>
               </div>
             </div>
             <div id="pw-connections-list" class="space-y-3"></div>
@@ -5706,6 +5709,23 @@ function getCurrentWorkspaceSlug() {
   } catch (_) {
     return "";
   }
+}
+
+function getWorkspaceAuthorityMode() {
+  const config = WORKSPACE_RUNTIME_CONFIG?.active || {};
+  const slug = getCurrentWorkspaceSlug?.() || config.slug || config.workspace_slug || "";
+  if (
+    config.backend_mode === "google_sheets_hybrid" ||
+    config.authority_mode === "sheets" ||
+    slug === "gpe"
+  ) {
+    return "google_sheets_hybrid";
+  }
+  return "supabase_native";
+}
+
+function shouldUseSheetsAuthority() {
+  return getWorkspaceAuthorityMode() === "google_sheets_hybrid";
 }
 
 function isMissingColumnError(error, columnName = "") {
@@ -12311,6 +12331,71 @@ function setupWorkspaceReturnButtons() {
 
 }
 
+function updateHybridManualButtons() {
+  const sheetsButtons = [
+    document.getElementById("pw-pull-sheets-btn"),
+    document.getElementById("pw-push-sheets-btn")
+  ].filter(Boolean);
+  const mondayButtons = [
+    document.getElementById("pw-monday-dry-run-btn"),
+    document.getElementById("pw-monday-backfill-btn")
+  ].filter(Boolean);
+  const sheetConfig = typeof getSheetMirrorConfig === "function" ? getSheetMirrorConfig() : {};
+  const sheetsVisible = shouldUseSheetsAuthority() || Boolean(sheetConfig.sheetId && sheetConfig.appsScriptUrl);
+  const mondayVisible = shouldUseSheetsAuthority() || Boolean(getMondayBoardId(WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active, WORKSPACE_CONNECTIONS));
+  sheetsButtons.forEach(function(button) { button.classList.toggle("hidden", !sheetsVisible); });
+  mondayButtons.forEach(function(button) { button.classList.toggle("hidden", !mondayVisible); });
+}
+
+async function runMondayBackfill(options = {}) {
+  const dryRun = options.dryRun !== false;
+  const boardId = getMondayBoardId(WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active, WORKSPACE_CONNECTIONS);
+  if (!boardId) throw new Error("No Monday board configured.");
+  if (!dryRun && !canManageWorkspace()) throw new Error("You do not have permission to run a board backfill.");
+  const meta = getWorkspaceRequestMetadata();
+  const backendMode = getActiveWorkspaceBackendMode();
+  const activeWorkspace = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active || {};
+  const posts = getMondayBackfillFrontendPosts();
+  if (!posts.length) throw new Error("No posts are loaded to send to Monday.");
+  const result = await callSupabaseEdgeFunction("monday-sync", {
+    action: "backfill_posts",
+    workspace_id: meta.workspace_id || meta.workspace_slug,
+    workspace_slug: meta.workspace_slug || getCurrentWorkspaceSlug() || "",
+    board_id: boardId,
+    backend_type: backendMode.mode || activeWorkspace.backend_type || "",
+    posts,
+    dryRun,
+    dry_run: dryRun,
+    batch_size: posts.length,
+    cursor: 0
+  });
+  if (!result || !result.ok) throw new Error(result?.error || result?.message || "Monday backfill failed.");
+  if (!dryRun) {
+    upsertLocalWorkspaceConnection("monday", {
+      status: result.failed ? "warning" : "connected",
+      last_sync_at: result.completed_at || new Date().toISOString(),
+      last_error: result.failed ? result.failed + " backfill item(s) failed" : "",
+      config: {
+        board_id: boardId,
+        groups_found: result.groups_found || 0,
+        default_group_id: result.default_group_id || "",
+        default_group_title: result.default_group_title || "",
+        group_id: result.group_id || "",
+        group_title: result.group_title || "",
+        group_match_strategy: result.group_match_strategy || ""
+      }
+    });
+    refreshConnectionCards();
+  }
+  showToast(
+    dryRun ? "Monday dry run complete" : "Monday push complete",
+    "Posts checked: " + (result.total_posts_seen || result.total || posts.length) + "; Failed: " + (result.failed || 0),
+    dryRun ? "ph-clipboard-text" : "ph-check",
+    dryRun ? "text-[#c77dff]" : "text-[#00ffaa]"
+  );
+  return result;
+}
+
 function setupWorkspaceUI() {
   if (STELLARSYNC_DEBUG && !profileMenuTrigger) console.error("[profile-menu] missing trigger");
   if (STELLARSYNC_DEBUG && !profileMenu) console.error("[profile-menu] missing menu");
@@ -12453,6 +12538,17 @@ function setupWorkspaceUI() {
   });
   document.getElementById("pw-profile-save-btn")?.addEventListener("click", savePWProfile);
   document.getElementById("pw-workspace-save-btn")?.addEventListener("click", savePWWorkspace);
+  document.getElementById("pw-pull-sheets-btn")?.addEventListener("click", async function() {
+    console.log("[button] fired pw-pull-sheets-btn");
+    try {
+      await syncRemoteIfConfigured();
+      showToast("Sheets pulled", "Google Sheets data loaded.", "ph-check", "text-[#00ffaa]");
+      renderWorkspaceHub();
+    } catch (err) {
+      console.error("[sheet-authority] manual pull failed", err);
+      showToast("Sheets pull failed", err?.message || "Could not pull from Sheets.", "ph-warning", "text-yellow-400");
+    }
+  });
   document.getElementById("pw-push-sheets-btn")?.addEventListener("click", async function() {
     console.log("[button] fired pw-push-sheets-btn");
     try {
@@ -12464,26 +12560,27 @@ function setupWorkspaceUI() {
       showToast("Sheets push failed", err?.message || "Could not push to Sheets.", "ph-warning", "text-yellow-400");
     }
   });
-  document.getElementById("pw-sync-all-btn")?.addEventListener("click", async function() {
-    console.log("[button] fired pw-sync-all-btn");
+  document.getElementById("pw-monday-dry-run-btn")?.addEventListener("click", async function() {
+    console.log("[button] fired pw-monday-dry-run-btn");
     try {
-      await withTimeout(pushSupabaseToSheets(), 60000, "Push to Sheets timed out");
-      if (typeof openMondayBackfillModal === "function") {
-        openMondayBackfillModal();
-      } else if (typeof confirmMondayBackfill === "function") {
-        await withTimeout(confirmMondayBackfill(), 60000, "Monday sync timed out");
-      }
-      showToast("Sync started", "Sheets pushed. Monday sync is ready/started.", "ph-check", "text-[#00ffaa]");
+      await withTimeout(runMondayBackfill({ dryRun: true }), 60000, "Monday dry run timed out");
       renderWorkspaceHub();
     } catch (err) {
-      console.error("[workspace-sync] sync all failed", err);
-      showToast("Sync failed", err?.message || "Could not complete sync.", "ph-warning", "text-yellow-400");
+      console.error("[monday-backfill] dry run failed", err);
+      showToast("Monday dry run failed", err?.message || "Could not run Monday preview.", "ph-warning", "text-yellow-400");
     }
   });
-  document.getElementById("pw-backfill-monday-btn")?.addEventListener("click", function() {
-    console.log("[button] fired pw-backfill-monday-btn");
-    backfillMondayBoard();
+  document.getElementById("pw-monday-backfill-btn")?.addEventListener("click", async function() {
+    console.log("[button] fired pw-monday-backfill-btn");
+    try {
+      await withTimeout(runMondayBackfill({ dryRun: false }), 60000, "Monday backfill timed out");
+      renderWorkspaceHub();
+    } catch (err) {
+      console.error("[monday-backfill] push failed", err);
+      showToast("Monday push failed", err?.message || "Could not push to Monday.", "ph-warning", "text-yellow-400");
+    }
   });
+  updateHybridManualButtons();
   document.getElementById("close-monday-backfill-modal-btn")?.addEventListener("click", closeMondayBackfillModal);
   document.getElementById("cancel-monday-backfill-btn")?.addEventListener("click", closeMondayBackfillModal);
   document.getElementById("back-monday-backfill-profile-btn")?.addEventListener("click", backToProfileWorkspaceFromMondayBackfill);
@@ -24931,6 +25028,62 @@ function upsertSavedPostIntoAppState(saveResult, fallbackPayload = {}) {
   return normalized;
 }
 
+async function savePostToSheetsAuthority(post) {
+  const postId = getCanonicalPostId(post);
+  if (!postId) {
+    throw new Error("Cannot save to Sheets without canonical post_id.");
+  }
+  if (!isRemoteConfigured()) {
+    throw new Error("Google Sheets Apps Script URL is not configured.");
+  }
+  showToast("Saving to Sheets", "Updating Google Sheets source of truth...", "ph-table", "text-[#c77dff]");
+  const result = await withTimeout(
+    apiPost("savePost", {
+      ...post,
+      post_id: postId,
+      postId,
+      stellarsync_post_id: postId,
+      workspace_id: getCurrentWorkspaceSlug?.() || "gpe"
+    }),
+    45000,
+    "Google Sheets save timed out"
+  );
+  const savedPost = result?.post || result?.data || result || post;
+  upsertLocalPostFromAuthority(savedPost);
+  persistLocalState();
+  rerenderAll();
+  showToast("Saved to Sheets", "Google Sheets updated.", "ph-check", "text-[#00ffaa]");
+  return savedPost;
+}
+
+function upsertLocalPostFromAuthority(post) {
+  const postId = getCanonicalPostId(post);
+  if (!postId) return;
+  const normalized = typeof normalizeRemotePost === "function"
+    ? normalizeRemotePost(post, appState.campaigns || [], appState.media || [])
+    : post;
+  const index = (appState.posts || []).findIndex((item) => {
+    return getCanonicalPostId(item) === postId;
+  });
+  if (index >= 0) {
+    appState.posts[index] = {
+      ...appState.posts[index],
+      ...normalized,
+      post_id: postId,
+      postId
+    };
+  } else {
+    appState.posts = [
+      ...(appState.posts || []),
+      {
+        ...normalized,
+        post_id: postId,
+        postId
+      }
+    ];
+  }
+}
+
 function withTimeout(promise, ms, label) {
   return Promise.race([
     promise,
@@ -25247,7 +25400,17 @@ function setupSaveHandler() {
       });
     }
     persistLocalState();
-    queueWorkspaceSyncAfterSave(payload);
+    if (shouldUseSheetsAuthority()) {
+      savePostToSheetsAuthority(payload).catch((err) => {
+        console.warn("[sheets-authority] save failed", err?.message || err);
+        showToast("Sheets save failed", err?.message || "Saved locally only.", "ph-warning", "text-yellow-400");
+      });
+    } else {
+      console.log("[post-save] supabase/native local save only", {
+        post_id: getCanonicalPostId(payload),
+        reason: "manual_remote_sync_only"
+      });
+    }
     rerenderAll();
     if (currentView) switchView(currentView);
     console.log("[post-save] complete local-only");
@@ -35498,6 +35661,7 @@ function populatePWModal() {
   if (connectionsList) {
     connectionsList.innerHTML = renderWorkspaceConnectionCards({ showBackfill: true });
   }
+  updateHybridManualButtons();
 
   if (aiProvidersList) aiProvidersList.innerHTML = renderAIProviderCards();
   if (reportBugTitle) reportBugTitle.value = "";
@@ -37086,6 +37250,7 @@ window.openSocialQueueComposer = openSocialQueueComposer;
 window.openMondayBackfillModal = openMondayBackfillModal;
 window.closeMondayBackfillModal = closeMondayBackfillModal;
 window.confirmMondayBackfill = confirmMondayBackfill;
+window.runMondayBackfill = runMondayBackfill;
 
 </script>
 </body>
