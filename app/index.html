@@ -7084,7 +7084,19 @@ async function uploadMediaToSupabaseStorage(file, options = {}) {
     }
   }
   if (uploadError) {
-    throw new Error(`Supabase upload failed: ${uploadError.message || JSON.stringify(uploadError)}`);
+    console.error("[supabase-upload] failed", {
+      message: uploadError.message,
+      statusCode: uploadError.statusCode,
+      error: uploadError,
+      file: {
+        name: file?.name,
+        type: file?.type,
+        size: file?.size
+      },
+      bucket,
+      storagePath
+    });
+    throw new Error(`Supabase upload failed: ${uploadError.statusCode || ""} ${uploadError.message || JSON.stringify(uploadError)}`);
   }
   const { data: publicData } = STELLARSYNC_SUPABASE_CLIENT.storage
     .from(bucket)
@@ -23895,6 +23907,7 @@ function renderMediaPreviewContent(item, linkedAssets, previewUrl, type) {
     const checked = selectedMediaViewerDetachAssetIds.has(mediaAssetId);
     return `
       <div class="media-manage-tile ${index === 0 ? "border-[#c77dff]/50" : ""}"
+        onclick="consumeMediaViewerTileEvent(event)"
         draggable="true"
         data-media-asset-id="${escapeHtml(mediaAssetId)}"
         ondragstart="startMediaViewerAssetDrag(event, ${index})"
@@ -23965,17 +23978,23 @@ function openSingleMediaViewerAsset(index) {
 }
 
 function handleMediaViewerThumbClick(event, index) {
-  event?.preventDefault?.();
-  event?.stopPropagation?.();
-  if (mediaViewerReorderMode || mediaViewerDetachMode || isMediaViewerCarouselMode()) {
-    currentMediaViewerIndex = Math.max(0, Math.min(index, currentMediaViewerItems.length - 1));
-    openMediaAssetModal(currentMediaViewerItems[currentMediaViewerIndex], {
-      items: currentMediaViewerItems,
-      openPosts: mediaPostsPanelOpen
-    });
+  event.preventDefault();
+  event.stopPropagation();
+
+  if (mediaViewerReorderMode) {
     return;
   }
-  openSingleMediaViewerAsset(index);
+  if (mediaViewerDetachMode) {
+    const asset = currentMediaViewerItems[index];
+    const id = getMediaAssetId(asset);
+    if (!id) return;
+    const nextChecked = !selectedMediaViewerDetachAssetIds.has(id);
+    toggleMediaViewerDetachSelection(id, nextChecked);
+    return;
+  }
+  currentMediaViewerIndex = index;
+  const next = currentMediaViewerItems[index];
+  if (next) openMediaAssetModal(next, { items: currentMediaViewerItems, openPosts: mediaPostsPanelOpen });
 }
 
 function toggleMediaViewerGalleryViewAll() {
@@ -25823,6 +25842,11 @@ function queueSupabaseInspoMirror(inspo) {
 }
 
 const MONDAY_POST_MIRROR_TIMERS = new Map();
+let MONDAY_QUEUE_DISABLED_UNTIL = 0;
+
+function shouldSkipMondayQueueNow() {
+  return Date.now() < MONDAY_QUEUE_DISABLED_UNTIL;
+}
 
 async function enqueueMondayPostSyncJob(post, options = {}) {
   const config = getMondaySyncConfig();
@@ -25842,39 +25866,30 @@ async function enqueueMondayPostSyncJob(post, options = {}) {
     console.log("[monday-queue] skipped", { postId, reason: "missing_post" });
     return { ok: false, skipped: true, reason: "missing_post" };
   }
+  if (shouldSkipMondayQueueNow()) {
+    console.log("[monday-queue] skipped temporary backoff");
+    return { ok: false, skipped: true, reason: "temporary_backoff" };
+  }
   const meta = getWorkspaceRequestMetadata();
-  return callSupabaseEdgeFunction("monday-sync", {
-    action: "enqueue_post_sync",
-    workspace_id: meta.workspace_id || meta.workspace_slug,
-    board_id: config.boardId,
-    reason: String(options.reason || "post_save_confirmed").trim(),
-    source: String(options.source || "supabase_after_sheets_save").trim(),
-    force: Boolean(options.force),
-    monday_item_id: targetPost.mondayItemId || targetPost.monday_item_id || "",
-    id: postId,
-    post_id: postId,
-    post_title: targetPost.title || targetPost.post_title || "",
-    title: targetPost.title || targetPost.post_title || "",
-    description: targetPost.description || targetPost.caption || targetPost.body || "",
-    status: targetPost.status || targetPost.publish_status || targetPost.flowState || "draft",
-    publish_status: targetPost.publish_status || targetPost.status || "draft",
-    platform: targetPost.platform || (Array.isArray(targetPost.platforms) ? targetPost.platforms[0] : "") || "",
-    platforms: targetPost.platforms || (targetPost.platform ? [targetPost.platform] : []),
-    platform_targets: targetPost.platform_targets || targetPost.platforms || targetPost.platform || "",
-    pillar: targetPost.pillar || "",
-    campaign_name: targetPost.campaign_name || targetPost.campaignName || "",
-    campaignName: targetPost.campaignName || targetPost.campaign_name || "",
-    scheduled_at: targetPost.scheduled_at || targetPost.scheduledAt || targetPost.date || targetPost.publish_date || "",
-    date: targetPost.date || targetPost.scheduled_at || targetPost.publish_date || "",
-    impressions: targetPost.impressions || targetPost.impression_count || targetPost.views || 0,
-    published_url: targetPost.published_url || targetPost.publishedUrl || "",
-    media_url: targetPost.media_url || targetPost.mediaUrl || "",
-    monday_sync_enabled: config.enabled,
-    monday_sync_direction: config.direction,
-    monday_auto_sync_on_save: config.autoSyncOnSave,
-    monday_last_pushed_at: config.lastPushedAt,
-    monday_last_pulled_at: config.lastPulledAt,
-  });
+  try {
+    const result = await callSupabaseEdgeFunction("monday-sync", {
+      action: "enqueue_post_sync",
+      workspace_id: meta.workspace_id || meta.workspace_slug,
+      workspace_slug: meta.workspace_slug || getCurrentWorkspaceSlug() || "",
+      board_id: config.boardId,
+      post_id: postId,
+      payload: targetPost,
+      reason: String(options.reason || "post_save_confirmed").trim(),
+      source: String(options.source || "supabase_after_sheets_save").trim()
+    });
+    if (!result?.ok) {
+      MONDAY_QUEUE_DISABLED_UNTIL = Date.now() + 5 * 60 * 1000;
+    }
+    return result;
+  } catch (err) {
+    MONDAY_QUEUE_DISABLED_UNTIL = Date.now() + 5 * 60 * 1000;
+    throw err;
+  }
 }
 
 function queueMondayMirrorForPost(post, options = {}) {
