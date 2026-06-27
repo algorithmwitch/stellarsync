@@ -3254,6 +3254,7 @@
       </button>
       <input id="media-upload-input" type="file" class="hidden" accept="image/*,video/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt" multiple onchange="handleMediaUploadFileSelected(event)" />
     </div>
+    <div id="media-upload-notice" class="hidden mt-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-200"></div>
   </div>
 
   <div id="media-filter-bar" class="flex flex-wrap items-center gap-3 mb-6 pb-2">
@@ -4230,6 +4231,7 @@
                     </button>
                     <input id="modal-media-upload-input" type="file" class="hidden" accept="image/*,video/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt" multiple />
                     <p id="modal-media-status" class="text-[10px] text-gray-500 mt-2 leading-tight">No media linked</p>
+                    <div id="modal-media-upload-notice" class="hidden mt-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-200"></div>
                   </div>
                 
                   <div class="flex-1 flex flex-col">
@@ -7139,6 +7141,27 @@ async function uploadMediaToSupabaseStorage(file, options = {}) {
     assetType: mediaType,
     fileUrl: publicUrl,
   });
+}
+
+function getUploadFailureMessage(err, file) {
+  const raw = String(err?.message || err || "");
+  const sizeMb = file?.size ? Math.round(file.size / 1024 / 1024) : null;
+  if (raw.includes("413") || raw.toLowerCase().includes("maximum allowed size")) {
+    return `This file is too large to upload${sizeMb ? ` (${sizeMb}MB)` : ""}. Try compressing the video or uploading a smaller file.`;
+  }
+  if (raw.includes("403") || raw.toLowerCase().includes("row-level security")) {
+    return "Upload is blocked by Supabase permissions. Check the media bucket storage policy.";
+  }
+  if (raw.includes("mime") || raw.includes("type")) {
+    return "This file type is not allowed yet. Try MP4, JPG, PNG, or WebP.";
+  }
+  return "Media upload failed. Please try again.";
+}
+
+function isBrowserPlayableVideo(asset = {}) {
+  const type = String(asset.mime_type || asset.mimeType || asset.type || "").toLowerCase();
+  const url = String(asset.url || asset.media_url || asset.mediaUrl || asset.fileUrl || asset.sourceUrl || asset.src || "").toLowerCase();
+  return type.includes("video/mp4") || url.endsWith(".mp4") || url.includes(".mp4?");
 }
 
 async function loadSupabaseMediaAssets(workspace, options = {}) {
@@ -10056,7 +10079,9 @@ function renderMediaGalleryStrip(assets = [], options = {}) {
               <span class="absolute top-2 left-2 z-10 w-6 h-6 rounded-full bg-[#181125]/95 border border-white/10 text-[10px] font-bold text-white flex items-center justify-center">${index + 1}</span>
               ${previewUrl ? (
                 kind === "video"
-                  ? `<video src="${escapeHtml(previewUrl)}" class="w-full h-full object-cover" muted playsinline preload="metadata"></video>`
+                  ? (isBrowserPlayableVideo(asset || {})
+                    ? `<video src="${escapeHtml(previewUrl)}" class="w-full h-full object-cover" muted playsinline preload="metadata"></video>`
+                    : `<div class="w-full h-full flex flex-col items-center justify-center bg-black/40 text-center p-3 text-purple-200"><i class="ph-fill ph-video text-3xl mb-2"></i><span class="text-[10px] font-bold">MOV preview unavailable</span></div>`)
                   : kind === "document"
                   ? `<div class="w-full h-full flex flex-col items-center justify-center gap-1 text-gray-400 p-2"><i class="ph-bold ph-file-text text-2xl"></i><span class="text-[9px] uppercase tracking-wider font-bold text-center">${escapeHtml(getMediaFileTypeLabel(asset))}</span></div>`
                   : `<img src="${escapeHtml(previewUrl)}" alt="${escapeHtml(title)}" class="w-full h-full object-cover" onerror="handleBrokenMediaPreview(this)">`
@@ -16531,7 +16556,9 @@ function renderModalCarouselPreview() {
           <span class="absolute top-2 left-2 z-10 w-6 h-6 rounded-full bg-[#181125]/90 border border-white/10 text-[10px] font-bold text-white flex items-center justify-center">${index + 1}</span>
           ${previewUrl
             ? String(asset.assetType || asset.type || "").startsWith("video")
-              ? `<video src="${escapeHtml(previewUrl)}" class="w-full h-full object-cover" muted playsinline preload="metadata"></video>`
+              ? (isBrowserPlayableVideo(asset || {})
+                ? `<video src="${escapeHtml(previewUrl)}" class="w-full h-full object-cover" muted playsinline preload="metadata"></video>`
+                : `<div class="w-full h-full flex flex-col items-center justify-center bg-black/40 text-center p-3 text-purple-200"><i class="ph-fill ph-video text-3xl mb-2"></i><span class="text-[10px] font-bold">MOV preview unavailable</span></div>`)
               : /pdf|document|doc|presentation|spreadsheet|text/i.test(String(asset.assetType || asset.type || asset.mimeType || ""))
               ? `<div class="w-full h-full flex flex-col items-center justify-center text-gray-400"><i class="ph-bold ph-file-text text-2xl mb-1"></i><span class="text-[10px] uppercase tracking-wider font-bold">Document</span></div>`
               : `<img src="${escapeHtml(previewUrl)}" alt="${escapeHtml(carouselTitle)}" class="w-full h-full object-cover" onerror="handleBrokenMediaPreview(this)">`
@@ -16582,34 +16609,20 @@ function getMediaAssetId(media) {
   if (!media) return "";
   if (typeof media !== "object") {
     var raw = String(media || "").trim();
-    return isSupabaseMediaAssetId(raw) ? raw : "";
+    return raw && !raw.startsWith("row_") ? raw : "";
   }
-  var direct = String(media.media_asset_id || media.mediaAssetId || "").trim();
-  if (isSupabaseMediaAssetId(direct)) return direct;
-  var id = String(media.id || "").trim();
-  if (isSupabaseMediaAssetId(id)) return id;
-  var candidates = [
-    media.asset_id,
-    media.assetId,
-    media.media_id,
-    media.mediaId,
-    media.storage_path,
-    media.storagePath,
-    media.media_url,
-    media.mediaUrl,
-    media.fileUrl,
-    media.url,
-    media.sourceUrl
-  ].map(function(v) {
-    return String(v || "").trim();
-  }).filter(Boolean);
-  for (var i = 0; i < candidates.length; i += 1) {
-    var candidate = candidates[i];
-    var match = findMediaAssetByAnyKey(candidate);
-    var matchId = String(match?.id || match?.media_asset_id || match?.mediaAssetId || "").trim();
-    if (isSupabaseMediaAssetId(matchId)) return matchId;
-  }
-  console.log("[media-id] unresolved media", media);
+  var direct =
+    media.media_asset_id ||
+    media.mediaAssetId ||
+    media.asset_id ||
+    media.assetId ||
+    media.media_id ||
+    media.mediaId ||
+    media.id;
+  if (direct && !String(direct).startsWith("row_")) return String(direct).trim();
+  var nested = media.asset || media.media || media.source || media.original || media.data;
+  if (nested && nested !== media) return getMediaAssetId(nested);
+  console.warn("[media-id] unresolved media", media);
   return "";
 }
 
@@ -17042,7 +17055,9 @@ function renderMediaPickerAssets(target = "modal") {
           <button type="button" onclick="attachMediaToCurrentPost('${escapeHtml(assetId)}')" class="relative h-20 w-full bg-black/20" title="${escapeHtml(title)}">
             ${thumbUrl ? (
               kind === "video"
-                ? `<video src="${escapeHtml(thumbUrl)}" class="w-full h-full object-contain" muted playsinline preload="metadata"></video>`
+                ? (isBrowserPlayableVideo(asset || {})
+                  ? `<video src="${escapeHtml(thumbUrl)}" class="w-full h-full object-contain" muted playsinline preload="metadata"></video>`
+                  : `<div class="w-full h-full flex flex-col items-center justify-center bg-black/40 text-center p-3 text-purple-200"><i class="ph-fill ph-video text-3xl mb-2"></i><span class="text-[10px] font-bold">MOV preview unavailable</span></div>`)
                 : `<img src="${escapeHtml(thumbUrl)}" alt="${escapeHtml(title)}" class="w-full h-full object-contain" loading="lazy" onerror="handleBrokenMediaPreview(this)">`
             ) : `<div class="w-full h-full flex items-center justify-center text-gray-600"><i class="ph-bold ph-file text-xl"></i></div>`}
             ${isSelected ? '<span class="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-purple-500 text-white"><i class="ph-bold ph-check text-[10px]"></i></span>' : ''}
@@ -17599,6 +17614,7 @@ function handleMediaUploadFileSelected(event) {
 function setupMediaUpload() {
   const btn = document.getElementById("media-upload-btn");
   const input = document.getElementById("media-upload-input");
+  const notice = document.getElementById("media-upload-notice");
   if (!btn || !input) {
     console.warn("[media-upload] missing button or input", { btn: !!btn, input: !!input });
     return;
@@ -17613,6 +17629,10 @@ function setupMediaUpload() {
     const files = Array.from(event.target.files || []);
     if (!files.length) return;
     try {
+      if (notice) {
+        notice.textContent = "";
+        notice.classList.add("hidden");
+      }
       showToast("Uploading", "Uploading media to vault...", "ph-upload-simple", "text-[#c77dff]");
       const uploaded = [];
       for (const file of files) {
@@ -17649,7 +17669,12 @@ function setupMediaUpload() {
       console.log("[media-upload] success", { uploaded: uploaded.length });
     } catch (err) {
       console.error("[media-upload] failed", err);
-      showToast("Upload failed", err.message || "Could not upload media.", "ph-warning", "text-yellow-400");
+      const friendlyMessage = getUploadFailureMessage(err, files[0]);
+      showToast(friendlyMessage, "error");
+      if (notice) {
+        notice.textContent = friendlyMessage;
+        notice.classList.remove("hidden");
+      }
     } finally {
       input.value = "";
     }
@@ -22663,6 +22688,7 @@ async function editCampaignById(campaignId) {
 function setupModalMediaUpload() {
   const btn = document.getElementById("modal-media-upload-trigger");
   const input = document.getElementById("modal-media-upload-input");
+  const notice = document.getElementById("modal-media-upload-notice");
   if (!btn || !input) {
     console.warn("[modal-media-upload] missing button or input", { btn: !!btn, input: !!input });
     return;
@@ -22677,6 +22703,10 @@ function setupModalMediaUpload() {
     const files = Array.from(event.target.files || []);
     if (!files.length) return;
     try {
+      if (notice) {
+        notice.textContent = "";
+        notice.classList.add("hidden");
+      }
       const isCarousel = String(postTypeSelect?.value || "").trim().toLowerCase() === "carousel";
       showToast(
         "Uploading",
@@ -22771,7 +22801,12 @@ function setupModalMediaUpload() {
       });
     } catch (err) {
       console.error("[modal-media-upload] failed", err);
-      showToast("Upload failed", err.message || "Could not upload post media.", "ph-warning", "text-yellow-400");
+      const friendlyMessage = getUploadFailureMessage(err, files[0]);
+      showToast(friendlyMessage, "error");
+      if (notice) {
+        notice.textContent = friendlyMessage;
+        notice.classList.remove("hidden");
+      }
     } finally {
       input.value = "";
     }
@@ -23203,7 +23238,9 @@ function renderMediaVaultCard(item) {
     : hasImagePreview
     ? `<img src="${escapeHtml(previewUrl)}" alt="${escapeHtml(displayTitle)}" class="w-full h-full object-cover rounded-none" loading="lazy" onerror="handleBrokenMediaPreview(this)">`
     : hasVideoPreview
-    ? `<video src="${escapeHtml(previewUrl)}" class="w-full h-full object-cover rounded-none" muted playsinline preload="metadata"></video>`
+    ? (isBrowserPlayableVideo(item || {})
+      ? `<video src="${escapeHtml(previewUrl)}" class="w-full h-full object-cover rounded-none" muted playsinline preload="metadata"></video>`
+      : `<div class="w-full h-full flex flex-col items-center justify-center bg-black/40 text-center p-4 text-purple-200"><i class="ph-fill ph-video text-4xl mb-2"></i><span class="text-xs font-bold">MOV preview unavailable</span><a href="${escapeHtml(previewUrl)}" target="_blank" rel="noopener noreferrer" class="mt-2 text-[10px] underline">Open video file</a></div>`)
     : `<div class="w-full h-full flex items-center justify-center"><i class="ph-fill ${icon} text-gray-600 text-5xl"></i></div>`;
 
   return `
@@ -23829,8 +23866,18 @@ function renderMediaPreviewContent(item, linkedAssets, previewUrl, type) {
       return '<div class="flex items-center justify-center h-64 text-gray-500"><i class="ph-bold ph-image text-4xl"></i></div>';
     }
     var kind = (type || inferMediaKindFromAsset(item) || (item ? String(item.type || item.assetType || "").toLowerCase() : ""));
-    if (kind === "video") {
+    if (kind === "video" && isBrowserPlayableVideo(item || {})) {
       return '<video controls src="' + escapeHtml(src) + '" class="max-h-[55vh] w-full object-contain rounded-lg" preload="metadata"></video>';
+    }
+    if (kind === "video") {
+      return `
+        <div class="w-full h-64 flex flex-col items-center justify-center bg-black/40 text-center p-6 rounded-lg">
+          <i class="ph-fill ph-video text-5xl text-purple-300 mb-3"></i>
+          <p class="text-sm font-bold text-white">Video uploaded</p>
+          <p class="text-xs text-gray-400 mt-1">Preview unavailable for MOV files. Use MP4 for in-app playback.</p>
+          <a href="${escapeHtml(src)}" target="_blank" rel="noopener noreferrer" class="mt-4 text-xs text-purple-300 underline">Open video file</a>
+        </div>
+      `;
     }
     if (kind === "document") {
       var docLabel = getMediaFileTypeLabel ? getMediaFileTypeLabel(item) : "Document";
@@ -23854,7 +23901,15 @@ function renderMediaPreviewContent(item, linkedAssets, previewUrl, type) {
   const mainTitle = getMediaDisplayTitle(mainAsset, getLinkedPostForMedia(mainAsset) || getMediaPostContext(mainAsset), `Asset ${currentMediaViewerIndex + 1}`);
   const renderMain = function(asset, url, kind, title) {
     if (!url) return '<div class="flex items-center justify-center h-[55vh] text-gray-500"><i class="ph-bold ph-image text-4xl"></i></div>';
-    if (kind === "video") return `<video controls src="${escapeHtml(url)}" class="max-h-[58vh] w-full object-contain rounded-lg" preload="metadata"></video>`;
+    if (kind === "video" && isBrowserPlayableVideo(asset || {})) return `<video controls src="${escapeHtml(url)}" class="max-h-[58vh] w-full object-contain rounded-lg" preload="metadata"></video>`;
+    if (kind === "video") return `
+      <div class="w-full h-[55vh] flex flex-col items-center justify-center bg-black/40 text-center p-6 rounded-lg">
+        <i class="ph-fill ph-video text-5xl text-purple-300 mb-3"></i>
+        <p class="text-sm font-bold text-white">Video uploaded</p>
+        <p class="text-xs text-gray-400 mt-1">Preview unavailable for MOV files. Use MP4 for in-app playback.</p>
+        <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="mt-4 text-xs text-purple-300 underline">Open video file</a>
+      </div>
+    `;
     if (kind === "document") return `<div class="flex flex-col items-center justify-center h-[55vh] text-gray-400 gap-3"><i class="ph-bold ph-file-text text-5xl"></i><span class="text-xs uppercase tracking-wider font-bold">${escapeHtml(getMediaFileTypeLabel(asset))}</span></div>`;
     return `<img src="${escapeHtml(url)}" alt="${escapeHtml(title)}" class="max-h-[58vh] w-full object-contain rounded-lg" onerror="handleBrokenMediaPreview(this)">`;
   };
@@ -23867,7 +23922,9 @@ function renderMediaPreviewContent(item, linkedAssets, previewUrl, type) {
         <span class="absolute top-1 left-1 z-10 px-1.5 py-0.5 rounded bg-black/65 text-[9px] font-bold text-white">${index + 1}</span>
         ${thumbUrl ? (
           kind === "video"
-            ? `<video src="${escapeHtml(thumbUrl)}" class="w-full h-full object-cover pointer-events-none" draggable="false" muted playsinline preload="metadata"></video>`
+            ? (isBrowserPlayableVideo(asset || {})
+              ? `<video src="${escapeHtml(thumbUrl)}" class="w-full h-full object-cover pointer-events-none" draggable="false" muted playsinline preload="metadata"></video>`
+              : `<div class="w-full h-full flex flex-col items-center justify-center bg-black/40 text-center p-2 text-purple-200"><i class="ph-fill ph-video text-2xl mb-1"></i><span class="text-[9px] font-bold">MOV</span></div>`)
             : kind === "document"
             ? `<div class="w-full h-full flex items-center justify-center text-gray-400"><i class="ph-bold ph-file-text text-2xl"></i></div>`
             : `<img src="${escapeHtml(thumbUrl)}" alt="${escapeHtml(title)}" class="w-full h-full object-cover pointer-events-none" draggable="false" onerror="handleBrokenMediaPreview(this)">`
@@ -23920,7 +23977,9 @@ function renderMediaPreviewContent(item, linkedAssets, previewUrl, type) {
           ${index === 0 ? `<span class="absolute top-2 right-2 z-10 px-2 py-1 rounded-full bg-[#231738]/95 border border-[#c77dff]/30 text-[8px] uppercase tracking-wider font-bold text-[#c77dff]">Cover</span>` : ""}
           ${thumbUrl ? (
             kind === "video"
-              ? `<video src="${escapeHtml(thumbUrl)}" class="w-full h-full object-cover" muted playsinline preload="metadata"></video>`
+              ? (isBrowserPlayableVideo(asset || {})
+                ? `<video src="${escapeHtml(thumbUrl)}" class="w-full h-full object-cover" muted playsinline preload="metadata"></video>`
+                : `<div class="w-full h-full flex flex-col items-center justify-center bg-black/40 text-center p-2 text-purple-200"><i class="ph-fill ph-video text-2xl mb-1"></i><span class="text-[9px] font-bold">MOV</span></div>`)
               : kind === "document"
               ? `<div class="w-full h-full flex flex-col items-center justify-center gap-1 text-gray-400 p-2"><i class="ph-bold ph-file-text text-2xl"></i><span class="text-[9px] uppercase tracking-wider font-bold text-center">${escapeHtml(getMediaFileTypeLabel(asset))}</span></div>`
               : `<img src="${escapeHtml(thumbUrl)}" alt="${escapeHtml(title)}" class="w-full h-full object-cover" onerror="handleBrokenMediaPreview(this)">`
@@ -24075,6 +24134,10 @@ async function saveMediaViewerOrder() {
   const linkedPost = currentMediaAssetDetail?.linkedPost || currentMediaViewerItems.find((asset) => asset.linkedPost)?.linkedPost || getLinkedPostForMedia(currentMediaAssetDetail);
   const postId = String(linkedPost ? getCanonicalPostId(linkedPost) : currentMediaAssetDetail?.postId || currentMediaAssetDetail?.linkedPostId || currentMediaAssetDetail?.linked_post_id || "").trim();
   const orderedIds = currentMediaViewerItems.map((asset) => getMediaAssetId(asset)).filter(Boolean);
+  if (!orderedIds.length) {
+    console.warn("[media-reorder] skipped save: no canonical media ids", currentMediaViewerItems);
+    return;
+  }
   console.log("[media-manage] reorder payload", { post_id: postId, ordered_media_asset_ids: orderedIds });
   if (!postId || !orderedIds.length) return;
   try {
