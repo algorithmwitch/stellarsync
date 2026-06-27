@@ -6899,12 +6899,12 @@ async function callAppsScript(action, payloadOrParams = {}, method = "GET", requ
   } catch (err) {
     throw new Error(`Apps Script returned non-JSON: ${text.slice(0, 300)}`);
   }
-  console.log("[apps-script] response body", {
+  console.log("[apps-script] response body", JSON.stringify({
     action,
     status: response.status,
     httpOk: response.ok,
     data
-  });
+  }, null, 2));
   return {
     ...data,
     status: response.status,
@@ -29475,14 +29475,14 @@ async function apiGet(action, params = {}) {
 
 async function apiPost(action, payload = {}, options = {}) {
   const result = await callAppsScript(action, payload || {}, "POST", options);
-  console.log("[apiPost] response", {
+  console.log("[apiPost] parsed result", JSON.stringify({
     action,
-    status: result?.status,
     ok: result?.ok,
     success: result?.success,
     error: result?.error,
+    httpStatus: result?.httpStatus,
     result
-  });
+  }, null, 2));
   if (result?.ok !== true || result?.success !== true) {
     const err = new Error(result?.error || `Request failed ${result?.status || ""}`.trim());
     err.backend = result;
