@@ -9601,7 +9601,11 @@ function getAttachedMediaForPost(post, mediaItems) {
   var mediaIdValues = splitMediaIdList(post.media_ids || post.mediaIds);
   mediaIdValues.forEach(function(id, index) {
     var asset = findMediaAssetByAnyKey(id, mediaItems);
-    addCandidate(asset || { id: id, media_asset_id: id }, {
+    var canonicalId = getMediaAssetId(asset || id);
+    if (!canonicalId) return;
+    addCandidate(asset, {
+      media_asset_id: canonicalId,
+      id: canonicalId,
       sort_order: index,
       linked_post_id: postId
     });
@@ -9609,7 +9613,11 @@ function getAttachedMediaForPost(post, mediaItems) {
   var carouselIdValues = splitMediaIdList(post.carouselAssetIds || post.carousel_asset_ids);
   carouselIdValues.forEach(function(id, index) {
     var asset = findMediaAssetByAnyKey(id, mediaItems);
-    addCandidate(asset || { id: id, media_asset_id: id }, {
+    var canonicalId = getMediaAssetId(asset || id);
+    if (!canonicalId) return;
+    addCandidate(asset, {
+      media_asset_id: canonicalId,
+      id: canonicalId,
       sort_order: index,
       linked_post_id: postId
     });
@@ -9634,7 +9642,14 @@ if (isSyntheticRowPostId(lid)) lid = "";
   var single = post.media_id || post.mediaId || post.asset_id || post.assetId;
   if (single) {
     var found = findMediaAssetByAnyKey(single, mediaItems);
-    addCandidate(found || { id: single, media_asset_id: single }, { linked_post_id: postId });
+    var singleCanonicalId = getMediaAssetId(found || single);
+    if (singleCanonicalId) {
+      addCandidate(found, {
+        media_asset_id: singleCanonicalId,
+        id: singleCanonicalId,
+        linked_post_id: postId
+      });
+    }
   }
   console.log("[media-attach] post id", postId);
   console.log("[media-attach] post_media count", postMediaRows.length);
@@ -16531,26 +16546,40 @@ function getCurrentCarouselOrderPayload() {
   return { assets: assets, ids: ids };
 }
 
+function isSupabaseMediaAssetId(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value || "").trim());
+}
+
 function getMediaAssetId(media) {
-  if (!media || typeof media !== "object") return String(media || "").trim();
-  var id = String(media.media_asset_id || media.mediaAssetId || "").trim();
-  if (id) { console.log("[media-id] normalize input — media_asset_id", id); return id; }
-  var uuid = String(media.id || "").trim();
-  if (uuid && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid)) { console.log("[media-id] resolved media_asset_id from id UUID", uuid); return uuid; }
-  var assetId = String(media.asset_id || media.assetId || "").trim();
-  if (assetId) {
-    var match = (appState.media || []).find(function(a) { return String(a.id || "").trim() === assetId; });
-    if (match) { console.log("[media-id] resolved media_asset_id via asset_id → id lookup", match.id); return String(match.id).trim(); }
+  if (!media) return "";
+  if (typeof media !== "object") {
+    var raw = String(media || "").trim();
+    return isSupabaseMediaAssetId(raw) ? raw : "";
   }
-  var storagePath = String(media.storage_path || media.storagePath || "").trim();
-  if (storagePath) {
-    var spMatch = (appState.media || []).find(function(a) { return String(a.storage_path || a.storagePath || "").trim() === storagePath; });
-    if (spMatch) { console.log("[media-id] resolved media_asset_id via storage_path lookup", spMatch.id); return String(spMatch.id).trim(); }
-  }
-  var mediaUrl = String(media.media_url || media.mediaUrl || media.fileUrl || media.url || media.sourceUrl || "").trim();
-  if (mediaUrl) {
-    var urlMatch = (appState.media || []).find(function(a) { return String(a.media_url || a.mediaUrl || a.fileUrl || a.url || a.sourceUrl || "").trim() === mediaUrl; });
-    if (urlMatch) { console.log("[media-id] resolved media_asset_id via url lookup", urlMatch.id); return String(urlMatch.id).trim(); }
+  var direct = String(media.media_asset_id || media.mediaAssetId || "").trim();
+  if (isSupabaseMediaAssetId(direct)) return direct;
+  var id = String(media.id || "").trim();
+  if (isSupabaseMediaAssetId(id)) return id;
+  var candidates = [
+    media.asset_id,
+    media.assetId,
+    media.media_id,
+    media.mediaId,
+    media.storage_path,
+    media.storagePath,
+    media.media_url,
+    media.mediaUrl,
+    media.fileUrl,
+    media.url,
+    media.sourceUrl
+  ].map(function(v) {
+    return String(v || "").trim();
+  }).filter(Boolean);
+  for (var i = 0; i < candidates.length; i += 1) {
+    var candidate = candidates[i];
+    var match = findMediaAssetByAnyKey(candidate);
+    var matchId = String(match?.id || match?.media_asset_id || match?.mediaAssetId || "").trim();
+    if (isSupabaseMediaAssetId(matchId)) return matchId;
   }
   console.log("[media-id] unresolved media", media);
   return "";
@@ -16603,16 +16632,22 @@ async function saveCurrentCarouselOrderToSupabase() {
   if (!isSupabaseMediaEnabled()) return;
   const postId = String(currentEditingPostId || getCanonicalPostId(window.__currentModalPostData || {}) || "").trim();
   if (!postId) return;
-  const order = getCurrentCarouselOrderPayload();
-  const canonicalIds = (currentModalCarouselAssets || []).map(function(a) { return getMediaAssetId(a); }).filter(Boolean);
-  if (!canonicalIds.length) return;
-  const result = await reorderPostMediaPreservingLocal(postId, canonicalIds, order.ids);
+  const assets = (currentModalCarouselAssets || []).filter(function(asset) {
+    return !!getMediaAssetId(asset);
+  });
+  const ids = assets.map(getMediaAssetId).filter(isSupabaseMediaAssetId);
+  if (!ids.length) {
+    console.warn("[carousel] no real Supabase media ids; skipping sync");
+    return;
+  }
+  await attachMediaAssetsToPost(assets, postId, 0);
+  const result = await reorderPostMediaPreservingLocal(postId, ids, ids);
   if (!result?.preservedLocal) {
     applyOrderedAttachedMediaResult(postId, result);
   }
   const refreshed = getAttachedMediaForPost(findPostByAnyId(postId) || window.__currentModalPostData || { post_id: postId });
   console.log("[carousel] refreshed order", refreshed.map(function(a) { return getMediaAssetId(a); }));
-  console.log("[carousel] order saved", { postId, count: canonicalIds.length, preservedLocal: !!result?.preservedLocal });
+  console.log("[carousel] order saved", { postId, count: ids.length, preservedLocal: !!result?.preservedLocal });
 }
 
 async function reorderPostMediaPreservingLocal(postId, orderedIds, rawIds) {
@@ -29925,6 +29960,25 @@ function buildSupabasePostRow(payload = {}) {
   };
 }
 
+function sanitizeSupabasePostRow(row) {
+  [
+    "campaign_id", "campaignId",
+    "media_id", "mediaId",
+    "media_ids", "mediaIds",
+    "media_url", "mediaUrl",
+    "media_type", "mediaType",
+    "media_filename", "mediaFilename",
+    "media_alt_text", "mediaAltText",
+    "media_source", "mediaSource",
+    "storage_path", "storagePath",
+    "carousel_asset_ids", "carouselAssetIds",
+    "carouselAssets"
+  ].forEach(function(k) {
+    delete row[k];
+  });
+  return row;
+}
+
 function normalizeSupabasePostRecord(row = {}) {
   const postId = getCanonicalPostId(row);
   return {
@@ -29987,9 +30041,7 @@ async function apiSavePostToSupabase(payload = {}) {
   if (!STELLARSYNC_SUPABASE_CLIENT) throw new Error("Supabase is not configured.");
   if (SUPABASE_DISABLED_MIRRORS.has("posts") || SUPABASE_MISSING_TABLES.has("posts")) throw new Error("Supabase posts persistence disabled for this session.");
   const row = buildSupabasePostRow(payload);
-  delete row.campaign_id;
-  delete row.media_alt_text;
-  delete row.mediaAltText;
+  sanitizeSupabasePostRow(row);
   const workspaceId = row.workspace_id;
   if (!workspaceId) throw new Error("Workspace ID is missing for Supabase save.");
   let saved = null;
