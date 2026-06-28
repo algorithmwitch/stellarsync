@@ -8486,7 +8486,11 @@ function isRenderableArtifact(record, type) {
 function filterRenderableArtifacts(list, type) {
   if (!Array.isArray(list)) return [];
   var before = list.length;
-  var filtered = list.filter(function(item) { return isRenderableArtifact(item, type); });
+  var filtered = list.filter(function(item) {
+    if (!isRenderableArtifact(item, type)) return false;
+    if (type === "media" && isGhostMediaAsset(item) && !STELLARSYNC_DEBUG) return false;
+    return true;
+  });
   var removed = before - filtered.length;
   console.log("[data-filter] " + type + " before/after/removed", before, filtered.length, removed);
   return filtered;
@@ -10136,6 +10140,29 @@ function isSupabasePublicMediaUrl(url) {
   return String(url || "").includes("/storage/v1/object/public/media/");
 }
 
+function isUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value || "").trim());
+}
+
+function isUuidLikeMediaId(id) {
+  return isUuid(id);
+}
+
+function isGoogleDriveViewUrl(url) {
+  return /https?:\/\/drive\.google\.com\/file\/d\/[^/]+\/view(?:\?|$)/i.test(String(url || "").trim());
+}
+
+function getGhostMediaStatusValue(asset = {}) {
+  return String(
+    asset.upload_status ||
+    asset.uploadStatus ||
+    asset.status ||
+    asset.media_status ||
+    asset.mediaStatus ||
+    ""
+  ).trim().toLowerCase();
+}
+
 function getFirstRawMediaUrl(asset = {}) {
   return String(
     asset.signedUrl ||
@@ -10157,6 +10184,32 @@ function getFirstRawMediaUrl(asset = {}) {
   ).trim();
 }
 
+function getMediaLookupKeys(asset = {}) {
+  if (!asset || typeof asset !== "object") {
+    return [String(asset || "").trim()].filter(Boolean);
+  }
+  return Array.from(new Set([
+    asset.id,
+    asset.assetId,
+    asset.asset_id,
+    asset.mediaAssetId,
+    asset.media_asset_id,
+    asset.mediaId,
+    asset.media_id,
+    asset.storagePath,
+    asset.storage_path,
+    asset.sourceUrl,
+    asset.source_url,
+    asset.url,
+    asset.mediaUrl,
+    asset.media_url,
+    asset.fileUrl,
+    asset.file_url
+  ].map(function(value) {
+    return String(value || "").trim();
+  }).filter(Boolean)));
+}
+
 function getRenderableMediaUrl(asset = {}) {
   const signed = String(
     asset.signedUrl ||
@@ -10167,11 +10220,47 @@ function getRenderableMediaUrl(asset = {}) {
   ).trim();
   if (signed) return signed;
   const raw = getFirstRawMediaUrl(asset);
+  if (isGoogleDriveViewUrl(raw)) {
+    return "";
+  }
   if ((asset.storage_path || asset.storagePath) && isSupabasePublicMediaUrl(raw)) {
     queueSignedMediaUrlRefresh(asset);
     return "";
   }
   return raw;
+}
+
+function isGhostMediaAsset(asset = {}) {
+  if (!asset || typeof asset !== "object") return false;
+  const hasUuid = isUuidLikeMediaId(
+    asset.media_asset_id ||
+    asset.mediaAssetId ||
+    asset.id ||
+    asset.assetId
+  );
+  const hasStoragePath = !!String(asset.storage_path || asset.storagePath || "").trim();
+  const rawUrl = getFirstRawMediaUrl(asset);
+  const renderableUrl = getRenderableMediaUrl(asset);
+  const driveView = isGoogleDriveViewUrl(rawUrl);
+  const failedStatus = /(failed|error|broken|unavailable|missing)/i.test(getGhostMediaStatusValue(asset));
+  const legacyAstId = /^AST-/i.test(String(
+    asset.media_asset_id ||
+    asset.mediaAssetId ||
+    asset.id ||
+    asset.assetId ||
+    ""
+  ).trim());
+  const kind = inferMediaKindFromAsset(asset);
+  const visualWithoutRenderable = (kind === "video" || kind === "image") && !renderableUrl;
+  return legacyAstId ||
+    (!hasUuid && !hasStoragePath && driveView) ||
+    failedStatus ||
+    (!hasUuid && !hasStoragePath && visualWithoutRenderable);
+}
+
+function getDeletableMediaKey(asset = {}) {
+  const keys = getMediaLookupKeys(asset);
+  return keys[0] || "";
 }
 
 function queueSignedMediaUrlRefresh(asset = {}) {
@@ -16802,7 +16891,7 @@ function getCurrentCarouselOrderPayload() {
 }
 
 function isSupabaseMediaAssetId(value) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(value || "").trim());
+  return isUuid(value);
 }
 
 function getMediaAssetId(media) {
@@ -17155,23 +17244,25 @@ async function detachSelectedCarouselMedia() {
   );
   console.log("[detach-ui] detach payload", { workspace_id: getWorkspaceRequestMetadata().workspace_id, post_id: postId, media_asset_ids: mediaAssetIds });
   try {
-    await detachMediaAssetsFromPost(selected, postId);
-    removeDetachedMediaFromLocalPost(postId, mediaAssetIds);
-    appState.media = (appState.media || []).map((asset) => {
-      if (!mediaAssetIds.includes(getMediaAssetId(asset))) return asset;
-      return {
-        ...asset,
-        linked_post_id: "",
-        linkedPostId: "",
-        post_id: "",
-        postId: "",
-        sort_order: "",
-        sortOrder: ""
-      };
-    });
-    const cleanedPost = findPostByAnyId(postId);
-    if (cleanedPost) {
-      await savePostForActiveBackend(buildDetachedPostSavePayload(cleanedPost));
+    const detachResult = await detachMediaAssetsFromPost(selected, postId);
+    if (!detachResult?.local_only) {
+      removeDetachedMediaFromLocalPost(postId, mediaAssetIds);
+      appState.media = (appState.media || []).map((asset) => {
+        if (!mediaAssetIds.includes(getMediaAssetId(asset))) return asset;
+        return {
+          ...asset,
+          linked_post_id: "",
+          linkedPostId: "",
+          post_id: "",
+          postId: "",
+          sort_order: "",
+          sortOrder: ""
+        };
+      });
+      const cleanedPost = findPostByAnyId(postId);
+      if (cleanedPost) {
+        await savePostForActiveBackend(buildDetachedPostSavePayload(cleanedPost));
+      }
     }
     window.mediaDetachSelectionMode = false;
     modalCarouselDetachSelectMode = false;
@@ -17461,18 +17552,7 @@ async function removeCarouselAssetById(mediaAssetId, fallbackIndex = -1) {
   removeCarouselAsset(fallbackIndex >= 0 ? fallbackIndex : currentModalCarouselAssets.indexOf(asset));
   if (!postId) return;
   try {
-    const canonicalId = String(getCanonicalMediaAssetId(asset) || asset.id || asset.media_asset_id || "").trim();
-    if (!canonicalId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(canonicalId)) {
-      showToast("Detach skipped", "No canonical UUID was found for this media item.", "ph-warning", "text-yellow-400");
-      return;
-    }
-    await callSupabaseEdgeFunction("media-index", {
-      action: "detach_from_post",
-      workspace_id: getWorkspaceRequestMetadata().workspace_id,
-      workspace_slug: getWorkspaceRequestMetadata().workspace_slug || getCurrentWorkspaceSlug() || "",
-      post_id: postId,
-      media_asset_ids: [canonicalId]
-    });
+    await detachMediaAssetsFromPost([asset], postId);
     rerenderAll();
   } catch (err) {
     console.log("[media-match] detach error full object", {
@@ -17492,27 +17572,8 @@ async function detachAllMediaFromCurrentPost() {
   modalCarouselDetachSelectMode = false;
   selectedCarouselDetachAssetIds.clear();
   try {
-    const meta = getWorkspaceRequestMetadata();
-    const mediaAssetIds = [];
-    for (const asset of assets) {
-      const uuid = String(getCanonicalMediaAssetId(asset) || asset.id || asset.media_asset_id || "").trim();
-      if (!uuid || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid)) continue;
-      mediaAssetIds.push(uuid);
-    }
-    if (!mediaAssetIds.length) {
-      showToast("Detach skipped", "No canonical UUIDs were found for the attached media.", "ph-warning", "text-yellow-400");
-      return;
-    }
-    console.log("[detach-ui] detach payload", { workspace_id: meta.workspace_id, post_id: postId, media_asset_ids: mediaAssetIds });
-    const result = await callSupabaseEdgeFunction("media-index", {
-      action: "detach_from_post",
-      workspace_id: meta.workspace_id,
-      workspace_slug: meta.workspace_slug || getCurrentWorkspaceSlug() || "",
-      post_id: postId,
-      media_asset_ids: mediaAssetIds
-    });
+    const result = await detachMediaAssetsFromPost(assets, postId);
     console.log("[media-match] detach response", result);
-    applyOrderedAttachedMediaResult(postId, result);
     rerenderAll();
     showToast("Media detached", "All media assets were unlinked from this post.", "ph-link-break", "text-[#00ffaa]");
   } catch (err) {
@@ -23176,7 +23237,10 @@ function buildMediaVaultItems() {
   const items = [];
 
   (appState.posts || []).forEach((post) => {
-    const postAssets = getAttachedMediaForPost(post).slice(0, 20).map((asset) => normalizeRemoteMedia(asset));
+    const postAssets = getAttachedMediaForPost(post)
+      .slice(0, 20)
+      .map((asset) => normalizeRemoteMedia(asset))
+      .filter((asset) => !isGhostMediaAsset(asset) || STELLARSYNC_DEBUG);
     if (postAssets.length > 1) {
       groupedPostIds.add(getCanonicalPostId(post) || getPostLookupId(post));
       postAssets.forEach((asset) => {
@@ -23200,6 +23264,7 @@ function buildMediaVaultItems() {
   });
 
   assets.forEach((asset) => {
+    if (isGhostMediaAsset(asset) && !STELLARSYNC_DEBUG) return;
     const assetKey = getMediaItemKey(asset) || getMediaAssetId(asset);
     if (groupedAssetIds.has(assetKey)) return;
     if (groupedPostIds.has(asset.postId || asset.linkedPostId || asset.linked_post_id)) return;
@@ -23263,7 +23328,23 @@ async function handleBrokenMediaPreview(el) {
 }
 
 function getMediaItemKey(item = {}) {
-  return String(item.id || item.assetId || item.asset_id || item.mediaAssetId || item.media_asset_id || item.storagePath || item.storage_path || "").trim();
+  return String(
+    item.id ||
+    item.assetId ||
+    item.asset_id ||
+    item.mediaAssetId ||
+    item.media_asset_id ||
+    item.storagePath ||
+    item.storage_path ||
+    item.fileUrl ||
+    item.file_url ||
+    item.mediaUrl ||
+    item.media_url ||
+    item.url ||
+    item.sourceUrl ||
+    item.source_url ||
+    ""
+  ).trim();
 }
 
 function getFilteredMediaVaultItems() {
@@ -23345,9 +23426,19 @@ function toggleMediaSelection(assetId, checked) {
 function handleMediaCardClick(assetId) {
   const key = String(assetId || "").trim();
   if (!key) return;
+  const item = getFilteredMediaVaultItems().find(function(candidate) {
+    return getMediaItemKey(candidate) === key;
+  });
   if (mediaSelectMode) {
     toggleMediaSelection(key, !selectedMediaAssetIds.has(key));
     return;
+  }
+  if (item && isGhostMediaAsset(item)) {
+    const rawUrl = getFirstRawMediaUrl(item);
+    if (isGoogleDriveViewUrl(rawUrl)) {
+      window.open(rawUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
   }
   openMediaAsset(key);
 }
@@ -23414,16 +23505,7 @@ function getDeletedMediaReferenceIds(items = []) {
   const ids = new Set();
   items.forEach(function(item) {
     getMediaDeleteTargets(item).forEach(function(asset) {
-      [
-        getMediaAssetId(asset),
-        getMediaItemKey(asset),
-        asset.asset_id,
-        asset.assetId,
-        asset.media_id,
-        asset.mediaId,
-        asset.storage_path,
-        asset.storagePath
-      ].forEach(function(value) {
+      getMediaLookupKeys(asset).forEach(function(value) {
         const next = String(value || "").trim();
         if (next) ids.add(next);
       });
@@ -23435,22 +23517,67 @@ function getDeletedMediaReferenceIds(items = []) {
 async function apiDeleteMediaAssets(items = []) {
   const entries = getMediaDeletePayloadEntries(items);
   if (!entries.length) return { ok: true, deleted_count: 0, deleted_media_asset_ids: [], deleted_asset_ids: [] };
+  const realEntries = entries.filter(function(entry) {
+    return isUuidLikeMediaId(entry.media_asset_id || entry.id);
+  });
+  const ghostEntries = entries.filter(function(entry) {
+    return !realEntries.includes(entry);
+  });
+  console.log("[media-delete] selected", entries);
+  console.log("[media-delete] uuid assets", realEntries);
+  console.log("[media-delete] local legacy assets", ghostEntries);
+  if (!realEntries.length) {
+    console.log("[media-delete] skipped remote delete for non-uuid", ghostEntries);
+    return {
+      ok: true,
+      local_only: true,
+      deleted_count: ghostEntries.length,
+      deleted_media_asset_ids: [],
+      deleted_asset_ids: ghostEntries.map(function(entry) { return entry.id; })
+    };
+  }
   const payload = {
-    action: "delete_media",
-    media_assets: entries,
-    media_asset_ids: entries.map(function(entry) { return entry.media_asset_id; }).filter(Boolean),
-    asset_ids: entries.map(function(entry) { return entry.asset_id; }).filter(Boolean),
-    delete_storage: false,
+    action: "delete_assets",
+    media_assets: realEntries,
+    media_asset_ids: realEntries.map(function(entry) { return entry.media_asset_id; }).filter(Boolean),
+    asset_ids: realEntries.map(function(entry) { return entry.asset_id; }).filter(Boolean),
+    storage_paths: realEntries.map(function(entry) { return entry.storage_path; }).filter(Boolean),
+    delete_storage: true,
     workspace_id: getWorkspaceRequestMetadata().workspace_id || "",
     workspace_slug: getCurrentWorkspaceSlug?.() || ""
   };
   console.log("[media-delete] request", payload);
-  const response = await callSupabaseEdgeFunction("media-index", payload);
-  console.log("[media-delete] response", response);
-  if (!response?.ok) {
-    throw new Error(response?.error || "Media could not be deleted. Try again.");
+  try {
+    const response = await callSupabaseEdgeFunction("media-index", payload);
+    console.log("[media-delete] backend result", response);
+    if (!response?.ok) {
+      throw new Error(response?.error || "Media could not be deleted. Try again.");
+    }
+    return response;
+  } catch (err) {
+    console.warn("[media-delete] delete_assets failed, retrying legacy action", err?.message || err);
+    if (!realEntries.some(function(entry) { return isUuidLikeMediaId(entry.media_asset_id || entry.id); })) {
+      console.log("[media-delete] skipped remote delete for non-uuid", ghostEntries);
+      return {
+        ok: true,
+        local_only: true,
+        deleted_count: ghostEntries.length,
+        deleted_media_asset_ids: [],
+        deleted_asset_ids: ghostEntries.map(function(entry) { return entry.id; })
+      };
+    }
+    const fallbackPayload = {
+      ...payload,
+      action: "delete_media",
+      delete_storage: false
+    };
+    const response = await callSupabaseEdgeFunction("media-index", fallbackPayload);
+    console.log("[media-delete] backend result", response);
+    if (!response?.ok) {
+      throw new Error(response?.error || "Media could not be deleted. Try again.");
+    }
+    return response;
   }
-  return response;
 }
 
 function cleanupDeletedMediaLocally(items = [], result = {}) {
@@ -23461,31 +23588,32 @@ function cleanupDeletedMediaLocally(items = [], result = {}) {
     ...getDeletedMediaReferenceIds(items),
     ...((result?.deleted_media_asset_ids || result?.deleted_asset_ids || []).map(function(value) { return String(value || "").trim(); }).filter(Boolean))
   ]);
-  if (!staleIds.size) return;
+  const affectedPostIds = (appState.posts || []).filter(function(post) {
+    const postKeys = new Set([
+      ...splitMediaIdList(post.media_ids || post.mediaIds),
+      ...splitMediaIdList(post.carousel_asset_ids || post.carouselAssetIds),
+      String(post.media_id || post.mediaId || "").trim()
+    ].filter(Boolean));
+    return Array.from(staleIds).some(function(key) {
+      return postKeys.has(key);
+    });
+  }).map(function(post) {
+    return getCanonicalPostId(post) || getPostLookupId(post);
+  }).filter(Boolean);
+  if (!staleIds.size) return [];
   console.log("[media-delete] local cleanup", {
     deleted_count: result?.deleted_count || staleIds.size,
     stale_ids: Array.from(staleIds)
   });
 
   appState.media = (appState.media || []).filter(function(asset) {
-    const candidates = [
-      getMediaAssetId(asset),
-      getMediaItemKey(asset),
-      asset.asset_id,
-      asset.assetId,
-      asset.media_id,
-      asset.mediaId,
-      asset.storage_path,
-      asset.storagePath
-    ].map(function(value) {
-      return String(value || "").trim();
-    }).filter(Boolean);
+    const candidates = getMediaLookupKeys(asset);
     return !candidates.some(function(value) { return staleIds.has(value); });
   });
 
   appState.postMedia = (appState.postMedia || appState.post_media || []).filter(function(row) {
-    const rowAssetId = String(getMediaAssetId(row) || row.media_asset_id || row.mediaAssetId || row.asset_id || row.assetId || "").trim();
-    return rowAssetId && !staleIds.has(rowAssetId);
+    const rowKeys = getMediaLookupKeys(row);
+    return !rowKeys.some(function(value) { return staleIds.has(value); });
   });
   appState.post_media = appState.postMedia;
 
@@ -23548,9 +23676,13 @@ function cleanupDeletedMediaLocally(items = [], result = {}) {
   renderMediaPickerAssets("modal");
   renderMedia();
   rerenderAll();
+  console.log("[media-delete] local cleanup complete", {
+    stale_ids: Array.from(staleIds)
+  });
+  return affectedPostIds;
 }
 
-async function deleteMediaVaultItems(items = []) {
+async function deleteMediaAssets(items = [], options = {}) {
   const targets = (items || []).filter(Boolean);
   if (!targets.length) return;
   const deleteEntries = getMediaDeletePayloadEntries(targets);
@@ -23558,34 +23690,93 @@ async function deleteMediaVaultItems(items = []) {
     showToast("Media could not be deleted. Try again.", "", "ph-warning", "text-yellow-400");
     return;
   }
-  const confirmed = await showCustomConfirm({
-    title: "Delete media?",
-    message: "This will remove the selected media from the vault. Any posts using it may lose their attachment.",
-    confirmText: "Delete media",
-    cancelText: "Keep media",
-    danger: true
-  });
-  if (!confirmed) return;
+  if (options.confirm !== false) {
+    const confirmed = await showCustomConfirm({
+      title: "Delete media?",
+      message: "This will remove the selected media from the vault. Any posts using it may lose their attachment.",
+      confirmText: "Delete media",
+      cancelText: "Keep media",
+      danger: true
+    });
+    if (!confirmed) return;
+  }
 
   targets.forEach(function(item) { setDeletingMediaForItem(item, true); });
   renderMedia();
   try {
+    const realTargets = targets.filter(function(item) {
+      return getMediaDeleteTargets(item).some(function(asset) {
+        return !isGhostMediaAsset(asset) && isUuidLikeMediaId(getMediaAssetId(asset));
+      });
+    });
+    const ghostTargets = targets.filter(function(item) {
+      return !realTargets.includes(item);
+    });
+    console.log("[media-delete] uuid assets", realTargets);
+    console.log("[media-delete] local legacy assets", ghostTargets);
+    const affectedPostIds = (appState.posts || []).filter(function(post) {
+      const postKeys = [
+        ...splitMediaIdList(post.media_ids || post.mediaIds),
+        ...splitMediaIdList(post.carousel_asset_ids || post.carouselAssetIds),
+        String(post.media_id || post.mediaId || "").trim()
+      ].filter(Boolean);
+      return targets.some(function(item) {
+        return getMediaDeleteTargets(item).some(function(asset) {
+          return getMediaLookupKeys(asset).some(function(key) { return postKeys.includes(key); });
+        });
+      });
+    }).map(function(post) {
+      return getCanonicalPostId(post) || getPostLookupId(post);
+    }).filter(Boolean);
+    console.log("[media-delete] affected posts", affectedPostIds);
     const response = await apiDeleteMediaAssets(targets);
     cleanupDeletedMediaLocally(targets, response);
+    if (ghostTargets.length && affectedPostIds.length) {
+      for (const postId of affectedPostIds) {
+        const cleanedPost = findPostByAnyId(postId);
+        if (cleanedPost) {
+          await savePostForActiveBackend(buildDetachedPostSavePayload(cleanedPost)).catch(function(err) {
+            console.warn("[media-delete] affected post save skipped", postId, err?.message || err);
+          });
+        }
+      }
+    }
     const deletedCount = Number(response?.deleted_count || deleteEntries.length || 0);
     showToast(
-      deletedCount === 1 ? "Media deleted." : `${deletedCount} media items deleted.`,
+      ghostTargets.length && !realTargets.length
+        ? "Broken media removed."
+        : deletedCount === 1 ? "Media deleted." : `${deletedCount} media items deleted.`,
       "",
       "ph-check",
       "text-[#00ffaa]"
     );
   } catch (err) {
-    console.error("[media-delete] failed", err);
-    showToast("Media could not be deleted. Try again.", "", "ph-warning", "text-yellow-400");
+    const hasOnlyGhostTargets = targets.every(function(item) {
+      return getMediaDeleteTargets(item).every(function(asset) { return isGhostMediaAsset(asset); });
+    });
+    if (hasOnlyGhostTargets) {
+      const affectedPostIds = cleanupDeletedMediaLocally(targets, { deleted_count: deleteEntries.length }) || [];
+      for (const postId of affectedPostIds) {
+        const cleanedPost = findPostByAnyId(postId);
+        if (cleanedPost) {
+          await savePostForActiveBackend(buildDetachedPostSavePayload(cleanedPost)).catch(function(saveErr) {
+            console.warn("[media-delete] affected post save skipped", postId, saveErr?.message || saveErr);
+          });
+        }
+      }
+      showToast("Broken media removed.", "", "ph-check", "text-[#00ffaa]");
+    } else {
+      console.error("[media-delete] failed", err);
+      showToast("Media could not be deleted. Try again.", "", "ph-warning", "text-yellow-400");
+    }
   } finally {
     targets.forEach(function(item) { setDeletingMediaForItem(item, false); });
     renderMedia();
   }
+}
+
+async function deleteMediaVaultItems(items = []) {
+  return deleteMediaAssets(items, { confirm: true });
 }
 
 async function deleteMediaVaultItemByKey(itemKey, event) {
@@ -23657,6 +23848,7 @@ function renderMediaVaultCard(item) {
   const isSelected = selectedMediaAssetIds.has(itemKey);
   const isDeleting = getDeletingMediaKeysForItem(item).some(function(key) { return deletingMediaAssetKeys.has(key); });
   const isGroup = item.kind === "group";
+  const isGhost = !isGroup && isGhostMediaAsset(item);
   const type = inferMediaKindFromAsset(item);
   const linkedPost = item.linkedPost || (appState.posts || []).find(post => post.id === item.postId) || getMediaPostContext(item);
   const linkedPostAssets = linkedPost ? getAttachedMediaForPost(linkedPost).slice(0, 20).map((asset) => normalizeRemoteMedia(asset)) : [];
@@ -23692,7 +23884,7 @@ function renderMediaVaultCard(item) {
       : item.sourceType === "external"
       ? "External URL"
       : "";
-  const badge = getMediaBadgeLabel(item, linkedPost);
+  const badge = isGhost ? "Broken media" : getMediaBadgeLabel(item, linkedPost);
   const usageLine = getMediaUsageLine(item, linkedPost);
   const metaLine = [usageLine, linkedStatus, item.meta || "", campaignLabel, sourceLabel].filter(Boolean).join(" - ");
   const displayTitle = getMediaDisplayTitle(item, linkedPost);
@@ -23712,8 +23904,16 @@ function renderMediaVaultCard(item) {
   const assetUrl = isGroup ? (getCarouselCoverUrl(item) || item.sourceUrl || linkedPost?.sourceUrl || "") : (getMediaPreviewUrl(item) || item.sourceUrl || "");
   const coverAsset = isCarouselPreview ? getCarouselCoverAsset(isGroup ? (item.assets || []) : linkedPostAssets.length ? linkedPostAssets : linkedPost || item) : null;
   const coverUrl = coverAsset ? getMediaPreviewUrl(coverAsset) : previewUrl;
-  const overlayLabel = coverUrl || getMediaPreviewUrl(item) ? "Open Asset" : item.sourceUrl ? "Open Link" : "View";
-  const previewBlock = isCarouselPreview
+  const overlayLabel = isGhost ? "Broken media" : coverUrl || getMediaPreviewUrl(item) ? "Open Asset" : item.sourceUrl ? "Open Link" : "View";
+  const previewBlock = isGhost
+    ? `<div class="w-full h-full flex flex-col items-center justify-center text-center gap-2 px-3">
+        <i class="ph-bold ph-warning-circle text-4xl text-red-300"></i>
+        <div class="text-[10px] uppercase tracking-wider font-bold text-red-200">Broken media</div>
+        ${isGoogleDriveViewUrl(getFirstRawMediaUrl(item))
+          ? `<a href="${escapeHtml(getFirstRawMediaUrl(item))}" target="_blank" rel="noopener noreferrer" class="text-[10px] text-purple-300 underline">Open Drive file</a>`
+          : `<div class="text-[10px] text-gray-500">Preview unavailable</div>`}
+      </div>`
+    : isCarouselPreview
     ? `
       <div class="w-full">
         <div class="w-full aspect-square rounded-none bg-[#120c1d] border border-white/5 overflow-hidden">${coverUrl ? `<img src="${escapeHtml(coverUrl)}" alt="${escapeHtml(getMediaDisplayTitle(coverAsset || item, linkedPost, displayTitle))}" class="w-full h-full object-cover" loading="lazy" onerror="handleBrokenMediaPreview(this)">` : `<div class="w-full h-full flex items-center justify-center text-gray-500"><i class="ph-bold ph-images text-4xl"></i></div>`}</div>
@@ -23732,9 +23932,9 @@ function renderMediaVaultCard(item) {
       <div class="aspect-square bg-[#120c1d] border-b border-white/5 flex items-center justify-center relative p-4">
         ${previewBlock}
         <span class="absolute top-3 right-3 px-2 py-1 bg-[#181125] border border-white/5 rounded text-[8px] uppercase font-bold text-gray-300">${escapeHtml(badge)}</span>
-        <div class="absolute inset-0 bg-[#2d1b4e]/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
+        <div class="absolute inset-0 bg-[#2d1b4e]/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm ${isGhost ? "pointer-events-none" : ""}">
           <span class="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-white" title="${escapeHtml(overlayLabel)}">
-            <i class="ph-bold ph-arrows-out-simple text-xl"></i>
+            <i class="ph-bold ${isGhost ? "ph-warning-circle" : "ph-arrows-out-simple"} text-xl"></i>
           </span>
         </div>
       </div>
@@ -23787,6 +23987,12 @@ function renderMedia() {
   renderMediaSelectToggleState();
 
   let items = getFilteredMediaVaultItems();
+  if (!STELLARSYNC_DEBUG) {
+    items = items.filter(function(item) {
+      if (item?.kind === "group") return true;
+      return !isGhostMediaAsset(item);
+    });
+  }
   var missingUrlCount = items.filter(item => !(item.url || item.media_url || item.source_url || item.fileUrl || item.file_url || item.thumbnail_url || item.thumbnailUrl || item.storage_path || item.storagePath)).length;
   var unlinkedCount = items.filter(item => getMediaLinkedStatus(item) === "Unlinked").length;
   console.log("[media] renderable count", items.length);
@@ -24105,6 +24311,28 @@ async function detachMediaAssetsFromPost(items, postId) {
   if (!Array.isArray(items)) items = items ? [items] : [];
   var meta = getWorkspaceRequestMetadata();
   var assets = items.filter(Boolean);
+  var localOnlyAssets = assets.filter(function(asset) {
+    return !isUuid(getMediaAssetId(asset)) || isGhostMediaAsset(asset);
+  });
+  if (localOnlyAssets.length === assets.length) {
+    console.log("[media-match] local-only detach", {
+      post_id: postId,
+      ids: localOnlyAssets.map(function(asset) { return getDeletableMediaKey(asset); })
+    });
+    removeDetachedMediaFromLocalPost(postId, localOnlyAssets.map(function(asset) {
+      return getDetachAssetId(asset) || getDeletableMediaKey(asset);
+    }).filter(Boolean));
+    const cleanedPost = findPostByAnyId(postId);
+    if (cleanedPost) {
+      await savePostForActiveBackend(buildDetachedPostSavePayload(cleanedPost));
+    }
+    persistLocalState();
+    return {
+      ok: true,
+      local_only: true,
+      detached_media_asset_ids: localOnlyAssets.map(function(asset) { return getDeletableMediaKey(asset); })
+    };
+  }
   var mediaAssetIds = assets.map(function(a) {
     return String(getMediaAssetId(a) || a.id || a.media_asset_id || "").trim();
   }).filter(function(id) {
@@ -24674,10 +24902,12 @@ async function detachSelectedMediaViewerAssets() {
   try {
     const result = await detachMediaAssetsFromPost(selected, postId);
     console.log("[media-manage] save response", result);
-    removeDetachedMediaFromLocalPost(postId, mediaAssetIds);
-    const cleanedPost = findPostByAnyId(postId);
-    if (cleanedPost) {
-      await savePostForActiveBackend(buildDetachedPostSavePayload(cleanedPost));
+    if (!result?.local_only) {
+      removeDetachedMediaFromLocalPost(postId, mediaAssetIds);
+      const cleanedPost = findPostByAnyId(postId);
+      if (cleanedPost) {
+        await savePostForActiveBackend(buildDetachedPostSavePayload(cleanedPost));
+      }
     }
     mediaViewerDetachMode = false;
     selectedMediaViewerDetachAssetIds.clear();
