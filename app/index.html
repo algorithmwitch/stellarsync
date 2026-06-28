@@ -2400,6 +2400,7 @@
               <div class="flex items-center gap-3 min-w-0">
                 <span id="app-header-title" class="font-bold text-xl text-white tracking-wide truncate" vid="21">StellarSync</span>
                 <span id="app-header-workspace-badge" class="hidden text-[10px] uppercase tracking-[0.2em] text-gray-500 font-bold ml-2 px-2 py-0.5 bg-[#1a1128] border border-white/5 rounded shrink-0"></span>
+                <span id="app-header-workspace-name-badge" class="hidden md:inline-flex items-center px-3 py-1 rounded-full border border-white/10 bg-white/5 text-gray-200 text-[10px] uppercase tracking-widest font-bold shrink-0"></span>
                 <span id="app-header-subtitle" class="hidden text-[10px] uppercase tracking-[0.24em] text-gray-500 font-bold">Calendar</span>
               </div>
               <p id="app-header-view-detail" class="hidden md:block text-[10px] uppercase tracking-[0.22em] text-gray-500 font-bold mt-1">Content command center</p>
@@ -7668,7 +7669,7 @@ function getDeterministicPillarIcon(pillar) {
     application: "ph-sparkle",
     education: "ph-book-open",
     promotion: "ph-rocket-launch",
-    algorithm: "ph-stars",
+    algorithm: "ph-sparkle",
     jobs: "ph-target",
     climate: "ph-leaf",
     systems: "ph-compass"
@@ -7678,7 +7679,7 @@ function getDeterministicPillarIcon(pillar) {
     "ph-sparkle", "ph-magic-wand", "ph-megaphone", "ph-target", "ph-rocket-launch",
     "ph-lightbulb", "ph-book-open", "ph-chart-line-up", "ph-users-three", "ph-hands-clapping",
     "ph-heart", "ph-globe", "ph-leaf", "ph-fire", "ph-compass", "ph-planet",
-    "ph-stars", "ph-pencil-simple", "ph-broadcast", "ph-network", "ph-funnel",
+    "ph-sparkle", "ph-pencil-simple", "ph-broadcast", "ph-network", "ph-funnel",
     "ph-calendar-star", "ph-quotes", "ph-chat-circle-text"
   ];
   var hash = 0;
@@ -10820,6 +10821,14 @@ function getPlanCapabilities(plan) {
     return { ...PLAN_CAPABILITIES.managed, ...caps };
   }
   return { ...caps };
+}
+
+function getWorkspaceTierBadgeClasses(plan) {
+  const p = normalizeWorkspacePlan(plan || "starter");
+  if (p === "custom" || p === "managed") return "bg-purple-500/10 border-purple-400/30 text-purple-300";
+  if (p === "agency") return "bg-cyan-500/10 border-cyan-400/30 text-cyan-300";
+  if (p === "growth") return "bg-emerald-500/10 border-emerald-400/30 text-emerald-300";
+  return "bg-white/5 border-white/10 text-gray-300";
 }
 
 function getDefaultFeatureFlagsForPlan(plan) {
@@ -33435,7 +33444,7 @@ const PILLAR_ICON_OPTIONS = [
   "ph-fire",
   "ph-compass",
   "ph-planet",
-  "ph-stars",
+  "ph-sparkle",
   "ph-pencil-simple",
   "ph-broadcast",
   "ph-network",
@@ -38491,42 +38500,31 @@ function renderWorkspaceAvatar(workspace) {
 }
 
 function renderWorkspaceBranding() {
-  var config = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active;
-  if (!config) {
-    var sessionConfig = getSessionWorkspaceConfig();
-    if (sessionConfig) {
-      config = {
-        workspace_slug: sessionConfig.slug,
-        name: sessionConfig.name,
-        slug: sessionConfig.slug,
-        short_name: sessionConfig.short_name,
-        avatar_initials: sessionConfig.avatar_initials,
-        avatar_mode: sessionConfig.avatar_mode,
-        icon: sessionConfig.icon
-      };
-    }
+  const config = WORKSPACE_RUNTIME_CONFIG?.active || getSessionWorkspaceConfig() || {};
+  const profile = getWorkspaceRuntimeProfile(config);
+  const name = config.name || config.brand_name || config.workspace_name || config.slug || "Workspace";
+  const slug = config.workspace_slug || config.slug || "";
+  const avatarHtml = renderWorkspaceAvatar(config);
+  const avatarEl = document.getElementById("avatar-initials");
+  const profileAvatarEl = document.getElementById("profile-menu-avatar");
+  const profileNameEl = document.getElementById("profile-menu-name");
+  const profileSlugEl = document.getElementById("profile-menu-slug");
+  const badgeEl = document.getElementById("app-header-workspace-badge");
+  const nameEl = document.getElementById("app-header-workspace-name-badge");
+  if (avatarEl) {
+    avatarEl.replaceChildren();
+    avatarEl.innerHTML = avatarHtml;
   }
-  var profile = getWorkspaceRuntimeProfile(config || {});
-  var name = config && (config.name || "");
-  var slug = config && (config.workspace_slug || config.slug || "");
-  var avatarHtml = renderWorkspaceAvatar(config || { name: name, slug: slug });
-  var avatarEl = document.getElementById("avatar-initials");
-  var profileAvatarEl = document.getElementById("profile-menu-avatar");
-  var profileNameEl = document.getElementById("profile-menu-name");
-  var profileSlugEl = document.getElementById("profile-menu-slug");
-  var badgeEl = document.getElementById("app-header-workspace-badge");
-  if (avatarEl) avatarEl.innerHTML = avatarHtml;
   if (profileAvatarEl) profileAvatarEl.innerHTML = avatarHtml;
   if (profileNameEl) profileNameEl.textContent = name || slug || "Workspace";
   if (profileSlugEl) profileSlugEl.textContent = [profile.plan_label, profile.backend_label].filter(Boolean).join(" • ");
   if (badgeEl) {
-    if (slug && slug !== "master") {
-      badgeEl.textContent = profile.plan_label || "Starter";
-      badgeEl.classList.remove("hidden");
-    } else {
-      badgeEl.classList.add("hidden");
-      badgeEl.textContent = "";
-    }
+    badgeEl.textContent = profile.plan_label || "Starter";
+    badgeEl.className = `hidden md:inline-flex items-center px-3 py-1 rounded-full border text-[10px] uppercase tracking-widest font-bold shrink-0 ${getWorkspaceTierBadgeClasses(config.plan_slug || config.subscription_tier)}`;
+  }
+  if (nameEl) {
+    nameEl.textContent = name;
+    nameEl.classList.remove("hidden");
   }
   applyWorkspaceDiagnosticsVisibility();
   requestAnimationFrame(function() { positionAssistantPanelFromButton("workspace-branding"); });
