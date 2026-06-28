@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Loading Workspace | StellarSync</title>
+  <meta name="description" content="Loading your StellarSync workspace.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&display=swap" rel="stylesheet">
+  <link rel="apple-touch-icon" href="../icon/stellarsync-apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="../icon/stellarsync-192.png">
+  <link rel="shortcut icon" href="../icon/stellarsync-192.png">
+  <style>
+    * { box-sizing: border-box; }
+    html,
+    body {
+      min-height: 100%;
+      margin: 0;
+      background: #0a0612;
+    }
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      width: 100vw;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+      color: #f7f2ff;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(157, 78, 221, 0.18), transparent 28rem),
+        radial-gradient(circle at 80% 12%, rgba(0, 240, 255, 0.10), transparent 30rem),
+        #0a0612;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    main.card {
+      position: relative;
+      z-index: 99999;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      min-height: 100dvh;
+      height: 100dvh;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(157, 78, 221, 0.18), transparent 28rem),
+        radial-gradient(circle at 80% 12%, rgba(0, 240, 255, 0.10), transparent 30rem),
+        linear-gradient(135deg, #0a0612, #05020a 55%, #0a0612);
+      z-index: 99998;
+    }
+    .card {
+      width: min(100%, 440px);
+      padding: 34px;
+      text-align: center;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 24px;
+      background: rgba(18, 12, 29, 0.88);
+      box-shadow: 0 30px 90px rgba(0,0,0,0.42);
+    }
+    img {
+      width: 56px;
+      height: 56px;
+      border-radius: 18px;
+      box-shadow: 0 0 28px rgba(199, 125, 255, 0.32);
+    }
+    h1 { margin: 18px 0 8px; font-size: 28px; line-height: 1.1; }
+    p { margin: 0 0 22px; color: #9ca3af; line-height: 1.55; }
+    .status { font-size: 12px; color: #6b7280; margin-bottom: 22px; }
+    a {
+      min-height: 46px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 18px;
+      border-radius: 14px;
+      color: white;
+      background: linear-gradient(135deg, #9d4edd, #c77dff);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    a.secondary {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.12);
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <img src="../icon/stellarsync-192.png" alt="StellarSync">
+    <h1>Loading workspace...</h1>
+    <p>StellarSync is preparing your workspace gateway.</p>
+    <div id="load-status" class="status">Checking workspace session...</div>
+    <div id="load-actions" style="display:none">
+      <a href="/login/">Login</a>
+      <a class="secondary" href="/onboarding/">Create Workspace</a>
+    </div>
+  </main>
+  <script>
+    var SUPABASE_URL = "https://szdlvyzjeqkfxsoqltwg.supabase.co";
+    var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN6ZGx2eXpqZXFrZnhzb3FsdHdnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyOTE1NjcsImV4cCI6MjA5Njg2NzU2N30.9GT0oJqPcmrc9VSb-ZN0FtWy6i7SLTHBuzRQ9gvxnX0";
+    var ACTIVE_WORKSPACE_KEY = "STELLARSYNC_ACTIVE_WORKSPACE";
+    var statusEl = document.getElementById("load-status");
+    var actionsEl = document.getElementById("load-actions");
+    var SB = SUPABASE_URL.replace(/\/+$/, "");
+
+    function setStatus(msg) {
+      if (statusEl) statusEl.textContent = msg || "";
+    }
+
+    function redirect(url) {
+      window.location.replace(url);
+    }
+
+    function showActions() {
+      if (actionsEl) actionsEl.style.display = "block";
+    }
+
+    function getAccessToken() {
+      try {
+        var found = [];
+        // Search localStorage and sessionStorage for Supabase auth tokens
+        [localStorage, sessionStorage].forEach(function(store) {
+          try {
+            for (var i = 0; i < store.length; i++) {
+              var key = store.key(i);
+              if (!key) continue;
+              if (key.indexOf("sb-") === 0 && key.indexOf("-auth-token") > 0) {
+                found.push({ key: key, value: store.getItem(key), storage: "localStorage" });
+              }
+              if (key === "supabase.auth.token") {
+                found.push({ key: key, value: store.getItem(key), storage: "localStorage" });
+              }
+            }
+          } catch (_) {}
+        });
+        // Try sessionStorage for legacy key
+        try {
+          var legacyVal = sessionStorage.getItem("supabase.auth.token");
+          if (legacyVal) found.push({ key: "supabase.auth.token", value: legacyVal, storage: "sessionStorage" });
+        } catch (_) {}
+
+        console.log("[load] auth storage keys found", found.length);
+        for (var f = 0; f < found.length; f++) {
+          try {
+            var parsed = JSON.parse(found[f].value);
+            var token = parsed?.access_token || parsed?.currentSession?.access_token || parsed?.session?.access_token || "";
+            if (token) {
+              console.log("[load] access token found", true);
+              return token;
+            }
+          } catch (_) {}
+        }
+        console.log("[load] access token found", false);
+        return "";
+      } catch (_) { return ""; }
+    }
+
+    async function sbGet(path) {
+      var token = getAccessToken();
+      var url = SB + path;
+      var headers = { apikey: SUPABASE_ANON_KEY, "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = "Bearer " + token;
+      var resp = await fetch(url, { method: "GET", headers: headers });
+      if (!resp.ok) return { error: { status: resp.status } };
+      return await resp.json();
+    }
+
+    async function sbPatch(path, body) {
+      var token = getAccessToken();
+      var url = SB + path;
+      var headers = { apikey: SUPABASE_ANON_KEY, "Content-Type": "application/json", Prefer: "return=minimal" };
+      if (token) headers["Authorization"] = "Bearer " + token;
+      var resp = await fetch(url, { method: "PATCH", headers: headers, body: JSON.stringify(body) });
+      return resp;
+    }
+
+    function normalizeConfig(source) {
+      return {
+        id: String(source.id || "").trim(),
+        slug: String(source.slug || "").trim(),
+        name: String(source.name || source.slug || "").trim(),
+        plan: String(source.plan || "").trim(),
+        subscription_status: String(source.subscription_status || "").trim(),
+        backend_type: String(source.backend_type || "").trim(),
+        apps_script_url: String(source.apps_script_url || "").trim(),
+        sheet_id: String(source.google_sheet_id || source.sheet_id || "").trim(),
+        google_sheet_id: String(source.google_sheet_id || source.sheet_id || "").trim(),
+        monday_board_id: String(source.monday_board_id || "").trim(),
+        supabase_media_enabled: Boolean(source.supabase_media_enabled),
+        media_bucket: String(source.media_bucket || source.storage_bucket || "media").trim(),
+        role: String(source.role || "").trim()
+      };
+    }
+
+    async function routeWorkspace() {
+      if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+        setStatus("Supabase not configured.");
+        showActions();
+        return;
+      }
+
+      // 1. Resolve access token from sessionStorage
+      var accessToken = getAccessToken();
+      if (!accessToken) {
+        setStatus("Not authenticated.");
+        showActions();
+        return;
+      }
+
+      // 2. Verify session with Supabase Auth API
+      var userResp, userId, userEmail;
+      try {
+        userResp = await sbGet("/auth/v1/user");
+        if (userResp.error || !userResp || !userResp.id) {
+          setStatus("Session expired or invalid.");
+          showActions();
+          return;
+        }
+        userId = userResp.id;
+        userEmail = userResp.email || "";
+        console.log("[load] verified user id", userId);
+        console.log("[load] verified user email", userEmail);
+        setStatus("Session active, looking up workspace...");
+      } catch (_) {
+        setStatus("Session check failed.");
+        showActions();
+        return;
+      }
+
+      // 3. Try sessionStorage first
+      var stored = sessionStorage.getItem(ACTIVE_WORKSPACE_KEY);
+      if (stored) {
+        try {
+          var cfg = JSON.parse(stored);
+          if (cfg && cfg.slug) {
+            setStatus("Using stored workspace: " + (cfg.name || cfg.slug));
+            redirect("/app/index.html?workspace=" + encodeURIComponent(cfg.slug));
+            return;
+          }
+        } catch (_) {}
+      }
+
+      // 4. Query workspace_members by user_id
+      var _membershipFound = false;
+      try {
+        var memUrl = "/rest/v1/workspace_members?select=role,workspace_id&user_id=eq." + encodeURIComponent(userId);
+        var memResp = await sbGet(memUrl);
+        var members = Array.isArray(memResp) ? memResp : (memResp.data && Array.isArray(memResp.data) ? memResp.data : []);
+        console.log("[load] member rows by user_id", members.length);
+        if (members.length) {
+          _membershipFound = true;
+          var wsIds = [];
+          var rolesById = {};
+          for (var i = 0; i < members.length; i++) {
+            var m = members[i];
+            if (m && m.workspace_id) {
+              wsIds.push(m.workspace_id);
+              rolesById[String(m.workspace_id)] = String(m.role || "");
+            }
+          }
+          if (wsIds.length) {
+            var wsUrl = "/rest/v1/workspaces?select=id,slug,name,plan,subscription_status,apps_script_url,google_sheet_id,monday_board_id,backend_type,supabase_media_enabled,media_bucket&id=in.(" + wsIds.map(encodeURIComponent).join(",") + ")";
+            var wsResp = await sbGet(wsUrl);
+            var workspaces = Array.isArray(wsResp) ? wsResp : (wsResp.data && Array.isArray(wsResp.data) ? wsResp.data : []);
+            console.log("[load] workspace rows", workspaces.length);
+            for (var i = 0; i < workspaces.length; i++) {
+              var w = workspaces[i];
+              if (w && w.slug) {
+                var cfg = normalizeConfig(w);
+                cfg.role = rolesById[String(w.id)] || "";
+                sessionStorage.setItem(ACTIVE_WORKSPACE_KEY, JSON.stringify(cfg));
+                setStatus("Found workspace: " + (cfg.name || cfg.slug));
+                redirect("/app/index.html?workspace=" + encodeURIComponent(cfg.slug));
+                return;
+              }
+            }
+          }
+        }
+      } catch (_) {}
+
+      // 5. Email fallback
+      if (userEmail) {
+        try {
+          console.log("[load] user email", userEmail);
+          var emailUrl = "/rest/v1/workspace_members?select=role,workspace_id&email=eq." + encodeURIComponent(userEmail);
+          var emailResp = await sbGet(emailUrl);
+          var emailMembers = Array.isArray(emailResp) ? emailResp : (emailResp.data && Array.isArray(emailResp.data) ? emailResp.data : []);
+          console.log("[load] member rows by email fallback", emailMembers.length);
+          if (emailMembers.length) {
+            _membershipFound = true;
+            var ewsIds = [];
+            var erolesById = {};
+            for (var i = 0; i < emailMembers.length; i++) {
+              var m = emailMembers[i];
+              if (m && m.workspace_id) {
+                ewsIds.push(m.workspace_id);
+                erolesById[String(m.workspace_id)] = String(m.role || "");
+              }
+            }
+            if (ewsIds.length) {
+              var ewsUrl = "/rest/v1/workspaces?select=id,slug,name,plan,subscription_status,apps_script_url,google_sheet_id,monday_board_id,backend_type,supabase_media_enabled,media_bucket&id=in.(" + ewsIds.map(encodeURIComponent).join(",") + ")";
+              var ewsResp = await sbGet(ewsUrl);
+              var eWorkspaces = Array.isArray(ewsResp) ? ewsResp : (ewsResp.data && Array.isArray(ewsResp.data) ? ewsResp.data : []);
+              console.log("[load] workspace rows", eWorkspaces.length);
+              for (var i = 0; i < eWorkspaces.length; i++) {
+                var w = eWorkspaces[i];
+                if (w && w.slug) {
+                  var cfg = normalizeConfig(w);
+                  cfg.role = erolesById[String(w.id)] || "";
+                  sessionStorage.setItem(ACTIVE_WORKSPACE_KEY, JSON.stringify(cfg));
+                  // Patch user_id for future lookups
+                  try {
+                    sbPatch("/rest/v1/workspace_members?email=eq." + encodeURIComponent(userEmail), { user_id: userId });
+                  } catch (_) {}
+                  setStatus("Found workspace: " + (cfg.name || cfg.slug));
+                  redirect("/app/index.html?workspace=" + encodeURIComponent(cfg.slug));
+                  return;
+                }
+              }
+            }
+          }
+        } catch (_) {}
+      }
+
+      // 6. Determine final state
+      if (_membershipFound) {
+        setStatus("Workspace membership found but workspace could not be loaded. Please contact support.");
+        showActions();
+      } else {
+        setStatus("No workspace found for your account.");
+        showActions();
+      }
+    }
+
+    routeWorkspace();
+  </script>
+</body>
+</html>

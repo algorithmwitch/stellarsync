@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>StellarSync Plugin</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #120c1d;
+        --panel: #181125;
+        --panel-2: #231738;
+        --text: #f8fafc;
+        --muted: #94a3b8;
+        --border: rgba(255,255,255,0.08);
+        --accent: #0a66c2;
+        --accent-2: #c77dff;
+      }
+      body {
+        margin: 0;
+        padding: 16px;
+        width: 360px;
+        background: radial-gradient(circle at top, rgba(10,102,194,0.18), transparent 45%), var(--bg);
+        color: var(--text);
+        font: 13px/1.45 Inter, Arial, sans-serif;
+      }
+      .card {
+        background: rgba(24,17,37,0.95);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 14px;
+        margin-bottom: 12px;
+      }
+      h1 {
+        font-size: 16px;
+        margin: 0 0 6px;
+      }
+      p {
+        margin: 0;
+        color: var(--muted);
+      }
+      .actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      button {
+        appearance: none;
+        border: 1px solid var(--border);
+        background: var(--panel-2);
+        color: var(--text);
+        border-radius: 12px;
+        padding: 10px 12px;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      button.primary {
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      }
+      button:disabled {
+        opacity: 0.55;
+        cursor: default;
+      }
+      .stack {
+        display: grid;
+        gap: 8px;
+      }
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11px;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 999px;
+        padding: 4px 8px;
+        background: rgba(10,102,194,0.16);
+        color: #cfe7ff;
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .tabs {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+        margin-bottom: 12px;
+      }
+      .tab {
+        padding: 9px 6px;
+        border-radius: 10px;
+        font-size: 11px;
+      }
+      .tab.active {
+        background: rgba(199,125,255,0.22);
+        border-color: rgba(199,125,255,0.45);
+      }
+      .panel {
+        display: none;
+      }
+      .panel.active {
+        display: block;
+      }
+      label {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 700;
+        margin-bottom: 5px;
+      }
+      input, textarea, select {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid var(--border);
+        background: rgba(10,6,18,0.92);
+        color: var(--text);
+        border-radius: 11px;
+        padding: 9px 10px;
+        font: inherit;
+        margin-bottom: 9px;
+      }
+      textarea {
+        min-height: 84px;
+        resize: vertical;
+      }
+      .source-preview {
+        border: 1px solid var(--border);
+        background: rgba(10,6,18,0.7);
+        border-radius: 12px;
+        padding: 10px;
+        margin-bottom: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>StellarSync Plugin</h1>
+      <p>Save current page links and social posts to StellarSync, or use the LinkedIn exporter for visible post extraction.</p>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="inspo">Save Inspo</button>
+      <button class="tab" data-tab="note">Save Note</button>
+      <button class="tab" data-tab="linkedin">LinkedIn Exporter</button>
+    </div>
+
+    <div class="panel active" data-panel="inspo">
+      <div class="card">
+        <h1>Save Inspo</h1>
+        <div class="source-preview mono" id="inspo-source-preview">Loading current tab...</div>
+        <label for="inspo-title">Title</label>
+        <input id="inspo-title" placeholder="Inspiration title">
+        <label for="inspo-notes">Notes</label>
+        <textarea id="inspo-notes" placeholder="Why this is useful"></textarea>
+        <label for="inspo-tags">Tags</label>
+        <input id="inspo-tags" placeholder="comma, separated">
+        <label for="inspo-platform">Platform / source</label>
+        <select id="inspo-platform"></select>
+        <div class="actions">
+          <button id="save-inspo-btn" class="primary">Open Save Flow</button>
+          <button id="refresh-tab-btn">Refresh Tab</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" data-panel="note">
+      <div class="card">
+        <h1>Save Note</h1>
+        <div class="source-preview mono" id="note-source-preview">Loading current tab...</div>
+        <label for="note-title">Title</label>
+        <input id="note-title" placeholder="Note title">
+        <label for="note-body">Quick note</label>
+        <textarea id="note-body" placeholder="Write a quick note from this page"></textarea>
+        <label for="note-platform">Platform / source</label>
+        <select id="note-platform"></select>
+        <div class="actions">
+          <button id="save-note-btn" class="primary">Open Save Flow</button>
+          <button id="refresh-note-tab-btn">Refresh Tab</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" data-panel="linkedin">
+      <div class="card">
+        <h1>LinkedIn Exporter</h1>
+        <p>Export visible LinkedIn posts locally, then import the JSON or paste TSV into StellarSync.</p>
+      <div class="actions">
+        <button id="export-btn" class="primary">Export Visible Posts</button>
+        <button id="capture-page-text-btn" class="primary" style="background:linear-gradient(135deg,#0a66c2,#3b82f6)">Capture Visible Page Text</button>
+        <button id="capture-selected-text-btn" class="primary" style="background:linear-gradient(135deg,#7c3aed,#a78bfa)">Capture Selected Text</button>
+        <button id="show-diagnostics-btn">Show Diagnostics</button>
+        <button id="copy-tsv-btn" disabled>Copy TSV for Google Sheets</button>
+        <button id="download-json-btn" disabled>Download JSON</button>
+        <button id="download-csv-btn" disabled>Download CSV</button>
+        <button id="download-tsv-btn" disabled>Download TSV</button>
+        <button id="download-media-manifest-btn" disabled>Download Media Manifest</button>
+        <button id="import-media-btn" disabled>Import Media to StellarSync</button>
+      </div>
+      </div>
+
+      <div class="card stack">
+      <div class="pill">No passwords. No server-side scraping. No hidden automation.</div>
+      <div class="pill">Runs only on the active LinkedIn tab after you click export.</div>
+      <div id="status" class="mono">Open your LinkedIn activity/profile page, scroll until the posts you want are visible, then click Export Visible Posts.</div>
+      </div>
+
+      <div class="card">
+        <div class="mono" id="diagnostics">No export run yet.</div>
+      </div>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+  </html>
