@@ -5309,7 +5309,7 @@
                     <button type="button" class="pw-ws-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg active" data-icon="sparkle"><i class="ph-fill ph-sparkle"></i></button>
                     <button type="button" class="pw-ws-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="leaf"><i class="ph-fill ph-leaf"></i></button>
                     <button type="button" class="pw-ws-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="planet"><i class="ph-fill ph-planet"></i></button>
-                    <button type="button" class="pw-ws-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="star"><i class="ph-fill ph-sparkle"></i></button>
+                    <button type="button" class="pw-ws-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="star"><i class="ph-fill ph-star"></i></button>
                     <button type="button" class="pw-ws-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="heart"><i class="ph-fill ph-heart"></i></button>
                     <button type="button" class="pw-ws-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="megaphone"><i class="ph-fill ph-megaphone"></i></button>
                     <button type="button" class="pw-ws-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="lightning"><i class="ph-fill ph-lightning"></i></button>
@@ -7669,7 +7669,7 @@ function getDeterministicPillarIcon(pillar) {
     application: "ph-sparkle",
     education: "ph-book-open",
     promotion: "ph-rocket-launch",
-    algorithm: "ph-sparkle",
+    algorithm: "ph-star",
     jobs: "ph-target",
     climate: "ph-leaf",
     systems: "ph-compass"
@@ -7679,7 +7679,7 @@ function getDeterministicPillarIcon(pillar) {
     "ph-sparkle", "ph-magic-wand", "ph-megaphone", "ph-target", "ph-rocket-launch",
     "ph-lightbulb", "ph-book-open", "ph-chart-line-up", "ph-users-three", "ph-hands-clapping",
     "ph-heart", "ph-globe", "ph-leaf", "ph-fire", "ph-compass", "ph-planet",
-    "ph-sparkle", "ph-pencil-simple", "ph-broadcast", "ph-network", "ph-funnel",
+    "ph-star", "ph-pencil-simple", "ph-broadcast", "ph-network", "ph-funnel",
     "ph-calendar-star", "ph-quotes", "ph-chat-circle-text"
   ];
   var hash = 0;
@@ -37041,8 +37041,11 @@ async function savePWProfile() {
     var user = STELLARSYNC_AUTH_USER;
     if (!user) throw new Error("Authenticated user not available");
     var userId = String(user.id || "").trim();
-    console.log("[icon-save] supabase tables unavailable, saving to session metadata only");
-    STELLARSYNC_AUTH_USER = {
+    const { data, error } = await STELLARSYNC_SUPABASE_CLIENT.auth.updateUser({
+      data: payload
+    });
+    if (error) throw error;
+    STELLARSYNC_AUTH_USER = data?.user || {
       ...user,
       user_metadata: {
         ...(user.user_metadata || {}),
