@@ -2414,7 +2414,7 @@
             <button id="app-update-btn" type="button" class="hidden px-4 py-2 bg-[#20110a] hover:bg-[#2e170e] text-[#ffd7a3] text-[10px] uppercase tracking-wider font-bold rounded-xl transition-all items-center gap-2 border border-[#5b3118]">
                 <i class="ph-bold ph-arrow-clockwise"></i> Update Available
             </button>
-            <button id="install-app-btn" type="button" title="Install App" aria-label="Install App" onclick="installApp()" class="hidden px-4 py-2 bg-[#1a1128] hover:bg-[#231738] text-white text-[10px] uppercase tracking-wider font-bold rounded-xl transition-all items-center gap-2 border border-white/10 shrink-0">
+            <button id="install-app-btn" type="button" title="Install App" aria-label="Install App" class="hidden px-4 py-2 bg-[#1a1128] hover:bg-[#231738] text-white text-[10px] uppercase tracking-wider font-bold rounded-xl transition-all items-center gap-2 border border-white/10 shrink-0">
                 <i class="ph-bold ph-download-simple"></i><span class="install-label">Install App</span>
             </button>
             <button id="topbar-new-post-btn" onclick="openModal()" class="px-4 md:px-6 py-2 bg-gradient-to-r from-[#9d4edd] to-[#c77dff] hover:opacity-90 text-white text-xs uppercase tracking-wider font-bold rounded-xl transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(157,78,221,0.2)] border border-white/10 shrink-0" vid="26">
@@ -2476,7 +2476,7 @@
                 </button>
               </div>
             </div>
-            <button id="mobile-install-app-btn" type="button" onclick="installApp()" class="hidden md:hidden w-10 h-10 rounded-xl bg-[#1e152d] border border-white/5 items-center justify-center text-gray-300 hover:text-white transition-colors shrink-0">
+            <button id="mobile-install-app-btn" type="button" class="hidden md:hidden w-10 h-10 rounded-xl bg-[#1e152d] border border-white/5 items-center justify-center text-gray-300 hover:text-white transition-colors shrink-0">
         <i class="ph-bold ph-download-simple"></i>
             </button>
         </div>
@@ -10733,6 +10733,7 @@ let mediaViewerOriginalOrder = [];
 let mediaViewerDetachMode = false;
 let selectedMediaViewerDetachAssetIds = new Set();
 let selectedMediaAssetIds = new Set();
+let deletingMediaAssetKeys = new Set();
 let mediaSelectMode = loadMediaSelectMode();
 let mediaPostsPanelOpen = false;
 let currentModalInspoId = null;
@@ -23324,6 +23325,7 @@ function renderMediaSelectToggleState() {
   target.innerHTML = `
     ${mediaSelectMode ? `<span class="text-xs text-gray-400 whitespace-nowrap">${selectedCount} selected</span>` : ""}
     ${mediaSelectMode && selectedCount && canAttachMediaToPosts() ? `<button type="button" onclick="openSelectedMediaAttachPanel()" class="px-3 py-2 rounded-lg bg-[#231738] border border-white/10 text-[10px] uppercase tracking-widest font-bold text-white whitespace-nowrap">Attach selected to post</button>` : ""}
+    ${mediaSelectMode && selectedCount ? `<button type="button" onclick="deleteSelectedMediaItems()" class="px-3 py-2 rounded-lg bg-[#30121b] border border-red-400/20 text-[10px] uppercase tracking-widest font-bold text-red-200 whitespace-nowrap">Delete selected</button>` : ""}
     ${mediaSelectMode && selectedCount ? `<button type="button" onclick="clearSelectedMedia()" class="px-3 py-2 rounded-lg bg-[#181125] border border-white/5 text-[10px] uppercase tracking-widest font-bold text-gray-300 whitespace-nowrap">Clear selection</button>` : ""}
     <button id="media-select-toggle" type="button" class="px-5 py-2 ${mediaSelectMode ? "bg-[#231738] text-white font-semibold" : "bg-transparent text-gray-500 font-medium"} hover:text-white rounded-lg text-xs whitespace-nowrap transition-colors" onclick="toggleMediaSelectMode()">
       Select media
@@ -23362,6 +23364,253 @@ function openSelectedMediaAttachPanel() {
   const first = selected[0] || currentMediaAssetDetail;
   if (!first) return;
   openMediaAssetModal(first, { items: selected.length ? selected : undefined, openPosts: true });
+}
+
+function getMediaDeleteTargets(item) {
+  if (!item) return [];
+  if (item.kind === "group" && Array.isArray(item.assets)) {
+    return item.assets.map(function(asset) {
+      return normalizeRemoteMedia(asset);
+    }).filter(Boolean);
+  }
+  return [normalizeRemoteMedia(item)];
+}
+
+function getDeletingMediaKeysForItem(item) {
+  return getMediaDeleteTargets(item).map(function(asset) {
+    return getMediaItemKey(asset) || getMediaAssetId(asset);
+  }).filter(Boolean);
+}
+
+function setDeletingMediaForItem(item, isDeleting) {
+  getDeletingMediaKeysForItem(item).forEach(function(key) {
+    if (isDeleting) deletingMediaAssetKeys.add(key);
+    else deletingMediaAssetKeys.delete(key);
+  });
+}
+
+function getMediaDeletePayloadEntries(items = []) {
+  const seen = new Set();
+  const entries = [];
+  items.forEach(function(item) {
+    getMediaDeleteTargets(item).forEach(function(asset) {
+      const mediaAssetId = String(getMediaAssetId(asset) || "").trim();
+      const itemKey = String(getMediaItemKey(asset) || mediaAssetId).trim();
+      if (!itemKey || seen.has(itemKey)) return;
+      seen.add(itemKey);
+      entries.push({
+        id: mediaAssetId || itemKey,
+        media_asset_id: mediaAssetId || "",
+        asset_id: String(asset.asset_id || asset.assetId || asset.media_id || asset.mediaId || "").trim(),
+        storage_path: String(asset.storage_path || asset.storagePath || "").trim(),
+        bucket: String(asset.bucket || "").trim()
+      });
+    });
+  });
+  return entries;
+}
+
+function getDeletedMediaReferenceIds(items = []) {
+  const ids = new Set();
+  items.forEach(function(item) {
+    getMediaDeleteTargets(item).forEach(function(asset) {
+      [
+        getMediaAssetId(asset),
+        getMediaItemKey(asset),
+        asset.asset_id,
+        asset.assetId,
+        asset.media_id,
+        asset.mediaId,
+        asset.storage_path,
+        asset.storagePath
+      ].forEach(function(value) {
+        const next = String(value || "").trim();
+        if (next) ids.add(next);
+      });
+    });
+  });
+  return Array.from(ids);
+}
+
+async function apiDeleteMediaAssets(items = []) {
+  const entries = getMediaDeletePayloadEntries(items);
+  if (!entries.length) return { ok: true, deleted_count: 0, deleted_media_asset_ids: [], deleted_asset_ids: [] };
+  const payload = {
+    action: "delete_media",
+    media_assets: entries,
+    media_asset_ids: entries.map(function(entry) { return entry.media_asset_id; }).filter(Boolean),
+    asset_ids: entries.map(function(entry) { return entry.asset_id; }).filter(Boolean),
+    delete_storage: false,
+    workspace_id: getWorkspaceRequestMetadata().workspace_id || "",
+    workspace_slug: getCurrentWorkspaceSlug?.() || ""
+  };
+  console.log("[media-delete] request", payload);
+  const response = await callSupabaseEdgeFunction("media-index", payload);
+  console.log("[media-delete] response", response);
+  if (!response?.ok) {
+    throw new Error(response?.error || "Media could not be deleted. Try again.");
+  }
+  return response;
+}
+
+function cleanupDeletedMediaLocally(items = [], result = {}) {
+  const deletedItemKeys = new Set((items || []).map(function(item) {
+    return String(getMediaItemKey(item) || "").trim();
+  }).filter(Boolean));
+  const staleIds = new Set([
+    ...getDeletedMediaReferenceIds(items),
+    ...((result?.deleted_media_asset_ids || result?.deleted_asset_ids || []).map(function(value) { return String(value || "").trim(); }).filter(Boolean))
+  ]);
+  if (!staleIds.size) return;
+  console.log("[media-delete] local cleanup", {
+    deleted_count: result?.deleted_count || staleIds.size,
+    stale_ids: Array.from(staleIds)
+  });
+
+  appState.media = (appState.media || []).filter(function(asset) {
+    const candidates = [
+      getMediaAssetId(asset),
+      getMediaItemKey(asset),
+      asset.asset_id,
+      asset.assetId,
+      asset.media_id,
+      asset.mediaId,
+      asset.storage_path,
+      asset.storagePath
+    ].map(function(value) {
+      return String(value || "").trim();
+    }).filter(Boolean);
+    return !candidates.some(function(value) { return staleIds.has(value); });
+  });
+
+  appState.postMedia = (appState.postMedia || appState.post_media || []).filter(function(row) {
+    const rowAssetId = String(getMediaAssetId(row) || row.media_asset_id || row.mediaAssetId || row.asset_id || row.assetId || "").trim();
+    return rowAssetId && !staleIds.has(rowAssetId);
+  });
+  appState.post_media = appState.postMedia;
+
+  appState.posts = (appState.posts || []).map(function(post) {
+    const clean = function(value) {
+      return splitMediaIdList(value).filter(function(id) {
+        return !staleIds.has(String(id || "").trim());
+      });
+    };
+    const next = {
+      ...post,
+      media_ids: clean(post.media_ids || post.mediaIds),
+      mediaIds: clean(post.media_ids || post.mediaIds),
+      carousel_asset_ids: clean(post.carousel_asset_ids || post.carouselAssetIds),
+      carouselAssetIds: clean(post.carousel_asset_ids || post.carouselAssetIds),
+      carouselAssets: (post.carouselAssets || []).filter(function(asset) {
+        return !staleIds.has(String(getMediaAssetId(asset) || getMediaItemKey(asset) || "").trim());
+      }),
+      carousel_assets: (post.carousel_assets || []).filter(function(asset) {
+        return !staleIds.has(String(getMediaAssetId(asset) || getMediaItemKey(asset) || "").trim());
+      })
+    };
+    if (staleIds.has(String(next.media_id || next.mediaId || "").trim())) {
+      next.media_id = next.media_ids[0] || "";
+      next.mediaId = next.media_id;
+    }
+    return applyDerivedPostMediaFormat(next, appState.media || []);
+  });
+
+  currentModalCarouselAssets = (currentModalCarouselAssets || []).filter(function(asset) {
+    return !staleIds.has(String(getMediaAssetId(asset) || getMediaItemKey(asset) || "").trim());
+  });
+  if (currentModalAsset && staleIds.has(String(getMediaAssetId(currentModalAsset) || getMediaItemKey(currentModalAsset) || "").trim())) {
+    currentModalAsset = currentModalCarouselAssets[0] || null;
+  }
+
+  if (currentMediaAssetDetail && staleIds.has(String(getMediaAssetId(currentMediaAssetDetail) || getMediaItemKey(currentMediaAssetDetail) || "").trim())) {
+    currentMediaAssetDetail = null;
+  }
+  currentMediaViewerItems = (currentMediaViewerItems || []).filter(function(asset) {
+    return !staleIds.has(String(getMediaAssetId(asset) || getMediaItemKey(asset) || "").trim());
+  });
+  if (currentMediaViewerIndex >= currentMediaViewerItems.length) {
+    currentMediaViewerIndex = Math.max(0, currentMediaViewerItems.length - 1);
+  }
+  if (!currentMediaViewerItems.length) closeMediaAssetModal();
+
+  Array.from(staleIds).forEach(function(id) {
+    selectedMediaAssetIds.delete(id);
+    deletingMediaAssetKeys.delete(id);
+  });
+  deletedItemKeys.forEach(function(key) {
+    selectedMediaAssetIds.delete(key);
+  });
+
+  removeStaleMediaReferences(Array.from(staleIds));
+  persistLocalState();
+  renderModalCarouselPreview();
+  renderModalExistingMediaPicker(currentModalAsset?.assetId || currentModalAsset?.id || "");
+  renderMediaPickerAssets("modal");
+  renderMedia();
+  rerenderAll();
+}
+
+async function deleteMediaVaultItems(items = []) {
+  const targets = (items || []).filter(Boolean);
+  if (!targets.length) return;
+  const deleteEntries = getMediaDeletePayloadEntries(targets);
+  if (!deleteEntries.length) {
+    showToast("Media could not be deleted. Try again.", "", "ph-warning", "text-yellow-400");
+    return;
+  }
+  const confirmed = await showCustomConfirm({
+    title: "Delete media?",
+    message: "This will remove the selected media from the vault. Any posts using it may lose their attachment.",
+    confirmText: "Delete media",
+    cancelText: "Keep media",
+    danger: true
+  });
+  if (!confirmed) return;
+
+  targets.forEach(function(item) { setDeletingMediaForItem(item, true); });
+  renderMedia();
+  try {
+    const response = await apiDeleteMediaAssets(targets);
+    cleanupDeletedMediaLocally(targets, response);
+    const deletedCount = Number(response?.deleted_count || deleteEntries.length || 0);
+    showToast(
+      deletedCount === 1 ? "Media deleted." : `${deletedCount} media items deleted.`,
+      "",
+      "ph-check",
+      "text-[#00ffaa]"
+    );
+  } catch (err) {
+    console.error("[media-delete] failed", err);
+    showToast("Media could not be deleted. Try again.", "", "ph-warning", "text-yellow-400");
+  } finally {
+    targets.forEach(function(item) { setDeletingMediaForItem(item, false); });
+    renderMedia();
+  }
+}
+
+async function deleteMediaVaultItemByKey(itemKey, event) {
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
+  const target = String(itemKey || "").trim();
+  if (!target) return;
+  const item = getFilteredMediaVaultItems().find(function(candidate) {
+    return getMediaItemKey(candidate) === target;
+  });
+  if (!item) {
+    showToast("Media could not be deleted. Try again.", "", "ph-warning", "text-yellow-400");
+    return;
+  }
+  await deleteMediaVaultItems([item]);
+}
+
+async function deleteSelectedMediaItems() {
+  const items = getFilteredMediaVaultItems().filter(function(item) {
+    return selectedMediaAssetIds.has(getMediaItemKey(item));
+  });
+  if (!items.length) return;
+  await deleteMediaVaultItems(items);
+  selectedMediaAssetIds.clear();
+  renderMedia();
 }
 
 var MEDIA_RENDER_BATCH_SIZE = 24;
@@ -23406,6 +23655,7 @@ async function ensureLazyHybridMediaLoad(options = {}) {
 function renderMediaVaultCard(item) {
   const itemKey = getMediaItemKey(item);
   const isSelected = selectedMediaAssetIds.has(itemKey);
+  const isDeleting = getDeletingMediaKeysForItem(item).some(function(key) { return deletingMediaAssetKeys.has(key); });
   const isGroup = item.kind === "group";
   const type = inferMediaKindFromAsset(item);
   const linkedPost = item.linkedPost || (appState.posts || []).find(post => post.id === item.postId) || getMediaPostContext(item);
@@ -23494,6 +23744,18 @@ function renderMediaVaultCard(item) {
         <p class="text-gray-500 text-[10px] font-medium wrap-safe">${escapeHtml(metaLine)}</p>
         ${isCarouselPreview ? `<p class="text-gray-600 text-[10px] font-medium wrap-safe mt-1">Carousel · ${(item.assets?.length || linkedPostAssets.length || getAttachedMediaForPost(linkedPost).length)} assets</p>` : ""}
         ${assetUrl ? `<p class="text-gray-600 text-[10px] font-medium wrap-safe mt-1">${escapeHtml(getDisplayExcerpt(assetUrl, assetUrl))}</p>` : ""}
+        <div class="mt-3 flex justify-end">
+          <button
+            type="button"
+            title="Delete media"
+            aria-label="Delete media"
+            ${isDeleting ? "disabled" : ""}
+            onclick="deleteMediaVaultItemByKey('${escapeHtml(itemKey)}', event)"
+            class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-400/10 bg-[#181125] text-gray-500 transition-colors hover:border-red-400/30 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <i class="ph-bold ph-trash text-sm"></i>
+          </button>
+        </div>
       </div>
     </div>
   `;
@@ -28796,9 +29058,7 @@ function getInstallAvailabilityState() {
 function setInstallButtonVisibility() {
   var state = getInstallAvailabilityState();
   var mobileOnly = window.innerWidth <= 768;
-  var canPrompt = state === "available";
-  var canShowFallback = state === "ios";
-  var visible = canPrompt || canShowFallback;
+  var visible = state !== "installed";
   var showDesktop = visible && !mobileOnly;
   var showMobile = visible && mobileOnly;
 
@@ -28953,6 +29213,8 @@ function setupPWAInstall() {
     const installed = await handlePWAInstallAction({ openHelper: false });
     if (installed) closeInstallHelperModal();
   });
+  installAppBtn?.addEventListener("click", () => handlePWAInstallAction({ openHelper: true }));
+  mobileInstallAppBtn?.addEventListener("click", () => handlePWAInstallAction({ openHelper: true }));
   closeInstallHelperModalBtn?.addEventListener("click", closeInstallHelperModal);
   closeInstallHelperBtn?.addEventListener("click", closeInstallHelperModal);
   installHelperModal?.addEventListener("click", (event) => {
@@ -36093,6 +36355,8 @@ window.toggleMediaSelection = toggleMediaSelection;
 window.handleMediaCardClick = handleMediaCardClick;
 window.clearSelectedMedia = clearSelectedMedia;
 window.openSelectedMediaAttachPanel = openSelectedMediaAttachPanel;
+window.deleteMediaVaultItemByKey = deleteMediaVaultItemByKey;
+window.deleteSelectedMediaItems = deleteSelectedMediaItems;
 window.updatePendingUploadField = updatePendingUploadField;
 window.removePendingUploadFile = removePendingUploadFile;
 window.navigateMediaViewer = navigateMediaViewer;
@@ -37815,8 +38079,9 @@ async function handlePWInviteCreate() {
     console.log("[members] invite create result", result);
     if (result && result.ok) {
       if (resultEl) {
-        var inviteLink = result.invite?.token
-          ? ((typeof window !== "undefined" ? window.location.origin : "https://stellarsync.app") + "/login/invite/?invite_token=" + encodeURIComponent(result.invite.token) + "&email=" + encodeURIComponent(email))
+        var inviteToken = String(result.invite_token || result.invite?.token || "").trim();
+        var inviteLink = inviteToken
+          ? ((typeof window !== "undefined" ? window.location.origin : "https://stellarsync.app") + "/login/invite/?invite_token=" + encodeURIComponent(inviteToken) + "&email=" + encodeURIComponent(result.invitee_email || email))
           : (result.invite_link || "");
         var sentCopy = result.email_sent
           ? "Invite sent to "
@@ -37848,14 +38113,17 @@ async function acceptInviteFromUrlIfPresent() {
   if (!token) return false;
   const result = await callSupabaseEdgeFunction("workspace-members", {
     action: "accept_invite",
-    token
+    invite_token: token
   });
   if (!result?.ok) {
     throw new Error(result?.error || "Invite accept failed");
   }
   const workspaceSlug = String(result.workspace_slug || "").trim();
+  const workspaceId = String(result.workspace_id || "").trim();
   if (workspaceSlug) {
     window.history.replaceState({}, "", "/app/?workspace=" + encodeURIComponent(workspaceSlug));
+  } else if (workspaceId) {
+    window.history.replaceState({}, "", "/app/?workspace_id=" + encodeURIComponent(workspaceId));
   } else {
     window.history.replaceState({}, "", "/app/");
   }
