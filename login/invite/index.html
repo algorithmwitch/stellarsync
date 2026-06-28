@@ -1318,13 +1318,20 @@ video {
                         await acceptInvite(data?.session);
                         return;
                     }
+                    const currentInviteUrl =
+                        window.location.origin +
+                        "/login/invite/" +
+                        window.location.search;
                     const { data, error } = await supabase.auth.signUp({
                         email: inviteEmail,
                         password,
                         options: {
+                            emailRedirectTo: currentInviteUrl,
                             data: {
                                 display_name: fullName,
-                                full_name: fullName
+                                full_name: fullName,
+                                invite_token: inviteToken,
+                                invited_workspace_email: inviteEmail
                             }
                         }
                     });
@@ -1341,7 +1348,7 @@ video {
                         await acceptInvite(signInResult.data.session);
                         return;
                     }
-                    setStatus("Account created. Confirm your email if required, then reopen this invite.");
+                    setStatus("Check your email to confirm your account, then this invite will finish here.");
                 } catch (err) {
                     showFailure(err?.message || "Could not continue with this invite.");
                 } finally {
