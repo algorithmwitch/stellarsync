@@ -33444,7 +33444,7 @@ const PILLAR_ICON_OPTIONS = [
   "ph-fire",
   "ph-compass",
   "ph-planet",
-  "ph-sparkle",
+  "ph-star",
   "ph-pencil-simple",
   "ph-broadcast",
   "ph-network",
@@ -37086,6 +37086,7 @@ var WORKSPACE_SETTINGS_ALLOWED_FIELDS = [
   "primary_color",
   "secondary_color",
   "icon",
+  "avatar_mode",
   "avatar_initials",
   "short_name",
   "feature_flags",
@@ -38489,15 +38490,11 @@ function renderWorkspaceAvatar(workspace) {
   if (avatarUrl) {
     return '<img src="' + escapeHtml(avatarUrl) + '" alt="Workspace avatar" class="w-full h-full object-cover rounded-xl" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'"><div class="hidden w-full h-full items-center justify-center text-white text-sm font-bold">' + escapeHtml(getWorkspaceInitials(source)) + '</div>';
   }
-  if (avatarMode === "icon") {
+  if (icon && avatarMode !== "initials") {
     var iconClass = getWorkspaceAvatarIconClass(icon);
     if (iconClass) {
       return '<i class="ph-fill ' + escapeHtml(iconClass) + ' text-base leading-none" aria-hidden="true"></i>';
     }
-    console.warn("[workspace-avatar] fallback initials used", {
-      workspace: source.workspace_slug || source.slug || source.name || "",
-      avatar_mode: avatarMode
-    });
   }
   return '<span class="workspace-avatar-initials">' + escapeHtml(getWorkspaceInitials(source)) + '</span>';
 }
