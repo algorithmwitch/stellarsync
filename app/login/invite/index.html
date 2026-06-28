@@ -1305,11 +1305,12 @@ video {
             }
 
             async function callWorkspaceMembers(payload, accessToken) {
+                const token = accessToken || SUPABASE_ANON_KEY;
                 const headers = {
                     "Content-Type": "application/json",
-                    apikey: SUPABASE_ANON_KEY
+                    "apikey": SUPABASE_ANON_KEY,
+                    "Authorization": "Bearer " + token
                 };
-                if (accessToken) headers.Authorization = "Bearer " + accessToken;
                 const response = await fetch(EDGE_URL, {
                     method: "POST",
                     headers,
