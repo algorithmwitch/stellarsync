@@ -9418,6 +9418,61 @@ function getPostAssets(post) {
   return getAttachedMediaForPost(post).filter((item) => item && typeof item === "object").map((asset) => normalizeRemoteMedia(asset));
 }
 
+function buildMediaCardLink(asset) {
+  const id = getMediaAssetId(asset);
+  const workspace = getCurrentWorkspaceSlug() || "gpe";
+  if (!id || typeof window === "undefined") return "";
+  return `${window.location.origin}/app/?workspace=${encodeURIComponent(workspace)}&media=${encodeURIComponent(id)}`;
+}
+
+function getPostMondayMediaLinks(post) {
+  return getAttachedMediaForPost(post)
+    .map(function(asset) { return buildMediaCardLink(asset); })
+    .filter(Boolean)
+    .join("\n");
+}
+
+function buildMondayPayloadForPost(post, fallback = {}) {
+  const source = post && typeof post === "object" ? post : {};
+  const backup = fallback && typeof fallback === "object" ? fallback : {};
+  const normalized = normalizeRemotePost({ ...backup, ...source }, getAvailableCampaignRecords(), appState.media || []);
+  const postId = getCanonicalPostId(normalized) || getPostLookupId(normalized) || String(source.id || backup.id || "").trim();
+  const platforms = getPostTargetPlatforms(normalized);
+  const campaignName = normalized.campaignName || normalized.campaign_name || source.campaignName || source.campaign_name || source.campaign || backup.campaignName || backup.campaign_name || "";
+  const scheduledAt = normalized.scheduledAt || normalized.scheduled_at || normalized.date || source.scheduledAt || source.scheduled_at || source.date || backup.scheduledAt || backup.scheduled_at || backup.date || "";
+  const mondayMediaLinks = getPostMondayMediaLinks(normalized);
+  return {
+    ...normalized,
+    ...source,
+    id: postId,
+    post_id: postId,
+    postId: postId,
+    title: normalized.title || normalized.post_title || getPostDisplayTitle(normalized, "Untitled post"),
+    post_title: normalized.post_title || normalized.title || getPostDisplayTitle(normalized, "Untitled post"),
+    description: normalized.description || normalized.caption || normalized.body || source.description || source.caption || source.body || "",
+    status: normalized.status || normalized.publishStatus || normalized.publish_status || normalized.flowState || source.status || source.publish_status || "draft",
+    publish_status: normalized.publishStatus || normalized.publish_status || normalized.status || source.publish_status || source.status || "draft",
+    platform: normalized.platform || platforms[0] || source.platform || "",
+    platforms: platforms,
+    platform_targets: Array.isArray(platforms) ? platforms.join(",") : String(platforms || ""),
+    pillar: normalized.pillar || normalized.contentPillar || source.pillar || "",
+    campaign_name: campaignName,
+    campaignName: campaignName,
+    scheduled_at: scheduledAt,
+    scheduledAt: scheduledAt,
+    date: normalized.date || scheduledAt,
+    impressions: normalized.impressions || normalized.impression_count || normalized.views || source.impressions || source.impression_count || source.views || 0,
+    published_url: normalized.publishedUrl || normalized.published_url || source.published_url || source.publishedUrl || "",
+    publishedUrl: normalized.publishedUrl || normalized.published_url || source.publishedUrl || source.published_url || "",
+    media_link: mondayMediaLinks,
+    media_links: mondayMediaLinks,
+    media_url: mondayMediaLinks || normalized.mediaUrl || normalized.media_url || source.media_url || source.mediaUrl || "",
+    mediaUrl: mondayMediaLinks || normalized.mediaUrl || normalized.media_url || source.mediaUrl || source.media_url || "",
+    monday_item_id: normalized.mondayItemId || normalized.monday_item_id || source.monday_item_id || source.mondayItemId || "",
+    mondayItemId: normalized.mondayItemId || normalized.monday_item_id || source.mondayItemId || source.monday_item_id || ""
+  };
+}
+
 function findLinkedAssetForPost(post) {
   const postId = String(post?.id || post?.postId || "").trim();
   if (!postId) return null;
@@ -12663,9 +12718,12 @@ function setupWorkspaceReturnButtons() {
 }
 
 function updateHybridManualButtons() {
+  const sheetsEnabled = shouldUseSheetsAuthority?.() || isSheetMirrorEnabled?.();
   ["pw-pull-sheets-btn", "pw-push-sheets-btn"].forEach((id) => {
     const btn = document.getElementById(id);
-    if (btn) btn.remove();
+    if (!btn) return;
+    btn.classList.toggle("hidden", !sheetsEnabled);
+    btn.disabled = !sheetsEnabled;
   });
   const dryRun = document.getElementById("pw-monday-dry-run-btn");
   if (dryRun) {
@@ -12773,7 +12831,7 @@ function setupWorkspaceUI() {
       event.preventDefault();
       event.stopPropagation();
       toggleProfileMenu(false);
-      openInstallHelperModal();
+      handlePWAInstallAction({ openHelper: true });
       return;
     }
     if (action === "support") {
@@ -12861,7 +12919,7 @@ function setupWorkspaceUI() {
   document.getElementById("pw-pull-sheets-btn")?.addEventListener("click", async function() {
     console.log("[button] fired pw-pull-sheets-btn");
     try {
-      await syncRemoteIfConfigured();
+      await pullSheetsToSupabase({ force: true, tabs: ["POSTS"] });
       showToast("Sheets pulled", "Google Sheets data loaded.", "ph-check", "text-[#00ffaa]");
       renderWorkspaceHub();
     } catch (err) {
@@ -19854,32 +19912,15 @@ async function syncPostToMonday() {
     if (!boardId) { showToast("No Monday board configured", "error"); return; }
     var post = window.__currentModalPostData || null;
     if (!post) { showToast("Save the post first before syncing to Monday", "error"); return; }
+    var mondayPost = buildMondayPayloadForPost(post);
     loadingToastId = showLoadingToast("Syncing Monday item", "Syncing Monday item...");
     var meta = getWorkspaceRequestMetadata();
-    console.log("[monday] request payload", { action: "sync_post", board_id: boardId, post_id: post.post_id || post.postId || post.id || "" });
+    console.log("[monday] request payload", { action: "sync_post", board_id: boardId, post_id: mondayPost.post_id || mondayPost.postId || mondayPost.id || "" });
     var result = await callSupabaseEdgeFunction("monday-sync", {
       action: "sync_post",
       workspace_id: meta.workspace_id || meta.workspace_slug,
       board_id: boardId,
-      monday_item_id: post.mondayItemId || post.monday_item_id || "",
-      id: post.id || post.post_id || post.postId || "",
-      post_id: post.post_id || post.postId || post.id || "",
-      post_title: post.title || post.post_title || "",
-      title: post.title || post.post_title || "",
-      description: post.description || post.caption || post.body || "",
-      status: post.status || post.publish_status || post.flowState || "draft",
-      publish_status: post.publish_status || post.status || "draft",
-      platform: post.platform || (Array.isArray(post.platforms) ? post.platforms[0] : "") || "",
-      platforms: post.platforms || (post.platform ? [post.platform] : []),
-      platform_targets: post.platform_targets || post.platforms || post.platform || "",
-      pillar: post.pillar || "",
-      campaign_name: post.campaign_name || post.campaignName || "",
-      campaignName: post.campaignName || post.campaign_name || "",
-      scheduled_at: post.scheduled_at || post.scheduledAt || post.date || post.publish_date || "",
-      date: post.date || post.scheduled_at || post.publish_date || "",
-      impressions: post.impressions || post.impression_count || post.views || 0,
-      published_url: post.published_url || post.publishedUrl || "",
-      media_url: post.media_url || post.mediaUrl || "",
+      ...mondayPost,
     });
     var diagnosticsEl = document.getElementById("modal-monday-diagnostics");
     if (diagnosticsEl) diagnosticsEl.textContent = JSON.stringify(result, null, 2);
@@ -19945,37 +19986,7 @@ function getMondayBackfillFrontendPosts() {
     .filter(function(post) { return post && typeof post === "object"; })
     .map(function(post, index) {
       const normalized = normalizeRemotePost(post, campaigns, appState.media || [], index);
-      const postId = getCanonicalPostId(normalized) || getPostLookupId(normalized, index) || String(normalized.id || post.id || "").trim();
-      const platforms = getPostTargetPlatforms(normalized);
-      const campaignName = normalized.campaignName || normalized.campaign_name || post.campaignName || post.campaign_name || post.campaign || "";
-      const scheduledAt = normalized.scheduledAt || normalized.scheduled_at || normalized.date || post.scheduledAt || post.scheduled_at || post.date || "";
-      return {
-        ...normalized,
-        id: postId,
-        post_id: postId,
-        postId,
-        title: normalized.title || normalized.post_title || getPostDisplayTitle(normalized, "Untitled post"),
-        post_title: normalized.post_title || normalized.title || getPostDisplayTitle(normalized, "Untitled post"),
-        description: normalized.description || normalized.caption || normalized.body || "",
-        status: normalized.status || normalized.publishStatus || normalized.publish_status || normalized.flowState || "draft",
-        publish_status: normalized.publishStatus || normalized.publish_status || normalized.status || "draft",
-        platform: normalized.platform || platforms[0] || "",
-        platforms,
-        platform_targets: Array.isArray(platforms) ? platforms.join(",") : String(platforms || ""),
-        pillar: normalized.pillar || normalized.contentPillar || "",
-        campaign_name: campaignName,
-        campaignName: campaignName,
-        scheduled_at: scheduledAt,
-        scheduledAt,
-        date: normalized.date || scheduledAt,
-        impressions: normalized.impressions || normalized.impression_count || normalized.views || 0,
-        published_url: normalized.publishedUrl || normalized.published_url || "",
-        publishedUrl: normalized.publishedUrl || normalized.published_url || "",
-        media_url: normalized.mediaUrl || normalized.media_url || "",
-        mediaUrl: normalized.mediaUrl || normalized.media_url || "",
-        monday_item_id: normalized.mondayItemId || normalized.monday_item_id || "",
-        mondayItemId: normalized.mondayItemId || normalized.monday_item_id || ""
-      };
+      return buildMondayPayloadForPost(normalized, post);
     });
 }
 
@@ -26069,7 +26080,8 @@ function shouldSkipMondayQueueNow() {
 async function enqueueMondayPostSyncJob(post, options = {}) {
   const config = getMondaySyncConfig();
   const targetPost = post || window.__currentModalPostData || null;
-  const postId = String(targetPost?.post_id || targetPost?.postId || targetPost?.id || "").trim();
+  const mondayPost = buildMondayPayloadForPost(targetPost || {});
+  const postId = String(mondayPost?.post_id || mondayPost?.postId || mondayPost?.id || "").trim();
   if (!config.enabled || !config.boardId) {
     console.log("[monday-queue] skipped", { postId, reason: "disabled_or_missing_board" });
     return { ok: false, skipped: true, reason: "disabled_or_missing_board" };
@@ -26096,7 +26108,7 @@ async function enqueueMondayPostSyncJob(post, options = {}) {
       workspace_slug: meta.workspace_slug || getCurrentWorkspaceSlug() || "",
       board_id: config.boardId,
       post_id: postId,
-      payload: targetPost,
+      payload: mondayPost,
       reason: String(options.reason || "post_save_confirmed").trim(),
       source: String(options.source || "supabase_after_sheets_save").trim()
     });
@@ -29699,15 +29711,20 @@ async function pushSupabaseToSheets() {
   return { ...results, media_assets_pushed: mediaAssetsPushed, media_attachments_pushed: mediaAttachmentsPushed, total_pushed: totalCount, errors: errorCount };
 }
 
-async function pullSheetsToSupabase() {
+async function pullSheetsToSupabase(options = {}) {
   console.log("[sheet-mirror] pull start");
   var config = getSheetMirrorConfig();
+  var requestedTabs = Array.isArray(options.tabs)
+    ? options.tabs.map(function(tab) { return String(tab || "").trim().toUpperCase(); }).filter(Boolean)
+    : [];
   if (!config.sheetId || !config.appsScriptUrl) {
     showToast("Sheet mirror not configured", "No Google Sheet ID or Apps Script URL.", "ph-warning", "text-yellow-400");
     return null;
   }
   if (isGoogleSheetsHybridSheetConnected()) {
-    var tabsToPull = ["POSTS","CAMPAIGNS","NOTES","INSPO","AI_DRAFTS","MEDIA","SETTINGS","BRAND_FRAMEWORK"];
+    var tabsToPull = requestedTabs.length
+      ? requestedTabs
+      : ["POSTS","CAMPAIGNS","NOTES","INSPO","AI_DRAFTS","MEDIA","SETTINGS","BRAND_FRAMEWORK"];
     var sheetData = await loadSheetsWorkspaceDataForHybrid(tabsToPull);
     if (sheetData && typeof sheetData === "object") {
       hydrateHybridSheetData(sheetData, { preserveCampaignRegistry: !Array.isArray(sheetData.campaigns) });
@@ -29729,7 +29746,9 @@ async function pullSheetsToSupabase() {
   var workspaceId = meta.workspace_id || "";
   if (!workspaceId) { showToast("Sync failed", "Workspace ID is missing.", "ph-warning", "text-yellow-400"); return null; }
   if (!STELLARSYNC_SUPABASE_CLIENT) { showToast("Sync failed", "Supabase is not configured.", "ph-warning", "text-yellow-400"); return null; }
-  var tables = ["POSTS","NOTES","INSPO","AI_DRAFTS","CAMPAIGNS","MEDIA","MEDIA_ATTACHMENTS","SETTINGS","BRAND_FRAMEWORK","SCHEMA_NOTES","AI_CHAIN_SETTINGS","FLOW_EVENT_LOG"];
+  var tables = requestedTabs.length
+    ? requestedTabs
+    : ["POSTS","NOTES","INSPO","AI_DRAFTS","CAMPAIGNS","MEDIA","MEDIA_ATTACHMENTS","SETTINGS","BRAND_FRAMEWORK","SCHEMA_NOTES","AI_CHAIN_SETTINGS","FLOW_EVENT_LOG"];
   var tableMap = {
     POSTS: "posts", NOTES: "notes", INSPO: "inspo", AI_DRAFTS: "ai_drafts",
     CAMPAIGNS: "campaigns", MEDIA: "media_assets", MEDIA_ATTACHMENTS: "media_attachments", SETTINGS: "workspace_settings",
@@ -37740,7 +37759,7 @@ async function handlePWInviteCreate() {
     if (result && result.ok) {
       if (resultEl) {
         var inviteLink = result.invite?.token
-          ? ((typeof window !== "undefined" ? window.location.origin : "https://stellarsync.app") + "/login/?invite_token=" + encodeURIComponent(result.invite.token) + "&email=" + encodeURIComponent(email))
+          ? ((typeof window !== "undefined" ? window.location.origin : "https://stellarsync.app") + "/invite/?invite_token=" + encodeURIComponent(result.invite.token) + "&email=" + encodeURIComponent(email))
           : (result.invite_link || "");
         var sentCopy = result.email_sent
           ? "Invite sent to "
@@ -37863,7 +37882,7 @@ function copyPWInviteLink(token, email) {
   if (!token) return;
   var decodedEmail = "";
   try { decodedEmail = email ? decodeURIComponent(email) : ""; } catch (_) { decodedEmail = email || ""; }
-  var link = (typeof window !== "undefined" ? window.location.origin : "https://stellarsync.app") + "/login/?invite_token=" + encodeURIComponent(token) + (decodedEmail ? "&email=" + encodeURIComponent(decodedEmail) : "");
+  var link = (typeof window !== "undefined" ? window.location.origin : "https://stellarsync.app") + "/invite/?invite_token=" + encodeURIComponent(token) + (decodedEmail ? "&email=" + encodeURIComponent(decodedEmail) : "");
   navigator.clipboard.writeText(link).then(function() {
     showToast("Copied", "Invite link copied to clipboard.", "ph-check", "text-emerald-400");
   }).catch(function() {
