@@ -924,8 +924,13 @@ video {
             <div class="w-14 h-14 rounded-2xl bg-[#231738] flex items-center justify-center mb-4 logo-glow overflow-hidden" vid="19">
                 <img src="../icon/stellarsync-192.png" alt="StellarSync" class="w-full h-full object-cover" vid="20">
             </div>
-            <h1 class="text-3xl font-bold text-white tracking-tight mb-1" vid="21">StellarSync</h1>
-            <p class="text-gray-500 text-xs font-medium tracking-widest uppercase" vid="22">Where content meets the cosmos</p>
+            <h1 id="login-title" class="text-3xl font-bold text-white tracking-tight mb-1" vid="21">StellarSync</h1>
+            <p id="login-subtitle" class="text-gray-500 text-xs font-medium tracking-widest uppercase" vid="22">Where content meets the cosmos</p>
+        </div>
+
+        <div id="invite-banner" class="hidden mb-5 rounded-2xl border border-[#a855f7]/30 bg-[#181125] px-4 py-3 text-left">
+            <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-[#c77dff]">Workspace Invite</div>
+            <div id="invite-banner-copy" class="mt-1 text-sm text-gray-200">Sign in or create your password to join this workspace.</div>
         </div>
 
         <form id="login-form" method="post" action="javascript:void(0)" onsubmit="return false;" class="space-y-4" vid="23">
@@ -948,7 +953,7 @@ video {
                     </div>
                     <span class="text-xs text-gray-400 font-medium" vid="36">Remember this constellation</span>
                 </label>
-                <a href="/contact/" class="text-xs text-[#c77dff] font-semibold hover:text-white transition-colors" vid="37">Forgot passphrase?</a>
+                <a id="login-secondary-link" href="/contact/" class="text-xs text-[#c77dff] font-semibold hover:text-white transition-colors" vid="37">Forgot passphrase?</a>
             </div>
 
             <p id="login-error" class="login-error" role="alert" aria-live="polite" vid="37a"></p>
@@ -960,7 +965,7 @@ video {
 
         <div class="mt-8 pt-6 border-t border-white/5 text-center" vid="39">
             <p class="text-xs text-gray-500 font-medium" vid="40">
-                New to the system? <a href="/sign-up/" class="text-[#c77dff] hover:text-white font-bold ml-1 transition-colors" vid="41">Initialize frequency</a>
+                New to the system? <a id="login-signup-link" href="/sign-up/" class="text-[#c77dff] hover:text-white font-bold ml-1 transition-colors" vid="41">Initialize frequency</a>
             </p>
         </div>
 	    </main>
@@ -1012,7 +1017,54 @@ video {
           const passwordInput = document.getElementById("login-password");
           const loginButton = document.getElementById("login-button");
           const errorEl = document.getElementById("login-error");
+          const loginTitle = document.getElementById("login-title");
+          const loginSubtitle = document.getElementById("login-subtitle");
+          const inviteBanner = document.getElementById("invite-banner");
+          const inviteBannerCopy = document.getElementById("invite-banner-copy");
+          const signupLink = document.getElementById("login-signup-link");
+          const secondaryLink = document.getElementById("login-secondary-link");
+          const params = new URLSearchParams(window.location.search || "");
+          const inviteToken = String(params.get("invite_token") || "").trim();
+          const inviteEmail = String(params.get("email") || "").trim();
+          const hasInvite = !!inviteToken;
           let loginInFlight = false;
+
+          function buildInviteQuery() {
+            const inviteParams = new URLSearchParams();
+            if (inviteToken) inviteParams.set("invite_token", inviteToken);
+            if (inviteEmail) inviteParams.set("email", inviteEmail);
+            return inviteParams.toString();
+          }
+
+          if (hasInvite) {
+            const inviteRoute = "/login/invite/" + (buildInviteQuery() ? "?" + buildInviteQuery() : "");
+            if (!window.location.pathname.includes("/login/invite/")) {
+              window.location.replace(inviteRoute);
+              return;
+            }
+          }
+
+          if (hasInvite) {
+            if (loginTitle) loginTitle.textContent = "Join your workspace";
+            if (loginSubtitle) loginSubtitle.textContent = "Sign in or create your password to accept the invite";
+            if (inviteBanner) inviteBanner.classList.remove("hidden");
+            if (inviteBannerCopy) inviteBannerCopy.textContent = inviteEmail
+              ? `You’ve been invited to join a StellarSync workspace as ${inviteEmail}.`
+              : "You’ve been invited to join a StellarSync workspace.";
+            if (inviteEmail && emailInput) {
+              emailInput.value = inviteEmail;
+              emailInput.readOnly = true;
+              emailInput.setAttribute("aria-readonly", "true");
+            }
+            if (signupLink) {
+              signupLink.textContent = "Create your password";
+              signupLink.href = "/sign-up/" + (buildInviteQuery() ? "?" + buildInviteQuery() : "");
+            }
+            if (secondaryLink) {
+              secondaryLink.textContent = "Need help?";
+              secondaryLink.href = "/contact/";
+            }
+          }
 
           console.log("[login] script loaded");
 
@@ -1061,6 +1113,11 @@ video {
               }
 
               console.log("[login] auth success", data?.user?.email);
+              if (hasInvite) {
+                var inviteTarget = "/login/invite/" + (buildInviteQuery() ? "?" + buildInviteQuery() : "");
+                window.location.assign(inviteTarget);
+                return;
+              }
               window.location.assign("/app/load.html");
             } catch (error) {
               console.error("[login] auth error", error);

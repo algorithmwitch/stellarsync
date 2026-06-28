@@ -1,1188 +1,350 @@
-
-<html lang="en" vid="0"><head vid="1">
-    <meta charset="UTF-8" vid="2">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" vid="3">
-    <title vid="4">Join Workspace | StellarSync</title>
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com" vid="6">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" vid="7">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" vid="8">
-    <script src="https://unpkg.com/@phosphor-icons/web" vid="9"></script>
-    <style vid="10">
-        :root {
-            --color-bg: #0a0612;
-            --color-accent: #a855f7;
-            --panel-bg: #120c1d;
-            --panel-border: rgba(255, 255, 255, 0.05);
-            --gradient-primary: linear-gradient(135deg, #9d4edd 0%, #c77dff 100%);
-            --glow-purple: rgba(157, 78, 221, 0.25);
-        }
-
-        html, body { 
-            height: 100%;
-            margin: 0;
-            background-color: var(--color-bg);
-            color: #e2e8f0;
-            font-family: 'Inter', sans-serif;
-            overflow: hidden;
-        }
-
-        .stars { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
-        .star { position: absolute; background: white; border-radius: 50%; opacity: 0; animation: twinkle var(--duration) ease-in-out infinite; animation-delay: var(--delay); }
-        @keyframes twinkle {
-            0% { opacity: 0; transform: scale(0.5); }
-            50% { opacity: var(--opacity); transform: scale(1.3); }
-            100% { opacity: 0; transform: scale(0.5); }
-        }
-
-        .glass-card {
-            background: var(--panel-bg);
-            border: 1px solid var(--panel-border);
-            box-shadow: 0 0 50px rgba(0, 0, 0, 0.6), 0 0 30px var(--glow-purple);
-            position: relative;
-            z-index: 10;
-        }
-
-        .glass-card::before {
-            content: '';
-            position: absolute;
-            inset: -1px;
-            border-radius: 2.5rem;
-            padding: 1px;
-            background: linear-gradient(135deg, rgba(255,255,255,0.12), rgba(157,78,221,0.25), rgba(255,255,255,0.06));
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            mask-composite: exclude;
-            pointer-events: none;
-        }
-
-        .glow-btn {
-            background: var(--gradient-primary);
-            box-shadow: 0 0 20px rgba(157, 78, 221, 0.3);
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        .glow-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 0 35px rgba(157, 78, 221, 0.5);
-            filter: brightness(1.1);
-        }
-
-        .input-group:focus-within i {
-            color: #c77dff;
-        }
-
-        .custom-checkbox {
-            appearance: none;
-            width: 18px;
-            height: 18px;
-            background: #0a0612;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 5px;
-            cursor: pointer;
-            position: relative;
-            transition: all 0.2s ease;
-        }
-        .custom-checkbox:checked {
-            background: #a855f7;
-            border-color: #a855f7;
-        }
-        .custom-checkbox:checked::after {
-            content: "\f270";
-            font-family: "Phosphor-Bold";
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: white;
-            font-size: 10px;
-        }
-
-        .reveal { opacity: 0; transform: translateY(20px); animation: fadeInUp 0.8s forwards; }
-        @keyframes fadeInUp {
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        input:-webkit-autofill,
-        input:-webkit-autofill:hover, 
-        input:-webkit-autofill:focus {
-            -webkit-text-fill-color: white;
-            -webkit-box-shadow: 0 0 0px 1000px #0a0612 inset;
-            transition: background-color 5000s ease-in-out 0s;
-        }
-
-        .workspace-name-gradient {
-            background: linear-gradient(to right, #fff, #c77dff, #00f0ff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-    </style>
-
-  <style type="text/css">
-*, ::before, ::after {
-  --tw-border-spacing-x: 0;
-  --tw-border-spacing-y: 0;
-  --tw-translate-x: 0;
-  --tw-translate-y: 0;
-  --tw-rotate: 0;
-  --tw-skew-x: 0;
-  --tw-skew-y: 0;
-  --tw-scale-x: 1;
-  --tw-scale-y: 1;
-  --tw-pan-x:  ;
-  --tw-pan-y:  ;
-  --tw-pinch-zoom:  ;
-  --tw-scroll-snap-strictness: proximity;
-  --tw-gradient-from-position:  ;
-  --tw-gradient-via-position:  ;
-  --tw-gradient-to-position:  ;
-  --tw-ordinal:  ;
-  --tw-slashed-zero:  ;
-  --tw-numeric-figure:  ;
-  --tw-numeric-spacing:  ;
-  --tw-numeric-fraction:  ;
-  --tw-ring-inset:  ;
-  --tw-ring-offset-width: 0px;
-  --tw-ring-offset-color: #fff;
-  --tw-ring-color: rgb(59 130 246 / 0.5);
-  --tw-ring-offset-shadow: 0 0 #0000;
-  --tw-ring-shadow: 0 0 #0000;
-  --tw-shadow: 0 0 #0000;
-  --tw-shadow-colored: 0 0 #0000;
-  --tw-blur:  ;
-  --tw-brightness:  ;
-  --tw-contrast:  ;
-  --tw-grayscale:  ;
-  --tw-hue-rotate:  ;
-  --tw-invert:  ;
-  --tw-saturate:  ;
-  --tw-sepia:  ;
-  --tw-drop-shadow:  ;
-  --tw-backdrop-blur:  ;
-  --tw-backdrop-brightness:  ;
-  --tw-backdrop-contrast:  ;
-  --tw-backdrop-grayscale:  ;
-  --tw-backdrop-hue-rotate:  ;
-  --tw-backdrop-invert:  ;
-  --tw-backdrop-opacity:  ;
-  --tw-backdrop-saturate:  ;
-  --tw-backdrop-sepia:  ;
-  --tw-contain-size:  ;
-  --tw-contain-layout:  ;
-  --tw-contain-paint:  ;
-  --tw-contain-style:  ;
-}
-
-::backdrop {
-  --tw-border-spacing-x: 0;
-  --tw-border-spacing-y: 0;
-  --tw-translate-x: 0;
-  --tw-translate-y: 0;
-  --tw-rotate: 0;
-  --tw-skew-x: 0;
-  --tw-skew-y: 0;
-  --tw-scale-x: 1;
-  --tw-scale-y: 1;
-  --tw-pan-x:  ;
-  --tw-pan-y:  ;
-  --tw-pinch-zoom:  ;
-  --tw-scroll-snap-strictness: proximity;
-  --tw-gradient-from-position:  ;
-  --tw-gradient-via-position:  ;
-  --tw-gradient-to-position:  ;
-  --tw-ordinal:  ;
-  --tw-slashed-zero:  ;
-  --tw-numeric-figure:  ;
-  --tw-numeric-spacing:  ;
-  --tw-numeric-fraction:  ;
-  --tw-ring-inset:  ;
-  --tw-ring-offset-width: 0px;
-  --tw-ring-offset-color: #fff;
-  --tw-ring-color: rgb(59 130 246 / 0.5);
-  --tw-ring-offset-shadow: 0 0 #0000;
-  --tw-ring-shadow: 0 0 #0000;
-  --tw-shadow: 0 0 #0000;
-  --tw-shadow-colored: 0 0 #0000;
-  --tw-blur:  ;
-  --tw-brightness:  ;
-  --tw-contrast:  ;
-  --tw-grayscale:  ;
-  --tw-hue-rotate:  ;
-  --tw-invert:  ;
-  --tw-saturate:  ;
-  --tw-sepia:  ;
-  --tw-drop-shadow:  ;
-  --tw-backdrop-blur:  ;
-  --tw-backdrop-brightness:  ;
-  --tw-backdrop-contrast:  ;
-  --tw-backdrop-grayscale:  ;
-  --tw-backdrop-hue-rotate:  ;
-  --tw-backdrop-invert:  ;
-  --tw-backdrop-opacity:  ;
-  --tw-backdrop-saturate:  ;
-  --tw-backdrop-sepia:  ;
-  --tw-contain-size:  ;
-  --tw-contain-layout:  ;
-  --tw-contain-paint:  ;
-  --tw-contain-style:  ;
-}/*
-! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com
-*//*
-1. Prevent padding and border from affecting element width. (https://github.com/mozdevs/cssremedy/issues/4)
-2. Allow adding a border to an element by just adding a border-width. (https://github.com/tailwindcss/tailwindcss/pull/116)
-*/
-
-*,
-::before,
-::after {
-  box-sizing: border-box; /* 1 */
-  border-width: 0; /* 2 */
-  border-style: solid; /* 2 */
-  border-color: #e5e7eb; /* 2 */
-}
-
-::before,
-::after {
-  --tw-content: '';
-}
-
-/*
-1. Use a consistent sensible line-height in all browsers.
-2. Prevent adjustments of font size after orientation changes in iOS.
-3. Use a more readable tab size.
-4. Use the user's configured `sans` font-family by default.
-5. Use the user's configured `sans` font-feature-settings by default.
-6. Use the user's configured `sans` font-variation-settings by default.
-7. Disable tap highlights on iOS
-*/
-
-html,
-:host {
-  line-height: 1.5; /* 1 */
-  -webkit-text-size-adjust: 100%; /* 2 */
-  -moz-tab-size: 4; /* 3 */
-  tab-size: 4; /* 3 */
-  font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; /* 4 */
-  font-feature-settings: normal; /* 5 */
-  font-variation-settings: normal; /* 6 */
-  -webkit-tap-highlight-color: transparent; /* 7 */
-}
-
-/*
-1. Remove the margin in all browsers.
-2. Inherit line-height from `html` so users can set them as a class directly on the `html` element.
-*/
-
-body {
-  margin: 0; /* 1 */
-  line-height: inherit; /* 2 */
-}
-
-/*
-1. Add the correct height in Firefox.
-2. Correct the inheritance of border color in Firefox. (https://bugzilla.mozilla.org/show_bug.cgi?id=190655)
-3. Ensure horizontal rules are visible by default.
-*/
-
-hr {
-  height: 0; /* 1 */
-  color: inherit; /* 2 */
-  border-top-width: 1px; /* 3 */
-}
-
-/*
-Add the correct text decoration in Chrome, Edge, and Safari.
-*/
-
-abbr:where([title]) {
-  text-decoration: underline dotted;
-}
-
-/*
-Remove the default font size and weight for headings.
-*/
-
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  font-size: inherit;
-  font-weight: inherit;
-}
-
-/*
-Reset links to optimize for opt-in styling instead of opt-out.
-*/
-
-a {
-  color: inherit;
-  text-decoration: inherit;
-}
-
-/*
-Add the correct font weight in Edge and Safari.
-*/
-
-b,
-strong {
-  font-weight: bolder;
-}
-
-/*
-1. Use the user's configured `mono` font-family by default.
-2. Use the user's configured `mono` font-feature-settings by default.
-3. Use the user's configured `mono` font-variation-settings by default.
-4. Correct the odd `em` font sizing in all browsers.
-*/
-
-code,
-kbd,
-samp,
-pre {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; /* 1 */
-  font-feature-settings: normal; /* 2 */
-  font-variation-settings: normal; /* 3 */
-  font-size: 1em; /* 4 */
-}
-
-/*
-Add the correct font size in all browsers.
-*/
-
-small {
-  font-size: 80%;
-}
-
-/*
-Prevent `sub` and `sup` elements from affecting the line height in all browsers.
-*/
-
-sub,
-sup {
-  font-size: 75%;
-  line-height: 0;
-  position: relative;
-  vertical-align: baseline;
-}
-
-sub {
-  bottom: -0.25em;
-}
-
-sup {
-  top: -0.5em;
-}
-
-/*
-1. Remove text indentation from table contents in Chrome and Safari. (https://bugs.chromium.org/p/chromium/issues/detail?id=999088, https://bugs.webkit.org/show_bug.cgi?id=201297)
-2. Correct table border color inheritance in all Chrome and Safari. (https://bugs.chromium.org/p/chromium/issues/detail?id=935729, https://bugs.webkit.org/show_bug.cgi?id=195016)
-3. Remove gaps between table borders by default.
-*/
-
-table {
-  text-indent: 0; /* 1 */
-  border-color: inherit; /* 2 */
-  border-collapse: collapse; /* 3 */
-}
-
-/*
-1. Change the font styles in all browsers.
-2. Remove the margin in Firefox and Safari.
-3. Remove default padding in all browsers.
-*/
-
-button,
-input,
-optgroup,
-select,
-textarea {
-  font-family: inherit; /* 1 */
-  font-feature-settings: inherit; /* 1 */
-  font-variation-settings: inherit; /* 1 */
-  font-size: 100%; /* 1 */
-  font-weight: inherit; /* 1 */
-  line-height: inherit; /* 1 */
-  letter-spacing: inherit; /* 1 */
-  color: inherit; /* 1 */
-  margin: 0; /* 2 */
-  padding: 0; /* 3 */
-}
-
-/*
-Remove the inheritance of text transform in Edge and Firefox.
-*/
-
-button,
-select {
-  text-transform: none;
-}
-
-/*
-1. Correct the inability to style clickable types in iOS and Safari.
-2. Remove default button styles.
-*/
-
-button,
-input:where([type='button']),
-input:where([type='reset']),
-input:where([type='submit']) {
-  -webkit-appearance: button; /* 1 */
-  background-color: transparent; /* 2 */
-  background-image: none; /* 2 */
-}
-
-/*
-Use the modern Firefox focus style for all focusable elements.
-*/
-
-:-moz-focusring {
-  outline: auto;
-}
-
-/*
-Remove the additional `:invalid` styles in Firefox. (https://github.com/mozilla/gecko-dev/blob/2f9eacd9d3d995c937b4251a5557d95d494c9be1/layout/style/res/forms.css#L728-L737)
-*/
-
-:-moz-ui-invalid {
-  box-shadow: none;
-}
-
-/*
-Add the correct vertical alignment in Chrome and Firefox.
-*/
-
-progress {
-  vertical-align: baseline;
-}
-
-/*
-Correct the cursor style of increment and decrement buttons in Safari.
-*/
-
-::-webkit-inner-spin-button,
-::-webkit-outer-spin-button {
-  height: auto;
-}
-
-/*
-1. Correct the odd appearance in Chrome and Safari.
-2. Correct the outline style in Safari.
-*/
-
-[type='search'] {
-  -webkit-appearance: textfield; /* 1 */
-  outline-offset: -2px; /* 2 */
-}
-
-/*
-Remove the inner padding in Chrome and Safari on macOS.
-*/
-
-::-webkit-search-decoration {
-  -webkit-appearance: none;
-}
-
-/*
-1. Correct the inability to style clickable types in iOS and Safari.
-2. Change font properties to `inherit` in Safari.
-*/
-
-::-webkit-file-upload-button {
-  -webkit-appearance: button; /* 1 */
-  font: inherit; /* 2 */
-}
-
-/*
-Add the correct display in Chrome and Safari.
-*/
-
-summary {
-  display: list-item;
-}
-
-/*
-Removes the default spacing and border for appropriate elements.
-*/
-
-blockquote,
-dl,
-dd,
-h1,
-h2,
-h3,
-h4,
-h5,
-h6,
-hr,
-figure,
-p,
-pre {
-  margin: 0;
-}
-
-fieldset {
-  margin: 0;
-  padding: 0;
-}
-
-legend {
-  padding: 0;
-}
-
-ol,
-ul,
-menu {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-/*
-Reset default styling for dialogs.
-*/
-dialog {
-  padding: 0;
-}
-
-/*
-Prevent resizing textareas horizontally by default.
-*/
-
-textarea {
-  resize: vertical;
-}
-
-/*
-1. Reset the default placeholder opacity in Firefox. (https://github.com/tailwindlabs/tailwindcss/issues/3300)
-2. Set the default placeholder color to the user's configured gray 400 color.
-*/
-
-input::placeholder,
-textarea::placeholder {
-  opacity: 1; /* 1 */
-  color: #9ca3af; /* 2 */
-}
-
-/*
-Set the default cursor for buttons.
-*/
-
-button,
-[role="button"] {
-  cursor: pointer;
-}
-
-/*
-Make sure disabled buttons don't get the pointer cursor.
-*/
-:disabled {
-  cursor: default;
-}
-
-/*
-1. Make replaced elements `display: block` by default. (https://github.com/mozdevs/cssremedy/issues/14)
-2. Add `vertical-align: middle` to align replaced elements more sensibly by default. (https://github.com/jensimmons/cssremedy/issues/14#issuecomment-634934210)
-   This can trigger a poorly considered lint error in some tools but is included by design.
-*/
-
-img,
-svg,
-video,
-canvas,
-audio,
-iframe,
-embed,
-object {
-  display: block; /* 1 */
-  vertical-align: middle; /* 2 */
-}
-
-/*
-Constrain images and videos to the parent width and preserve their intrinsic aspect ratio. (https://github.com/mozdevs/cssremedy/issues/14)
-*/
-
-img,
-video {
-  max-width: 100%;
-  height: auto;
-}
-
-/* Make elements with the HTML hidden attribute stay hidden by default */
-[hidden]:where(:not([hidden="until-found"])) {
-  display: none;
-}
-.pointer-events-none {
-  pointer-events: none;
-}
-.fixed {
-  position: fixed;
-}
-.absolute {
-  position: absolute;
-}
-.relative {
-  position: relative;
-}
-.inset-0 {
-  inset: 0px;
-}
-.bottom-\[-10\%\] {
-  bottom: -10%;
-}
-.left-4 {
-  left: 1rem;
-}
-.left-\[-10\%\] {
-  left: -10%;
-}
-.right-4 {
-  right: 1rem;
-}
-.right-\[-10\%\] {
-  right: -10%;
-}
-.top-1\/2 {
-  top: 50%;
-}
-.top-\[-10\%\] {
-  top: -10%;
-}
-.z-0 {
-  z-index: 0;
-}
-.mx-auto {
-  margin-left: auto;
-  margin-right: auto;
-}
-.my-8 {
-  margin-top: 2rem;
-  margin-bottom: 2rem;
-}
-.mb-10 {
-  margin-bottom: 2.5rem;
-}
-.mb-3 {
-  margin-bottom: 0.75rem;
-}
-.mb-4 {
-  margin-bottom: 1rem;
-}
-.mb-6 {
-  margin-bottom: 1.5rem;
-}
-.ml-1 {
-  margin-left: 0.25rem;
-}
-.mt-4 {
-  margin-top: 1rem;
-}
-.flex {
-  display: flex;
-}
-.inline-flex {
-  display: inline-flex;
-}
-.hidden {
-  display: none;
-}
-.h-20 {
-  height: 5rem;
-}
-.h-\[500px\] {
-  height: 500px;
-}
-.h-\[600px\] {
-  height: 600px;
-}
-.h-px {
-  height: 1px;
-}
-.w-20 {
-  width: 5rem;
-}
-.w-\[500px\] {
-  width: 500px;
-}
-.w-\[600px\] {
-  width: 600px;
-}
-.w-full {
-  width: 100%;
-}
-.max-w-lg {
-  max-width: 32rem;
-}
-.max-w-xs {
-  max-width: 20rem;
-}
-.-translate-y-1\/2 {
-  --tw-translate-y: -50%;
-  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
-}
-.transform {
-  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
-}
-@keyframes spin {
-
-  to {
-    transform: rotate(360deg);
-  }
-}
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-.cursor-pointer {
-  cursor: pointer;
-}
-.flex-col {
-  flex-direction: column;
-}
-.items-start {
-  align-items: flex-start;
-}
-.items-center {
-  align-items: center;
-}
-.justify-center {
-  justify-content: center;
-}
-.gap-2 {
-  gap: 0.5rem;
-}
-.gap-3 {
-  gap: 0.75rem;
-}
-.space-y-2 > :not([hidden]) ~ :not([hidden]) {
-  --tw-space-y-reverse: 0;
-  margin-top: calc(0.5rem * calc(1 - var(--tw-space-y-reverse)));
-  margin-bottom: calc(0.5rem * var(--tw-space-y-reverse));
-}
-.space-y-6 > :not([hidden]) ~ :not([hidden]) {
-  --tw-space-y-reverse: 0;
-  margin-top: calc(1.5rem * calc(1 - var(--tw-space-y-reverse)));
-  margin-bottom: calc(1.5rem * var(--tw-space-y-reverse));
-}
-.overflow-hidden {
-  overflow: hidden;
-}
-.rounded-2xl {
-  border-radius: 1rem;
-}
-.rounded-\[2\.5rem\] {
-  border-radius: 2.5rem;
-}
-.rounded-full {
-  border-radius: 9999px;
-}
-.rounded-lg {
-  border-radius: 0.5rem;
-}
-.rounded-xl {
-  border-radius: 0.75rem;
-}
-.border {
-  border-width: 1px;
-}
-.border-amber-500\/10 {
-  border-color: rgb(245 158 11 / 0.1);
-}
-.border-white\/10 {
-  border-color: rgb(255 255 255 / 0.1);
-}
-.bg-\[\#0a0612\] {
-  --tw-bg-opacity: 1;
-  background-color: rgb(10 6 18 / var(--tw-bg-opacity, 1));
-}
-.bg-amber-500\/5 {
-  background-color: rgb(245 158 11 / 0.05);
-}
-.bg-cyan-600\/10 {
-  background-color: rgb(8 145 178 / 0.1);
-}
-.bg-purple-600\/10 {
-  background-color: rgb(147 51 234 / 0.1);
-}
-.bg-white\/5 {
-  background-color: rgb(255 255 255 / 0.05);
-}
-.bg-gradient-to-br {
-  background-image: linear-gradient(to bottom right, var(--tw-gradient-stops));
-}
-.bg-gradient-to-r {
-  background-image: linear-gradient(to right, var(--tw-gradient-stops));
-}
-.from-purple-500 {
-  --tw-gradient-from: #a855f7 var(--tw-gradient-from-position);
-  --tw-gradient-to: rgb(168 85 247 / 0) var(--tw-gradient-to-position);
-  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
-}
-.from-transparent {
-  --tw-gradient-from: transparent var(--tw-gradient-from-position);
-  --tw-gradient-to: rgb(0 0 0 / 0) var(--tw-gradient-to-position);
-  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
-}
-.via-white\/10 {
-  --tw-gradient-to: rgb(255 255 255 / 0)  var(--tw-gradient-to-position);
-  --tw-gradient-stops: var(--tw-gradient-from), rgb(255 255 255 / 0.1) var(--tw-gradient-via-position), var(--tw-gradient-to);
-}
-.via-white\/5 {
-  --tw-gradient-to: rgb(255 255 255 / 0)  var(--tw-gradient-to-position);
-  --tw-gradient-stops: var(--tw-gradient-from), rgb(255 255 255 / 0.05) var(--tw-gradient-via-position), var(--tw-gradient-to);
-}
-.to-cyan-400 {
-  --tw-gradient-to: #22d3ee var(--tw-gradient-to-position);
-}
-.to-transparent {
-  --tw-gradient-to: transparent var(--tw-gradient-to-position);
-}
-.p-10 {
-  padding: 2.5rem;
-}
-.p-4 {
-  padding: 1rem;
-}
-.px-1 {
-  padding-left: 0.25rem;
-  padding-right: 0.25rem;
-}
-.px-3 {
-  padding-left: 0.75rem;
-  padding-right: 0.75rem;
-}
-.py-1\.5 {
-  padding-top: 0.375rem;
-  padding-bottom: 0.375rem;
-}
-.py-3\.5 {
-  padding-top: 0.875rem;
-  padding-bottom: 0.875rem;
-}
-.py-4 {
-  padding-top: 1rem;
-  padding-bottom: 1rem;
-}
-.pl-11 {
-  padding-left: 2.75rem;
-}
-.pr-12 {
-  padding-right: 3rem;
-}
-.pr-4 {
-  padding-right: 1rem;
-}
-.pt-0\.5 {
-  padding-top: 0.125rem;
-}
-.text-center {
-  text-align: center;
-}
-.text-3xl {
-  font-size: 1.875rem;
-  line-height: 2.25rem;
-}
-.text-4xl {
-  font-size: 2.25rem;
-  line-height: 2.5rem;
-}
-.text-\[10px\] {
-  font-size: 10px;
-}
-.text-\[11px\] {
-  font-size: 11px;
-}
-.text-lg {
-  font-size: 1.125rem;
-  line-height: 1.75rem;
-}
-.text-sm {
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-}
-.text-xs {
-  font-size: 0.75rem;
-  line-height: 1rem;
-}
-.font-bold {
-  font-weight: 700;
-}
-.font-extrabold {
-  font-weight: 800;
-}
-.uppercase {
-  text-transform: uppercase;
-}
-.italic {
-  font-style: italic;
-}
-.leading-relaxed {
-  line-height: 1.625;
-}
-.leading-tight {
-  line-height: 1.25;
-}
-.tracking-\[0\.2em\] {
-  letter-spacing: 0.2em;
-}
-.tracking-\[0\.3em\] {
-  letter-spacing: 0.3em;
-}
-.tracking-wider {
-  letter-spacing: 0.05em;
-}
-.tracking-widest {
-  letter-spacing: 0.1em;
-}
-.text-amber-500 {
-  --tw-text-opacity: 1;
-  color: rgb(245 158 11 / var(--tw-text-opacity, 1));
-}
-.text-amber-500\/80 {
-  color: rgb(245 158 11 / 0.8);
-}
-.text-gray-400 {
-  --tw-text-opacity: 1;
-  color: rgb(156 163 175 / var(--tw-text-opacity, 1));
-}
-.text-gray-500 {
-  --tw-text-opacity: 1;
-  color: rgb(107 114 128 / var(--tw-text-opacity, 1));
-}
-.text-gray-600 {
-  --tw-text-opacity: 1;
-  color: rgb(75 85 99 / var(--tw-text-opacity, 1));
-}
-.text-purple-400 {
-  --tw-text-opacity: 1;
-  color: rgb(192 132 252 / var(--tw-text-opacity, 1));
-}
-.text-white {
-  --tw-text-opacity: 1;
-  color: rgb(255 255 255 / var(--tw-text-opacity, 1));
-}
-.shadow-2xl {
-  --tw-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
-  --tw-shadow-colored: 0 25px 50px -12px var(--tw-shadow-color);
-  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
-}
-.ring-4 {
-  --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
-  --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(4px + var(--tw-ring-offset-width)) var(--tw-ring-color);
-  box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
-}
-.ring-white\/5 {
-  --tw-ring-color: rgb(255 255 255 / 0.05);
-}
-.blur-\[150px\] {
-  --tw-blur: blur(150px);
-  filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);
-}
-.filter {
-  filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);
-}
-.transition {
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
-}
-.transition-all {
-  transition-property: all;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
-}
-.transition-colors {
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
-}
-.ease-in-out {
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-}
-.placeholder\:text-gray-700::placeholder {
-  --tw-text-opacity: 1;
-  color: rgb(55 65 81 / var(--tw-text-opacity, 1));
-}
-.hover\:bg-white\/10:hover {
-  background-color: rgb(255 255 255 / 0.1);
-}
-.hover\:text-white:hover {
-  --tw-text-opacity: 1;
-  color: rgb(255 255 255 / var(--tw-text-opacity, 1));
-}
-.hover\:underline:hover {
-  text-decoration-line: underline;
-}
-.focus\:border-purple-500\/50:focus {
-  border-color: rgb(168 85 247 / 0.5);
-}
-.focus\:outline-none:focus {
-  outline: 2px solid transparent;
-  outline-offset: 2px;
-}
-@media (min-width: 768px) {
-
-  .md\:p-12 {
-    padding: 3rem;
-  }
-
-  .md\:text-4xl {
-    font-size: 2.25rem;
-    line-height: 2.5rem;
-  }
-}* {
-      -ms-overflow-style: none !important;
-      scrollbar-width: none !important;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accept Invite | StellarSync</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg: #0a0612;
+      --panel: #120c1d;
+      --panel-2: #181125;
+      --border: rgba(255,255,255,0.08);
+      --text: #f5ecff;
+      --muted: #a79abf;
+      --accent: #a855f7;
+      --accent-2: #c77dff;
+      --danger: #fca5a5;
     }
-
-    *::-webkit-scrollbar {
-      display: none !important;
-      width: 0 !important;
-      height: 0 !important;
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background:
+        radial-gradient(circle at top, rgba(168,85,247,0.14), transparent 32%),
+        linear-gradient(180deg, #08050d 0%, #0a0612 100%);
+      color: var(--text);
+      font-family: Inter, system-ui, sans-serif;
     }
-  </style></head>
-<body class="flex items-center justify-center p-4" vid="11">
+    .card {
+      width: 100%;
+      max-width: 520px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 28px;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.45);
+    }
+    .eyebrow {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: var(--accent-2);
+    }
+    h1 {
+      margin: 14px 0 8px;
+      font-size: 32px;
+      line-height: 1.08;
+    }
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+    .stack { display: grid; gap: 16px; }
+    .field {
+      display: grid;
+      gap: 8px;
+      margin-top: 18px;
+    }
+    .label {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .input {
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      padding: 13px 14px;
+      color: var(--text);
+      font-size: 14px;
+    }
+    .actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+    .btn {
+      appearance: none;
+      border: 1px solid transparent;
+      border-radius: 14px;
+      padding: 13px 16px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: white;
+    }
+    .btn-secondary {
+      background: var(--panel-2);
+      color: var(--text);
+      border-color: var(--border);
+    }
+    .status {
+      margin-top: 18px;
+      min-height: 22px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .status.error { color: var(--danger); }
+    .hidden { display: none !important; }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: rgba(168,85,247,0.1);
+      border: 1px solid rgba(168,85,247,0.18);
+      color: #e9d5ff;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    .notice {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 1px solid rgba(252,165,165,0.24);
+      background: rgba(127,29,29,0.18);
+      color: #fecaca;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="eyebrow">StellarSync Invite</div>
+    <h1 id="invite-title">Join your workspace</h1>
+    <p id="invite-copy">Accept your invite and continue into StellarSync.</p>
+    <p id="invite-meta" style="margin-top:10px;color:#cfc2e8;"></p>
 
-    <div id="stars-container" class="stars" vid="12"></div>
-
-    <div class="fixed inset-0 z-0 pointer-events-none" vid="13">
-        <div class="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] bg-purple-600/10 rounded-full blur-[150px]" vid="14"></div>
-        <div class="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-cyan-600/10 rounded-full blur-[150px]" vid="15"></div>
+    <div style="margin-top:18px" class="stack">
+      <div class="pill" id="invite-role-pill">Pending invite</div>
+      <div class="field">
+        <label class="label" for="invite-email">Invited email</label>
+        <input id="invite-email" class="input" type="email" readonly>
+      </div>
     </div>
 
-    <main class="w-full max-w-lg reveal" vid="16">
-        <div class="glass-card rounded-[2.5rem] p-10 md:p-12 overflow-hidden" vid="17">
-            
-            <div class="flex flex-col items-center text-center mb-10" vid="18">
-                <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500 to-cyan-400 flex items-center justify-center shadow-2xl mb-6 ring-4 ring-white/5" vid="19">
-                    <i class="ph-fill ph-planet text-white text-4xl" vid="20"></i>
-                </div>
-                <p class="text-xs font-bold text-gray-500 uppercase tracking-[0.3em] mb-3" vid="21">You've been invited to your</p>
-                <h1 class="text-3xl md:text-4xl font-extrabold text-white leading-tight mb-3" id="workspaceName" vid="22">StellarSync Workspace</h1>
-                <div class="flex items-center gap-2 text-sm text-gray-500" vid="23">
-                    <i class="ph ph-user-circle-plus" vid="24"></i>
-                    <span vid="25">by support@stellarsync.app</span>
-                </div>
-            </div>
+    <div class="actions" id="invite-auth-actions">
+      <a id="invite-login-link" class="btn btn-primary" href="/login/">Sign in</a>
+      <a id="invite-signup-link" class="btn btn-secondary" href="/sign-up/">Create password</a>
+    </div>
 
-            <div class="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent mb-10" vid="26"></div>
+    <div id="invite-failure-box" class="notice hidden">
+      <div id="invite-failure-copy">This invite could not be opened.</div>
+      <div class="actions" style="margin-top:14px;">
+        <a class="btn btn-secondary" href="/login/">Back to login</a>
+      </div>
+    </div>
 
-            <div class="mb-6" vid="27">
-                <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2" vid="28">
-                    <i class="ph-bold ph-id-card text-purple-400" vid="29"></i>
-                    Accept your invitation
-                </h2>
-                
-                <form id="inviteForm" class="space-y-6" vid="30">
-                    <div class="space-y-2" vid="31">
-                        <label class="text-[11px] font-bold text-gray-500 uppercase tracking-wider ml-1" vid="32">Full Name</label>
-                        <div class="relative input-group" vid="33">
-                            <i class="ph-bold ph-user absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 transition-colors" vid="34"></i>
-                            <input type="text" required="" placeholder="Enter your full name" class="w-full bg-[#0a0612] border border-white/10 rounded-xl py-3.5 pl-11 pr-4 text-white text-sm focus:outline-none focus:border-purple-500/50 transition-all placeholder:text-gray-700" vid="35">
-                        </div>
-                    </div>
+    <div class="status" id="invite-status"></div>
+  </main>
 
-                    <div class="space-y-2" vid="36">
-                        <label class="text-[11px] font-bold text-gray-500 uppercase tracking-wider ml-1" vid="37">Create Password</label>
-                        <div class="relative input-group" vid="38">
-                            <i class="ph-bold ph-lock-simple absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 transition-colors" vid="39"></i>
-                            <input id="passwordInput" type="password" required="" placeholder="••••••••" class="w-full bg-[#0a0612] border border-white/10 rounded-xl py-3.5 pl-11 pr-12 text-white text-sm focus:outline-none focus:border-purple-500/50 transition-all placeholder:text-gray-700" vid="40">
-                            <button type="button" onclick="togglePassword()" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors" vid="41">
-                                <i id="passwordIcon" class="ph-bold ph-eye" vid="42"></i>
-                            </button>
-                        </div>
-                        <p class="text-[10px] text-gray-600 ml-1 italic" vid="43">At least 8 characters</p>
-                    </div>
+  <script>
+    (function () {
+      const SUPABASE_URL = "https://szdlvyzjeqkfxsoqltwg.supabase.co";
+      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN6ZGx2eXpqZXFrZnhzb3FsdHdnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyOTE1NjcsImV4cCI6MjA5Njg2NzU2N30.9GT0oJqPcmrc9VSb-ZN0FtWy6i7SLTHBuzRQ9gvxnX0";
+      const EDGE_URL = SUPABASE_URL.replace(/\/+$/, "") + "/functions/v1/workspace-members";
+      const ACTIVE_WORKSPACE_KEY = "STELLARSYNC_ACTIVE_WORKSPACE";
+      const params = new URLSearchParams(window.location.search || "");
+      const inviteToken = String(params.get("invite_token") || "").trim();
+      let inviteEmail = String(params.get("email") || "").trim();
+      const supabase = window.supabase?.createClient
+        ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+        : null;
 
-                    <div class="flex items-start gap-3 px-1" vid="44">
-                        <div class="pt-0.5" vid="45">
-                            <input type="checkbox" required="" id="terms" class="custom-checkbox" vid="46">
-                        </div>
-                        <label for="terms" class="text-xs text-gray-400 leading-relaxed cursor-pointer" vid="47">
-                            I agree to the <a href="#" class="text-purple-400 hover:underline" vid="48">Terms of Service</a> and <a href="#" class="text-purple-400 hover:underline" vid="49">Privacy Policy</a>
-                        </label>
-                    </div>
+      const titleEl = document.getElementById("invite-title");
+      const copyEl = document.getElementById("invite-copy");
+      const metaEl = document.getElementById("invite-meta");
+      const rolePillEl = document.getElementById("invite-role-pill");
+      const emailEl = document.getElementById("invite-email");
+      const statusEl = document.getElementById("invite-status");
+      const actionsEl = document.getElementById("invite-auth-actions");
+      const failureBoxEl = document.getElementById("invite-failure-box");
+      const failureCopyEl = document.getElementById("invite-failure-copy");
+      const loginLink = document.getElementById("invite-login-link");
+      const signupLink = document.getElementById("invite-signup-link");
+      let acceptInFlight = false;
+      let invitePreviewValid = false;
 
-                    <button type="submit" class="glow-btn w-full py-4 mt-4 rounded-2xl text-white text-xs font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-3" vid="50">
-                        Enter Workspace
-                        <i class="ph-bold ph-arrow-right text-lg" vid="51"></i>
-                    </button>
-                </form>
-            </div>
+      function setStatus(message, isError) {
+        if (!statusEl) return;
+        statusEl.textContent = message || "";
+        statusEl.classList.toggle("error", !!isError);
+      }
 
-            <div class="h-px w-full bg-gradient-to-r from-transparent via-white/5 to-transparent my-8" vid="52"></div>
+      function buildInviteQuery() {
+        const query = new URLSearchParams();
+        if (inviteToken) query.set("invite_token", inviteToken);
+        if (inviteEmail) query.set("email", inviteEmail);
+        return query.toString();
+      }
 
-            <div class="text-center space-y-6" vid="53">
-                <div vid="54">
-                    <p class="text-sm text-gray-500 mb-4" vid="55">Already have a StellarSync account?</p>
-                    <button class="w-full py-3.5 rounded-xl border border-white/10 bg-white/5 text-white text-xs font-bold uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-3" vid="56">
-                        <i class="ph-bold ph-sign-in text-lg" vid="57"></i>
-                        Log In Instead
-                    </button>
-                </div>
-
-                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-500/5 border border-amber-500/10" vid="58">
-                    <i class="ph-fill ph-clock-countdown text-amber-500" vid="59"></i>
-                    <span class="text-[10px] font-bold text-amber-500/80 uppercase tracking-wider" vid="60">Invite expires in 7 days</span>
-                </div>
-                
-                <p class="text-[10px] text-gray-600 leading-relaxed max-w-xs mx-auto" vid="61">
-                    This invitation was sent securely. If you weren't expecting this, you can safely ignore this email.
-                </p>
-            </div>
-        </div>
-    </main>
-
-    <script vid="62">
-        const starsContainer = document.getElementById('stars-container');
-        const starCount = 200;
-        for (let i = 0; i < starCount; i++) {
-            const star = document.createElement('div');
-            star.className = 'star';
-            star.style.left = `${Math.random() * 100}%`;
-            star.style.top = `${Math.random() * 100}%`;
-            const size = Math.random() < 0.1 ? 3 : (Math.random() < 0.3 ? 2 : 1);
-            star.style.width = `${size}px`;
-            star.style.height = `${size}px`;
-            star.style.setProperty('--duration', `${2 + Math.random() * 5}s`);
-            star.style.setProperty('--delay', `${Math.random() * 5}s`);
-            star.style.setProperty('--opacity', `${0.1 + Math.random() * 0.4}`);
-            starsContainer.appendChild(star);
+      function getAppRedirect(result) {
+        const workspaceSlug = String(result?.workspace_slug || "").trim();
+        const workspaceId = String(result?.workspace_id || "").trim();
+        if (workspaceSlug) {
+          return "/app/index.html?workspace=" + encodeURIComponent(workspaceSlug);
         }
-
-        function togglePassword() {
-            const input = document.getElementById('passwordInput');
-            const icon = document.getElementById('passwordIcon');
-            if (input.type === 'password') {
-                input.type = 'text';
-                icon.classList.remove('ph-eye');
-                icon.classList.add('ph-eye-slash');
-            } else {
-                input.type = 'password';
-                icon.classList.remove('ph-eye-slash');
-                icon.classList.add('ph-eye');
-            }
+        if (workspaceId) {
+          return "/app/index.html?workspace_id=" + encodeURIComponent(workspaceId);
         }
+        throw new Error("Invite accepted but workspace routing is missing.");
+      }
 
-        
-        const urlParams = new URLSearchParams(window.location.search);
-        const nameParam = urlParams.get('workspace');
-        if (nameParam) {
-            document.getElementById('workspaceName').innerText = nameParam;
-        }
-
-        document.getElementById('inviteForm').onsubmit = (e) => {
-            e.preventDefault();
-            const btn = e.target.querySelector('button[type="submit"]');
-            btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin text-lg"></i>';
-            btn.disabled = true;
-            
-            setTimeout(() => {
-                
-                window.location.href = '/dashboard';
-            }, 2000);
+      function storeActiveWorkspace(result) {
+        const workspaceId = String(result?.workspace_id || "").trim();
+        const workspaceSlug = String(result?.workspace_slug || "").trim();
+        const workspaceName = String(result?.workspace_name || workspaceSlug || workspaceId || "").trim();
+        if (!workspaceId && !workspaceSlug) return;
+        const config = {
+          id: workspaceId,
+          slug: workspaceSlug,
+          name: workspaceName
         };
-    </script>
+        try {
+          sessionStorage.setItem(ACTIVE_WORKSPACE_KEY, JSON.stringify(config));
+        } catch (_) {}
+      }
 
+      function showFailure(message) {
+        if (actionsEl) actionsEl.classList.add("hidden");
+        if (failureBoxEl) failureBoxEl.classList.remove("hidden");
+        if (failureCopyEl) failureCopyEl.textContent = message || "This invite could not be opened.";
+        setStatus("", false);
+      }
 
-</body></html>
+      async function callWorkspaceMembers(payload, accessToken) {
+        const headers = {
+          "Content-Type": "application/json",
+          apikey: SUPABASE_ANON_KEY
+        };
+        if (accessToken) headers.Authorization = "Bearer " + accessToken;
+        const response = await fetch(EDGE_URL, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(payload)
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data?.ok === false) {
+          throw new Error(data?.error || data?.message || ("Invite request failed (" + response.status + ")"));
+        }
+        return data;
+      }
+
+      async function previewInvite() {
+        if (!inviteToken) {
+          showFailure("Invite token missing. Ask your workspace admin to send a fresh invite.");
+          return;
+        }
+        if (emailEl) {
+          emailEl.value = inviteEmail;
+          emailEl.readOnly = true;
+        }
+        const query = buildInviteQuery();
+        if (loginLink) loginLink.href = "/login/" + (query ? "?" + query : "");
+        if (signupLink) signupLink.href = "/sign-up/" + (query ? "?" + query : "");
+        try {
+          const result = await callWorkspaceMembers({
+            action: "preview_invite",
+            invite_token: inviteToken
+          });
+          const invite = result?.invite || {};
+          const workspaceName = String(invite.workspace_name || "your workspace").trim();
+          const role = String(invite.role || "member").trim();
+          const inviterLabel = String(invite.inviter_email || invite.admin_email || "").trim();
+          inviteEmail = String(invite.email || inviteEmail || "").trim();
+          const query = buildInviteQuery();
+          if (loginLink) loginLink.href = "/login/" + (query ? "?" + query : "");
+          if (signupLink) signupLink.href = "/sign-up/" + (query ? "?" + query : "");
+          if (titleEl) titleEl.textContent = "You’ve been invited to join " + workspaceName + " on StellarSync.";
+          if (copyEl) {
+            copyEl.textContent = "Sign in or create your password to accept this workspace invite.";
+          }
+          if (metaEl) metaEl.textContent = inviterLabel ? "Invited by " + inviterLabel : "Invited by the workspace admin.";
+          if (rolePillEl) {
+            rolePillEl.textContent = role + " invite";
+          }
+          if (emailEl && !emailEl.value) emailEl.value = String(invite.email || inviteEmail || "").trim();
+          invitePreviewValid = true;
+        } catch (err) {
+          showFailure(err?.message || "Could not load invite.");
+        }
+      }
+
+      async function acceptInvite(session) {
+        if (!inviteToken || acceptInFlight) return;
+        if (!session?.access_token) {
+          setStatus("Sign in or create your password to continue.", false);
+          return;
+        }
+        acceptInFlight = true;
+        if (actionsEl) actionsEl.classList.add("hidden");
+        if (failureBoxEl) failureBoxEl.classList.add("hidden");
+        setStatus("Accepting your invite...");
+        try {
+          const result = await callWorkspaceMembers({
+            action: "accept_invite",
+            invite_token: inviteToken
+          }, session.access_token);
+          storeActiveWorkspace(result);
+          window.location.replace(getAppRedirect(result));
+        } catch (err) {
+          acceptInFlight = false;
+          if (actionsEl) actionsEl.classList.remove("hidden");
+          showFailure(err?.message || "Invite acceptance failed.");
+        }
+      }
+
+      async function boot() {
+        await previewInvite();
+        if (!invitePreviewValid) return;
+        if (!supabase) {
+          showFailure("Supabase is not configured for invite acceptance.");
+          return;
+        }
+        const { data } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+        if (data?.session) {
+          await acceptInvite(data.session);
+          return;
+        }
+        setStatus("Sign in or create your password to accept this invite.");
+        supabase.auth.onAuthStateChange(async function (event, session) {
+          if (event === "SIGNED_IN" && session) {
+            await acceptInvite(session);
+          }
+        });
+      }
+
+      boot();
+    })();
+  </script>
+</body>
+</html>
