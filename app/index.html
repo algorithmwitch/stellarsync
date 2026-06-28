@@ -37341,6 +37341,7 @@ async function savePWWorkspace() {
   };
   console.log("[icon-save] workspace payload", payload);
   console.log("[workspace-icon] save payload", payload);
+  applyWorkspaceVisualPayloadLocally(payload);
   applyWorkspaceVisualState(activeWorkspace, {
     workspace_id: payload.workspace_id || activeWorkspace.workspace_id || activeWorkspace.id || "",
     workspace_slug: activeWorkspace.workspace_slug || activeWorkspace.slug || "",
@@ -37383,6 +37384,7 @@ async function savePWWorkspace() {
       delete settingsPayload.current_year;
       delete settingsPayload.current_month;
       await upsertWorkspaceSettings(workspaceId, settingsPayload);
+      applyWorkspaceVisualPayloadLocally(payload);
       console.log("[icon-save] response", { ok: true, workspace_slug: slug });
       console.log("[workspace-icon] save response", { ok: true, workspace_slug: slug });
       var reloadedWorkspaceRecord = null;
@@ -37485,6 +37487,53 @@ async function savePWWorkspace() {
   } finally {
     if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "Save Workspace"; }
   }
+}
+
+function applyWorkspaceVisualPayloadLocally(payload = {}) {
+  const active = WORKSPACE_RUNTIME_CONFIG?.active || {};
+  const next = {
+    ...active,
+    name: payload.display_name || payload.brand_name || active.name || "",
+    brand_name: payload.brand_name || payload.display_name || active.brand_name || "",
+    short_name: payload.short_name || active.short_name || "",
+    avatar_initials: payload.avatar_initials || payload.short_name || active.avatar_initials || "",
+    avatar_mode: payload.avatar_mode || "initials",
+    icon: payload.avatar_mode === "icon" ? payload.icon : "",
+    updated_at: new Date().toISOString()
+  };
+  WORKSPACE_RUNTIME_CONFIG.active = mergeWorkspaceSettings(active, next);
+  appState.workspace = {
+    ...(appState.workspace || {}),
+    ...WORKSPACE_RUNTIME_CONFIG.active
+  };
+  appState.workspaceSettings = {
+    ...(appState.workspaceSettings || {}),
+    brand_name: next.brand_name,
+    short_name: next.short_name,
+    avatar_initials: next.avatar_initials,
+    avatar_mode: next.avatar_mode,
+    icon: next.icon
+  };
+  appState.settings = {
+    ...(appState.settings || {}),
+    brand_name: next.brand_name,
+    short_name: next.short_name,
+    avatar_initials: next.avatar_initials,
+    avatar_mode: next.avatar_mode,
+    icon: next.icon
+  };
+  appState.brandOS = {
+    ...(appState.brandOS || {}),
+    brand_name: next.brand_name,
+    short_name: next.short_name,
+    avatar_initials: next.avatar_initials,
+    avatar_mode: next.avatar_mode,
+    icon: next.icon
+  };
+  storeActiveWorkspaceConfig(WORKSPACE_RUNTIME_CONFIG.active);
+  persistWorkspaceProfileCache(WORKSPACE_RUNTIME_CONFIG.active);
+  persistLocalState();
+  renderWorkspaceBranding();
 }
 
 function applyWorkspaceVisualState(sourceWorkspace, patch = {}, options = {}) {
