@@ -1243,6 +1243,11 @@ video {
                 if (loginToggleText) loginToggleText.textContent = isLogin ? "Create Account Instead" : "Log In Instead";
             }
 
+            function setFormVisible(visible) {
+                if (!inviteForm) return;
+                inviteForm.classList.toggle("hidden", !visible);
+            }
+
             async function callWorkspaceMembers(payload, accessToken) {
                 const token = accessToken || SUPABASE_ANON_KEY;
                 const response = await fetch(EDGE_URL, {
@@ -1265,6 +1270,7 @@ video {
                 if (!inviteToken || !session?.access_token || acceptInFlight) return;
                 acceptInFlight = true;
                 clearFailure();
+                setFormVisible(false);
                 setStatus("Accepting your invite...");
                 try {
                     const result = await callWorkspaceMembers({
@@ -1281,8 +1287,38 @@ video {
                     window.location.replace(getAppRedirect(result));
                 } catch (err) {
                     acceptInFlight = false;
+                    setFormVisible(true);
                     showFailure(err?.message || "Invite acceptance failed.");
                 }
+            }
+
+            async function hydrateSessionFromCallback() {
+                if (!supabase) return null;
+                const hashParams = new URLSearchParams(String(window.location.hash || "").replace(/^#/, ""));
+                const code = String(params.get("code") || "").trim();
+                const hashAccessToken = String(hashParams.get("access_token") || "").trim();
+                const hashRefreshToken = String(hashParams.get("refresh_token") || "").trim();
+                try {
+                    if (code) {
+                        const exchanged = await supabase.auth.exchangeCodeForSession(code);
+                        const session = exchanged?.data?.session || null;
+                        if (session) return session;
+                    }
+                    if (hashAccessToken && hashRefreshToken) {
+                        const restored = await supabase.auth.setSession({
+                            access_token: hashAccessToken,
+                            refresh_token: hashRefreshToken
+                        });
+                        const session = restored?.data?.session || null;
+                        if (session) return session;
+                    }
+                } catch (err) {
+                    console.error("[invite-page] error", err);
+                    showFailure(err?.message || "Could not finish email confirmation.");
+                    return null;
+                }
+                const existing = await supabase.auth.getSession().catch(() => null);
+                return existing?.data?.session || null;
             }
 
             async function handleSubmit(event) {
@@ -1318,10 +1354,7 @@ video {
                         await acceptInvite(data?.session);
                         return;
                     }
-                    const currentInviteUrl =
-                        window.location.origin +
-                        "/login/invite/" +
-                        window.location.search;
+                    const currentInviteUrl = window.location.href;
                     const { data, error } = await supabase.auth.signUp({
                         email: inviteEmail,
                         password,
@@ -1356,8 +1389,9 @@ video {
                 }
             }
 
-            function boot() {
+            async function boot() {
                 setMode("signup");
+                setFormVisible(false);
                 if (workspaceNameEl) workspaceNameEl.textContent = "your StellarSync workspace";
                 if (inviteMetaEl) inviteMetaEl.textContent = "Sign in or create your password to continue";
                 if (inviteEmailTextEl) {
@@ -1374,11 +1408,14 @@ video {
                     showFailure("Supabase is not configured for invite acceptance.");
                     return;
                 }
+                setStatus("Checking your invite...");
+                const restoredSession = await hydrateSessionFromCallback();
+                if (restoredSession) {
+                    await acceptInvite(restoredSession);
+                    return;
+                }
+                setFormVisible(true);
                 setStatus("Sign in or create your password to accept this invite.");
-                supabase.auth.getSession().then(function(result) {
-                    const session = result?.data?.session || null;
-                    if (session) return acceptInvite(session);
-                }).catch(function() {});
                 supabase.auth.onAuthStateChange(async function(event, session) {
                     if (event === "SIGNED_IN" && session) {
                         await acceptInvite(session);
