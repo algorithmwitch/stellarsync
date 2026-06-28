@@ -9776,9 +9776,14 @@ function getAttachedMediaForPost(post, mediaItems) {
       linked_post_id: postId
     });
   });
-  var linked = (mediaItems || []).filter(function(asset) {
+  var explicitAttachCount =
+    postMediaRows.length ||
+    mediaIdValues.length ||
+    carouselIdValues.length ||
+    carouselAssets.length;
+  var linked = explicitAttachCount ? [] : (mediaItems || []).filter(function(asset) {
     var lid = String(asset.linkedPostId || asset.linked_post_id || "").trim();
-if (isSyntheticRowPostId(lid)) lid = "";
+    if (isSyntheticRowPostId(lid)) lid = "";
     return lid && postIds.has(lid);
   }).sort(function(a, b) {
     var aSort = Number(a.sort_order || a.sortOrder || 0) || 0;
@@ -17065,6 +17070,17 @@ function removeDetachedMediaFromLocalPost(postId, detachedIds = []) {
     return !(rowPostId === targetPostId && ids.has(rowAssetId));
   });
   appState.post_media = appState.postMedia;
+  appState.media = (appState.media || []).map((asset) => {
+    const assetId = getMediaAssetId(asset);
+    if (!shouldRemoveAsset(asset) && !ids.has(assetId)) return asset;
+    return {
+      ...asset,
+      linked_post_id: "",
+      linkedPostId: "",
+      post_id: "",
+      postId: ""
+    };
+  });
   appState.posts = (appState.posts || []).map((post) => {
     if (!getPostIdentityValues(post).includes(targetPostId)) return post;
     const clean = (value) => splitMediaIdList(value).filter((id) => !ids.has(String(id)));
@@ -30623,7 +30639,10 @@ function sanitizeSupabasePostRow(row) {
     "media_source", "mediaSource",
     "storage_path", "storagePath",
     "carousel_asset_ids", "carouselAssetIds",
-    "carouselAssets"
+    "carouselAssets",
+    "monday_item_id", "mondayItemId",
+    "monday_synced_at", "mondayLastSyncedAt",
+    "monday_sync_status", "mondaySyncStatus"
   ].forEach(function(k) {
     delete row[k];
   });
@@ -37759,7 +37778,7 @@ async function handlePWInviteCreate() {
     if (result && result.ok) {
       if (resultEl) {
         var inviteLink = result.invite?.token
-          ? ((typeof window !== "undefined" ? window.location.origin : "https://stellarsync.app") + "/invite/?invite_token=" + encodeURIComponent(result.invite.token) + "&email=" + encodeURIComponent(email))
+          ? ((typeof window !== "undefined" ? window.location.origin : "https://stellarsync.app") + "/login/invite/?invite_token=" + encodeURIComponent(result.invite.token) + "&email=" + encodeURIComponent(email))
           : (result.invite_link || "");
         var sentCopy = result.email_sent
           ? "Invite sent to "
@@ -37882,7 +37901,7 @@ function copyPWInviteLink(token, email) {
   if (!token) return;
   var decodedEmail = "";
   try { decodedEmail = email ? decodeURIComponent(email) : ""; } catch (_) { decodedEmail = email || ""; }
-  var link = (typeof window !== "undefined" ? window.location.origin : "https://stellarsync.app") + "/invite/?invite_token=" + encodeURIComponent(token) + (decodedEmail ? "&email=" + encodeURIComponent(decodedEmail) : "");
+  var link = (typeof window !== "undefined" ? window.location.origin : "https://stellarsync.app") + "/login/invite/?invite_token=" + encodeURIComponent(token) + (decodedEmail ? "&email=" + encodeURIComponent(decodedEmail) : "");
   navigator.clipboard.writeText(link).then(function() {
     showToast("Copied", "Invite link copied to clipboard.", "ph-check", "text-emerald-400");
   }).catch(function() {
@@ -38758,5 +38777,4 @@ window.confirmMondayBackfill = confirmMondayBackfill;
 window.runMondayBackfill = runMondayBackfill;
 
 </script>
-</body>
-</html>
+</bo
