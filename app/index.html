@@ -29268,7 +29268,13 @@ function noteToPost(noteId) {
 
 async function deleteInspoById(inspoId) {
   if (!inspoId) return;
-  if (!confirm("Delete this inspo item?")) return;
+  const ok = await showCustomConfirm({
+    title: "Delete inspo item?",
+    message: "This removes the inspo item from the front end and backend.",
+    confirmText: "Delete",
+    danger: true
+  });
+  if (!ok) return;
   await apiDeleteInspo(inspoId);
   appState.inspo = (appState.inspo || []).filter(function(item) {
     return String(item.inspoId || item.inspo_id || item.id || "") !== String(inspoId);
@@ -29286,6 +29292,32 @@ async function deleteNoteById(noteId) {
   });
   persistLocalState();
   renderNotes();
+}
+
+function showCustomConfirm({ title, message, confirmText = "Confirm", cancelText = "Cancel", danger = false }) {
+  return new Promise((resolve) => {
+    const wrap = document.createElement("div");
+    wrap.className = "fixed inset-0 z-[9999] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4";
+    wrap.innerHTML = `
+      <div class="w-full max-w-sm rounded-2xl bg-[#120c1d] border border-white/10 shadow-2xl p-5">
+        <div class="text-sm font-bold text-white mb-2">${escapeHtml(title)}</div>
+        <div class="text-xs text-gray-400 leading-relaxed mb-5">${escapeHtml(message)}</div>
+        <div class="flex justify-end gap-2">
+          <button data-confirm-cancel class="px-4 py-2 rounded-xl bg-[#181125] text-gray-300 text-xs font-bold">${escapeHtml(cancelText)}</button>
+          <button data-confirm-ok class="px-4 py-2 rounded-xl ${danger ? "bg-red-500/20 text-red-200 border border-red-400/30" : "bg-[#2d1b4e] text-white border border-[#a855f7]/30"} text-xs font-bold">${escapeHtml(confirmText)}</button>
+        </div>
+      </div>`;
+    document.body.appendChild(wrap);
+    const close = (value) => {
+      wrap.remove();
+      resolve(value);
+    };
+    wrap.querySelector("[data-confirm-cancel]")?.addEventListener("click", () => close(false));
+    wrap.querySelector("[data-confirm-ok]")?.addEventListener("click", () => close(true));
+    wrap.addEventListener("click", (e) => {
+      if (e.target === wrap) close(false);
+    });
+  });
 }
 
 async function apiUpdateCampaign(campaign) {
@@ -37411,28 +37443,26 @@ async function savePWWorkspace() {
       } catch (verifyErr) {
         console.warn("[workspace-save] verification skipped", verifyErr?.message || verifyErr);
       }
-      applyWorkspaceVisualState(activeWorkspace, {
+      const savedWorkspaceVisual = {
         workspace_id: workspaceId,
         workspace_slug: slug,
         name: payload.display_name || activeWorkspace.name || "",
         brand_name: payload.brand_name || payload.display_name || activeWorkspace.brand_name || activeWorkspace.name || "",
-        short_name: payload.short_name || activeWorkspace.short_name || "",
-        avatar_initials: payload.avatar_initials || activeWorkspace.avatar_initials || "",
-        avatar_mode: payload.avatar_mode || activeWorkspace.avatar_mode || "initials",
-        icon: payload.icon || activeWorkspace.icon || "",
-        constellation_shape: payload.constellation_shape || activeWorkspace.constellation_shape || "star",
-        brand_voice: payload.brand_voice || activeWorkspace.brand_voice || ""
-      }, { persist: true, render: false });
-      var backendMode = getActiveWorkspaceBackendMode();
-      if (isGoogleSheetsFrontendMode(backendMode.mode) && isRemoteConfigured()) {
-        try {
-          var sheetWorkspaceResult = await apiSaveWorkspaceSettingsToSheets({ ...payload, ...settingsPayload, workspace_id: workspaceId, workspace_slug: slug });
-          if (STELLARSYNC_DEBUG) console.log("[workspace-save] sheets result", sheetWorkspaceResult || { ok: true });
-          await refreshSheetsTabsQuietly(["SETTINGS", "BRAND_FRAMEWORK"]);
-        } catch (sheetErr) {
-          if (STELLARSYNC_DEBUG) console.log("[workspace-save] sheets route skipped", sheetErr?.message || sheetErr);
-        }
-      }
+        short_name: payload.short_name || "",
+        avatar_initials: payload.avatar_initials || "",
+        avatar_mode: payload.avatar_mode,
+        icon: payload.icon || "",
+        brand_voice: payload.brand_voice || "",
+        constellation_shape: payload.constellation_shape || activeWorkspace.constellation_shape || "star"
+      };
+      applyWorkspaceVisualState(activeWorkspace, savedWorkspaceVisual, {
+        persist: true,
+        render: true
+      });
+      storeActiveWorkspaceConfig(WORKSPACE_RUNTIME_CONFIG.active);
+      persistWorkspaceProfileCache(WORKSPACE_RUNTIME_CONFIG.active);
+      persistLocalState();
+      renderWorkspaceBranding();
     }
     if (statusEl) { statusEl.textContent = "Workspace saved."; statusEl.className = "text-xs text-emerald-400"; statusEl.classList.remove("hidden"); }
     renderWorkspaceBranding();
