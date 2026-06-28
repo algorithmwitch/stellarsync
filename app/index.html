@@ -38144,9 +38144,34 @@ function applyWorkspaceVisualState(sourceWorkspace, patch = {}, options = {}) {
 
 // ── Members / Invites ──────────────────────────────────────────────────
 
+function isUuidLike(value) {
+  return isUuid(value);
+}
+
 function getPWMembersWorkspaceId() {
   var config = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active || {};
-  return config.workspace_id || config.id || "";
+  var workspace = appState && appState.workspace || {};
+  var sessionWorkspace = {};
+  try {
+    sessionWorkspace = JSON.parse(sessionStorage.getItem("STELLARSYNC_ACTIVE_WORKSPACE") || "{}") || {};
+  } catch (_) {
+    sessionWorkspace = {};
+  }
+  var urlParams = new URLSearchParams(window.location.search || "");
+  var candidates = [
+    config.workspace_id,
+    config.id,
+    workspace.workspace_id,
+    workspace.id,
+    sessionWorkspace.id,
+    sessionWorkspace.workspace_id,
+    urlParams.get("workspace_id")
+  ];
+  for (var i = 0; i < candidates.length; i += 1) {
+    var candidate = String(candidates[i] || "").trim();
+    if (isUuidLike(candidate)) return candidate;
+  }
+  return "";
 }
 
 function getPWMembersCallerRole() {
@@ -38291,18 +38316,28 @@ async function handlePWInviteCreate() {
   var roleEl = document.getElementById("pw-members-invite-role");
   var resultEl = document.getElementById("pw-members-invite-result");
   var btn = document.getElementById("pw-members-invite-btn");
+  var activeWorkspace = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active || {};
   var email = emailEl ? String(emailEl.value || "").trim() : "";
   var role = roleEl ? String(roleEl.value || "").trim().toLowerCase() : "viewer";
+  var workspaceId = getPWMembersWorkspaceId();
+  var workspaceSlug = String(activeWorkspace.workspace_slug || activeWorkspace.slug || "").trim();
+  var workspaceName = String(activeWorkspace.name || activeWorkspace.workspace_name || activeWorkspace.brand_name || "").trim();
   if (!email || !email.includes("@")) {
     if (resultEl) resultEl.innerHTML = '<span class="text-red-400">Enter a valid email address.</span>';
     return;
   }
+  if (!workspaceId) {
+    if (resultEl) resultEl.innerHTML = '<span class="text-yellow-300">Workspace is still loading. Refresh and try again.</span>';
+    return;
+  }
   if (btn) { btn.disabled = true; btn.textContent = "Inviting..."; }
-  console.log("[members] invite create", { email, role });
+  console.log("[members] invite create", { email, role, workspaceId });
   try {
     var result = await callSupabaseEdgeFunction("workspace-members", {
       action: "create_invite",
-      workspace_id: getPWMembersWorkspaceId(),
+      workspace_id: workspaceId,
+      workspace_slug: workspaceSlug,
+      workspace_name: workspaceName,
       email: email,
       role: role
     });

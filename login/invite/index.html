@@ -1059,7 +1059,7 @@ video {
                     <i class="ph-fill ph-planet text-white text-4xl" vid="20"></i>
                 </div>
                 <p class="text-xs font-bold text-gray-500 uppercase tracking-[0.3em] mb-3" vid="21">You've been invited to your</p>
-                <h1 class="text-3xl md:text-4xl font-extrabold text-white leading-tight mb-3" id="workspaceName" vid="22">StellarSync Workspace</h1>
+                <h1 class="text-3xl md:text-4xl font-extrabold text-white leading-tight mb-3" id="workspaceName" vid="22">your StellarSync workspace</h1>
                 <div class="flex items-center gap-2 text-sm text-gray-500" vid="23">
                     <i class="ph ph-user-circle-plus" vid="24"></i>
                     <span id="inviteMeta" vid="25">by the workspace admin</span>
@@ -1334,7 +1334,7 @@ video {
                         invite_token: inviteToken
                     });
                     const invite = result?.invite || {};
-                    const workspaceName = String(invite.workspace_name || "StellarSync Workspace").trim();
+                    const workspaceName = String(invite.workspace_name || "").trim() || "your StellarSync workspace";
                     const inviterEmail = String(invite.inviter_email || invite.admin_email || "").trim();
                     const role = String(invite.role || "member").trim();
                     inviteEmail = String(invite.email || inviteEmail || "").trim().toLowerCase();
