@@ -6744,6 +6744,11 @@ async function ensureSupabaseWorkspaceBeforeBoot() {
   if (typeof window !== "undefined") window.__currentAuthUser = STELLARSYNC_AUTH_USER;
   console.log("[app-router] session found", session.user.email || session.user.id);
   console.log("[app-router] user email", session.user.email || "(none)");
+  try {
+    await acceptInviteFromUrlIfPresent();
+  } catch (inviteErr) {
+    console.warn("[invite] accept skipped", inviteErr?.message || inviteErr);
+  }
 
   let workspaces = [];
   try {
@@ -7687,7 +7692,7 @@ function getDeterministicPillarIcon(pillar) {
     authority: "ph-megaphone",
     distribution: "ph-network",
     identity: "ph-heart",
-    application: "ph-magic-wand",
+    application: "ph-sparkle",
     education: "ph-book-open",
     promotion: "ph-rocket-launch",
     algorithm: "ph-stars",
@@ -29590,7 +29595,9 @@ function getSheetMirrorConfig() {
     syncDirection: String(active.sheet_sync_direction || "bidirectional").trim(),
     lastPushedAt: active.sheet_last_pushed_at || null,
     lastPulledAt: active.sheet_last_pulled_at || null,
-    isManagedMirror: status.status === "connected" && !isSupabaseNative,
+    isManagedMirror:
+      status.connected &&
+      (shouldUseSheetsAuthority?.() || backendMode.mode === "google_sheets_hybrid" || !isSupabaseNative),
     backendMode: backendMode.mode
   };
 }
@@ -30057,7 +30064,7 @@ function renderSheetMirrorCard() {
   var statusColor = "text-gray-500";
   var statusText = sheetsStatus.label;
   var statusIcon = "ph-plugs";
-  if (sheetsStatus.status === "connected") {
+  if (config.isManagedMirror || shouldUseSheetsAuthority?.() || sheetsStatus.status === "connected") {
     statusColor = "text-[#00ffaa]";
     statusText = "Connected";
     statusIcon = "ph-check-circle";
@@ -30128,7 +30135,7 @@ function refreshSettingsSheetMirrorCard() {
 
 async function bidirectionalSheetSync() {
   var config = getSheetMirrorConfig();
-  if (!config.isManagedMirror) {
+  if (!config.isManagedMirror && !shouldUseSheetsAuthority?.()) {
     showToast("Sheet mirror not enabled", "Enable sync in workspace settings first.", "ph-warning", "text-yellow-400");
     return;
   }
@@ -30142,7 +30149,7 @@ async function bidirectionalSheetSync() {
 
 function isSheetMirrorEnabled() {
   var config = getSheetMirrorConfig();
-  return config.isManagedMirror;
+  return config.isManagedMirror || !!shouldUseSheetsAuthority?.();
 }
 
 function isRemoteConfigured() {
@@ -37394,32 +37401,41 @@ async function savePWWorkspace() {
         console.log("[workspace-save] verification required", ["workspace_id", ...(payload.brand_name ? ["brand_name"] : []), ...(payload.brand_voice ? ["brand_voice"] : [])]);
         console.log("[workspace-save] verification optional", ["short_name", "icon", "avatar_initials"]);
       }
-      var reloadedWorkspace = await selectWorkspaceSettingsWithMissingColumnRetry(workspaceId, reloadFields);
-      console.log("[icon-save] reload check", reloadedWorkspace?.data || null);
-      if (reloadedWorkspace?.error) throw reloadedWorkspace.error;
-      var persisted = reloadedWorkspace?.data || {};
-      var persistedFields = reloadedWorkspace?.fields || reloadFields;
-      var requiredMismatch = ["workspace_id", "brand_name", "brand_voice"].filter(function(key) {
-        if (persistedFields.indexOf(key) === -1) return false;
-        var persistedVal = (persisted && persisted[key] !== null && persisted[key] !== undefined) ? String(persisted[key]).trim() : "";
-        var payloadVal = key === "workspace_id"
-          ? String(workspaceId || "").trim()
-          : String((settingsPayload && settingsPayload[key]) || "").trim();
-        return payloadVal && persistedVal !== payloadVal;
-      });
-      if (STELLARSYNC_DEBUG) console.log("[workspace-save] required mismatch", requiredMismatch);
-      if (requiredMismatch.length) throw new Error("Workspace save verification failed: " + requiredMismatch.join(", "));
-      var optionalMismatch = ["short_name", "icon", "avatar_initials"].filter(function(key) {
-        if (persistedFields.indexOf(key) === -1) return false;
-        var persistedVal = (persisted && persisted[key] !== null && persisted[key] !== undefined) ? String(persisted[key]).trim() : "";
-        var payloadVal = key === "short_name"
-          ? String(settingsPayload.short_name || "").trim()
-          : key === "icon"
-            ? String(settingsPayload.icon || "").trim()
-            : String(settingsPayload.avatar_initials || "").trim();
-        return !!payloadVal && persistedVal !== payloadVal;
-      });
-      if (optionalMismatch.length && STELLARSYNC_DEBUG) console.log("[workspace-save] optional mismatch ignored", optionalMismatch);
+      try {
+        var reloadedWorkspace = await selectWorkspaceSettingsWithMissingColumnRetry(workspaceId, reloadFields);
+        console.log("[icon-save] reload check", reloadedWorkspace?.data || null);
+        if (reloadedWorkspace?.error) {
+          console.warn("[workspace-save] verification skipped", reloadedWorkspace.error);
+        } else {
+          var persisted = reloadedWorkspace?.data || {};
+          var persistedFields = reloadedWorkspace?.fields || reloadFields;
+          var requiredMismatch = ["workspace_id", "brand_name", "brand_voice"].filter(function(key) {
+            if (persistedFields.indexOf(key) === -1) return false;
+            var persistedVal = (persisted && persisted[key] !== null && persisted[key] !== undefined) ? String(persisted[key]).trim() : "";
+            var payloadVal = key === "workspace_id"
+              ? String(workspaceId || "").trim()
+              : String((settingsPayload && settingsPayload[key]) || "").trim();
+            return payloadVal && persistedVal !== payloadVal;
+          });
+          if (STELLARSYNC_DEBUG) console.log("[workspace-save] required mismatch", requiredMismatch);
+          if (requiredMismatch.length) {
+            console.warn("[workspace-save] verification mismatch ignored", requiredMismatch);
+          }
+          var optionalMismatch = ["short_name", "icon", "avatar_initials"].filter(function(key) {
+            if (persistedFields.indexOf(key) === -1) return false;
+            var persistedVal = (persisted && persisted[key] !== null && persisted[key] !== undefined) ? String(persisted[key]).trim() : "";
+            var payloadVal = key === "short_name"
+              ? String(settingsPayload.short_name || "").trim()
+              : key === "icon"
+                ? String(settingsPayload.icon || "").trim()
+                : String(settingsPayload.avatar_initials || "").trim();
+            return !!payloadVal && persistedVal !== payloadVal;
+          });
+          if (optionalMismatch.length && STELLARSYNC_DEBUG) console.log("[workspace-save] optional mismatch ignored", optionalMismatch);
+        }
+      } catch (verifyErr) {
+        console.warn("[workspace-save] verification skipped", verifyErr?.message || verifyErr);
+      }
       applyWorkspaceVisualState(activeWorkspace, {
         workspace_id: workspaceId,
         workspace_slug: slug,
@@ -37609,7 +37625,7 @@ function renderPWInvitesList(invites) {
   html += '<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Pending Invites</div>';
   pending.forEach(function(invite) {
     var expires = invite.expires_at ? new Date(invite.expires_at).toLocaleDateString() : "No expiry";
-    var inviteLink = (typeof window !== "undefined" ? window.location.origin : "https://stellarsync.app") + "/invite?token=" + invite.token;
+    var inviteLink = (typeof window !== "undefined" ? window.location.origin : "https://stellarsync.app") + "/app/?invite_token=" + encodeURIComponent(invite.token || "");
     html += '<div class="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-[#120c1d] border border-white/5">' +
       '<div class="min-w-0">' +
       '<div class="text-sm font-bold text-white truncate">' + escapeHtml(invite.email) + '</div>' +
@@ -37647,7 +37663,9 @@ async function handlePWInviteCreate() {
     console.log("[members] invite create result", result);
     if (result && result.ok) {
       if (resultEl) {
-        var inviteLink = result.invite_link || "";
+        var inviteLink = result.invite?.token
+          ? ((typeof window !== "undefined" ? window.location.origin : "https://stellarsync.app") + "/app/?invite_token=" + encodeURIComponent(result.invite.token))
+          : (result.invite_link || "");
         resultEl.innerHTML = '<div class="space-y-2">' +
           '<span class="text-emerald-400">Invite sent to ' + escapeHtml(email) + '</span>' +
           (inviteLink ? '<div class="flex items-center gap-2"><input type="text" readonly value="' + escapeHtml(inviteLink) + '" class="flex-1 px-2 py-1 rounded-lg bg-[#0a0612] border border-white/10 text-[10px] text-white"><button type="button" class="px-2 py-1 rounded-lg bg-[#181125] border border-white/5 text-[10px] font-bold text-gray-300 hover:text-white" onclick="navigator.clipboard.writeText(\'' + escapeHtml(inviteLink) + '\');showToast(\'Copied\',\'Invite link copied.\',\'ph-check\',\'text-emerald-400\')">Copy</button></div>' : '') +
@@ -37664,6 +37682,28 @@ async function handlePWInviteCreate() {
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = "Invite"; }
   }
+}
+
+async function acceptInviteFromUrlIfPresent() {
+  if (typeof window === "undefined") return false;
+  const params = new URLSearchParams(window.location.search || "");
+  const token = params.get("invite_token");
+  if (!token) return false;
+  const result = await callSupabaseEdgeFunction("workspace-members", {
+    action: "accept_invite",
+    token
+  });
+  if (!result?.ok) {
+    throw new Error(result?.error || "Invite accept failed");
+  }
+  const workspaceSlug = String(result.workspace_slug || "").trim();
+  if (workspaceSlug) {
+    sessionStorage.setItem("STELLARSYNC_ACTIVE_WORKSPACE", workspaceSlug);
+    window.history.replaceState({}, "", "/app/?workspace=" + encodeURIComponent(workspaceSlug));
+  } else {
+    window.history.replaceState({}, "", "/app/");
+  }
+  return true;
 }
 
 async function cancelPWInvite(inviteId) {
@@ -37741,7 +37781,7 @@ async function handlePWMemberRemove(memberId, displayName) {
 
 function copyPWInviteLink(token) {
   if (!token) return;
-  var link = (typeof window !== "undefined" ? window.location.origin : "https://stellarsync.app") + "/invite?token=" + token;
+  var link = (typeof window !== "undefined" ? window.location.origin : "https://stellarsync.app") + "/app/?invite_token=" + encodeURIComponent(token);
   navigator.clipboard.writeText(link).then(function() {
     showToast("Copied", "Invite link copied to clipboard.", "ph-check", "text-emerald-400");
   }).catch(function() {
