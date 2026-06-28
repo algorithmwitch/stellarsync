@@ -38081,14 +38081,15 @@ async function handlePWInviteCreate() {
       if (resultEl) {
         var inviteToken = String(result.invite_token || result.invite?.token || "").trim();
         var inviteLink = inviteToken
-          ? ((typeof window !== "undefined" ? window.location.origin : "https://stellarsync.app") + "/login/invite/?invite_token=" + encodeURIComponent(inviteToken) + "&email=" + encodeURIComponent(result.invitee_email || email))
+          ? ((typeof window !== "undefined" ? window.location.origin : "https://stellarsync.app") + "/login/invite/?invite_token=" + encodeURIComponent(inviteToken) + "&email=" + encodeURIComponent(result.invited_email || result.invitee_email || email))
           : (result.invite_link || "");
+        var workspaceName = String(result.workspace_name || "").trim();
         var sentCopy = result.email_sent
           ? "Invite sent to "
           : "Invite created, but email was not sent. Copy the link for ";
         resultEl.innerHTML = '<div class="space-y-2">' +
           '<span class="' + (result.email_sent ? 'text-emerald-400' : 'text-yellow-300') + '">' +
-          sentCopy + escapeHtml(email) +
+          sentCopy + escapeHtml(email) + (workspaceName ? ' for ' + escapeHtml(workspaceName) : '') +
           '</span>' +
           (inviteLink ? '<div class="flex items-center gap-2"><input type="text" readonly value="' + escapeHtml(inviteLink) + '" class="flex-1 px-2 py-1 rounded-lg bg-[#0a0612] border border-white/10 text-[10px] text-white"><button type="button" class="px-2 py-1 rounded-lg bg-[#181125] border border-white/5 text-[10px] font-bold text-gray-300 hover:text-white" onclick="navigator.clipboard.writeText(\'' + escapeHtml(inviteLink) + '\');showToast(\'Copied\',\'Invite link copied.\',\'ph-check\',\'text-emerald-400\')">Copy</button></div>' : '') +
           '</div>';
@@ -38120,12 +38121,21 @@ async function acceptInviteFromUrlIfPresent() {
   }
   const workspaceSlug = String(result.workspace_slug || "").trim();
   const workspaceId = String(result.workspace_id || "").trim();
+  if (workspaceSlug || workspaceId) {
+    try {
+      sessionStorage.setItem("STELLARSYNC_ACTIVE_WORKSPACE", JSON.stringify({
+        id: workspaceId,
+        slug: workspaceSlug,
+        name: String(result.workspace_name || workspaceSlug || workspaceId || "").trim()
+      }));
+    } catch (_) {}
+  }
   if (workspaceSlug) {
-    window.history.replaceState({}, "", "/app/?workspace=" + encodeURIComponent(workspaceSlug));
+    window.history.replaceState({}, "", "/app/index.html?workspace=" + encodeURIComponent(workspaceSlug));
   } else if (workspaceId) {
-    window.history.replaceState({}, "", "/app/?workspace_id=" + encodeURIComponent(workspaceId));
+    window.history.replaceState({}, "", "/app/index.html?workspace_id=" + encodeURIComponent(workspaceId));
   } else {
-    window.history.replaceState({}, "", "/app/");
+    throw new Error("Invite accepted but workspace routing data is missing.");
   }
   return true;
 }
