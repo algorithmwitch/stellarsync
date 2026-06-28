@@ -7180,18 +7180,41 @@ function renderUnplayableVideoNotice(asset = {}) {
   return `
     <div class="flex flex-col items-center justify-center h-[55vh] text-center bg-[#0f0a18] border border-white/5 rounded-lg p-6">
       <i class="ph-fill ph-video text-5xl text-[#c77dff] mb-3"></i>
-      <div class="text-sm font-bold text-white">Video uploaded</div>
+      <div class="text-sm font-bold text-white">Video saved</div>
       <div class="text-xs text-gray-400 mt-2 max-w-sm">
-        This file is saved, but MOV previews may not play in the browser. Use MP4 for in-app playback.
+        This video uploaded successfully, but this browser may not support inline MOV playback. Open or download the original, or upload MP4 for in-app playback.
       </div>
-      ${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="mt-4 text-xs text-[#c77dff] underline">Open video file</a>` : ""}
+      ${url ? `
+        <div class="mt-4 flex gap-2">
+          <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="px-4 py-2 rounded-lg bg-[#231738] text-xs font-bold text-white border border-white/10">
+            Open video
+          </a>
+          <a href="${escapeHtml(url)}" download class="px-4 py-2 rounded-lg bg-[#181125] text-xs font-bold text-gray-300 border border-white/10">
+            Download
+          </a>
+        </div>
+      ` : ""}
     </div>
   `;
 }
 
 function renderVideoPreview(asset, url) {
-  if (!url) return '<div class="flex items-center justify-center h-64 text-gray-500"><i class="ph-bold ph-video text-4xl"></i></div>';
-  return `<video controls playsinline src="${escapeHtml(url)}" class="max-h-[58vh] w-full object-contain rounded-lg" preload="metadata"></video>`;
+  if (!url) return renderUnplayableVideoNotice(asset);
+  const playable = isBrowserPlayableVideo(asset);
+  if (!playable) {
+    return renderUnplayableVideoNotice(asset);
+  }
+  window.__lastVideoPreviewAsset = asset || {};
+  return `
+    <video
+      controls
+      playsinline
+      src="${escapeHtml(url)}"
+      class="max-h-[58vh] w-full object-contain rounded-lg bg-black"
+      preload="metadata"
+      onerror="this.outerHTML = renderUnplayableVideoNotice(window.__lastVideoPreviewAsset || {})"
+    ></video>
+  `;
 }
 
 async function loadSupabaseMediaAssets(workspace, options = {}) {
@@ -16640,7 +16663,15 @@ function renderModalCarouselPreview() {
   if (detachAllBtn) detachAllBtn.classList.toggle("hidden", !modeEnabled);
   if (cancelBtn) cancelBtn.classList.toggle("hidden", !modeEnabled);
   if (!items.length) {
-    modalCarouselPreview.innerHTML = makeEmptyState("No carousel images", "Upload or link multiple images to build a carousel sequence.", "ph-images-square").replace("glass-card", "col-span-2");
+    modalCarouselPreview.innerHTML = `
+      <div class="col-span-2 rounded-2xl border border-dashed border-white/10 bg-[#181125]/60 p-6 text-center">
+        <i class="ph-bold ph-images-square text-3xl text-gray-500"></i>
+        <div class="mt-3 text-sm font-bold text-white">No media attached yet</div>
+        <div class="mt-1 text-xs text-gray-400">
+          Upload or choose from the Media Vault. This area will stay here for single images, videos, and carousels.
+        </div>
+      </div>
+    `;
     return;
   }
   getCarouselCoverAsset(items);
@@ -16694,10 +16725,7 @@ function syncModalMediaLayout(assetCount = 0) {
   const picker = document.getElementById("modal-existing-media-picker");
   const manager = document.getElementById("modal-carousel-manager");
   const upload = document.getElementById("modal-media-upload-trigger");
-  const postType = String(document.getElementById("modal-post-type")?.value || "").toLowerCase();
-  const count = Number(assetCount || currentModalCarouselAssets?.length || 0);
-  const showCarouselTools = postType === "carousel" || count >= 2;
-  if (manager) manager.classList.toggle("hidden", !showCarouselTools);
+  if (manager) manager.classList.remove("hidden");
   if (picker) picker.classList.remove("hidden");
   if (upload) upload.classList.remove("hidden");
 }
