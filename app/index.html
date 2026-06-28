@@ -30457,6 +30457,15 @@ async function callSupabaseEdgeFunction(functionName, payload = {}) {
     console.warn(isSocialConnectionFunction ? "[linkedin-auth] missing Supabase session token" : "[supabase-auth] missing Supabase session token");
     throw new Error(isSocialConnectionFunction ? "Please sign in again to connect LinkedIn" : "Please sign in again.");
   }
+  if (functionName === "monday-sync") {
+    console.log("[monday-edge] request", {
+      action: payload?.action || "",
+      workspace_id: payload?.workspace_id || "",
+      workspace_slug: payload?.workspace_slug || "",
+      board_id: payload?.board_id || "",
+      post_id: payload?.post_id || payload?.payload?.post_id || payload?.payload?.postId || ""
+    });
+  }
   const response = await fetch(`${SUPABASE_URL}/functions/v1/${functionName}`, {
     method: "POST",
     headers: {
@@ -30478,6 +30487,16 @@ async function callSupabaseEdgeFunction(functionName, payload = {}) {
     console.log("[media-index] raw response", rawText);
     console.log("[media-index] parsed error", result);
     console.log("[media-index] request payload", payload || {});
+  }
+  if (functionName === "monday-sync") {
+    console.log("[monday-edge] response", {
+      action: payload?.action || "",
+      status: response.status,
+      httpOk: response.ok,
+      ok: result?.ok,
+      error: result?.error || result?.message || "",
+      result
+    });
   }
   console.log("[supabase-edge] response body", JSON.stringify({
     action: functionName,
@@ -37671,25 +37690,45 @@ function renderPWInvitesList(invites) {
   var container = document.getElementById("pw-members-invite-result");
   if (!container) return;
   var pending = invites.filter(function(i) { return i.status === "pending"; });
-  if (!pending.length) {
+  var handled = invites.filter(function(i) { return i.status !== "pending"; });
+  if (!pending.length && !handled.length) {
     container.innerHTML = '';
     return;
   }
   var html = '<div class="mt-3 space-y-2">';
-  html += '<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Pending Invites</div>';
-  pending.forEach(function(invite) {
-    var expires = invite.expires_at ? new Date(invite.expires_at).toLocaleDateString() : "No expiry";
-    var inviteLink = (typeof window !== "undefined" ? window.location.origin : "https://stellarsync.app") + "/app/?invite_token=" + encodeURIComponent(invite.token || "");
-    html += '<div class="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-[#120c1d] border border-white/5">' +
-      '<div class="min-w-0">' +
-      '<div class="text-sm font-bold text-white truncate">' + escapeHtml(invite.email) + '</div>' +
-      '<div class="text-[10px] text-gray-500">' + toTitleCase(invite.role.replace("_", " ")) + ' · Expires ' + expires + '</div>' +
-      '</div>' +
-      '<div class="flex items-center gap-2 shrink-0">' +
-      '<button type="button" class="px-2 py-1 rounded-lg bg-[#181125] border border-white/5 text-[10px] font-bold text-gray-300 hover:text-white" onclick="copyPWInviteLink(\'' + invite.token + '\')">Copy Link</button>' +
-      '<button type="button" class="px-2 py-1 rounded-lg bg-[#30121b] border border-red-400/20 text-[10px] font-bold text-red-200 hover:opacity-80" onclick="cancelPWInvite(\'' + invite.id + '\')">Cancel</button>' +
-      '</div></div>';
-  });
+  if (pending.length) {
+    html += '<div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Pending Invites</div>';
+    pending.forEach(function(invite) {
+      var expires = invite.expires_at ? new Date(invite.expires_at).toLocaleDateString() : "No expiry";
+      html += '<div class="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-[#120c1d] border border-white/5">' +
+        '<div class="min-w-0">' +
+        '<div class="text-sm font-bold text-white truncate">' + escapeHtml(invite.email) + '</div>' +
+        '<div class="text-[10px] text-gray-500">' + toTitleCase(invite.role.replace("_", " ")) + ' · Expires ' + expires + '</div>' +
+        '</div>' +
+        '<div class="flex items-center gap-2 shrink-0">' +
+        '<button type="button" class="px-2 py-1 rounded-lg bg-[#181125] border border-white/5 text-[10px] font-bold text-gray-300 hover:text-white" onclick="copyPWInviteLink(\'' + invite.token + '\', \'' + encodeURIComponent(String(invite.email || "")) + '\')">Copy Link</button>' +
+        '<button type="button" class="px-2 py-1 rounded-lg bg-[#30121b] border border-red-400/20 text-[10px] font-bold text-red-200 hover:opacity-80" onclick="cancelPWInvite(\'' + invite.id + '\')">Cancel</button>' +
+        '</div></div>';
+    });
+  }
+  if (handled.length) {
+    html += '<div class="pt-3 text-[10px] uppercase tracking-widest text-gray-500 font-bold">Accepted And Archived Invites</div>';
+    handled.forEach(function(invite) {
+      var handledAt = invite.accepted_at
+        ? new Date(invite.accepted_at).toLocaleDateString()
+        : invite.updated_at
+          ? new Date(invite.updated_at).toLocaleDateString()
+          : "No timestamp";
+      html += '<div class="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-[#120c1d] border border-white/5">' +
+        '<div class="min-w-0">' +
+        '<div class="text-sm font-bold text-white truncate">' + escapeHtml(invite.email) + '</div>' +
+        '<div class="text-[10px] text-gray-500">' + toTitleCase(String(invite.status || "handled").replace("_", " ")) + ' · ' + handledAt + '</div>' +
+        '</div>' +
+        '<div class="flex items-center gap-2 shrink-0">' +
+        '<button type="button" class="px-2 py-1 rounded-lg bg-[#30121b] border border-red-400/20 text-[10px] font-bold text-red-200 hover:opacity-80" onclick="deletePWInvite(\'' + invite.id + '\')">Remove</button>' +
+        '</div></div>';
+    });
+  }
   html += '</div>';
   container.innerHTML = html;
 }
@@ -37718,7 +37757,7 @@ async function handlePWInviteCreate() {
     if (result && result.ok) {
       if (resultEl) {
         var inviteLink = result.invite?.token
-          ? ((typeof window !== "undefined" ? window.location.origin : "https://stellarsync.app") + "/app/?invite_token=" + encodeURIComponent(result.invite.token))
+          ? ((typeof window !== "undefined" ? window.location.origin : "https://stellarsync.app") + "/login/?invite_token=" + encodeURIComponent(result.invite.token) + "&email=" + encodeURIComponent(email))
           : (result.invite_link || "");
         var sentCopy = result.email_sent
           ? "Invite sent to "
@@ -37757,7 +37796,6 @@ async function acceptInviteFromUrlIfPresent() {
   }
   const workspaceSlug = String(result.workspace_slug || "").trim();
   if (workspaceSlug) {
-    sessionStorage.setItem("STELLARSYNC_ACTIVE_WORKSPACE", workspaceSlug);
     window.history.replaceState({}, "", "/app/?workspace=" + encodeURIComponent(workspaceSlug));
   } else {
     window.history.replaceState({}, "", "/app/");
@@ -37838,14 +37876,37 @@ async function handlePWMemberRemove(memberId, displayName) {
   }
 }
 
-function copyPWInviteLink(token) {
+function copyPWInviteLink(token, email) {
   if (!token) return;
-  var link = (typeof window !== "undefined" ? window.location.origin : "https://stellarsync.app") + "/app/?invite_token=" + encodeURIComponent(token);
+  var decodedEmail = "";
+  try { decodedEmail = email ? decodeURIComponent(email) : ""; } catch (_) { decodedEmail = email || ""; }
+  var link = (typeof window !== "undefined" ? window.location.origin : "https://stellarsync.app") + "/login/?invite_token=" + encodeURIComponent(token) + (decodedEmail ? "&email=" + encodeURIComponent(decodedEmail) : "");
   navigator.clipboard.writeText(link).then(function() {
     showToast("Copied", "Invite link copied to clipboard.", "ph-check", "text-emerald-400");
   }).catch(function() {
     showToast("Copy failed", "Could not copy invite link. Link: " + link, "ph-warning", "text-yellow-400");
   });
+}
+
+async function deletePWInvite(inviteId) {
+  if (!inviteId) return;
+  console.log("[members] invite delete", { inviteId });
+  try {
+    var result = await callSupabaseEdgeFunction("workspace-members", {
+      action: "delete_invite",
+      workspace_id: getPWMembersWorkspaceId(),
+      invite_id: inviteId
+    });
+    console.log("[members] invite delete result", result);
+    if (result && result.ok) {
+      loadPWMembers();
+    } else {
+      showToast("Remove failed", result?.error || "Unknown error", "ph-warning", "text-yellow-400");
+    }
+  } catch (err) {
+    console.warn("[members] invite delete error", err);
+    showToast("Remove failed", err?.message || String(err), "ph-warning", "text-yellow-400");
+  }
 }
 
 (function() {
@@ -38685,6 +38746,7 @@ bootAppWithWorkspaceRouter();
 window.loadPWMembers = loadPWMembers;
 window.handlePWInviteCreate = handlePWInviteCreate;
 window.cancelPWInvite = cancelPWInvite;
+window.deletePWInvite = deletePWInvite;
 window.handlePWMemberRoleChange = handlePWMemberRoleChange;
 window.handlePWMemberRemove = handlePWMemberRemove;
 window.copyPWInviteLink = copyPWInviteLink;
