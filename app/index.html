@@ -5308,7 +5308,7 @@
                     <button type="button" class="pw-ws-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg active" data-icon="sparkle"><i class="ph-fill ph-sparkle"></i></button>
                     <button type="button" class="pw-ws-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="leaf"><i class="ph-fill ph-leaf"></i></button>
                     <button type="button" class="pw-ws-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="planet"><i class="ph-fill ph-planet"></i></button>
-                    <button type="button" class="pw-ws-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="star"><i class="ph-fill ph-star"></i></button>
+                    <button type="button" class="pw-ws-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="star"><i class="ph-fill ph-sparkle"></i></button>
                     <button type="button" class="pw-ws-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="heart"><i class="ph-fill ph-heart"></i></button>
                     <button type="button" class="pw-ws-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="megaphone"><i class="ph-fill ph-megaphone"></i></button>
                     <button type="button" class="pw-ws-icon-btn w-9 h-9 rounded-lg bg-[#181125] border border-white/5 text-gray-400 hover:text-white hover:border-[#c77dff]/40 transition-all flex items-center justify-center text-lg" data-icon="lightning"><i class="ph-fill ph-lightning"></i></button>
@@ -6377,33 +6377,6 @@ async function loadWorkspaceSettingsForWorkspace(workspace) {
 }
 
 async function loadProfileSettingsForUser(user) {
-  if (!STELLARSYNC_SUPABASE_CLIENT || !user || !user.id) return user;
-  for (const tableName of ["profile_settings", "user_preferences"]) {
-    try {
-      const result = await STELLARSYNC_SUPABASE_CLIENT
-        .from(tableName)
-        .select("display_name,avatar_mode,icon,avatar_initials")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      if (result.error) {
-        if (isOptionalProfileSettingsError(result.error)) {
-          if (STELLARSYNC_DEBUG) console.log("[optional-profile] table missing, using defaults", { table: tableName });
-          continue;
-        }
-        if (STELLARSYNC_DEBUG) console.warn("[icon-save] profile load skipped", result.error.message || result.error);
-        continue;
-      }
-      if (result.data) {
-        return { ...user, user_metadata: { ...(user.user_metadata || {}), ...result.data } };
-      }
-    } catch (err) {
-      if (isOptionalProfileSettingsError(err)) {
-        if (STELLARSYNC_DEBUG) console.log("[optional-profile] table missing, using defaults", { table: tableName });
-      } else if (STELLARSYNC_DEBUG) {
-        console.warn("[icon-save] profile load skipped", err?.message || err);
-      }
-    }
-  }
   return user;
 }
 
@@ -12681,26 +12654,32 @@ function setupWorkspaceReturnButtons() {
 }
 
 function updateHybridManualButtons() {
-  const sheetsButtons = [
-    document.getElementById("pw-pull-sheets-btn"),
-    document.getElementById("pw-push-sheets-btn")
-  ].filter(Boolean);
-  const mondayButtons = [
-    document.getElementById("pw-monday-dry-run-btn"),
-    document.getElementById("pw-monday-backfill-btn")
-  ].filter(Boolean);
-  const sheetConfig = typeof getSheetMirrorConfig === "function" ? getSheetMirrorConfig() : {};
-  const sheetsVisible = shouldUseSheetsAuthority() || Boolean(sheetConfig.sheetId && sheetConfig.appsScriptUrl);
-  const mondayVisible = shouldUseSheetsAuthority() || Boolean(getMondayBoardId(WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active, WORKSPACE_CONNECTIONS));
-  sheetsButtons.forEach(function(button) { button.classList.toggle("hidden", !sheetsVisible); });
-  mondayButtons.forEach(function(button) { button.classList.toggle("hidden", !mondayVisible); });
+  ["pw-pull-sheets-btn", "pw-push-sheets-btn"].forEach((id) => {
+    const btn = document.getElementById(id);
+    if (btn) btn.remove();
+  });
+  const dryRun = document.getElementById("pw-monday-dry-run-btn");
+  if (dryRun) {
+    dryRun.classList.toggle(
+      "hidden",
+      !getMondayBoardId(WORKSPACE_RUNTIME_CONFIG?.active, WORKSPACE_CONNECTIONS)
+    );
+  }
 }
 
 async function runMondayBackfill(options = {}) {
   const dryRun = options.dryRun !== false;
+  if (!dryRun) {
+    showToast(
+      "Monday push paused",
+      "Board push is disabled until monday-sync accepts the current payload without 400 errors.",
+      "ph-warning",
+      "text-yellow-400"
+    );
+    return { ok: false, skipped: true, reason: "push_paused_after_failed_backfill" };
+  }
   const boardId = getMondayBoardId(WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active, WORKSPACE_CONNECTIONS);
   if (!boardId) throw new Error("No Monday board configured.");
-  if (!dryRun && !canManageWorkspace()) throw new Error("You do not have permission to run a board backfill.");
   const meta = getWorkspaceRequestMetadata();
   const backendMode = getActiveWorkspaceBackendMode();
   const activeWorkspace = WORKSPACE_RUNTIME_CONFIG && WORKSPACE_RUNTIME_CONFIG.active || {};
@@ -12719,23 +12698,6 @@ async function runMondayBackfill(options = {}) {
     cursor: 0
   });
   if (!result || !result.ok) throw new Error(result?.error || result?.message || "Monday backfill failed.");
-  if (!dryRun) {
-    upsertLocalWorkspaceConnection("monday", {
-      status: result.failed ? "warning" : "connected",
-      last_sync_at: result.completed_at || new Date().toISOString(),
-      last_error: result.failed ? result.failed + " backfill item(s) failed" : "",
-      config: {
-        board_id: boardId,
-        groups_found: result.groups_found || 0,
-        default_group_id: result.default_group_id || "",
-        default_group_title: result.default_group_title || "",
-        group_id: result.group_id || "",
-        group_title: result.group_title || "",
-        group_match_strategy: result.group_match_strategy || ""
-      }
-    });
-    refreshConnectionCards();
-  }
   showToast(
     dryRun ? "Monday dry run complete" : "Monday push complete",
     "Posts checked: " + (result.total_posts_seen || result.total || posts.length) + "; Failed: " + (result.failed || 0),
