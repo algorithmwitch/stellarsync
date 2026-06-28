@@ -37641,8 +37641,13 @@ async function handlePWInviteCreate() {
         var inviteLink = result.invite?.token
           ? ((typeof window !== "undefined" ? window.location.origin : "https://stellarsync.app") + "/app/?invite_token=" + encodeURIComponent(result.invite.token))
           : (result.invite_link || "");
+        var sentCopy = result.email_sent
+          ? "Invite sent to "
+          : "Invite created, but email was not sent. Copy the link for ";
         resultEl.innerHTML = '<div class="space-y-2">' +
-          '<span class="text-emerald-400">Invite sent to ' + escapeHtml(email) + '</span>' +
+          '<span class="' + (result.email_sent ? 'text-emerald-400' : 'text-yellow-300') + '">' +
+          sentCopy + escapeHtml(email) +
+          '</span>' +
           (inviteLink ? '<div class="flex items-center gap-2"><input type="text" readonly value="' + escapeHtml(inviteLink) + '" class="flex-1 px-2 py-1 rounded-lg bg-[#0a0612] border border-white/10 text-[10px] text-white"><button type="button" class="px-2 py-1 rounded-lg bg-[#181125] border border-white/5 text-[10px] font-bold text-gray-300 hover:text-white" onclick="navigator.clipboard.writeText(\'' + escapeHtml(inviteLink) + '\');showToast(\'Copied\',\'Invite link copied.\',\'ph-check\',\'text-emerald-400\')">Copy</button></div>' : '') +
           '</div>';
       }
