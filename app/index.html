@@ -7199,21 +7199,27 @@ function renderUnplayableVideoNotice(asset = {}) {
 }
 
 function renderVideoPreview(asset, url) {
-  if (!url) return renderUnplayableVideoNotice(asset);
-  const playable = isBrowserPlayableVideo(asset);
-  if (!playable) {
+  const src = url || getRenderableMediaUrl(asset || {});
+  if (!src) {
     return renderUnplayableVideoNotice(asset);
   }
-  window.__lastVideoPreviewAsset = asset || {};
   return `
-    <video
-      controls
-      playsinline
-      src="${escapeHtml(url)}"
-      class="max-h-[58vh] w-full object-contain rounded-lg bg-black"
-      preload="metadata"
-      onerror="this.outerHTML = renderUnplayableVideoNotice(window.__lastVideoPreviewAsset || {})"
-    ></video>
+    <div class="w-full">
+      <video
+        controls
+        playsinline
+        src="${escapeHtml(src)}"
+        class="max-h-[58vh] w-full object-contain rounded-lg bg-black"
+        preload="metadata"
+        onloadedmetadata="console.log('[video] metadata loaded', { src: this.currentSrc })"
+        oncanplay="console.log('[video] can play', { src: this.currentSrc })"
+        onerror="console.log('[video] failed', { src: this.currentSrc, error: this.error, networkState: this.networkState, readyState: this.readyState })"
+      ></video>
+      <div class="flex justify-center gap-3 mt-3">
+        <a href="${escapeHtml(src)}" target="_blank" rel="noopener noreferrer" class="text-xs text-[#c77dff] underline">Open video</a>
+        <a href="${escapeHtml(src)}" download class="text-xs text-[#c77dff] underline">Download</a>
+      </div>
+    </div>
   `;
 }
 
@@ -10103,7 +10109,7 @@ function getRenderableMediaUrl(asset = {}) {
   const raw = getFirstRawMediaUrl(asset);
   if ((asset.storage_path || asset.storagePath) && isSupabasePublicMediaUrl(raw)) {
     queueSignedMediaUrlRefresh(asset);
-    return raw;
+    return "";
   }
   return raw;
 }
@@ -24026,7 +24032,7 @@ function removeStaleMediaReferences(staleIds) {
 function renderMediaPreviewContent(item, linkedAssets, previewUrl, type) {
   const mode = getMediaViewerMode(item);
   if (mode === "single") {
-    var src = previewUrl || (item ? item.fileUrl || item.sourceUrl || item.media_url || item.mediaUrl || item.url : "") || "";
+    var src = previewUrl || getRenderableMediaUrl(item || {}) || "";
     if (!src) {
       return '<div class="flex items-center justify-center h-64 text-gray-500"><i class="ph-bold ph-image text-4xl"></i></div>';
     }
@@ -24572,8 +24578,11 @@ function toggleMediaPostsPanel(open = !mediaPostsPanelOpen) {
 }
 
 function copyCurrentMediaAssetUrl() {
-  const targetUrl = currentMediaAssetDetail?.fileUrl || currentMediaAssetDetail?.sourceUrl || currentMediaAssetDetail?.media_url || currentMediaAssetDetail?.url || "";
-  if (!targetUrl) return;
+  const targetUrl = getRenderableMediaUrl(currentMediaAssetDetail || {});
+  if (!targetUrl) {
+    showToast("URL not ready", "This media is still getting a signed preview URL.", "ph-clock", "text-yellow-400");
+    return;
+  }
   copyTextToClipboardWithToast(targetUrl, "Copied", "Media URL copied.", "Copy failed", "Could not copy media URL.");
 }
 
