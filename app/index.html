@@ -7100,12 +7100,6 @@ async function uploadMediaToSupabaseStorage(file, options = {}) {
     });
     throw new Error(`Supabase upload failed: ${uploadError.statusCode || ""} ${uploadError.message || JSON.stringify(uploadError)}`);
   }
-  const { data: publicData } = STELLARSYNC_SUPABASE_CLIENT.storage
-    .from(bucket)
-    .getPublicUrl(storagePath);
-  const publicUrl =
-    publicData?.publicUrl ||
-    `${String(config.supabase_url || "").replace(/\/+$/, "")}/storage/v1/object/public/${bucket}/${storagePath}`;
   const createPayload = {
     action: "create_asset",
     workspace_id: mediaContext.id || config.workspace_id || config.id || getWorkspaceRequestMetadata().workspace_id,
@@ -7115,7 +7109,9 @@ async function uploadMediaToSupabaseStorage(file, options = {}) {
     filename: file?.name || "",
     title: options.title || file?.name || "Supabase media",
     media_type: mediaType,
-    media_url: publicUrl,
+    media_url: "",
+    url: "",
+    file_url: "",
     mime_type: file?.type || "",
     size_bytes: file?.size || 0,
     alt_text: options.altText || "",
@@ -7131,29 +7127,24 @@ async function uploadMediaToSupabaseStorage(file, options = {}) {
   if (!created?.ok || !created.asset) {
     throw new Error(created?.error || "Media asset row was not created after upload.");
   }
-  const normalized = normalizeRemoteMedia({
+  const signedUrl = await refreshSupabaseSignedMediaUrl({
+    ...created.asset,
+    bucket,
+    storage_path: storagePath
+  }).catch(() => "");
+  return normalizeRemoteMedia({
     ...created.asset,
     media_type: mediaType,
     media_filename: file?.name || "",
     media_source: "supabase",
     bucket,
     storage_path: storagePath,
-    storagePath,
     assetType: mediaType,
-    fileUrl: "",
-    media_url: "",
-    url: ""
+    signedUrl,
+    signed_url: signedUrl,
+    previewUrl: signedUrl,
+    preview_url: signedUrl
   });
-  try {
-    const signedUrl = await refreshSupabaseSignedMediaUrl(normalized);
-    normalized.signedUrl = signedUrl;
-    normalized.signed_url = signedUrl;
-    normalized.previewUrl = signedUrl;
-    normalized.preview_url = signedUrl;
-  } catch (err) {
-    console.warn("[supabase-upload] signed url after upload failed", err?.message || err);
-  }
-  return normalized;
 }
 
 function getUploadFailureMessage(err, file) {
@@ -7239,7 +7230,18 @@ async function loadSupabaseMediaAssets(workspace, options = {}) {
     console.log("[media-attach] post_media count", indexedPostMedia.length);
     console.log("[media] list_assets returned count", indexedAssets.length);
     if (indexedAssets.length) {
-      result.assets = indexedAssets.map(normalizeRemoteMedia);
+      var signedAssets = await Promise.all(indexedAssets.map(async function(asset) {
+        if (!asset.storage_path && !asset.storagePath) return asset;
+        var signedUrl = await refreshSupabaseSignedMediaUrl(asset).catch(function() { return ""; });
+        return {
+          ...asset,
+          signedUrl,
+          signed_url: signedUrl,
+          previewUrl: signedUrl,
+          preview_url: signedUrl
+        };
+      }));
+      result.assets = signedAssets.map(normalizeRemoteMedia);
       result.source = "media_assets";
       var indexedCounts = countRenderableMediaCount(result.assets);
       console.log("[media] renderable count", indexedCounts.renderable);
@@ -10041,6 +10043,31 @@ function setModalTargetPlatforms(platforms) {
   return selected;
 }
 
+function isSupabasePublicMediaUrl(url) {
+  return String(url || "").includes("/storage/v1/object/public/media/");
+}
+
+function getFirstRawMediaUrl(asset = {}) {
+  return String(
+    asset.signedUrl ||
+    asset.signed_url ||
+    asset.previewUrl ||
+    asset.preview_url ||
+    asset.publicUrl ||
+    asset.public_url ||
+    asset.fileUrl ||
+    asset.file_url ||
+    asset.mediaUrl ||
+    asset.media_url ||
+    asset.thumbnailUrl ||
+    asset.thumbnail_url ||
+    asset.url ||
+    asset.sourceUrl ||
+    asset.source_url ||
+    ""
+  ).trim();
+}
+
 function getRenderableMediaUrl(asset = {}) {
   const signed = String(
     asset.signedUrl ||
@@ -10050,20 +10077,39 @@ function getRenderableMediaUrl(asset = {}) {
     ""
   ).trim();
   if (signed) return signed;
-  const raw = String(
-    asset.fileUrl ||
-    asset.file_url ||
-    asset.mediaUrl ||
-    asset.media_url ||
-    asset.url ||
-    asset.sourceUrl ||
-    asset.source_url ||
-    ""
-  ).trim();
-  if (raw.includes("/storage/v1/object/public/media/") && (asset.storage_path || asset.storagePath)) {
-    return "";
+  const raw = getFirstRawMediaUrl(asset);
+  if ((asset.storage_path || asset.storagePath) && isSupabasePublicMediaUrl(raw)) {
+    queueSignedMediaUrlRefresh(asset);
+    return raw;
   }
   return raw;
+}
+
+function queueSignedMediaUrlRefresh(asset = {}) {
+  const id = getMediaAssetId?.(asset) || asset.media_asset_id || asset.id || "";
+  if (!id || asset.__signingQueued) return;
+  asset.__signingQueued = true;
+  setTimeout(async () => {
+    try {
+      const signed = await refreshSupabaseSignedMediaUrl(asset);
+      if (!signed) return;
+      const key = getMediaItemKey(asset);
+      const idx = (appState.media || []).findIndex((item) => getMediaItemKey(item) === key);
+      if (idx >= 0) {
+        appState.media[idx] = {
+          ...appState.media[idx],
+          signedUrl: signed,
+          signed_url: signed,
+          previewUrl: signed,
+          preview_url: signed
+        };
+        persistLocalState();
+        renderMedia?.();
+      }
+    } catch (err) {
+      console.warn("[media-sign] queued refresh failed", err?.message || err);
+    }
+  }, 0);
 }
 
 function getMediaPreviewUrl(asset = {}) {
