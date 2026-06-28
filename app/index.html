@@ -10218,9 +10218,7 @@ function renderMediaGalleryStrip(assets = [], options = {}) {
               <span class="absolute top-2 left-2 z-10 w-6 h-6 rounded-full bg-[#181125]/95 border border-white/10 text-[10px] font-bold text-white flex items-center justify-center">${index + 1}</span>
               ${previewUrl ? (
                 kind === "video"
-                  ? (isBrowserPlayableVideo(asset || {})
-                    ? `<video src="${escapeHtml(previewUrl)}" class="w-full h-full object-cover" muted playsinline preload="metadata"></video>`
-                    : `<div class="w-full h-full flex flex-col items-center justify-center bg-black/40 text-center p-3 text-purple-200"><i class="ph-fill ph-video text-3xl mb-2"></i><span class="text-[10px] font-bold">MOV preview unavailable</span></div>`)
+                  ? `<video src="${escapeHtml(previewUrl)}" class="w-full h-full object-cover" muted playsinline preload="metadata" onerror="this.outerHTML='<div class=\\'w-full h-full flex flex-col items-center justify-center bg-black/40 text-purple-200\\'><i class=\\'ph-fill ph-video text-3xl mb-2\\'></i><span class=\\'text-[10px] font-bold\\'>Open video</span></div>'"></video>`
                   : kind === "document"
                   ? `<div class="w-full h-full flex flex-col items-center justify-center gap-1 text-gray-400 p-2"><i class="ph-bold ph-file-text text-2xl"></i><span class="text-[9px] uppercase tracking-wider font-bold text-center">${escapeHtml(getMediaFileTypeLabel(asset))}</span></div>`
                   : `<img src="${escapeHtml(previewUrl)}" alt="${escapeHtml(title)}" class="w-full h-full object-cover" onerror="handleBrokenMediaPreview(this)">`
@@ -17017,6 +17015,16 @@ function removeDetachedMediaFromLocalPost(postId, detachedIds = []) {
   const targetPostId = String(postId || "").trim();
   const ids = new Set((detachedIds || []).map(String).filter(Boolean));
   if (!targetPostId || !ids.size) return;
+  const selectedAssets = [
+    ...(currentModalCarouselAssets || []),
+    ...(currentMediaViewerItems || [])
+  ].filter((asset) => ids.has(getMediaAssetId(asset)));
+  const detachedStoragePaths = new Set(
+    selectedAssets.map((asset) => String(asset.storage_path || asset.storagePath || "")).filter(Boolean)
+  );
+  const shouldRemoveAsset = (asset) =>
+    ids.has(getMediaAssetId(asset)) ||
+    detachedStoragePaths.has(String(asset?.storage_path || asset?.storagePath || ""));
   appState.postMedia = (appState.postMedia || appState.post_media || []).filter((row) => {
     const rowPostId = String(row.post_id || row.postId || "").trim();
     const rowAssetId = getMediaAssetId(row);
@@ -17032,8 +17040,8 @@ function removeDetachedMediaFromLocalPost(postId, detachedIds = []) {
       mediaIds: clean(post.media_ids || post.mediaIds),
       carousel_asset_ids: clean(post.carousel_asset_ids || post.carouselAssetIds),
       carouselAssetIds: clean(post.carousel_asset_ids || post.carouselAssetIds),
-      carouselAssets: (post.carouselAssets || []).filter((asset) => !ids.has(getMediaAssetId(asset))),
-      carousel_assets: (post.carousel_assets || []).filter((asset) => !ids.has(getMediaAssetId(asset)))
+      carouselAssets: (post.carouselAssets || []).filter((asset) => !shouldRemoveAsset(asset)),
+      carousel_assets: (post.carousel_assets || []).filter((asset) => !shouldRemoveAsset(asset))
     };
     if (ids.has(String(next.media_id || next.mediaId || ""))) {
       next.media_id = next.media_ids[0] || "";
@@ -17042,11 +17050,25 @@ function removeDetachedMediaFromLocalPost(postId, detachedIds = []) {
     return applyDerivedPostMediaFormat(next, appState.media);
   });
   if (String(currentEditingPostId || "") === targetPostId) {
-    currentModalCarouselAssets = (currentModalCarouselAssets || []).filter((asset) => !ids.has(getMediaAssetId(asset)));
+    currentModalCarouselAssets = (currentModalCarouselAssets || []).filter((asset) => !shouldRemoveAsset(asset));
     currentModalAsset = currentModalCarouselAssets[0] || null;
     window.__currentModalPostData = findPostByAnyId(targetPostId) || window.__currentModalPostData;
   }
   persistLocalState();
+}
+
+function buildDetachedPostSavePayload(post = {}) {
+  const mediaIds = splitMediaIdList(post.media_ids || post.mediaIds);
+  const carouselAssetIds = splitMediaIdList(post.carousel_asset_ids || post.carouselAssetIds);
+  return {
+    ...post,
+    media_ids: mediaIds,
+    mediaIds: mediaIds,
+    carousel_asset_ids: carouselAssetIds,
+    carouselAssetIds: carouselAssetIds,
+    media_count: mediaIds.length,
+    mediaCount: mediaIds.length
+  };
 }
 
 async function detachSelectedCarouselMedia() {
@@ -17059,6 +17081,10 @@ async function detachSelectedCarouselMedia() {
   try {
     await detachMediaAssetsFromPost(selected, postId);
     removeDetachedMediaFromLocalPost(postId, mediaAssetIds);
+    const cleanedPost = findPostByAnyId(postId);
+    if (cleanedPost) {
+      await savePostForActiveBackend(buildDetachedPostSavePayload(cleanedPost));
+    }
     window.mediaDetachSelectionMode = false;
     modalCarouselDetachSelectMode = false;
     selectedCarouselDetachAssetIds.clear();
@@ -17226,9 +17252,7 @@ function renderMediaPickerAssets(target = "modal") {
           <button type="button" onclick="attachMediaToCurrentPost('${escapeHtml(assetId)}')" class="relative h-20 w-full bg-black/20" title="${escapeHtml(title)}">
             ${thumbUrl ? (
               kind === "video"
-                ? (isBrowserPlayableVideo(asset || {})
-                  ? `<video src="${escapeHtml(thumbUrl)}" class="w-full h-full object-contain" muted playsinline preload="metadata"></video>`
-                  : `<div class="w-full h-full flex flex-col items-center justify-center bg-black/40 text-center p-3 text-purple-200"><i class="ph-fill ph-video text-3xl mb-2"></i><span class="text-[10px] font-bold">MOV preview unavailable</span></div>`)
+                ? `<video src="${escapeHtml(thumbUrl)}" class="w-full h-full object-contain" muted playsinline preload="metadata" onerror="this.outerHTML='<div class=\\'w-full h-full flex flex-col items-center justify-center bg-black/40 text-purple-200\\'><i class=\\'ph-fill ph-video text-3xl mb-2\\'></i><span class=\\'text-[10px] font-bold\\'>Open video</span></div>'"></video>`
                 : `<img src="${escapeHtml(thumbUrl)}" alt="${escapeHtml(title)}" class="w-full h-full object-contain" loading="lazy" onerror="handleBrokenMediaPreview(this)">`
             ) : `<div class="w-full h-full flex items-center justify-center text-gray-600"><i class="ph-bold ph-file text-xl"></i></div>`}
             ${isSelected ? '<span class="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-purple-500 text-white"><i class="ph-bold ph-check text-[10px]"></i></span>' : ''}
@@ -23409,9 +23433,7 @@ function renderMediaVaultCard(item) {
     : hasImagePreview
     ? `<img src="${escapeHtml(previewUrl)}" alt="${escapeHtml(displayTitle)}" class="w-full h-full object-cover rounded-none" loading="lazy" onerror="handleBrokenMediaPreview(this)">`
     : hasVideoPreview
-    ? (isBrowserPlayableVideo(item || {})
-      ? `<video src="${escapeHtml(previewUrl)}" class="w-full h-full object-cover rounded-none" muted playsinline preload="metadata"></video>`
-      : `<div class="w-full h-full flex flex-col items-center justify-center bg-black/40 text-center p-4 text-purple-200"><i class="ph-fill ph-video text-4xl mb-2"></i><span class="text-xs font-bold">MOV preview unavailable</span><a href="${escapeHtml(previewUrl)}" target="_blank" rel="noopener noreferrer" class="mt-2 text-[10px] underline">Open video file</a></div>`)
+    ? `<video src="${escapeHtml(previewUrl)}" class="w-full h-full object-cover rounded-none" muted playsinline preload="metadata" onerror="this.outerHTML='<div class=\\'w-full h-full flex flex-col items-center justify-center bg-black/40 text-purple-200\\'><i class=\\'ph-fill ph-video text-4xl mb-2\\'></i><span class=\\'text-xs font-bold\\'>Open video</span></div>'"></video>`
     : `<div class="w-full h-full flex items-center justify-center"><i class="ph-fill ${icon} text-gray-600 text-5xl"></i></div>`;
 
   return `
@@ -24075,9 +24097,7 @@ function renderMediaPreviewContent(item, linkedAssets, previewUrl, type) {
         <span class="absolute top-1 left-1 z-10 px-1.5 py-0.5 rounded bg-black/65 text-[9px] font-bold text-white">${index + 1}</span>
         ${thumbUrl ? (
           kind === "video"
-            ? (isBrowserPlayableVideo(asset || {})
-              ? `<video src="${escapeHtml(thumbUrl)}" class="w-full h-full object-cover pointer-events-none" draggable="false" muted playsinline preload="metadata"></video>`
-              : `<div class="w-full h-full flex flex-col items-center justify-center bg-black/40 text-center p-2 text-purple-200"><i class="ph-fill ph-video text-2xl mb-1"></i><span class="text-[9px] font-bold">MOV</span></div>`)
+            ? `<video src="${escapeHtml(thumbUrl)}" class="w-full h-full object-cover pointer-events-none" draggable="false" muted playsinline preload="metadata" onerror="this.outerHTML='<div class=\\'w-full h-full flex flex-col items-center justify-center bg-black/40 text-purple-200\\'><i class=\\'ph-fill ph-video text-2xl mb-1\\'></i><span class=\\'text-[9px] font-bold\\'>Open</span></div>'"></video>`
             : kind === "document"
             ? `<div class="w-full h-full flex items-center justify-center text-gray-400"><i class="ph-bold ph-file-text text-2xl"></i></div>`
             : `<img src="${escapeHtml(thumbUrl)}" alt="${escapeHtml(title)}" class="w-full h-full object-cover pointer-events-none" draggable="false" onerror="handleBrokenMediaPreview(this)">`
@@ -24130,9 +24150,7 @@ function renderMediaPreviewContent(item, linkedAssets, previewUrl, type) {
           ${index === 0 ? `<span class="absolute top-2 right-2 z-10 px-2 py-1 rounded-full bg-[#231738]/95 border border-[#c77dff]/30 text-[8px] uppercase tracking-wider font-bold text-[#c77dff]">Cover</span>` : ""}
           ${thumbUrl ? (
             kind === "video"
-              ? (isBrowserPlayableVideo(asset || {})
-                ? `<video src="${escapeHtml(thumbUrl)}" class="w-full h-full object-cover" muted playsinline preload="metadata"></video>`
-                : `<div class="w-full h-full flex flex-col items-center justify-center bg-black/40 text-center p-2 text-purple-200"><i class="ph-fill ph-video text-2xl mb-1"></i><span class="text-[9px] font-bold">MOV</span></div>`)
+              ? `<video src="${escapeHtml(thumbUrl)}" class="w-full h-full object-cover" muted playsinline preload="metadata" onerror="this.outerHTML='<div class=\\'w-full h-full flex flex-col items-center justify-center bg-black/40 text-purple-200\\'><i class=\\'ph-fill ph-video text-2xl mb-1\\'></i><span class=\\'text-[9px] font-bold\\'>Open</span></div>'"></video>`
               : kind === "document"
               ? `<div class="w-full h-full flex flex-col items-center justify-center gap-1 text-gray-400 p-2"><i class="ph-bold ph-file-text text-2xl"></i><span class="text-[9px] uppercase tracking-wider font-bold text-center">${escapeHtml(getMediaFileTypeLabel(asset))}</span></div>`
               : `<img src="${escapeHtml(thumbUrl)}" alt="${escapeHtml(title)}" class="w-full h-full object-cover" onerror="handleBrokenMediaPreview(this)">`
@@ -24353,6 +24371,11 @@ async function detachSelectedMediaViewerAssets() {
   try {
     const result = await detachMediaAssetsFromPost(selected, postId);
     console.log("[media-manage] save response", result);
+    removeDetachedMediaFromLocalPost(postId, mediaAssetIds);
+    const cleanedPost = findPostByAnyId(postId);
+    if (cleanedPost) {
+      await savePostForActiveBackend(buildDetachedPostSavePayload(cleanedPost));
+    }
     mediaViewerDetachMode = false;
     selectedMediaViewerDetachAssetIds.clear();
     await refreshAttachedMediaForMediaViewer(postId);
