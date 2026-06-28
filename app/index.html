@@ -9646,6 +9646,25 @@ function getMediaDedupeKey(item = {}) {
   ).trim();
 }
 
+window.__DETACHED_MEDIA_BY_POST = window.__DETACHED_MEDIA_BY_POST || {};
+
+function rememberDetachedMedia(postId, ids) {
+  const key = String(postId || "").trim();
+  if (!key) return;
+  const set = window.__DETACHED_MEDIA_BY_POST[key] || new Set();
+  (ids || []).forEach((id) => {
+    id = String(id || "").trim();
+    if (id) set.add(id);
+  });
+  window.__DETACHED_MEDIA_BY_POST[key] = set;
+}
+
+function isMediaDetachedForPost(postId, asset) {
+  const set = window.__DETACHED_MEDIA_BY_POST?.[String(postId || "").trim()];
+  if (!set) return false;
+  return set.has(getMediaAssetId(asset));
+}
+
 function findMediaAssetByAnyKey(key, mediaItems = appState.media || []) {
   const target = String(key || "").trim();
   if (!target) return null;
@@ -9724,6 +9743,7 @@ function getAttachedMediaForPost(post, mediaItems) {
     });
     var key = getMediaDedupeKey(normalized);
     if (!key || seenKeys.has(key)) return;
+    if (isMediaDetachedForPost(postId, normalized)) return;
     seenKeys.add(key);
     result.push(normalized);
   }
@@ -9782,6 +9802,7 @@ function getAttachedMediaForPost(post, mediaItems) {
     carouselIdValues.length ||
     carouselAssets.length;
   var linked = explicitAttachCount ? [] : (mediaItems || []).filter(function(asset) {
+    if (isMediaDetachedForPost(postId, asset)) return false;
     var lid = String(asset.linkedPostId || asset.linked_post_id || "").trim();
     if (isSyntheticRowPostId(lid)) lid = "";
     return lid && postIds.has(lid);
@@ -17127,10 +17148,26 @@ async function detachSelectedCarouselMedia() {
   if (!postId || !selected.length) return;
   const mediaAssetIds = selected.map((asset) => getDetachAssetId(asset)).filter(Boolean);
   if (!mediaAssetIds.length) return;
+  rememberDetachedMedia(postId, mediaAssetIds);
+  currentModalCarouselAssets = (currentModalCarouselAssets || []).filter((asset) =>
+    !mediaAssetIds.includes(getMediaAssetId(asset))
+  );
   console.log("[detach-ui] detach payload", { workspace_id: getWorkspaceRequestMetadata().workspace_id, post_id: postId, media_asset_ids: mediaAssetIds });
   try {
     await detachMediaAssetsFromPost(selected, postId);
     removeDetachedMediaFromLocalPost(postId, mediaAssetIds);
+    appState.media = (appState.media || []).map((asset) => {
+      if (!mediaAssetIds.includes(getMediaAssetId(asset))) return asset;
+      return {
+        ...asset,
+        linked_post_id: "",
+        linkedPostId: "",
+        post_id: "",
+        postId: "",
+        sort_order: "",
+        sortOrder: ""
+      };
+    });
     const cleanedPost = findPostByAnyId(postId);
     if (cleanedPost) {
       await savePostForActiveBackend(buildDetachedPostSavePayload(cleanedPost));
@@ -24370,6 +24407,7 @@ async function detachSelectedMediaViewerAssets() {
   const selected = currentMediaViewerItems.filter(function(asset) { return selectedMediaViewerDetachAssetIds.has(getMediaAssetId(asset)); });
   if (!postId || !selected.length) return;
   const mediaAssetIds = selected.map(function(asset) { return getMediaAssetId(asset); }).filter(Boolean);
+  rememberDetachedMedia(postId, mediaAssetIds);
   console.log("[media-manage] detach payload", { post_id: postId, media_asset_ids: mediaAssetIds });
   try {
     const result = await detachMediaAssetsFromPost(selected, postId);
@@ -25929,19 +25967,19 @@ function buildSheetsPostPayload(post) {
     workspace_slug: getCurrentWorkspaceSlug?.() || "gpe",
     _rowNumber: post._rowNumber || post.row_number || post.rowNumber || post.sheetRow || ""
   };
+  const activePostId = String(currentEditingPostId || "").trim();
+  const isCurrentModalPost =
+    activePostId &&
+    getPostIdentityValues(post).includes(activePostId);
   const explicitMediaIds = []
     .concat(Array.isArray(post.media_ids) ? post.media_ids : String(post.media_ids || post.mediaIds || "").split(/[|,\n]/))
     .concat(Array.isArray(post.carouselAssetIds) ? post.carouselAssetIds : String(post.carousel_asset_ids || post.carouselAssetIds || "").split(/[|,\n]/))
     .map((value) => String(value || "").trim())
     .filter(Boolean);
-  const attachedIds = []
-    .concat(getAttachedMediaForPost(post).map((item) => getMediaAssetId(item)))
-    .concat(
-      String(currentEditingPostId || "").trim() && getPostIdentityValues(post).includes(String(currentEditingPostId || "").trim())
-        ? (currentModalCarouselAssets || []).map((item) => getMediaAssetId(item))
-        : []
-    )
-    .concat(explicitMediaIds)
+  const attachedIds = (isCurrentModalPost
+    ? (currentModalCarouselAssets || []).map((item) => getMediaAssetId(item))
+    : explicitMediaIds
+  )
     .map((value) => String(value || "").trim())
     .filter(Boolean)
     .filter((value, index, list) => list.indexOf(value) === index);
@@ -25954,26 +25992,26 @@ function buildSheetsPostPayload(post) {
   delete payload.pendingMedia;
   delete payload.uploadQueue;
   delete payload.attachedMediaObjects;
+  payload.media_ids = attachedIds.join(",");
+  payload.mediaIds = attachedIds;
+  payload.carousel_asset_ids = attachedIds.join(",");
+  payload.carouselAssetIds = attachedIds;
+  payload.media_id = attachedIds[0] || "";
+  payload.mediaId = attachedIds[0] || "";
+  payload.media_count = attachedIds.length;
   if (attachedIds.length) {
-    payload.media_ids = attachedIds.join(",");
-    payload.mediaIds = attachedIds;
-    payload.carousel_asset_ids = attachedIds.join(",");
-    payload.carouselAssetIds = attachedIds;
-    payload.media_id = attachedIds[0];
-    payload.mediaId = attachedIds[0];
-    payload.media_count = attachedIds.length;
     if (attachedIds.length > 1) {
       payload.format = "carousel";
       payload.postType = "carousel";
       payload.post_type = "carousel";
     }
   } else {
-    if (Array.isArray(payload.media_ids)) {
-      payload.media_ids = payload.media_ids.map(String).filter(Boolean).join(",");
-    }
-    if (Array.isArray(payload.carouselAssetIds)) {
-      payload.carousel_asset_ids = payload.carouselAssetIds.map(String).filter(Boolean).join(",");
-    }
+    payload.media_ids = "";
+    payload.mediaIds = [];
+    payload.carousel_asset_ids = "";
+    payload.carouselAssetIds = [];
+    payload.media_id = "";
+    payload.mediaId = "";
   }
   console.log("[sheets-payload] cleaned save payload", {
     post_id: payload.post_id,
@@ -38777,4 +38815,5 @@ window.confirmMondayBackfill = confirmMondayBackfill;
 window.runMondayBackfill = runMondayBackfill;
 
 </script>
-</bo
+</body>
+</html>
