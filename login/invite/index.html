@@ -1062,7 +1062,7 @@ video {
                 <h1 class="text-3xl md:text-4xl font-extrabold text-white leading-tight mb-3" id="workspaceName" vid="22">your StellarSync workspace</h1>
                 <div class="flex items-center gap-2 text-sm text-gray-500" vid="23">
                     <i class="ph ph-user-circle-plus" vid="24"></i>
-                    <span id="inviteMeta" vid="25">by the workspace admin</span>
+                    <span id="inviteMeta" vid="25">Sign in or create your password to continue</span>
                 </div>
                 <p id="inviteEmailText" class="mt-3 text-xs text-gray-500 max-w-xs" vid="25a">Loading invite details…</p>
             </div>
@@ -1132,7 +1132,7 @@ video {
 
                 <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-500/5 border border-amber-500/10" vid="58">
                     <i class="ph-fill ph-clock-countdown text-amber-500" vid="59"></i>
-                    <span id="inviteExpiry" class="text-[10px] font-bold text-amber-500/80 uppercase tracking-wider" vid="60">Invite expires in 7 days</span>
+                    <span id="inviteExpiry" class="text-[10px] font-bold text-amber-500/80 uppercase tracking-wider" vid="60">Invite link ready</span>
                 </div>
                 
                 <p class="text-[10px] text-gray-600 leading-relaxed max-w-xs mx-auto" vid="61">
@@ -1180,9 +1180,8 @@ video {
             const ACTIVE_WORKSPACE_KEY = "STELLARSYNC_ACTIVE_WORKSPACE";
             const params = new URLSearchParams(window.location.search || "");
             const inviteToken = String(params.get("invite_token") || "").trim();
-            let inviteEmail = String(params.get("email") || "").trim().toLowerCase();
+            const inviteEmail = String(params.get("email") || "").trim().toLowerCase();
             let authMode = "signup";
-            let invitePreviewValid = false;
             let acceptInFlight = false;
             const supabase = window.supabase?.createClient
                 ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
@@ -1198,7 +1197,6 @@ video {
             const passwordInput = document.getElementById("passwordInput");
             const passwordLabel = document.getElementById("passwordLabel");
             const passwordHint = document.getElementById("passwordHint");
-            const termsInput = document.getElementById("terms");
             const submitButton = document.getElementById("submitButton");
             const submitButtonText = document.getElementById("submitButtonText");
             const loginToggleButton = document.getElementById("loginToggleButton");
@@ -1207,14 +1205,6 @@ video {
             const failureCopy = document.getElementById("inviteFailureCopy");
             const statusEl = document.getElementById("inviteStatus");
 
-            function log(label, payload) {
-                if (typeof payload === "undefined") {
-                    console.log(label);
-                    return;
-                }
-                console.log(label, payload);
-            }
-
             function setStatus(message, isError = false) {
                 if (!statusEl) return;
                 statusEl.textContent = message || "";
@@ -1222,64 +1212,24 @@ video {
                 statusEl.classList.toggle("text-gray-500", !isError);
             }
 
-            function clearFailure() {
-                failureBox?.classList.add("hidden");
-                if (failureCopy) failureCopy.textContent = "";
-            }
-
             function showFailure(message) {
                 failureBox?.classList.remove("hidden");
-                if (failureCopy) {
-                    failureCopy.textContent = message || "This invite could not be opened.";
-                }
+                if (failureCopy) failureCopy.textContent = message || "This invite could not be opened.";
                 setStatus("", true);
             }
 
-            function setSubmitting(isSubmitting) {
-                if (submitButton) submitButton.disabled = !!isSubmitting;
-                if (loginToggleButton) loginToggleButton.disabled = !!isSubmitting;
-                if (submitButtonText) {
-                    submitButtonText.textContent = isSubmitting
-                        ? (authMode === "login" ? "Signing In..." : "Creating Account...")
-                        : (authMode === "login" ? "Log In To Workspace" : "Enter Workspace");
-                }
-            }
-
-            function formatExpiry(expiresAt) {
-                if (!expiresAt) return "Invite expires soon";
-                const date = new Date(expiresAt);
-                if (Number.isNaN(date.getTime())) return "Invite expires soon";
-                return "Invite expires " + date.toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric"
-                });
+            function clearFailure() {
+                failureBox?.classList.add("hidden");
             }
 
             function getAppRedirect(result) {
-                const workspaceSlug = String(result?.workspace_slug || "").trim();
-                const workspaceId = String(result?.workspace_id || "").trim();
-                if (workspaceSlug) {
-                    return "/app/index.html?workspace=" + encodeURIComponent(workspaceSlug);
+                if (result?.workspace_slug) {
+                    return "/app/index.html?workspace=" + encodeURIComponent(result.workspace_slug);
                 }
-                if (workspaceId) {
-                    return "/app/index.html?workspace_id=" + encodeURIComponent(workspaceId);
+                if (result?.workspace_id) {
+                    return "/app/index.html?workspace_id=" + encodeURIComponent(result.workspace_id);
                 }
-                throw new Error("Invite accepted but workspace routing is missing.");
-            }
-
-            function storeActiveWorkspace(result) {
-                const workspaceId = String(result?.workspace_id || "").trim();
-                const workspaceSlug = String(result?.workspace_slug || "").trim();
-                const workspaceName = String(result?.workspace_name || workspaceSlug || workspaceId || "").trim();
-                if (!workspaceId && !workspaceSlug) return;
-                try {
-                    sessionStorage.setItem(ACTIVE_WORKSPACE_KEY, JSON.stringify({
-                        id: workspaceId,
-                        slug: workspaceSlug,
-                        name: workspaceName
-                    }));
-                } catch (_) {}
+                return "/app/index.html";
             }
 
             function setMode(mode) {
@@ -1288,31 +1238,20 @@ video {
                 if (nameField) nameField.classList.toggle("hidden", isLogin);
                 if (nameInput) nameInput.required = !isLogin;
                 if (passwordLabel) passwordLabel.textContent = isLogin ? "Password" : "Create Password";
-                if (passwordHint) {
-                    passwordHint.textContent = isLogin
-                        ? "Use the password already attached to this email."
-                        : "At least 8 characters";
-                }
-                if (submitButtonText) {
-                    submitButtonText.textContent = isLogin ? "Log In To Workspace" : "Enter Workspace";
-                }
-                if (loginToggleText) {
-                    loginToggleText.textContent = isLogin ? "Create Account Instead" : "Log In Instead";
-                }
-                setStatus(isLogin
-                    ? "Sign in with the invited email to accept this workspace invite."
-                    : "Create your password to accept this workspace invite.");
+                if (passwordHint) passwordHint.textContent = isLogin ? "Use the password already attached to this email." : "At least 8 characters";
+                if (submitButtonText) submitButtonText.textContent = isLogin ? "Log In To Workspace" : "Enter Workspace";
+                if (loginToggleText) loginToggleText.textContent = isLogin ? "Create Account Instead" : "Log In Instead";
             }
 
             async function callWorkspaceMembers(payload, accessToken) {
-                const headers = {
-                    "Content-Type": "application/json",
-                    apikey: SUPABASE_ANON_KEY
-                };
-                if (accessToken) headers.Authorization = "Bearer " + accessToken;
+                const token = accessToken || SUPABASE_ANON_KEY;
                 const response = await fetch(EDGE_URL, {
                     method: "POST",
-                    headers,
+                    headers: {
+                        "Content-Type": "application/json",
+                        "apikey": SUPABASE_ANON_KEY,
+                        "Authorization": "Bearer " + token
+                    },
                     body: JSON.stringify(payload)
                 });
                 const data = await response.json().catch(() => ({}));
@@ -1320,49 +1259,6 @@ video {
                     throw new Error(data?.error || data?.message || ("Invite request failed (" + response.status + ")"));
                 }
                 return data;
-            }
-
-            async function previewInvite() {
-                if (!inviteToken) {
-                    showFailure("Invite token missing. Ask your workspace admin to send a fresh invite.");
-                    return;
-                }
-                setStatus("Loading your invite...");
-                try {
-                    const result = await callWorkspaceMembers({
-                        action: "preview_invite",
-                        invite_token: inviteToken
-                    });
-                    const invite = result?.invite || {};
-                    const workspaceName = String(invite.workspace_name || "").trim() || "your StellarSync workspace";
-                    const inviterEmail = String(invite.inviter_email || invite.admin_email || "").trim();
-                    const role = String(invite.role || "member").trim();
-                    inviteEmail = String(invite.email || inviteEmail || "").trim().toLowerCase();
-                    invitePreviewValid = true;
-                    clearFailure();
-                    if (workspaceNameEl) workspaceNameEl.textContent = workspaceName;
-                    if (inviteMetaEl) {
-                        inviteMetaEl.textContent = inviterEmail ? "by " + inviterEmail : "by the workspace admin";
-                    }
-                    if (inviteEmailTextEl) {
-                        inviteEmailTextEl.textContent = inviteEmail
-                            ? "Invited email: " + inviteEmail
-                            : "Your invite is ready to accept.";
-                    }
-                    if (inviteExpiryEl) {
-                        inviteExpiryEl.textContent = formatExpiry(invite.expires_at);
-                    }
-                    setStatus("Create your password or log in to continue.");
-                    log("[invite-page] invite loaded", {
-                        workspace_name: workspaceName,
-                        workspace_slug: invite.workspace_slug || "",
-                        invited_email: inviteEmail,
-                        role
-                    });
-                } catch (err) {
-                    console.error("[invite-page] error", err);
-                    showFailure(err?.message || "Could not load invite.");
-                }
             }
 
             async function acceptInvite(session) {
@@ -1375,25 +1271,28 @@ video {
                         action: "accept_invite",
                         invite_token: inviteToken
                     }, session.access_token);
-                    log("[invite-page] invite accepted", {
-                        workspace_slug: result?.workspace_slug || "",
-                        workspace_id: result?.workspace_id || ""
-                    });
-                    storeActiveWorkspace(result);
-                    const redirectUrl = getAppRedirect(result);
-                    log("[invite-page] redirect workspace", redirectUrl);
-                    window.location.replace(redirectUrl);
+                    try {
+                        sessionStorage.setItem(ACTIVE_WORKSPACE_KEY, JSON.stringify({
+                            id: String(result?.workspace_id || "").trim(),
+                            slug: String(result?.workspace_slug || "").trim(),
+                            name: String(result?.workspace_name || result?.workspace_slug || result?.workspace_id || "").trim()
+                        }));
+                    } catch (_) {}
+                    window.location.replace(getAppRedirect(result));
                 } catch (err) {
                     acceptInFlight = false;
-                    console.error("[invite-page] error", err);
                     showFailure(err?.message || "Invite acceptance failed.");
                 }
             }
 
             async function handleSubmit(event) {
                 event.preventDefault();
-                if (!invitePreviewValid) {
-                    showFailure("This invite is not ready yet. Reload and try again.");
+                if (!inviteToken) {
+                    showFailure("Invite token missing. Ask your workspace admin to send a fresh invite.");
+                    return;
+                }
+                if (!inviteEmail) {
+                    showFailure("Invite email missing. Ask your workspace admin to resend the invite.");
                     return;
                 }
                 if (!supabase) {
@@ -1402,19 +1301,15 @@ video {
                 }
                 const password = String(passwordInput?.value || "");
                 const fullName = String(nameInput?.value || "").trim();
-                if (!inviteEmail) {
-                    showFailure("Invite email missing. Ask your workspace admin to resend the invite.");
-                    return;
-                }
                 if (!password || password.length < 8) {
                     showFailure("Use a password with at least 8 characters.");
                     return;
                 }
                 clearFailure();
-                setSubmitting(true);
+                submitButton.disabled = true;
+                setStatus(authMode === "login" ? "Signing you in..." : "Creating your account...");
                 try {
                     if (authMode === "login") {
-                        setStatus("Signing you in...");
                         const { data, error } = await supabase.auth.signInWithPassword({
                             email: inviteEmail,
                             password
@@ -1423,7 +1318,6 @@ video {
                         await acceptInvite(data?.session);
                         return;
                     }
-                    setStatus("Creating your account...");
                     const { data, error } = await supabase.auth.signUp({
                         email: inviteEmail,
                         password,
@@ -1435,10 +1329,6 @@ video {
                         }
                     });
                     if (error) throw error;
-                    log("[invite-page] account created", {
-                        invited_email: inviteEmail,
-                        user_id: data?.user?.id || ""
-                    });
                     if (data?.session) {
                         await acceptInvite(data.session);
                         return;
@@ -1451,32 +1341,38 @@ video {
                         await acceptInvite(signInResult.data.session);
                         return;
                     }
-                    setStatus("Account created. If email confirmation is required, confirm it and reopen this invite.", false);
+                    setStatus("Account created. Confirm your email if required, then reopen this invite.");
                 } catch (err) {
-                    console.error("[invite-page] error", err);
                     showFailure(err?.message || "Could not continue with this invite.");
                 } finally {
-                    setSubmitting(false);
+                    submitButton.disabled = false;
                 }
             }
 
-            async function boot() {
-                log("[invite-page] token found", {
-                    has_token: !!inviteToken,
-                    email: inviteEmail || ""
-                });
+            function boot() {
                 setMode("signup");
-                await previewInvite();
-                if (!invitePreviewValid) return;
+                if (workspaceNameEl) workspaceNameEl.textContent = "your StellarSync workspace";
+                if (inviteMetaEl) inviteMetaEl.textContent = "Sign in or create your password to continue";
+                if (inviteEmailTextEl) {
+                    inviteEmailTextEl.textContent = inviteEmail
+                        ? "Invited email: " + inviteEmail
+                        : "Use the invited email to accept this workspace invite.";
+                }
+                if (inviteExpiryEl) inviteExpiryEl.textContent = "Invite token ready";
+                if (!inviteToken) {
+                    showFailure("Invite token missing. Ask your workspace admin to send a fresh invite.");
+                    return;
+                }
                 if (!supabase) {
                     showFailure("Supabase is not configured for invite acceptance.");
                     return;
                 }
-                const { data } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
-                if (data?.session) {
-                    await acceptInvite(data.session);
-                }
-                supabase.auth.onAuthStateChange(async function (event, session) {
+                setStatus("Sign in or create your password to accept this invite.");
+                supabase.auth.getSession().then(function(result) {
+                    const session = result?.data?.session || null;
+                    if (session) return acceptInvite(session);
+                }).catch(function() {});
+                supabase.auth.onAuthStateChange(async function(event, session) {
                     if (event === "SIGNED_IN" && session) {
                         await acceptInvite(session);
                     }
@@ -1484,10 +1380,9 @@ video {
             }
 
             inviteForm?.addEventListener("submit", handleSubmit);
-            loginToggleButton?.addEventListener("click", function () {
+            loginToggleButton?.addEventListener("click", function() {
                 setMode(authMode === "login" ? "signup" : "login");
             });
-
             boot();
         })();
     </script>
