@@ -4236,6 +4236,16 @@
                   </div>
                 
                   <div class="flex-1 flex flex-col">
+                    <div class="mb-3 rounded-2xl border border-white/5 bg-[#0f0a18] p-3">
+                      <div class="flex items-start justify-between gap-3 flex-wrap">
+                        <label for="modal-media-url" class="block text-[10px] uppercase font-bold tracking-widest text-gray-500">Media URL</label>
+                        <div class="flex items-center gap-2 flex-wrap">
+                          <button id="modal-media-url-copy-btn" type="button" class="px-2.5 py-1 rounded-lg bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 hover:text-white transition-colors">Copy</button>
+                          <button id="modal-media-url-open-btn" type="button" class="px-2.5 py-1 rounded-lg bg-[#181125] border border-white/5 text-[10px] uppercase tracking-wider font-bold text-gray-300 hover:text-white transition-colors">Open Media</button>
+                        </div>
+                      </div>
+                      <input id="modal-media-url" type="url" class="form-input mt-2 text-xs font-medium break-all" placeholder="No media linked" autocomplete="off" spellcheck="false">
+                    </div>
                     <div class="flex justify-between items-center mb-2">
                       <label class="block text-[10px] uppercase font-bold tracking-widest text-gray-500">Caption / Description</label>
                       <div class="flex gap-2">
@@ -9444,6 +9454,87 @@ function getPostAssets(post) {
   return getAttachedMediaForPost(post).filter((item) => item && typeof item === "object").map((asset) => normalizeRemoteMedia(asset));
 }
 
+function resolveSupabasePublicMediaUrl(storagePath, bucket = "media") {
+  const path = String(storagePath || "").trim().replace(/^\/+/, "");
+  if (!path || !SUPABASE_URL) return "";
+  return `${String(SUPABASE_URL).replace(/\/+$/, "")}/storage/v1/object/public/${encodeURIComponent(bucket)}/${encodeURI(path)}`;
+}
+
+function normalizePersistentMediaUrl(url, options = {}) {
+  const raw = String(url || "").trim();
+  if (!raw) return "";
+  const lower = raw.toLowerCase();
+  if (lower.startsWith("blob:") || lower.startsWith("data:") || lower.startsWith("file:") || lower.startsWith("javascript:")) return "";
+  if (lower.includes("/storage/v1/object/sign/") && !options.allowSignedUrl) return "";
+  return raw;
+}
+
+function hasOwnMediaField(source, key) {
+  return !!source && typeof source === "object" && Object.prototype.hasOwnProperty.call(source, key);
+}
+
+function getCanonicalMediaUrl(assetOrPost, options = {}) {
+  const source = assetOrPost && typeof assetOrPost === "object" ? assetOrPost : {};
+  if (
+    options.respectExplicitEmpty &&
+    (
+      (hasOwnMediaField(source, "media_url") && !String(source.media_url || "").trim()) ||
+      (hasOwnMediaField(source, "mediaUrl") && !String(source.mediaUrl || "").trim())
+    )
+  ) {
+    return "";
+  }
+  const storagePath = String(source.storage_path || source.storagePath || "").trim();
+  const publicUrl = storagePath ? resolveSupabasePublicMediaUrl(storagePath, source.bucket || "media") : "";
+  const candidates = [
+    source.media_url,
+    source.mediaUrl,
+    publicUrl,
+    source.file_url,
+    source.fileUrl,
+    source.url,
+    source.source_url,
+    source.sourceUrl
+  ];
+  for (const candidate of candidates) {
+    const normalized = normalizePersistentMediaUrl(candidate, options);
+    if (normalized) return normalized;
+  }
+  return "";
+}
+
+function getCanonicalMediaFields(post, mediaItems = appState.media || []) {
+  const attached = getAttachedMediaForPost(post, mediaItems);
+  const normalizedAssets = attached
+    .filter((asset) => asset && typeof asset === "object")
+    .map((asset) => normalizeRemoteMedia(asset));
+  const ids = normalizedAssets.map((asset) => getMediaAssetId(asset) || getMediaDedupeKey(asset)).filter(Boolean);
+  const urls = normalizedAssets.map((asset) => getCanonicalMediaUrl(asset)).filter(Boolean);
+  const fallbackUrl = ids.length ? "" : getCanonicalMediaUrl(post, { respectExplicitEmpty: true });
+  const firstAsset = normalizedAssets[0] || null;
+  const mediaUrl = urls[0] || fallbackUrl || "";
+  const mediaUrls = urls.length ? urls : (fallbackUrl ? [fallbackUrl] : []);
+  const storagePath = firstAsset
+    ? String(firstAsset.storage_path || firstAsset.storagePath || "").trim()
+    : (ids.length ? "" : String(post.storage_path || post.storagePath || "").trim());
+  const mediaId = ids[0] || (ids.length ? "" : String(post.media_id || post.mediaId || "").trim());
+  console.log("[media-url] resolved", {
+    postId: getCanonicalPostId(post || {}) || getPostLookupId(post || {}) || "",
+    mediaId,
+    mediaUrl,
+    source: urls[0] ? "attached_asset" : fallbackUrl ? "post_field" : "empty"
+  });
+  return {
+    attachedAssets: normalizedAssets,
+    mediaId,
+    mediaIds: ids,
+    mediaUrl,
+    mediaUrls,
+    storagePath,
+    firstAsset
+  };
+}
+
 function buildMediaCardLink(asset) {
   const id = getMediaAssetId(asset);
   const workspace = getCurrentWorkspaceSlug() || "gpe";
@@ -9466,6 +9557,7 @@ function buildMondayPayloadForPost(post, fallback = {}) {
   const platforms = getPostTargetPlatforms(normalized);
   const campaignName = normalized.campaignName || normalized.campaign_name || source.campaignName || source.campaign_name || source.campaign || backup.campaignName || backup.campaign_name || "";
   const scheduledAt = normalized.scheduledAt || normalized.scheduled_at || normalized.date || source.scheduledAt || source.scheduled_at || source.date || backup.scheduledAt || backup.scheduled_at || backup.date || "";
+  const canonicalMedia = getCanonicalMediaFields(normalized, appState.media || []);
   const mondayMediaLinks = getPostMondayMediaLinks(normalized);
   return {
     ...normalized,
@@ -9492,8 +9584,10 @@ function buildMondayPayloadForPost(post, fallback = {}) {
     publishedUrl: normalized.publishedUrl || normalized.published_url || source.publishedUrl || source.published_url || "",
     media_link: mondayMediaLinks,
     media_links: mondayMediaLinks,
-    media_url: mondayMediaLinks || normalized.mediaUrl || normalized.media_url || source.media_url || source.mediaUrl || "",
-    mediaUrl: mondayMediaLinks || normalized.mediaUrl || normalized.media_url || source.mediaUrl || source.media_url || "",
+    media_url: canonicalMedia.mediaUrl || normalized.mediaUrl || normalized.media_url || source.media_url || source.mediaUrl || "",
+    mediaUrl: canonicalMedia.mediaUrl || normalized.mediaUrl || normalized.media_url || source.mediaUrl || source.media_url || "",
+    media_urls: canonicalMedia.mediaUrls,
+    mediaUrls: canonicalMedia.mediaUrls,
     monday_item_id: normalized.mondayItemId || normalized.monday_item_id || source.monday_item_id || source.mondayItemId || "",
     mondayItemId: normalized.mondayItemId || normalized.monday_item_id || source.mondayItemId || source.monday_item_id || ""
   };
@@ -9887,15 +9981,24 @@ function derivePostFormatFromMedia(post, mediaItems = appState.media || []) {
 }
 
 function applyDerivedPostMediaFormat(post, mediaItems = appState.media || []) {
-  const attached = getAttachedMediaForPost(post, mediaItems);
-  const ids = attached.map((asset) => getMediaDedupeKey(asset)).filter(Boolean);
-  const normalizedAssets = attached.filter((asset) => asset && typeof asset === "object").map((asset) => normalizeRemoteMedia(asset));
+  const canonicalMedia = getCanonicalMediaFields(post, mediaItems);
+  const ids = canonicalMedia.mediaIds;
+  const normalizedAssets = canonicalMedia.attachedAssets;
   const derived = derivePostFormatFromMedia({ ...post, media_ids: ids, carouselAssetIds: ids, carouselAssets: normalizedAssets }, mediaItems);
   return {
     ...post,
+    media_id: canonicalMedia.mediaId,
+    mediaId: canonicalMedia.mediaId,
     media_ids: ids,
     mediaIds: ids,
+    media_url: canonicalMedia.mediaUrl,
+    mediaUrl: canonicalMedia.mediaUrl,
+    media_urls: canonicalMedia.mediaUrls,
+    mediaUrls: canonicalMedia.mediaUrls,
+    storage_path: canonicalMedia.storagePath,
+    storagePath: canonicalMedia.storagePath,
     carouselAssetIds: ids,
+    carousel_asset_ids: ids,
     carouselAssets: normalizedAssets,
     post_type: derived.post_type,
     postType: derived.postType,
@@ -11667,6 +11770,9 @@ const mediaLinkBtn = document.getElementById("media-link-btn");
 const modalMediaUploadTrigger = document.getElementById("modal-media-upload-trigger");
 const modalMediaUploadInput = document.getElementById("modal-media-upload-input");
 const modalMediaStatus = document.getElementById("modal-media-status");
+const modalMediaUrlInput = document.getElementById("modal-media-url");
+const modalMediaUrlCopyBtn = document.getElementById("modal-media-url-copy-btn");
+const modalMediaUrlOpenBtn = document.getElementById("modal-media-url-open-btn");
 
 const mediaLinkModal = document.getElementById("media-link-modal");
 const mediaLinkModalCard = document.getElementById("media-link-modal-card");
@@ -12285,6 +12391,81 @@ function toggleSidePanel(name) {
   }
 }
 
+const initializedViews = new Set();
+const dirtyViews = new Set(["calendar", "ledger", "media", "inspo", "notes", "write-idea", "performance", "audit", "constellation"]);
+let deferredBootControlsInitialized = false;
+
+function markViewDirty(viewName) {
+  const name = String(viewName || "").trim();
+  if (name) dirtyViews.add(name);
+}
+
+function markNonVisibleViewsDirty(viewNames = []) {
+  (viewNames || []).forEach((name) => {
+    if (String(name || "").trim() && String(currentView || "calendar").trim() !== String(name || "").trim()) {
+      dirtyViews.add(String(name).trim());
+    }
+  });
+}
+
+function renderCurrentVisibleView() {
+  const targetName = String(currentView || "calendar").trim() || "calendar";
+  if (targetName === "calendar") {
+    safeRender(renderCalendar, "renderCurrentVisibleView/calendar");
+    safeRender(renderOverviewPanel, "renderCurrentVisibleView/overview");
+  } else if (targetName === "ledger") {
+    safeRender(renderLedgerFilterMenus, "renderCurrentVisibleView/ledgerFilter");
+    safeRender(updateLedgerFilterLabels, "renderCurrentVisibleView/ledgerLabels");
+    safeRender(() => setLedgerSubView(activeLedgerSubView || "content"), "renderCurrentVisibleView/ledgerSubView");
+  } else if (targetName === "media") {
+    safeRender(renderMedia, "renderCurrentVisibleView/media");
+  } else if (targetName === "inspo") {
+    safeRender(renderInspo, "renderCurrentVisibleView/inspo");
+  } else if (targetName === "notes") {
+    safeRender(renderNotes, "renderCurrentVisibleView/notes");
+  } else if (targetName === "write-idea") {
+    safeRender(renderWriteIdeaScaffold, "renderCurrentVisibleView/writeIdea");
+  } else if (targetName === "performance") {
+    safeRender(renderPerformanceView, "renderCurrentVisibleView/performance");
+  } else if (targetName === "audit") {
+    safeRender(renderAuditView, "renderCurrentVisibleView/audit");
+  } else if (targetName === "constellation") {
+    safeRender(renderConstellation, "renderCurrentVisibleView/constellation");
+  }
+  initializedViews.add(targetName);
+  dirtyViews.delete(targetName);
+}
+
+function renderBootShell() {
+  safeRender(() => updateHeaderForView(currentView), "renderBootShell/header");
+  safeRender(populateCampaignDropdown, "renderBootShell/campaignDropdown");
+  safeRender(setBackendActionAvailability, "renderBootShell/backendActions");
+  safeRender(updateAppStatusBanner, "renderBootShell/statusBanner");
+  safeRender(() => ensureBrandOSDefaults(WORKSPACE_RUNTIME_CONFIG?.active || {}), "renderBootShell/brandDefaults");
+  safeRender(() => renderQueue(getScheduledQueue()), "renderBootShell/queue");
+  safeRender(renderWorkspaceBranding, "renderBootShell/branding");
+  safeRender(applyTierFeatureGates, "renderBootShell/tierGates");
+  safeRender(renderContextualGuidancePanel, "renderBootShell/context");
+}
+
+function initializeDeferredBootControls() {
+  if (deferredBootControlsInitialized) return;
+  deferredBootControlsInitialized = true;
+  guardedCall(setupLedgerControls, "setupLedgerControls");
+  guardedCall(setupMediaFilters, "setupMediaFilters");
+  guardedCall(setupMediaAdvancedFilters, "setupMediaAdvancedFilters");
+  guardedCall(setupMediaUpload, "setupMediaUpload");
+  guardedCall(setupInspoModal, "setupInspoModal");
+  guardedCall(setupNoteModal, "setupNoteModal");
+  guardedCall(setupImportModals, "setupImportModals");
+  guardedCall(setupCampaignControls, "setupCampaignControls");
+  guardedCall(setupConstellationInteractions, "setupConstellationInteractions");
+  guardedCall(setupWriteIdeaWorkspace, "setupWriteIdeaWorkspace");
+  guardedCall(setupAIAndBrandWorkspaces, "setupAIAndBrandWorkspaces");
+  guardedCall(setupStellarAssistant, "setupStellarAssistant");
+  guardedCall(setupSplitPane, "setupSplitPane");
+}
+
 function rerenderAll() {
   appState.posts = normalizePostsForState(appState.posts || [], "normalized");
   auditDuplicatePosts(appState.posts);
@@ -12331,6 +12512,8 @@ function rerenderAll() {
   }, "renderWorkspaceHub");
   safeRender(renderWorkspaceBranding, "renderWorkspaceBranding");
   safeRender(applyTierFeatureGates, "applyTierFeatureGates");
+  initializedViews.add(activeView);
+  dirtyViews.delete(activeView);
 }
 
 function inspoTypeLabel(type) {
@@ -17026,6 +17209,80 @@ function applyLocalMediaOrderToPost(postId, orderedAssets) {
   persistLocalState?.();
 }
 
+function getModalCanonicalMediaState() {
+  return applyDerivedPostMediaFormat(window.__currentModalPostData || {}, appState.media || []);
+}
+
+function resolveManagedMediaAssetForPost(post) {
+  const normalized = applyDerivedPostMediaFormat(post || {}, appState.media || []);
+  const candidates = [
+    normalized.media_id,
+    normalized.mediaId,
+    normalized.asset_id,
+    normalized.assetId,
+    normalized.storage_path,
+    normalized.storagePath,
+    normalized.media_url,
+    normalized.mediaUrl
+  ];
+  for (const candidate of candidates) {
+    const asset = findMediaAssetByAnyKey(candidate, appState.media || []);
+    if (asset) return asset;
+  }
+  return null;
+}
+
+function syncModalMediaUrlControls() {
+  if (!modalMediaUrlInput) return;
+  const modalPost = getModalCanonicalMediaState();
+  const managedAsset = resolveManagedMediaAssetForPost(modalPost);
+  const mediaUrl = String(modalPost.media_url || modalPost.mediaUrl || "").trim();
+  modalMediaUrlInput.value = mediaUrl;
+  modalMediaUrlInput.readOnly = !!managedAsset;
+  modalMediaUrlInput.classList.toggle("opacity-70", !mediaUrl);
+  if (modalMediaUrlOpenBtn) {
+    modalMediaUrlOpenBtn.disabled = !mediaUrl;
+    modalMediaUrlOpenBtn.classList.toggle("opacity-40", !mediaUrl);
+    modalMediaUrlOpenBtn.classList.toggle("pointer-events-none", !mediaUrl);
+    modalMediaUrlOpenBtn.textContent = managedAsset ? "Open Media" : "Open URL";
+  }
+  if (modalMediaUrlCopyBtn) {
+    modalMediaUrlCopyBtn.disabled = !mediaUrl;
+    modalMediaUrlCopyBtn.classList.toggle("opacity-40", !mediaUrl);
+  }
+}
+
+async function copyModalMediaUrl() {
+  const url = String(modalMediaUrlInput?.value || "").trim();
+  if (!url) {
+    showToast("No media URL", "Attach media before copying the canonical URL.", "ph-warning", "text-yellow-400");
+    return;
+  }
+  await copyTextToClipboardWithToast(url, "Copied", "Media URL copied.", "Copy failed", "Could not copy media URL.");
+}
+
+function openMediaFromPostModal() {
+  const modalPost = getModalCanonicalMediaState();
+  const managedAsset = resolveManagedMediaAssetForPost(modalPost);
+  const mediaUrl = String(modalPost.media_url || modalPost.mediaUrl || "").trim();
+  if (managedAsset) {
+    console.log("[media-viewer] opening from post modal", {
+      postId: getCanonicalPostId(modalPost) || "",
+      assetId: getMediaAssetId(managedAsset)
+    });
+    openMediaAssetModal(managedAsset, {
+      items: (currentModalCarouselAssets || []).slice(),
+      openPosts: true
+    });
+    return;
+  }
+  if (mediaUrl) {
+    window.open(mediaUrl, "_blank", "noopener,noreferrer");
+    return;
+  }
+  showToast("No media", "This post does not have a canonical media URL yet.", "ph-warning", "text-yellow-400");
+}
+
 function applyCurrentCarouselOrderToModalPost() {
   const order = getCurrentCarouselOrderPayload();
   currentModalCarouselAssets = order.assets;
@@ -17050,6 +17307,7 @@ function applyCurrentCarouselOrderToModalPost() {
     upsertLocalPostMediaLinks(postId, order.assets);
   }
   if (modalMediaStatus) modalMediaStatus.textContent = order.assets.length ? `${order.assets.length >= 2 ? `Carousel · ${order.assets.length} assets` : renderPostMediaTypeBadge(window.__currentModalPostData || {})} linked` : "No media linked";
+  syncModalMediaUrlControls();
 }
 
 async function attachCurrentCarouselToSupabasePost() {
@@ -25195,6 +25453,12 @@ function renderMediaPostPanel() {
 function closeMediaAssetModal() {
   if (!mediaAssetModal || !mediaAssetModalCard) return;
   console.log("[modal] close media-viewer");
+  mediaAssetModal.querySelectorAll("video").forEach((video) => {
+    try {
+      video.pause();
+      video.removeAttribute("autoplay");
+    } catch (_) {}
+  });
   mediaAssetModal.classList.add("opacity-0", "pointer-events-none");
   mediaAssetModalCard.classList.remove("scale-100");
   mediaAssetModalCard.classList.add("scale-95");
@@ -25606,6 +25870,21 @@ function setupModalControls() {
   if (descInput) {
     descInput.addEventListener("input", renderSocialValidationBadges);
   }
+
+  modalMediaUrlCopyBtn?.addEventListener("click", () => {
+    copyModalMediaUrl().catch((err) => {
+      console.error(err);
+      showToast("Copy failed", err?.message || "Could not copy media URL.", "ph-warning", "text-yellow-400");
+    });
+  });
+  modalMediaUrlOpenBtn?.addEventListener("click", openMediaFromPostModal);
+  modalMediaUrlInput?.addEventListener("input", () => {
+    if (modalMediaUrlInput.readOnly || !window.__currentModalPostData) return;
+    const nextValue = normalizePersistentMediaUrl(modalMediaUrlInput.value, { allowSignedUrl: false });
+    window.__currentModalPostData.media_url = nextValue;
+    window.__currentModalPostData.mediaUrl = nextValue;
+    syncModalMediaUrlControls();
+  });
 }
 
 function getPostModalElement() {
@@ -26081,6 +26360,7 @@ function renderPostModalDeferredSections(matched, token) {
         ? `${linkedAsset.title || linkedAsset.assetName || "Media"} linked`
         : "No media linked";
   }
+  syncModalMediaUrlControls();
   syncModalMediaLayout(currentModalCarouselAssets.length);
   renderModalExistingMediaPicker(currentModalAsset?.assetId || currentModalAsset?.id || "");
   if (modalMediaUploadTrigger) {
@@ -26336,10 +26616,15 @@ function closeModal() {
   if (socialScheduleStatusEl) socialScheduleStatusEl.textContent = "Creates one scheduled_social_posts row per selected platform when saved.";
   const picker = document.getElementById("modal-existing-media-picker");
   if (picker) picker.innerHTML = "";
+  if (modalMediaUrlInput) {
+    modalMediaUrlInput.value = "";
+    modalMediaUrlInput.readOnly = false;
+  }
   hidePostSaveErrorBanner();
   modalAiInlineHelper?.classList.add("hidden");
   syncModalMediaLayout(0);
   renderModalCarouselPreview();
+  syncModalMediaUrlControls();
   updateModalCampaignPreview();
 }
 
@@ -26430,7 +26715,10 @@ function upsertSavedPostIntoAppState(saveResult, fallbackPayload = {}) {
   currentEditingPostId = normalized.id || normalized.postId || normalized.post_id || currentEditingPostId;
   window.__currentModalPostData = normalized;
   persistLocalState();
-  rerenderAll();
+  renderBootShell();
+  markNonVisibleViewsDirty(["calendar", "ledger", "media", "inspo", "notes", "write-idea", "performance", "audit", "constellation"]);
+  renderCurrentVisibleView();
+  syncModalMediaUrlControls();
   return normalized;
 }
 
@@ -26472,7 +26760,7 @@ async function savePostToSheetsAuthority(post) {
 function buildSheetsPostPayload(post) {
   const postId = getCanonicalPostId(post);
   const meta = getWorkspaceRequestMetadata();
-  const payload = {
+  const payload = applyDerivedPostMediaFormat({
     ...post,
     post_id: postId,
     postId,
@@ -26480,7 +26768,7 @@ function buildSheetsPostPayload(post) {
     workspace_id: meta.workspace_id || post.workspace_id || "",
     workspace_slug: getCurrentWorkspaceSlug?.() || "gpe",
     _rowNumber: post._rowNumber || post.row_number || post.rowNumber || post.sheetRow || ""
-  };
+  });
   const activePostId = String(currentEditingPostId || "").trim();
   const isCurrentModalPost =
     activePostId &&
@@ -26513,6 +26801,18 @@ function buildSheetsPostPayload(post) {
   payload.media_id = attachedIds[0] || "";
   payload.mediaId = attachedIds[0] || "";
   payload.media_count = attachedIds.length;
+  const derivedMedia = getCanonicalMediaFields({
+    ...payload,
+    media_ids: attachedIds,
+    mediaId: attachedIds[0] || "",
+    media_id: attachedIds[0] || ""
+  }, appState.media || []);
+  payload.media_url = derivedMedia.mediaUrl;
+  payload.mediaUrl = derivedMedia.mediaUrl;
+  payload.media_urls = derivedMedia.mediaUrls;
+  payload.mediaUrls = derivedMedia.mediaUrls;
+  payload.storage_path = derivedMedia.storagePath;
+  payload.storagePath = derivedMedia.storagePath;
   if (attachedIds.length) {
     if (attachedIds.length > 1) {
       payload.format = "carousel";
@@ -26532,6 +26832,7 @@ function buildSheetsPostPayload(post) {
     postId: payload.postId,
     _rowNumber: payload._rowNumber,
     media_ids: payload.media_ids,
+    media_url: payload.media_url,
     carousel_asset_ids: payload.carousel_asset_ids,
     media_count: payload.media_count || 0
   });
@@ -27283,56 +27584,16 @@ function switchView(viewName) {
 
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      if (targetName === "calendar") {
-        safeRender(renderCalendar, "switchView/calendar");
-        safeRender(renderOverviewPanel, "switchView/overview");
-        return;
+      if (!deferredBootControlsInitialized && targetName !== "calendar") {
+        initializeDeferredBootControls();
       }
-
-      if (targetName === "ledger") {
-        safeRender(renderLedgerFilterMenus, "switchView/ledgerFilter");
-        safeRender(updateLedgerFilterLabels, "switchView/ledgerLabels");
-        safeRender(function() { setLedgerSubView(activeLedgerSubView || "content"); }, "switchView/ledgerSubView");
-        return;
-      }
-
+      renderCurrentVisibleView();
       if (targetName === "media") {
-        safeRender(function() {
-          renderMedia();
-          ensureLazyHybridMediaLoad().catch(function(err) {
-            console.log("[media-backend] load error", err?.message || err);
-          });
-        }, "switchView/media");
-        return;
+        ensureLazyHybridMediaLoad().catch(function(err) {
+          console.log("[media-backend] load error", err?.message || err);
+        });
       }
-
-      if (targetName === "inspo") {
-        safeRender(renderInspo, "switchView/inspo");
-        return;
-      }
-
-      if (targetName === "notes") {
-        safeRender(renderNotes, "switchView/notes");
-        return;
-      }
-
-      if (targetName === "write-idea") {
-        safeRender(renderWriteIdeaScaffold, "switchView/writeIdea");
-        return;
-      }
-
-      if (targetName === "performance") {
-        safeRender(renderPerformanceView, "switchView/performance");
-        return;
-      }
-
-      if (targetName === "audit") {
-        safeRender(renderAuditView, "switchView/audit");
-        return;
-      }
-
       if (targetName === "constellation") {
-        safeRender(renderConstellation, "switchView/constellation");
         safeRender(() => {
           if (constellationFirstOpen) {
             constellationFirstOpen = false;
@@ -31124,58 +31385,60 @@ function generateSupabaseAIDraftId() {
 
 function buildSupabasePostRow(payload = {}) {
   const meta = getWorkspaceRequestMetadata();
-  const postId = getSupabasePostId(payload);
-  const targets = Array.isArray(payload.platforms)
-    ? payload.platforms
-    : Array.isArray(payload.platform_targets)
-      ? payload.platform_targets
-      : Array.isArray(payload.platformTargets)
-        ? payload.platformTargets
-        : String(payload.platform_targets || payload.platformTargets || payload.platform || "")
+  const normalizedPayload = applyDerivedPostMediaFormat(payload, appState.media || []);
+  const canonicalMedia = getCanonicalMediaFields(normalizedPayload, appState.media || []);
+  const postId = getSupabasePostId(normalizedPayload);
+  const targets = Array.isArray(normalizedPayload.platforms)
+    ? normalizedPayload.platforms
+    : Array.isArray(normalizedPayload.platform_targets)
+      ? normalizedPayload.platform_targets
+      : Array.isArray(normalizedPayload.platformTargets)
+        ? normalizedPayload.platformTargets
+        : String(normalizedPayload.platform_targets || normalizedPayload.platformTargets || normalizedPayload.platform || "")
           .split(/[|,\n]/)
           .map((item) => item.trim())
           .filter(Boolean);
   const now = new Date().toISOString();
   return {
-    workspace_id: payload.workspace_id || payload.workspaceId || meta.workspace_id || null,
-    workspace_slug: payload.workspace_slug || meta.workspace_slug || "",
+    workspace_id: normalizedPayload.workspace_id || normalizedPayload.workspaceId || meta.workspace_id || null,
+    workspace_slug: normalizedPayload.workspace_slug || meta.workspace_slug || "",
     post_id: postId,
-    title: payload.title || "",
-    description: payload.description || payload.caption || payload.body || "",
-    status: payload.status || payload.publish_status || "draft",
-    publish_status: payload.publish_status || payload.status || "draft",
-    publish_date: payload.publish_date || payload.publishDate || payload.queueDateLabel || "",
-    publish_time: payload.publish_time || payload.publishTime || payload.queueTimeLabel || "",
-    scheduled_at: payload.scheduled_at || payload.scheduledAt || null,
-    platform: payload.platform || targets[0] || "linkedin",
+    title: normalizedPayload.title || "",
+    description: normalizedPayload.description || normalizedPayload.caption || normalizedPayload.body || "",
+    status: normalizedPayload.status || normalizedPayload.publish_status || "draft",
+    publish_status: normalizedPayload.publish_status || normalizedPayload.status || "draft",
+    publish_date: normalizedPayload.publish_date || normalizedPayload.publishDate || normalizedPayload.queueDateLabel || "",
+    publish_time: normalizedPayload.publish_time || normalizedPayload.publishTime || normalizedPayload.queueTimeLabel || "",
+    scheduled_at: normalizedPayload.scheduled_at || normalizedPayload.scheduledAt || null,
+    platform: normalizedPayload.platform || targets[0] || "linkedin",
     platforms: targets,
     platform_targets: targets,
-    campaign_id: payload.campaignId || payload.campaign_id || "",
-    campaign_name: payload.campaignName || payload.campaign_name || "",
-    pillar: payload.pillar || payload.hubPillarLabel || "",
-    format: payload.format || payload.postType || "",
-    post_type: payload.postType || payload.format || "",
-    media_id: payload.mediaId || payload.media_id || payload.assetId || "",
-    media_ids: Array.isArray(payload.mediaIds)
-      ? payload.mediaIds
-      : String(payload.media_ids || payload.mediaIds || payload.mediaId || payload.media_id || payload.assetId || "")
+    campaign_id: normalizedPayload.campaignId || normalizedPayload.campaign_id || "",
+    campaign_name: normalizedPayload.campaignName || normalizedPayload.campaign_name || "",
+    pillar: normalizedPayload.pillar || normalizedPayload.hubPillarLabel || "",
+    format: normalizedPayload.format || normalizedPayload.postType || "",
+    post_type: normalizedPayload.postType || normalizedPayload.format || "",
+    media_id: canonicalMedia.mediaId || normalizedPayload.assetId || "",
+    media_ids: Array.isArray(normalizedPayload.mediaIds)
+      ? normalizedPayload.mediaIds
+      : String(normalizedPayload.media_ids || normalizedPayload.mediaIds || canonicalMedia.mediaId || normalizedPayload.assetId || "")
         .split(/[|,\n]/)
         .map((item) => item.trim())
         .filter(Boolean),
-    media_url: payload.mediaUrl || payload.media_url || "",
-    media_type: payload.mediaType || payload.media_type || "",
-    media_filename: payload.mediaFilename || payload.media_filename || "",
-    media_alt_text: payload.mediaAltText || payload.media_alt_text || "",
-    storage_path: payload.storagePath || payload.storage_path || "",
-    monday_item_id: payload.monday_item_id || payload.mondayItemId || "",
-    monday_synced_at: payload.monday_synced_at || payload.mondayLastSyncedAt || null,
-    monday_sync_status: payload.mondaySyncStatus || payload.monday_sync_status || "",
-    published_url: payload.publishedUrl || payload.published_url || "",
-    published_at: payload.publishedAt || payload.published_at || null,
-    source_url: payload.sourceUrl || payload.source_url || "",
-    source_platform: payload.sourcePlatform || payload.source_platform || "",
+    media_url: canonicalMedia.mediaUrl,
+    media_type: normalizedPayload.mediaType || normalizedPayload.media_type || "",
+    media_filename: normalizedPayload.mediaFilename || normalizedPayload.media_filename || "",
+    media_alt_text: normalizedPayload.mediaAltText || normalizedPayload.media_alt_text || "",
+    storage_path: canonicalMedia.storagePath || normalizedPayload.storagePath || normalizedPayload.storage_path || "",
+    monday_item_id: normalizedPayload.monday_item_id || normalizedPayload.mondayItemId || "",
+    monday_synced_at: normalizedPayload.monday_synced_at || normalizedPayload.mondayLastSyncedAt || null,
+    monday_sync_status: normalizedPayload.mondaySyncStatus || normalizedPayload.monday_sync_status || "",
+    published_url: normalizedPayload.publishedUrl || normalizedPayload.published_url || "",
+    published_at: normalizedPayload.publishedAt || normalizedPayload.published_at || null,
+    source_url: normalizedPayload.sourceUrl || normalizedPayload.source_url || "",
+    source_platform: normalizedPayload.sourcePlatform || normalizedPayload.source_platform || "",
     updated_at: now,
-    created_at: payload.created_at || now
+    created_at: normalizedPayload.created_at || now
   };
 }
 
@@ -37499,9 +37762,8 @@ function queueBootLazyHydration() {
     await hydrateSelectedWorkspaceConnections().catch(function(err) {
       reportFrontendError("boot/hydrateSelectedWorkspaceConnections", err);
     });
-    if (typeof rerenderAll === "function") {
-      rerenderAll();
-    }
+    renderBootShell();
+    renderCurrentVisibleView();
     if (typeof loadProfileSettingsForUser === "function" && STELLARSYNC_AUTH_USER?.id) {
       try {
         const hydratedUser = await loadProfileSettingsForUser(STELLARSYNC_AUTH_USER);
@@ -37543,6 +37805,13 @@ function queueBootLazyHydration() {
         );
       });
     }
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(function() {
+        initializeDeferredBootControls();
+      });
+    } else {
+      initializeDeferredBootControls();
+    }
     try { console.timeEnd("[boot] lazy-hydration"); } catch (_) {}
   }, STELLARSYNC_IS_MOBILE_BOOT ? 250 : 150);
 }
@@ -37559,44 +37828,30 @@ function initApp() {
   versionEl && (versionEl.textContent = "Frontend " + APP_FRONTEND_VERSION + " · SW " + APP_SERVICE_WORKER_VERSION);
 
   console.time("[boot] first-paint");
-  guardedCall(seedStars, "seedStars");
+  if (STELLARSYNC_IS_MOBILE_BOOT || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    queueAfterFirstPaint("boot/seedStars", function() {
+      guardedCall(seedStars, "seedStars");
+    }, 400);
+  } else {
+    guardedCall(seedStars, "seedStars");
+  }
   guardedCall(cleanInvalidImportantToken, "cleanInvalidImportantToken");
 
   guardedCall(setupWorkspaceUI, "setupWorkspaceUI");
   console.log("[boot] setupWorkspaceUI done");
   if (STELLARSYNC_DEBUG) guardedCall(auditClickableOverlays, "auditClickableOverlays");
   guardedCall(setupCalendarControls, "setupCalendarControls");
-  guardedCall(setupLedgerControls, "setupLedgerControls");
-  guardedCall(setupMediaFilters, "setupMediaFilters");
-  guardedCall(setupMediaAdvancedFilters, "setupMediaAdvancedFilters");
-  guardedCall(setupMediaUpload, "setupMediaUpload");
   guardedCall(setupMediaLinkModal, "setupMediaLinkModal");
   guardedCall(setupModalControls, "setupModalControls");
   guardedCall(setupModalMediaUpload, "setupModalMediaUpload");
-  guardedCall(setupInspoModal, "setupInspoModal");
-  guardedCall(setupNoteModal, "setupNoteModal");
-  guardedCall(setupImportModals, "setupImportModals");
-  guardedCall(setupCampaignControls, "setupCampaignControls");
-  guardedCall(setupConstellationInteractions, "setupConstellationInteractions");
-  guardedCall(setupWriteIdeaWorkspace, "setupWriteIdeaWorkspace");
-  guardedCall(setupAIAndBrandWorkspaces, "setupAIAndBrandWorkspaces");
-  guardedCall(setupStellarAssistant, "setupStellarAssistant");
   guardedCall(setupPWAInstall, "setupPWAInstall");
-
-  guardedCall(setupSplitPane, "setupSplitPane");
   guardedCall(applyShellLayout, "applyShellLayout");
 
-  console.log("[boot] switchView calendar start");
-  guardedCall(renderCalendar, "renderCalendar");
+  currentView = "calendar";
+  renderBootShell();
   guardedCall(switchView, "switchView", "calendar");
   guardedCall(handleSocialAuthReturn, "handleSocialAuthReturn");
   guardedCall(updateHybridManualButtons, "updateHybridManualButtons");
-  guardedCall(renderWorkspaceBranding, "renderWorkspaceBranding");
-  if (!STELLARSYNC_IS_MOBILE_BOOT) {
-    console.log("[boot] rerenderAll start");
-    guardedCall(rerenderAll, "rerenderAll");
-    console.log("[boot] rerenderAll done");
-  }
   queueAfterFirstPaint("boot/registerServiceWorkerSafe", function() {
     guardedCall(registerServiceWorkerSafe, "registerServiceWorkerSafe");
   }, STELLARSYNC_IS_MOBILE_BOOT ? 350 : 150);

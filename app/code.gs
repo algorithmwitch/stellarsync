@@ -4400,6 +4400,52 @@ function getWorkspaceServerConfig_(payload) {
   };
 }
 
+function hasOwnProp_(obj, key) {
+  return !!obj && Object.prototype.hasOwnProperty.call(obj, key);
+}
+
+function normalizePersistentMediaUrl_(value) {
+  var raw = String(value || "").trim();
+  if (!raw) return "";
+  var lower = raw.toLowerCase();
+  if (lower.indexOf("blob:") === 0 || lower.indexOf("data:") === 0 || lower.indexOf("file:") === 0 || lower.indexOf("javascript:") === 0) return "";
+  if (lower.indexOf("/storage/v1/object/sign/") !== -1) return "";
+  return raw;
+}
+
+function getCanonicalMediaUrlValue_(payload, existing) {
+  payload = payload || {};
+  existing = existing || {};
+  var explicitPayloadValue = "";
+  if (hasOwnProp_(payload, "media_url")) explicitPayloadValue = String(payload.media_url || "").trim();
+  else if (hasOwnProp_(payload, "mediaUrl")) explicitPayloadValue = String(payload.mediaUrl || "").trim();
+  var explicitExistingValue = "";
+  if (hasOwnProp_(existing, "media_url")) explicitExistingValue = String(existing.media_url || "").trim();
+  else if (hasOwnProp_(existing, "mediaUrl")) explicitExistingValue = String(existing.mediaUrl || "").trim();
+  if (explicitPayloadValue === "") {
+    if (hasOwnProp_(payload, "media_url") || hasOwnProp_(payload, "mediaUrl")) return "";
+  }
+  var candidates = [
+    explicitPayloadValue,
+    payload.file_url,
+    payload.fileUrl,
+    payload.url,
+    payload.source_url,
+    payload.sourceUrl,
+    explicitExistingValue,
+    existing.file_url,
+    existing.fileUrl,
+    existing.url,
+    existing.source_url,
+    existing.sourceUrl
+  ];
+  for (var i = 0; i < candidates.length; i += 1) {
+    var normalized = normalizePersistentMediaUrl_(candidates[i]);
+    if (normalized) return normalized;
+  }
+  return "";
+}
+
 function normalizeWorkspacePostFields_(payload, existing) {
   payload = payload || {};
   existing = existing || {};
@@ -4407,7 +4453,7 @@ function normalizeWorkspacePostFields_(payload, existing) {
   return {
     workspace_id: String(pickFirstDefined_(payload.workspace_id, payload.workspaceId, existing.workspace_id, existing.workspaceId, workspaceConfig.WORKSPACE_ID)).trim(),
     media_id: String(pickFirstDefined_(payload.media_id, payload.mediaId, existing.media_id, existing.mediaId, "")).trim(),
-    media_url: String(pickFirstDefined_(payload.media_url, payload.mediaUrl, existing.media_url, existing.mediaUrl, "")).trim(),
+    media_url: getCanonicalMediaUrlValue_(payload, existing),
     media_type: String(pickFirstDefined_(payload.media_type, payload.mediaType, existing.media_type, existing.mediaType, "")).trim(),
     media_filename: String(pickFirstDefined_(payload.media_filename, payload.mediaFilename, existing.media_filename, existing.mediaFilename, "")).trim(),
     media_alt_text: String(pickFirstDefined_(payload.media_alt_text, payload.mediaAltText, existing.media_alt_text, existing.mediaAltText, "")).trim(),
