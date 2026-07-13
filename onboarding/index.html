@@ -2139,6 +2139,65 @@ video {
         const SUPABASE_URL = "https://szdlvyzjeqkfxsoqltwg.supabase.co";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN6ZGx2eXpqZXFrZnhzb3FsdHdnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyOTE1NjcsImV4cCI6MjA5Njg2NzU2N30.9GT0oJqPcmrc9VSb-ZN0FtWy6i7SLTHBuzRQ9gvxnX0";
 
+        function getSafeInternalReturnPath(value) {
+            var raw = String(value || "").trim();
+            if (!raw || raw.indexOf("//") === 0) return "";
+            if (/^[a-z][a-z0-9+.-]*:/i.test(raw)) return "";
+            if (raw.charAt(0) !== "/") return "";
+            if (raw === "/login" || raw.indexOf("/login/") === 0) return "";
+            return raw;
+        }
+
+        function buildLoginUrl(returnTo) {
+            var safeReturn = getSafeInternalReturnPath(returnTo);
+            var params = new URLSearchParams();
+            if (safeReturn) params.set("returnTo", safeReturn);
+            var query = params.toString();
+            return "/login/" + (query ? "?" + query : "");
+        }
+
+        function getOnboardingReturnTarget() {
+            var params = new URLSearchParams(window.location.search || "");
+            return getSafeInternalReturnPath(
+                params.get("returnTo") ||
+                params.get("redirectTo") ||
+                params.get("redirect") ||
+                params.get("next") ||
+                params.get("return_url") ||
+                "/app/load.html"
+            );
+        }
+
+        async function guardOnboardingAuth() {
+            if (!window.supabase || !SUPABASE_URL || !SUPABASE_ANON_KEY) return;
+            var params = new URLSearchParams(window.location.search || "");
+            var explicitCreate = params.get("create") === "1" || params.get("new_workspace") === "1";
+            var client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            var sessionResult = await client.auth.getSession();
+            var session = sessionResult && sessionResult.data && sessionResult.data.session;
+            if (!session) {
+                window.location.replace(buildLoginUrl("/onboarding/"));
+                return;
+            }
+            if (explicitCreate) return;
+            var memberships = await client
+                .from("workspace_members")
+                .select("workspace_id")
+                .eq("user_id", session.user.id)
+                .limit(1);
+            if (memberships.error) {
+                console.warn("[onboarding] membership guard skipped", memberships.error.message || memberships.error);
+                return;
+            }
+            if ((memberships.data || []).length > 0) {
+                window.location.replace(getOnboardingReturnTarget());
+            }
+        }
+
+        guardOnboardingAuth().catch(function(error) {
+            console.warn("[onboarding] auth guard failed", error && error.message ? error.message : error);
+        });
+
         function goToStage(stage) {
             document.querySelectorAll('.stage-container').forEach(s => s.classList.remove('active'));
             const targetStage = document.getElementById(`stage-${stage}`);
