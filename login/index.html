@@ -1029,6 +1029,26 @@ video {
           const hasInvite = !!inviteToken;
           let loginInFlight = false;
 
+          function getSafeInternalReturnPath(value) {
+            var raw = String(value || "").trim();
+            if (!raw || raw.indexOf("//") === 0) return "";
+            if (/^[a-z][a-z0-9+.-]*:/i.test(raw)) return "";
+            if (raw.charAt(0) !== "/") return "";
+            if (raw === "/login" || raw.indexOf("/login/") === 0) return "";
+            return raw;
+          }
+
+          function getLoginReturnTarget() {
+            return getSafeInternalReturnPath(
+              params.get("returnTo") ||
+              params.get("redirectTo") ||
+              params.get("redirect") ||
+              params.get("next") ||
+              params.get("return_url") ||
+              ""
+            );
+          }
+
           function buildInviteQuery() {
             const inviteParams = new URLSearchParams();
             if (inviteToken) inviteParams.set("invite_token", inviteToken);
@@ -1116,6 +1136,11 @@ video {
               if (hasInvite) {
                 var inviteTarget = "/login/invite/" + (buildInviteQuery() ? "?" + buildInviteQuery() : "");
                 window.location.assign(inviteTarget);
+                return;
+              }
+              var returnTarget = getLoginReturnTarget();
+              if (returnTarget) {
+                window.location.assign(returnTarget);
                 return;
               }
               window.location.assign("/app/load.html");
