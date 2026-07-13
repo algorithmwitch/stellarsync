@@ -2,7 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { AppProviders } from "@/app/providers";
 import { AppRouter } from "@/app/router";
-import "@/styles/global.css";
+import "@/styles/index.css";
 
 const pendingRedirect = sessionStorage.getItem("stellarsync_app_react_redirect");
 if (pendingRedirect && window.location.pathname === "/app-react/") {

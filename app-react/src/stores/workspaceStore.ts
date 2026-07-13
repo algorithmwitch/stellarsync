@@ -6,6 +6,7 @@ type WorkspaceState = {
   activeWorkspace: WorkspaceMembership | null;
   setMemberships(memberships: WorkspaceMembership[]): void;
   setActiveWorkspace(workspace: WorkspaceMembership | null): void;
+  clearActiveWorkspace(): void;
 };
 
 export const useWorkspaceStore = create<WorkspaceState>((set) => ({
@@ -13,5 +14,5 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   activeWorkspace: null,
   setMemberships: (memberships) => set({ memberships }),
   setActiveWorkspace: (activeWorkspace) => set({ activeWorkspace }),
+  clearActiveWorkspace: () => set({ activeWorkspace: null }),
 }));
-

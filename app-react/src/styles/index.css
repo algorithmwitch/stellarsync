@@ -1,0 +1,156 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+  --color-bg: #0a0612;
+  --color-bg-elevated: #120a1d;
+  --color-panel: #120c1d;
+  --color-panel-raised: #181125;
+  --color-panel-alt: rgba(25, 17, 37, 0.92);
+  --color-accent: #a855f7;
+  --color-accent-light: #c77dff;
+  --color-text: #f5ebff;
+  --color-text-strong: #ffffff;
+  --color-muted: #bba6d5;
+  --color-muted-strong: #cda4ff;
+  --color-border: rgb(255 255 255 / 0.08);
+  --color-border-soft: rgb(255 255 255 / 0.05);
+  --color-success: #6ee7b7;
+  --color-warning: #fcd34d;
+  --color-danger: #fb7185;
+  --pillar-education: #00f0ff;
+  --pillar-promotional: #b25fff;
+  --pillar-engagement: #ffd700;
+  --pillar-awareness: #00ffaa;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+@theme inline {
+  --color-stellar-bg: var(--color-bg);
+  --color-stellar-bg-elevated: var(--color-bg-elevated);
+  --color-stellar-panel: var(--color-panel);
+  --color-stellar-panel-raised: var(--color-panel-raised);
+  --color-stellar-panel-alt: var(--color-panel-alt);
+  --color-stellar-accent: var(--color-accent);
+  --color-stellar-accent-light: var(--color-accent-light);
+  --color-stellar-text: var(--color-text);
+  --color-stellar-text-strong: var(--color-text-strong);
+  --color-stellar-muted: var(--color-muted);
+  --color-stellar-muted-strong: var(--color-muted-strong);
+  --color-stellar-border: var(--color-border);
+  --color-stellar-border-soft: var(--color-border-soft);
+  --color-stellar-success: var(--color-success);
+  --color-stellar-warning: var(--color-warning);
+  --color-stellar-danger: var(--color-danger);
+  --font-sans: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--color-bg);
+}
+
+body {
+  margin: 0;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at top left, rgb(199 125 255 / 0.18), transparent 30rem),
+    linear-gradient(180deg, #090511, #120a1d);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+img,
+video {
+  max-width: 100%;
+}
+
+@layer base {
+  body {
+    @apply text-stellar-text antialiased;
+  }
+}
+
+@layer components {
+  .stellar-shell {
+    @apply grid min-h-screen grid-cols-1;
+  }
+
+  .stellar-sidebar {
+    @apply border-b border-stellar-border bg-[rgb(12_8_19_/_0.92)] px-5 py-6 backdrop-blur-sm;
+  }
+
+  .stellar-content {
+    @apply px-4 py-5 sm:px-6;
+  }
+
+  .stellar-nav-link {
+    @apply rounded-2xl border border-transparent px-4 py-3 text-sm font-medium text-stellar-muted transition hover:border-stellar-border hover:bg-white/5 hover:text-stellar-text;
+  }
+
+  .stellar-nav-link-active {
+    @apply border-stellar-border bg-white/8 text-stellar-text-strong shadow-[0_0_0_1px_rgb(255_255_255_/_0.04)];
+  }
+
+  .stellar-panel {
+    @apply rounded-3xl border border-stellar-border bg-stellar-panel p-5 shadow-[0_20px_60px_rgb(0_0_0_/_0.18)];
+  }
+
+  .stellar-card {
+    @apply rounded-2xl border border-stellar-border bg-stellar-panel-raised p-5 shadow-[0_12px_40px_rgb(0_0_0_/_0.14)];
+  }
+
+  .stellar-eyebrow {
+    @apply text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-stellar-muted-strong;
+  }
+
+  .stellar-button-base {
+    @apply inline-flex min-h-11 items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .stellar-button-primary {
+    @apply bg-stellar-accent-light text-[#140a1e] shadow-[0_10px_30px_rgb(199_125_255_/_0.25)] hover:bg-[#d697ff];
+  }
+
+  .stellar-button-secondary {
+    @apply border border-stellar-border bg-white/5 text-stellar-text hover:bg-white/8;
+  }
+
+  .stellar-badge {
+    @apply inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium;
+  }
+}
+
+@media (min-width: 960px) {
+  .stellar-shell {
+    grid-template-columns: 280px minmax(0, 1fr);
+  }
+
+  .stellar-sidebar {
+    border-right: 1px solid var(--color-border);
+    border-bottom: 0;
+  }
+}

@@ -1,4 +1,5 @@
 import { callEdgeFunction } from "@/services/supabase/edge";
+import { createConnectedAccountsReturnUrl } from "@/features/workspaces/routing";
 import { normalizeConnectedAccount } from "@/services/connectedAccounts/model";
 import type { ConnectedAccount } from "@/types/connectedAccounts";
 
@@ -15,7 +16,12 @@ export async function fetchConnectedAccounts(workspaceId: string): Promise<Conne
   return (response.connections || []).map(normalizeConnectedAccount);
 }
 
-export async function startOAuthConnection(workspaceId: string, provider: string, accountType: string) {
+export async function startOAuthConnection(
+  workspaceId: string,
+  workspaceSlug: string,
+  provider: string,
+  accountType: string,
+) {
   return callEdgeFunction<{
     ok: boolean;
     authorization_url: string;
@@ -23,7 +29,7 @@ export async function startOAuthConnection(workspaceId: string, provider: string
     workspace_id: workspaceId,
     provider,
     account_type: accountType,
-    return_url: `${window.location.origin}/app-react/settings/connected-accounts`,
+    return_url: createConnectedAccountsReturnUrl(window.location.origin, workspaceSlug),
   });
 }
 
@@ -35,4 +41,3 @@ export async function disconnectConnectedAccount(workspaceId: string, provider: 
     account_type: accountType,
   });
 }
-
