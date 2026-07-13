@@ -1,2 +1,0 @@
-import{j as e}from"./index-DUHK9ekA.js";function l(){return e.jsxs("section",{className:"panel",children:[e.jsx("div",{className:"eyebrow",children:"Milestone 2 foundation"}),e.jsx("h2",{children:"Calendar shell"}),e.jsx("p",{children:"The React shell is active. Calendar migration remains incremental while legacy features stay available."})]})}export{l as default};
-//# sourceMappingURL=CalendarPage-Bu7P5_WW.js.map
