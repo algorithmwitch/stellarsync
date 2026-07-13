@@ -7236,7 +7236,7 @@ function renderVideoPreview(asset, url) {
 
 async function loadSupabaseMediaAssets(workspace, options = {}) {
   console.log("[media-backend] loadSupabaseMediaAssets started", workspace?.workspace_slug || "unknown");
-  var result = { assets: [], postMedia: [], source: "none", error: null };
+  var result = { assets: [], postMedia: [], source: "none", error: null, count: 0, limit: 0, offset: 0, hasMore: false };
   if (!STELLARSYNC_SUPABASE_CLIENT) {
     console.log("[media-backend] no supabase client available");
     return result;
@@ -7248,16 +7248,22 @@ async function loadSupabaseMediaAssets(workspace, options = {}) {
   var workspaceId = mediaWorkspace.id;
   var workspaceSlug = mediaWorkspace.slug;
   var prefix = options.prefix || getWorkspaceMediaPrefix(config);
+  var limit = Number(options.limit || MEDIA_VAULT_PAGE_SIZE || 24) || 24;
+  var offset = Number(options.offset || 0) || 0;
   var loadingToastId = options.silent ? "" : showLoadingToast("Loading media assets", "Loading media assets...");
   console.log("[media] active workspace id", workspaceId || "(missing)");
   console.log("[media] active workspace slug", workspaceSlug || "(missing)");
+  MEDIA_HYDRATION_STATE.loading = true;
+  MEDIA_HYDRATION_STATE.error = null;
 
   try {
     var indexed = await callSupabaseEdgeFunction("media-index", {
       action: "list_assets",
       workspace_id: workspaceId,
       workspace_slug: workspaceSlug,
-      prefix
+      prefix,
+      limit,
+      offset
     });
     console.log("[media-index] list_assets response FULL_OBJECT", indexed);
     var indexedAssets = Array.isArray(indexed.assets) ? indexed.assets : [];
@@ -7267,22 +7273,33 @@ async function loadSupabaseMediaAssets(workspace, options = {}) {
       appState.postMedia = indexedPostMedia;
       appState.post_media = indexedPostMedia;
     }
+    MEDIA_HYDRATION_STATE.relationshipsLoaded = true;
     console.log("[media-attach] post_media count", indexedPostMedia.length);
     console.log("[media] list_assets returned count", indexedAssets.length);
     if (indexedAssets.length) {
-      var signedAssets = await Promise.all(indexedAssets.map(async function(asset) {
-        if (!asset.storage_path && !asset.storagePath) return asset;
-        var signedUrl = await refreshSupabaseSignedMediaUrl(asset).catch(function() { return ""; });
-        return {
-          ...asset,
-          signedUrl,
-          signed_url: signedUrl,
-          previewUrl: signedUrl,
-          preview_url: signedUrl
-        };
-      }));
-      result.assets = signedAssets.map(normalizeRemoteMedia);
+      var hydratedAssets = indexedAssets.map(function(asset) {
+        var normalized = normalizeRemoteMedia(asset);
+        var canonicalUrl =
+          getRenderableMediaUrl(normalized) ||
+          resolveSupabasePublicMediaUrl(normalized) ||
+          "";
+        return normalizeRemoteMedia({
+          ...normalized,
+          media_url: normalized.media_url || canonicalUrl,
+          mediaUrl: normalized.mediaUrl || canonicalUrl,
+          previewUrl: normalized.previewUrl || normalized.preview_url || canonicalUrl,
+          preview_url: normalized.preview_url || normalized.previewUrl || canonicalUrl
+        });
+      });
+      result.assets = hydratedAssets;
       result.source = "media_assets";
+      result.count = Number(indexed.count || hydratedAssets.length) || hydratedAssets.length;
+      result.limit = limit;
+      result.offset = offset;
+      result.hasMore = offset + hydratedAssets.length < result.count;
+      MEDIA_HYDRATION_STATE.assetsLoaded = true;
+      MEDIA_HYDRATION_STATE.loading = false;
+      reconcileAllPostMediaState();
       var indexedCounts = countRenderableMediaCount(result.assets);
       console.log("[media] renderable count", indexedCounts.renderable);
       console.log("[media] unlinked count", result.assets.filter(asset => !String(asset.linkedPostId || asset.linked_post_id || asset.linkedNoteId || asset.linked_note_id || asset.linkedInspoId || asset.linked_inspo_id || "").trim()).length);
@@ -7292,6 +7309,7 @@ async function loadSupabaseMediaAssets(workspace, options = {}) {
     }
   } catch (err) {
     console.log("[media-backend] media-index list_assets error", err?.message || err);
+    MEDIA_HYDRATION_STATE.error = err?.message || String(err || "");
   }
   
   console.log("[media-backend] attempting table query");
@@ -7419,6 +7437,10 @@ async function loadSupabaseMediaAssets(workspace, options = {}) {
       return true;
     });
     result.assets = result.assets.map(normalizeRemoteMedia);
+    MEDIA_HYDRATION_STATE.assetsLoaded = true;
+    MEDIA_HYDRATION_STATE.relationshipsLoaded = true;
+    MEDIA_HYDRATION_STATE.loading = false;
+    reconcileAllPostMediaState();
     var counts = countRenderableMediaCount(result.assets);
     console.log("[media] renderable count", counts.renderable);
     console.log("[media] unlinked count", result.assets.filter(asset => !String(asset.linkedPostId || asset.linked_post_id || asset.linkedNoteId || asset.linked_note_id || asset.linkedInspoId || asset.linked_inspo_id || "").trim()).length);
@@ -7430,6 +7452,10 @@ async function loadSupabaseMediaAssets(workspace, options = {}) {
 
   console.log("[media-backend] no supabase media assets found");
   result.source = "media_assets";
+  MEDIA_HYDRATION_STATE.assetsLoaded = true;
+  if (!MEDIA_HYDRATION_STATE.relationshipsLoaded) MEDIA_HYDRATION_STATE.relationshipsLoaded = true;
+  MEDIA_HYDRATION_STATE.loading = false;
+  reconcileAllPostMediaState();
   if (loadingToastId) updateLoadingToastSuccess(loadingToastId, "Loading media assets", "No Supabase media assets found.");
   return result;
 }
@@ -9454,10 +9480,34 @@ function getPostAssets(post) {
   return getAttachedMediaForPost(post).filter((item) => item && typeof item === "object").map((asset) => normalizeRemoteMedia(asset));
 }
 
-function resolveSupabasePublicMediaUrl(storagePath, bucket = "media") {
-  const path = String(storagePath || "").trim().replace(/^\/+/, "");
-  if (!path || !SUPABASE_URL) return "";
-  return `${String(SUPABASE_URL).replace(/\/+$/, "")}/storage/v1/object/public/${encodeURIComponent(bucket)}/${encodeURI(path)}`;
+function encodeStoragePathSegments(value) {
+  return String(value || "")
+    .split("/")
+    .filter(Boolean)
+    .map(encodeURIComponent)
+    .join("/");
+}
+
+function resolveSupabasePublicMediaUrl(assetOrStoragePath, bucket = "media") {
+  const source = assetOrStoragePath && typeof assetOrStoragePath === "object" ? assetOrStoragePath : {};
+  const path = String(
+    source.storage_path ||
+    source.storagePath ||
+    assetOrStoragePath ||
+    ""
+  ).trim().replace(/^\/+/, "");
+  const resolvedBucket = String(source.bucket || bucket || "media").trim().replace(/^\/+|\/+$/g, "");
+  if (!path || !resolvedBucket || !SUPABASE_URL) return "";
+  return `${String(SUPABASE_URL).replace(/\/+$/, "")}/storage/v1/object/public/${encodeStoragePathSegments(resolvedBucket)}/${encodeStoragePathSegments(path)}`;
+}
+
+function shouldUseSignedMediaUrl(asset = {}) {
+  return (
+    asset.is_private === true ||
+    asset.isPrivate === true ||
+    String(asset.access || "").toLowerCase() === "private" ||
+    String(asset.bucket_visibility || "").toLowerCase() === "private"
+  );
 }
 
 function normalizePersistentMediaUrl(url, options = {}) {
@@ -9485,7 +9535,7 @@ function getCanonicalMediaUrl(assetOrPost, options = {}) {
     return "";
   }
   const storagePath = String(source.storage_path || source.storagePath || "").trim();
-  const publicUrl = storagePath ? resolveSupabasePublicMediaUrl(storagePath, source.bucket || "media") : "";
+  const publicUrl = storagePath ? resolveSupabasePublicMediaUrl(source) : "";
   const candidates = [
     source.media_url,
     source.mediaUrl,
@@ -9766,6 +9816,50 @@ function getMediaDedupeKey(item = {}) {
   ).trim();
 }
 
+const MEDIA_HYDRATION_STATE = {
+  assetsLoaded: false,
+  relationshipsLoaded: false,
+  loading: false,
+  error: null
+};
+
+function isMediaHydrationComplete() {
+  return MEDIA_HYDRATION_STATE.assetsLoaded && MEDIA_HYDRATION_STATE.relationshipsLoaded;
+}
+
+function preserveExistingPostMediaFields(post = {}) {
+  const next = { ...post };
+  const mediaIds = Array.isArray(post.media_ids) ? post.media_ids : Array.isArray(post.mediaIds) ? post.mediaIds : splitMediaIdList(post.media_ids || post.mediaIds);
+  const mediaUrls = Array.isArray(post.media_urls) ? post.media_urls : Array.isArray(post.mediaUrls) ? post.mediaUrls : splitMediaIdList(post.media_urls || post.mediaUrls);
+  next.media_id = String(post.media_id || post.mediaId || mediaIds[0] || "").trim();
+  next.mediaId = next.media_id;
+  next.media_ids = mediaIds;
+  next.mediaIds = mediaIds;
+  next.media_url = String(post.media_url || post.mediaUrl || "").trim();
+  next.mediaUrl = next.media_url;
+  next.media_urls = mediaUrls;
+  next.mediaUrls = mediaUrls;
+  next.storage_path = String(post.storage_path || post.storagePath || "").trim();
+  next.storagePath = next.storage_path;
+  next.post_media = Array.isArray(post.post_media) ? post.post_media.slice() : Array.isArray(post.postMedia) ? post.postMedia.slice() : [];
+  next.postMedia = next.post_media;
+  if (!Array.isArray(next.carouselAssetIds) || !next.carouselAssetIds.length) next.carouselAssetIds = mediaIds.slice();
+  if (!Array.isArray(next.carousel_asset_ids) || !next.carousel_asset_ids.length) next.carousel_asset_ids = mediaIds.slice();
+  if (!Array.isArray(next.carouselAssets) && Array.isArray(post.carousel_assets)) next.carouselAssets = post.carousel_assets.slice();
+  if (!Array.isArray(next.carousel_assets) && Array.isArray(post.carouselAssets)) next.carousel_assets = post.carouselAssets.slice();
+  return next;
+}
+
+function reconcileAllPostMediaState() {
+  if (!isMediaHydrationComplete()) return;
+  appState.posts = (appState.posts || []).map(function(post) {
+    return applyDerivedPostMediaFormat(post, appState.media || []);
+  });
+  if (window.__currentModalPostData) {
+    Object.assign(window.__currentModalPostData, applyDerivedPostMediaFormat(window.__currentModalPostData, appState.media || []));
+  }
+}
+
 window.__DETACHED_MEDIA_BY_POST = window.__DETACHED_MEDIA_BY_POST || {};
 
 function rememberDetachedMedia(postId, ids) {
@@ -9981,6 +10075,9 @@ function derivePostFormatFromMedia(post, mediaItems = appState.media || []) {
 }
 
 function applyDerivedPostMediaFormat(post, mediaItems = appState.media || []) {
+  if (!isMediaHydrationComplete()) {
+    return preserveExistingPostMediaFields(post);
+  }
   const canonicalMedia = getCanonicalMediaFields(post, mediaItems);
   const ids = canonicalMedia.mediaIds;
   const normalizedAssets = canonicalMedia.attachedAssets;
@@ -10336,23 +10433,16 @@ function getMediaLookupKeys(asset = {}) {
 }
 
 function getRenderableMediaUrl(asset = {}) {
-  const signed = String(
-    asset.signedUrl ||
-    asset.signed_url ||
-    asset.previewUrl ||
-    asset.preview_url ||
-    ""
-  ).trim();
+  const preview = String(asset.previewUrl || asset.preview_url || "").trim();
+  if (preview) return preview;
+  const signed = String(asset.signedUrl || asset.signed_url || "").trim();
   if (signed) return signed;
   const raw = getFirstRawMediaUrl(asset);
   if (isGoogleDriveViewUrl(raw)) {
     return "";
   }
-  if ((asset.storage_path || asset.storagePath) && isSupabasePublicMediaUrl(raw)) {
-    queueSignedMediaUrlRefresh(asset);
-    return "";
-  }
-  return raw;
+  if (raw) return raw;
+  return resolveSupabasePublicMediaUrl(asset);
 }
 
 function isGhostMediaAsset(asset = {}) {
@@ -10390,21 +10480,25 @@ function getDeletableMediaKey(asset = {}) {
 
 function queueSignedMediaUrlRefresh(asset = {}) {
   const id = getMediaAssetId?.(asset) || asset.media_asset_id || asset.id || "";
-  if (!id || asset.__signingQueued) return;
+  if (!id || asset.__signingQueued || !shouldUseSignedMediaUrl(asset)) return;
   asset.__signingQueued = true;
   setTimeout(async () => {
     try {
       const signed = await refreshSupabaseSignedMediaUrl(asset);
       if (!signed) return;
+      var fallbackUrl =
+        getRenderableMediaUrl(asset) ||
+        resolveSupabasePublicMediaUrl(asset) ||
+        "";
       const key = getMediaItemKey(asset);
       const idx = (appState.media || []).findIndex((item) => getMediaItemKey(item) === key);
       if (idx >= 0) {
         appState.media[idx] = {
           ...appState.media[idx],
-          signedUrl: signed,
-          signed_url: signed,
-          previewUrl: signed,
-          preview_url: signed
+          signedUrl: signed || appState.media[idx].signedUrl || "",
+          signed_url: signed || appState.media[idx].signed_url || "",
+          previewUrl: signed || appState.media[idx].previewUrl || appState.media[idx].preview_url || fallbackUrl,
+          preview_url: signed || appState.media[idx].preview_url || appState.media[idx].previewUrl || fallbackUrl
         };
         persistLocalState();
         renderMedia?.();
@@ -10492,7 +10586,7 @@ function renderMediaGalleryStrip(assets = [], options = {}) {
               <span class="absolute top-2 left-2 z-10 w-6 h-6 rounded-full bg-[#181125]/95 border border-white/10 text-[10px] font-bold text-white flex items-center justify-center">${index + 1}</span>
               ${previewUrl ? (
                 kind === "video"
-                  ? `<video src="${escapeHtml(previewUrl)}" class="w-full h-full object-cover" muted playsinline preload="metadata" onerror="this.outerHTML='<div class=\\'w-full h-full flex flex-col items-center justify-center bg-black/40 text-purple-200\\'><i class=\\'ph-fill ph-video text-3xl mb-2\\'></i><span class=\\'text-[10px] font-bold\\'>Open video</span></div>'"></video>`
+                  ? `<video src="${escapeHtml(previewUrl)}" class="w-full h-full object-cover" muted playsinline preload="none" onerror="this.outerHTML='<div class=\\'w-full h-full flex flex-col items-center justify-center bg-black/40 text-purple-200\\'><i class=\\'ph-fill ph-video text-3xl mb-2\\'></i><span class=\\'text-[10px] font-bold\\'>Open video</span></div>'"></video>`
                   : kind === "document"
                   ? `<div class="w-full h-full flex flex-col items-center justify-center gap-1 text-gray-400 p-2"><i class="ph-bold ph-file-text text-2xl"></i><span class="text-[9px] uppercase tracking-wider font-bold text-center">${escapeHtml(getMediaFileTypeLabel(asset))}</span></div>`
                   : `<img src="${escapeHtml(previewUrl)}" alt="${escapeHtml(title)}" class="w-full h-full object-cover" onerror="handleBrokenMediaPreview(this)">`
@@ -17055,7 +17149,7 @@ function renderModalCarouselPreview() {
           <span class="absolute top-2 left-2 z-10 w-6 h-6 rounded-full bg-[#181125]/90 border border-white/10 text-[10px] font-bold text-white flex items-center justify-center">${index + 1}</span>
           ${previewUrl
             ? String(asset.assetType || asset.type || "").startsWith("video")
-              ? `<video src="${escapeHtml(previewUrl)}" class="w-full h-full object-cover" muted playsinline preload="metadata"></video>`
+              ? `<video src="${escapeHtml(previewUrl)}" class="w-full h-full object-cover" muted playsinline preload="none"></video>`
               : /pdf|document|doc|presentation|spreadsheet|text/i.test(String(asset.assetType || asset.type || asset.mimeType || ""))
               ? `<div class="w-full h-full flex flex-col items-center justify-center text-gray-400"><i class="ph-bold ph-file-text text-2xl mb-1"></i><span class="text-[10px] uppercase tracking-wider font-bold">Document</span></div>`
               : `<img src="${escapeHtml(previewUrl)}" alt="${escapeHtml(carouselTitle)}" class="w-full h-full object-cover" onerror="handleBrokenMediaPreview(this)">`
@@ -17138,6 +17232,10 @@ function getDetachAssetId(asset = {}) {
 function normalizeAttachedMedia(media) {
   if (!media || typeof media !== "object") return media;
   var id = getMediaAssetId(media);
+  var fallbackUrl =
+    getRenderableMediaUrl(media) ||
+    resolveSupabasePublicMediaUrl(media) ||
+    "";
   console.log("[media-id] normalize input", media);
   if (id) console.log("[media-id] resolved media_asset_id", id);
   else console.log("[media-id] unresolved media", media);
@@ -17147,8 +17245,8 @@ function normalizeAttachedMedia(media) {
     mediaAssetId: id || media.media_asset_id || media.mediaAssetId || "",
     storage_path: media.storage_path || media.storagePath || "",
     storagePath: media.storage_path || media.storagePath || "",
-    media_url: media.media_url || media.mediaUrl || media.fileUrl || media.url || "",
-    mediaUrl: media.media_url || media.mediaUrl || media.fileUrl || media.url || "",
+    media_url: media.media_url || media.mediaUrl || media.fileUrl || media.url || fallbackUrl || "",
+    mediaUrl: media.media_url || media.mediaUrl || media.fileUrl || media.url || fallbackUrl || "",
     filename: media.filename || media.fileName || media.name || "",
     title: media.title || media.asset_title || media.assetName || "",
     sort_order: Number(media.sort_order ?? media.sortOrder ?? 0) || 0,
@@ -17232,11 +17330,16 @@ function resolveManagedMediaAssetForPost(post) {
   return null;
 }
 
+function getPermanentMediaUrl(asset = {}) {
+  const normalized = normalizeRemoteMedia(asset || {});
+  return getCanonicalMediaUrl(normalized, { allowSignedUrl: false }) || resolveSupabasePublicMediaUrl(normalized) || "";
+}
+
 function syncModalMediaUrlControls() {
   if (!modalMediaUrlInput) return;
   const modalPost = getModalCanonicalMediaState();
   const managedAsset = resolveManagedMediaAssetForPost(modalPost);
-  const mediaUrl = String(modalPost.media_url || modalPost.mediaUrl || "").trim();
+  const mediaUrl = managedAsset ? getPermanentMediaUrl(managedAsset) : String(modalPost.media_url || modalPost.mediaUrl || "").trim();
   modalMediaUrlInput.value = mediaUrl;
   modalMediaUrlInput.readOnly = !!managedAsset;
   modalMediaUrlInput.classList.toggle("opacity-70", !mediaUrl);
@@ -17264,7 +17367,7 @@ async function copyModalMediaUrl() {
 function openMediaFromPostModal() {
   const modalPost = getModalCanonicalMediaState();
   const managedAsset = resolveManagedMediaAssetForPost(modalPost);
-  const mediaUrl = String(modalPost.media_url || modalPost.mediaUrl || "").trim();
+  const mediaUrl = managedAsset ? getPermanentMediaUrl(managedAsset) : String(modalPost.media_url || modalPost.mediaUrl || "").trim();
   if (managedAsset) {
     console.log("[media-viewer] opening from post modal", {
       postId: getCanonicalPostId(modalPost) || "",
@@ -17711,7 +17814,7 @@ function renderMediaPickerAssets(target = "modal") {
           <button type="button" onclick="attachMediaToCurrentPost('${escapeHtml(assetId)}')" class="relative h-20 w-full bg-black/20" title="${escapeHtml(title)}">
             ${thumbUrl ? (
               kind === "video"
-                ? `<video src="${escapeHtml(thumbUrl)}" class="w-full h-full object-contain" muted playsinline preload="metadata" onerror="this.outerHTML='<div class=\\'w-full h-full flex flex-col items-center justify-center bg-black/40 text-purple-200\\'><i class=\\'ph-fill ph-video text-3xl mb-2\\'></i><span class=\\'text-[10px] font-bold\\'>Open video</span></div>'"></video>`
+                ? `<video src="${escapeHtml(thumbUrl)}" class="w-full h-full object-contain" muted playsinline preload="none" onerror="this.outerHTML='<div class=\\'w-full h-full flex flex-col items-center justify-center bg-black/40 text-purple-200\\'><i class=\\'ph-fill ph-video text-3xl mb-2\\'></i><span class=\\'text-[10px] font-bold\\'>Open video</span></div>'"></video>`
                 : `<img src="${escapeHtml(thumbUrl)}" alt="${escapeHtml(title)}" class="w-full h-full object-contain" loading="lazy" onerror="handleBrokenMediaPreview(this)">`
             ) : `<div class="w-full h-full flex items-center justify-center text-gray-600"><i class="ph-bold ph-file text-xl"></i></div>`}
             ${isSelected ? '<span class="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-purple-500 text-white"><i class="ph-bold ph-check text-[10px]"></i></span>' : ''}
@@ -18034,7 +18137,7 @@ function renderUploadStagingList() {
     <div class="p-4 rounded-2xl bg-[#181125] border border-white/5 grid grid-cols-1 md:grid-cols-[180px_1fr] gap-4">
       <div class="aspect-video md:aspect-square rounded-xl overflow-hidden bg-[#0f0a18] border border-white/5 flex items-center justify-center">
         ${item.type.startsWith("video/")
-          ? `<video src="${escapeHtml(item.previewUrl)}" class="w-full h-full object-cover" muted playsinline preload="metadata"></video>`
+          ? `<video src="${escapeHtml(item.previewUrl)}" class="w-full h-full object-cover" muted playsinline preload="none"></video>`
           : item.type.startsWith("image/")
           ? `<img src="${escapeHtml(item.previewUrl)}" alt="${escapeHtml(item.name)}" class="w-full h-full object-cover" onerror="handleBrokenMediaPreview(this)">`
           : `<div class="w-full h-full flex flex-col items-center justify-center text-gray-400"><i class="ph-bold ph-file-text text-3xl mb-2"></i><span class="text-xs uppercase tracking-wider font-bold">Document</span></div>`}
@@ -18167,7 +18270,10 @@ async function commitPendingUploads() {
     }
     if (isSupabaseMediaEnabled()) {
       const mediaResult = await loadSupabaseMediaAssets(WORKSPACE_RUNTIME_CONFIG.active || loadWorkspaceConfig(), { force: true, silent: true });
-      appState.media = filterRenderableArtifacts(Array.isArray(mediaResult.assets) ? mediaResult.assets : [], "media");
+      appState.media = mergeMediaAssetsPreservingExisting(
+        filterRenderableArtifacts(Array.isArray(mediaResult.assets) ? mediaResult.assets : [], "media"),
+        appState.media || []
+      );
       if (Array.isArray(mediaResult.postMedia)) {
         appState.postMedia = mediaResult.postMedia;
         appState.post_media = mediaResult.postMedia;
@@ -23560,7 +23666,12 @@ function buildMediaVaultItems() {
 }
 
 async function refreshSupabaseSignedMediaUrl(asset) {
-  if (!asset?.storage_path && !asset?.storagePath) return asset?.media_url || asset?.mediaUrl || asset?.url || "";
+  if (!asset?.storage_path && !asset?.storagePath) {
+    return getRenderableMediaUrl(asset || {});
+  }
+  if (!shouldUseSignedMediaUrl(asset)) {
+    return resolveSupabasePublicMediaUrl(asset);
+  }
   const path = asset.storage_path || asset.storagePath;
   const meta = getWorkspaceRequestMetadata();
   const result = await callSupabaseEdgeFunction("media-sign-url", {
@@ -23568,28 +23679,50 @@ async function refreshSupabaseSignedMediaUrl(asset) {
     bucket: asset?.bucket || "media",
     workspace_id: meta.workspace_id || "",
     workspace_slug: meta.workspace_slug || getCurrentWorkspaceSlug?.() || "",
-    expires_in: 604800
+    expires_in: 3600
   });
-  return result?.signedUrl || result?.signed_url || result?.url || "";
+  if (!result?.httpOk) {
+    throw new Error(
+      result?.error ||
+      result?.message ||
+      `media-sign-url failed with HTTP ${result?.httpStatus || "unknown"}`
+    );
+  }
+  const url = result?.signedUrl || result?.signed_url || result?.url || "";
+  if (!url) {
+    throw new Error("media-sign-url returned no URL.");
+  }
+  return url;
 }
 
 async function handleBrokenMediaPreview(el) {
   if (!el) return;
+  var src = String(el.currentSrc || el.src || "").trim();
+  var asset = (appState.media || []).find((item) => {
+    return src && [
+      item?.previewUrl,
+      item?.preview_url,
+      item?.signedUrl,
+      item?.signed_url,
+      item?.media_url,
+      item?.mediaUrl,
+      item?.fileUrl,
+      item?.url,
+      item?.sourceUrl,
+      resolveSupabasePublicMediaUrl(item || {})
+    ].map((value) => String(value || "").trim()).includes(src);
+  }) || currentMediaAssetDetail || {};
   try {
-    if (el.dataset.resigned !== "true") {
-      const src = String(el.currentSrc || el.src || "").trim();
-      const asset = (appState.media || []).find((item) => {
-        return src && [
-          item?.media_url,
-          item?.mediaUrl,
-          item?.fileUrl,
-          item?.url,
-          item?.sourceUrl
-        ].map((value) => String(value || "").trim()).includes(src);
-      });
+    const publicUrl = resolveSupabasePublicMediaUrl(asset || {});
+    if (!shouldUseSignedMediaUrl(asset) && publicUrl && publicUrl !== src && el.dataset.publicRetry !== "true") {
+      el.dataset.publicRetry = "true";
+      el.src = publicUrl;
+      return;
+    }
+    if (shouldUseSignedMediaUrl(asset) && el.dataset.signedRetry !== "true") {
       const freshUrl = await refreshSupabaseSignedMediaUrl(asset || {});
       if (freshUrl) {
-        el.dataset.resigned = "true";
+        el.dataset.signedRetry = "true";
         el.src = freshUrl;
         return;
       }
@@ -24086,38 +24219,55 @@ async function deleteSelectedMediaItems() {
 
 var MEDIA_RENDER_BATCH_SIZE = 24;
 var MEDIA_RENDER_SESSION_ID = 0;
+var MEDIA_VAULT_PAGE_SIZE = 24;
+var MEDIA_VAULT_PAGINATION = { offset: 0, limit: MEDIA_VAULT_PAGE_SIZE, total: 0, hasMore: false };
 var HYBRID_MEDIA_LOADED = false;
 var HYBRID_MEDIA_LOADING = false;
 var HYBRID_MEDIA_LAZY_LOAD_PROMISE = null;
 
-async function ensureLazyHybridMediaLoad(options = {}) {
-  if (!isGPEHybridWorkspace()) return { skipped: true };
-  if (HYBRID_MEDIA_LOADED) {
+async function ensureMediaVaultLoaded(options = {}) {
+  if (!isSupabaseMediaEnabled()) return { skipped: true, assets: appState.media || [] };
+  if (HYBRID_MEDIA_LOADED && !options.force && !options.append) {
     console.log("[media] media load skipped already loaded");
     return { skipped: true, assets: appState.media || [] };
   }
   if (HYBRID_MEDIA_LAZY_LOAD_PROMISE) return HYBRID_MEDIA_LAZY_LOAD_PROMISE;
   console.log("[media] lazy load requested");
   HYBRID_MEDIA_LOADING = true;
-  HYBRID_MEDIA_LAZY_LOAD_PROMISE = Promise.allSettled([
-    isSupabaseMediaEnabled() ? loadSupabaseMediaAssets(WORKSPACE_RUNTIME_CONFIG?.active || loadWorkspaceConfig(), { silent: true }) : Promise.resolve({ assets: [], postMedia: [] })
-  ]).then(function(results) {
-    var supabaseResult = results[0].status === "fulfilled" ? results[0].value : { assets: [], postMedia: [] };
+  var offset = options.append ? Number(MEDIA_VAULT_PAGINATION.offset || 0) + Number(MEDIA_VAULT_PAGINATION.limit || MEDIA_VAULT_PAGE_SIZE) : 0;
+  var limit = Number(options.limit || MEDIA_VAULT_PAGE_SIZE) || MEDIA_VAULT_PAGE_SIZE;
+  HYBRID_MEDIA_LAZY_LOAD_PROMISE = loadSupabaseMediaAssets(WORKSPACE_RUNTIME_CONFIG?.active || loadWorkspaceConfig(), {
+    silent: true,
+    force: true,
+    limit,
+    offset
+  }).then(function(supabaseResult) {
     var supabaseMedia = Array.isArray(supabaseResult.assets) ? supabaseResult.assets.map(function(asset) { return normalizeRemoteMedia(asset); }) : [];
-    var mergedMedia = mergeMediaAssetsPreservingExisting(appState.media || [], filterRenderableArtifacts(supabaseMedia, "media"));
+    var mergedMedia = options.append
+      ? mergeMediaAssetsPreservingExisting(appState.media || [], filterRenderableArtifacts(supabaseMedia, "media"))
+      : filterRenderableArtifacts(supabaseMedia, "media");
     safeReplaceCollectionFromAuthority("media", mergedMedia, "media");
-    if (Array.isArray(supabaseResult.postMedia) && supabaseResult.postMedia.length) {
+    if (Array.isArray(supabaseResult.postMedia)) {
       appState.postMedia = supabaseResult.postMedia;
       appState.post_media = supabaseResult.postMedia;
     }
+    MEDIA_VAULT_PAGINATION = {
+      offset: Number(supabaseResult.offset || offset) || 0,
+      limit: Number(supabaseResult.limit || limit) || limit,
+      total: Number(supabaseResult.count || mergedMedia.length) || mergedMedia.length,
+      hasMore: supabaseResult.hasMore === true
+    };
     HYBRID_MEDIA_LOADED = true;
     HYBRID_MEDIA_LOADING = false;
     HYBRID_MEDIA_LAZY_LOAD_PROMISE = null;
+    reconcileAllPostMediaState();
+    persistLocalState();
     if (currentView === "media" && options.render !== false) renderMedia();
     return { skipped: false, assets: appState.media };
   }).catch(function(err) {
     HYBRID_MEDIA_LOADING = false;
     HYBRID_MEDIA_LAZY_LOAD_PROMISE = null;
+    MEDIA_HYDRATION_STATE.error = err?.message || String(err || "");
     throw err;
   });
   return HYBRID_MEDIA_LAZY_LOAD_PROMISE;
@@ -24203,7 +24353,7 @@ function renderMediaVaultCard(item) {
     : hasImagePreview
     ? `<img src="${escapeHtml(previewUrl)}" alt="${escapeHtml(displayTitle)}" class="w-full h-full object-cover rounded-none" loading="lazy" onerror="handleBrokenMediaPreview(this)">`
     : hasVideoPreview
-    ? `<video src="${escapeHtml(previewUrl)}" class="w-full h-full object-cover rounded-none" muted playsinline preload="metadata" onerror="this.outerHTML='<div class=\\'w-full h-full flex flex-col items-center justify-center bg-black/40 text-purple-200\\'><i class=\\'ph-fill ph-video text-4xl mb-2\\'></i><span class=\\'text-xs font-bold\\'>Open video</span></div>'"></video>`
+    ? `<video src="${escapeHtml(previewUrl)}" class="w-full h-full object-cover rounded-none" muted playsinline preload="none" onerror="this.outerHTML='<div class=\\'w-full h-full flex flex-col items-center justify-center bg-black/40 text-purple-200\\'><i class=\\'ph-fill ph-video text-4xl mb-2\\'></i><span class=\\'text-xs font-bold\\'>Open video</span></div>'"></video>`
     : `<div class="w-full h-full flex items-center justify-center"><i class="ph-fill ${icon} text-gray-600 text-5xl"></i></div>`;
 
   return `
@@ -24307,16 +24457,23 @@ function renderMedia() {
   var renderSessionId = ++MEDIA_RENDER_SESSION_ID;
   var firstBatch = items.slice(0, MEDIA_RENDER_BATCH_SIZE);
   var remainingBatch = items.slice(MEDIA_RENDER_BATCH_SIZE);
+  var loadMoreCard = MEDIA_VAULT_PAGINATION.hasMore ? `
+    <div class="col-span-full flex justify-center pt-2">
+      <button type="button" onclick="loadMoreMediaVaultAssets()" class="px-4 py-2 rounded-xl bg-[#181125] border border-white/10 text-xs uppercase tracking-widest font-bold text-gray-200 hover:text-white">
+        Load More
+      </button>
+    </div>
+  ` : "";
   console.log("[media] first batch render count", firstBatch.length);
   console.log("[media] first media chunk rendered", firstBatch.length);
-  grid.innerHTML = firstBatch.map(renderMediaVaultCard).join("") + (remainingBatch.length ? renderMediaLoadingCard() : "");
+  grid.innerHTML = firstBatch.map(renderMediaVaultCard).join("") + (remainingBatch.length ? renderMediaLoadingCard() : "") + (!remainingBatch.length ? loadMoreCard : "");
   if (remainingBatch.length) {
     var scheduleChunk = window.requestIdleCallback ? window.requestIdleCallback : function(callback) { return setTimeout(callback, 0); };
     scheduleChunk(function() {
       if (renderSessionId !== MEDIA_RENDER_SESSION_ID) return;
       var loadingCard = grid.querySelector("[data-media-loading-card='true']");
       if (loadingCard) loadingCard.remove();
-      grid.insertAdjacentHTML("beforeend", remainingBatch.map(renderMediaVaultCard).join(""));
+      grid.insertAdjacentHTML("beforeend", remainingBatch.map(renderMediaVaultCard).join("") + loadMoreCard);
       console.log("[media] background media loaded count", remainingBatch.length);
       console.log("[media] next media chunk rendered", remainingBatch.length);
       console.log("[media] association reconcile complete");
@@ -24326,6 +24483,14 @@ function renderMedia() {
     console.log("[media] association reconcile complete");
   }
   console.log("[render] renderMedia done", { childCount: grid.children.length, htmlLength: grid.innerHTML.length });
+}
+
+async function loadMoreMediaVaultAssets() {
+  try {
+    await ensureMediaVaultLoaded({ append: true, render: true });
+  } catch (err) {
+    showToast("Media load failed", err?.message || "Could not load more media.", "ph-warning", "text-yellow-400");
+  }
 }
 
 function getMediaAssetDetailRows(item, linkedPost) {
@@ -24907,7 +25072,7 @@ function renderMediaPreviewContent(item, linkedAssets, previewUrl, type) {
         <span class="absolute top-1 left-1 z-10 px-1.5 py-0.5 rounded bg-black/65 text-[9px] font-bold text-white">${index + 1}</span>
         ${thumbUrl ? (
           kind === "video"
-            ? `<video src="${escapeHtml(thumbUrl)}" class="w-full h-full object-cover pointer-events-none" draggable="false" muted playsinline preload="metadata" onerror="this.outerHTML='<div class=\\'w-full h-full flex flex-col items-center justify-center bg-black/40 text-purple-200\\'><i class=\\'ph-fill ph-video text-2xl mb-1\\'></i><span class=\\'text-[9px] font-bold\\'>Open</span></div>'"></video>`
+            ? `<video src="${escapeHtml(thumbUrl)}" class="w-full h-full object-cover pointer-events-none" draggable="false" muted playsinline preload="none" onerror="this.outerHTML='<div class=\\'w-full h-full flex flex-col items-center justify-center bg-black/40 text-purple-200\\'><i class=\\'ph-fill ph-video text-2xl mb-1\\'></i><span class=\\'text-[9px] font-bold\\'>Open</span></div>'"></video>`
             : kind === "document"
             ? `<div class="w-full h-full flex items-center justify-center text-gray-400"><i class="ph-bold ph-file-text text-2xl"></i></div>`
             : `<img src="${escapeHtml(thumbUrl)}" alt="${escapeHtml(title)}" class="w-full h-full object-cover pointer-events-none" draggable="false" onerror="handleBrokenMediaPreview(this)">`
@@ -24960,7 +25125,7 @@ function renderMediaPreviewContent(item, linkedAssets, previewUrl, type) {
           ${index === 0 ? `<span class="absolute top-2 right-2 z-10 px-2 py-1 rounded-full bg-[#231738]/95 border border-[#c77dff]/30 text-[8px] uppercase tracking-wider font-bold text-[#c77dff]">Cover</span>` : ""}
           ${thumbUrl ? (
             kind === "video"
-              ? `<video src="${escapeHtml(thumbUrl)}" class="w-full h-full object-cover" muted playsinline preload="metadata" onerror="this.outerHTML='<div class=\\'w-full h-full flex flex-col items-center justify-center bg-black/40 text-purple-200\\'><i class=\\'ph-fill ph-video text-2xl mb-1\\'></i><span class=\\'text-[9px] font-bold\\'>Open</span></div>'"></video>`
+              ? `<video src="${escapeHtml(thumbUrl)}" class="w-full h-full object-cover" muted playsinline preload="none" onerror="this.outerHTML='<div class=\\'w-full h-full flex flex-col items-center justify-center bg-black/40 text-purple-200\\'><i class=\\'ph-fill ph-video text-2xl mb-1\\'></i><span class=\\'text-[9px] font-bold\\'>Open</span></div>'"></video>`
               : kind === "document"
               ? `<div class="w-full h-full flex flex-col items-center justify-center gap-1 text-gray-400 p-2"><i class="ph-bold ph-file-text text-2xl"></i><span class="text-[9px] uppercase tracking-wider font-bold text-center">${escapeHtml(getMediaFileTypeLabel(asset))}</span></div>`
               : `<img src="${escapeHtml(thumbUrl)}" alt="${escapeHtml(title)}" class="w-full h-full object-cover" onerror="handleBrokenMediaPreview(this)">`
@@ -25211,7 +25376,7 @@ function cancelMediaViewerReorder() {
 }
 
 function renderTaggedContent(item, linkedPost) {
-  const targetUrl = getRenderableMediaUrl(item);
+  const targetUrl = getPermanentMediaUrl(item) || getRenderableMediaUrl(item);
   const noteId = String(item.linkedNoteId || item.linked_note_id || "").trim();
   const inspoId = String(item.linkedInspoId || item.linked_inspo_id || "").trim();
   const platforms = linkedPost ? getPostTargetPlatforms(linkedPost) : [];
@@ -25371,7 +25536,7 @@ function openMediaAssetModal(item, options = {}) {
   }
 
   if (mediaAssetModalOpenLink) {
-    const targetUrl = getRenderableMediaUrl(item);
+    const targetUrl = getPermanentMediaUrl(item) || getRenderableMediaUrl(item);
     mediaAssetModalOpenLink.href = targetUrl || "#";
     mediaAssetModalOpenLink.classList.toggle("pointer-events-none", !targetUrl);
     mediaAssetModalOpenLink.classList.toggle("opacity-40", !targetUrl);
@@ -25414,7 +25579,7 @@ function toggleMediaPostsPanel(open = !mediaPostsPanelOpen) {
 }
 
 function copyCurrentMediaAssetUrl() {
-  const targetUrl = getRenderableMediaUrl(currentMediaAssetDetail || {});
+  const targetUrl = getPermanentMediaUrl(currentMediaAssetDetail || {}) || getRenderableMediaUrl(currentMediaAssetDetail || {});
   if (!targetUrl) {
     showToast("URL not ready", "This media is still getting a signed preview URL.", "ph-clock", "text-yellow-400");
     return;
@@ -27589,7 +27754,7 @@ function switchView(viewName) {
       }
       renderCurrentVisibleView();
       if (targetName === "media") {
-        ensureLazyHybridMediaLoad().catch(function(err) {
+        ensureMediaVaultLoaded().catch(function(err) {
           console.log("[media-backend] load error", err?.message || err);
         });
       }
@@ -30209,14 +30374,6 @@ async function syncRemoteIfConfigured(options = {}) {
       }
       if (supabaseCampaigns.status === "fulfilled" && Array.isArray(supabaseCampaigns.value)) {
         appState.campaigns = supabaseCampaigns.value.map(function(item) { return normalizeRemoteCampaign(item); });
-      }
-      if (isSupabaseMediaEnabled()) {
-        try {
-          var supabaseMediaResult = await loadSupabaseMediaAssets(activeCfg);
-          appState.media = filterRenderableArtifacts(Array.isArray(supabaseMediaResult.assets) ? supabaseMediaResult.assets : [], "media");
-        } catch (err) {
-          console.log("[media-backend] load error", err?.message || err);
-        }
       }
       calendarCursor = getInitialCalendarCursor();
       selectedCalendarDateKey = toDateKey(calendarCursor);
@@ -37783,11 +37940,6 @@ function queueBootLazyHydration() {
     if (!STELLARSYNC_IS_MOBILE_BOOT && typeof loadAIProviders === "function") {
       loadAIProviders().catch(function(err) {
         reportFrontendError("boot/loadAIProviders", err);
-      });
-    }
-    if (!STELLARSYNC_IS_MOBILE_BOOT && isSupabaseMediaEnabled?.() && typeof loadSupabaseMediaAssets === "function") {
-      loadSupabaseMediaAssets(WORKSPACE_RUNTIME_CONFIG.active || loadWorkspaceConfig(), { silent: true }).catch(function(err) {
-        reportFrontendError("boot/loadSupabaseMediaAssets", err);
       });
     }
     if (shouldUseSheetsAuthority?.()) {
